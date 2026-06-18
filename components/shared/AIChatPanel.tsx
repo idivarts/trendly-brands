@@ -1,12 +1,15 @@
 import AIModelSelector from "@/components/ai/AIModelSelector/AIModelSelector";
+import { TokenMeterBar, TokenMeterBlock, TokenMeterNotice } from "@/components/billing/TokenMeter";
 import AIAnswerControl from "@/components/shared/AIAnswerControl";
 import AIChatHistory from "@/components/shared/AIChatHistory";
 import MarkdownMessage from "@/components/shared/MarkdownMessage";
-import { TokenMeterBar, TokenMeterBlock, TokenMeterNotice } from "@/components/billing/TokenMeter";
+import { getAIChatStarter } from "@/constants/AIChatStarters";
+import { useBreakpoints } from "@/hooks";
 import { AIControl, AIModule, useAIChat } from "@/hooks/use-ai-chat";
 import { useAIModels } from "@/hooks/use-ai-models";
 import { useEntitlements } from "@/hooks/use-entitlements";
-import { useBreakpoints } from "@/hooks";
+import { useAWSContext } from "@/shared-libs/contexts/aws-context.provider";
+import { pickMedia } from "@/shared-libs/utils/media-picker";
 import Colors from "@/shared-uis/constants/Colors";
 import {
     faChevronLeft,
@@ -17,8 +20,7 @@ import {
     faPaperPlane,
     faPenToSquare,
     faRobot,
-    faWandMagicSparkles,
-    faXmark,
+    faXmark
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -39,8 +41,6 @@ import {
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useAWSContext } from "@/shared-libs/contexts/aws-context.provider";
-import { pickMedia } from "@/shared-libs/utils/media-picker";
 
 // Readable column width for the conversation in the wide (split) layout — the
 // chat doesn't stretch full-bleed; messages + composer sit in a centered column.
@@ -214,7 +214,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     scope = "module",
     layout = "panel",
     title = "AI Content Expert",
-    heroTitle = "What can I help you create?",
+    heroTitle,
     heroSuggestions,
     onControlsChange,
     initialMessage,
@@ -356,15 +356,12 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     const chatLabel = scope === "all" ? (activeThread?.title?.trim() || "New conversation") : title;
     const headerLabel = effectiveViewMode === "history" ? "Chat history" : chatLabel;
 
-    // Quick-start chips for the hero empty state. The content-oriented defaults
-    // only apply to the Playground (scope "all"); per-module panels show none
-    // unless the host passes its own, so a specific context never suggests an
-    // off-topic prompt.
-    const heroSuggestionList =
-        heroSuggestions ??
-        (scope === "all"
-            ? ["Plan a content calendar", "Write a post caption", "Brainstorm content ideas", "Draft a content strategy"]
-            : []);
+    // Hero (empty-state) copy comes from the per-module starter map, but any of
+    // the three pieces can be overridden per-mount via props.
+    const starter = getAIChatStarter(module);
+    const resolvedHeroTitle = heroTitle ?? starter.heading;
+    const resolvedHeroDescription = welcomeText ?? starter.description;
+    const heroSuggestionList = heroSuggestions ?? starter.templates;
 
     // True from the moment a queued initial message is dispatched until its
     // content is on screen. sendMessage creates the thread over HTTP first, so
@@ -610,15 +607,15 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                         </View>
                     )}
                     {!!item.text && (
-                    <View style={[styles.bubble, isAI ? styles.aiBubble : styles.userBubble]}>
-                        {isAI ? (
-                            <MarkdownMessage content={item.text} compact={isCompact} />
-                        ) : (
-                            <Text style={[styles.bubbleText, styles.userText]}>
-                                {item.text}
-                            </Text>
-                        )}
-                    </View>
+                        <View style={[styles.bubble, isAI ? styles.aiBubble : styles.userBubble]}>
+                            {isAI ? (
+                                <MarkdownMessage content={item.text} compact={isCompact} />
+                            ) : (
+                                <Text style={[styles.bubbleText, styles.userText]}>
+                                    {item.text}
+                                </Text>
+                            )}
+                        </View>
                     )}
                     {showControl && item.control && (
                         <AIAnswerControl
@@ -750,243 +747,245 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
             style={[styles.container, splitMode && styles.containerSplit]}
             onLayout={measureKbOffset}
         >
-        {/* Closable conversation list (desktop split layout only). Hidden by
+            {/* Closable conversation list (desktop split layout only). Hidden by
             default; toggled open by the header clock icon. */}
-        {splitMode && historyOpen && (
-            <View style={styles.historyPane}>
-                <View style={styles.historyPaneHeader}>
-                    <Text style={styles.historyPaneTitle} numberOfLines={1}>Conversations</Text>
-                    <Pressable
-                        onPress={() => setHistoryOpen(false)}
-                        style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
-                        accessibilityRole="button"
-                        accessibilityLabel="Close conversations"
-                        hitSlop={6}
-                    >
-                        <FontAwesomeIcon icon={faXmark} size={14} color={colors.textSecondary} />
-                    </Pressable>
-                </View>
-                <AIChatHistory
-                    threads={threads}
-                    activeThreadId={activeThreadId}
-                    onPickThread={onPickThread}
-                    onNewChat={onNewChat}
-                    onRenameThread={renameThread}
-                    onDeleteThread={deleteThread}
-                    showModuleBadge={scope === "all"}
-                />
-            </View>
-        )}
-        <KeyboardAvoidingView
-            style={styles.fill}
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            keyboardVerticalOffset={kbVerticalOffset}
-        >
-            {/* ── Header — capped at 3 elements (per design critique) ───── */}
-            {!hideHeader && (
-            <View style={styles.panelHeader}>
-                {onCollapse && (
-                    <Pressable
-                        onPress={onCollapse}
-                        style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
-                        accessibilityRole="button"
-                        accessibilityLabel="Collapse panel"
-                        hitSlop={6}
-                    >
-                        <FontAwesomeIcon icon={faChevronRight} size={11} color={colors.textSecondary} />
-                    </Pressable>
-                )}
-                <Text style={styles.panelHeaderLabel} numberOfLines={1}>
-                    {headerLabel}
-                </Text>
-                {effectiveViewMode === "chat" ? (
-                    <>
+            {splitMode && historyOpen && (
+                <View style={styles.historyPane}>
+                    <View style={styles.historyPaneHeader}>
+                        <Text style={styles.historyPaneTitle} numberOfLines={1}>Conversations</Text>
                         <Pressable
-                            onPress={onToggleHistory}
-                            style={({ pressed }) => [
-                                styles.iconBtn,
-                                (pressed || historyActive) && styles.iconBtnPressed,
-                            ]}
-                            accessibilityRole="button"
-                            accessibilityLabel="Open past conversations"
-                            hitSlop={6}
-                        >
-                            <FontAwesomeIcon icon={faClockRotateLeft} size={14} color={colors.text} />
-                        </Pressable>
-                        <Pressable
-                            onPress={onNewChat}
+                            onPress={() => setHistoryOpen(false)}
                             style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
                             accessibilityRole="button"
-                            accessibilityLabel="Start a new chat"
+                            accessibilityLabel="Close conversations"
                             hitSlop={6}
                         >
-                            <FontAwesomeIcon icon={faPenToSquare} size={14} color={colors.text} />
+                            <FontAwesomeIcon icon={faXmark} size={14} color={colors.textSecondary} />
                         </Pressable>
-                    </>
-                ) : (
-                    <Pressable
-                        onPress={() => setViewMode("chat")}
-                        style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
-                        accessibilityRole="button"
-                        accessibilityLabel="Back to chat"
-                        hitSlop={6}
-                    >
-                        <FontAwesomeIcon icon={faChevronLeft} size={12} color={colors.text} />
-                    </Pressable>
-                )}
-            </View>
+                    </View>
+                    <AIChatHistory
+                        threads={threads}
+                        activeThreadId={activeThreadId}
+                        onPickThread={onPickThread}
+                        onNewChat={onNewChat}
+                        onRenameThread={renameThread}
+                        onDeleteThread={deleteThread}
+                        showModuleBadge={scope === "all"}
+                    />
+                </View>
             )}
-
-            {effectiveViewMode === "history" ? (
-                <AIChatHistory
-                    threads={threads}
-                    activeThreadId={activeThreadId}
-                    onPickThread={onPickThread}
-                    onNewChat={onNewChat}
-                    onRenameThread={renameThread}
-                    onDeleteThread={deleteThread}
-                    showModuleBadge={scope === "all"}
-                />
-            ) : showHero ? (
-                // ── Hero empty state (Playground draft) ──────────────────────
-                // Centered greeting + composer + quick-start chips. Replaced by
-                // the normal thread view the moment the user sends.
-                <ScrollView
-                    style={styles.fill}
-                    contentContainerStyle={styles.heroScroll}
-                    keyboardShouldPersistTaps="handled"
-                    showsVerticalScrollIndicator={false}
-                >
-                    <View style={styles.heroInner}>
-                        <View style={styles.heroIcon}>
-                            <FontAwesomeIcon icon={faWandMagicSparkles} size={24} color={colors.onPrimary} />
-                        </View>
-                        <Text style={styles.heroTitle}>{heroTitle}</Text>
-                        {!!welcomeText && <Text style={styles.heroSubtitle}>{welcomeText}</Text>}
-                        <View style={styles.heroComposer}>{composerStack}</View>
-                        {heroSuggestionList.length > 0 && (
-                            <View style={styles.heroChips}>
-                                {heroSuggestionList.map((s) => (
-                                    <Pressable
-                                        key={s}
-                                        onPress={() => setInput(s)}
-                                        style={({ pressed }) => [styles.heroChip, pressed && styles.heroChipPressed]}
-                                        accessibilityRole="button"
-                                        accessibilityLabel={s}
-                                    >
-                                        <Text style={styles.heroChipText} numberOfLines={1}>{s}</Text>
-                                    </Pressable>
-                                ))}
-                            </View>
+            <KeyboardAvoidingView
+                style={styles.fill}
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                keyboardVerticalOffset={kbVerticalOffset}
+            >
+                {/* ── Header — capped at 3 elements (per design critique) ───── */}
+                {!hideHeader && (
+                    <View style={styles.panelHeader}>
+                        {onCollapse && (
+                            <Pressable
+                                onPress={onCollapse}
+                                style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+                                accessibilityRole="button"
+                                accessibilityLabel="Collapse panel"
+                                hitSlop={6}
+                            >
+                                <FontAwesomeIcon icon={faChevronRight} size={11} color={colors.textSecondary} />
+                            </Pressable>
+                        )}
+                        <Text style={styles.panelHeaderLabel} numberOfLines={1}>
+                            {headerLabel}
+                        </Text>
+                        {effectiveViewMode === "chat" ? (
+                            <>
+                                <Pressable
+                                    onPress={onToggleHistory}
+                                    style={({ pressed }) => [
+                                        styles.iconBtn,
+                                        (pressed || historyActive) && styles.iconBtnPressed,
+                                    ]}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Open past conversations"
+                                    hitSlop={6}
+                                >
+                                    <FontAwesomeIcon icon={faClockRotateLeft} size={14} color={colors.text} />
+                                </Pressable>
+                                <Pressable
+                                    onPress={onNewChat}
+                                    style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Start a new chat"
+                                    hitSlop={6}
+                                >
+                                    <FontAwesomeIcon icon={faPenToSquare} size={14} color={colors.text} />
+                                </Pressable>
+                            </>
+                        ) : (
+                            <Pressable
+                                onPress={() => setViewMode("chat")}
+                                style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+                                accessibilityRole="button"
+                                accessibilityLabel="Back to chat"
+                                hitSlop={6}
+                            >
+                                <FontAwesomeIcon icon={faChevronLeft} size={12} color={colors.text} />
+                            </Pressable>
                         )}
                     </View>
-                </ScrollView>
-            ) : (
-                // ── Chat view ────────────────────────────────────────────────
-                <>
-                    {busy ? (
-                        <View style={styles.initLoader}>
-                            <ActivityIndicator color={colors.primary} />
-                            <Text style={styles.initText}>Setting up your conversation…</Text>
-                        </View>
-                    ) : (
-                        <FlatList
-                            ref={listRef}
-                            data={renderedMessages}
-                            inverted={isInverted}
-                            keyExtractor={(item) => item.id}
-                            renderItem={renderMessage}
-                            contentContainerStyle={[styles.messageList, splitMode && styles.centered]}
-                            showsVerticalScrollIndicator={false}
-                            // Inverted: visual "scroll up" = approaching the end of
-                            // the data, so pagination hangs off onEndReached. The
-                            // wizard (non-inverted) keeps its top-of-list trigger.
-                            onEndReached={isInverted && hasMore ? loadOlder : undefined}
-                            onEndReachedThreshold={0.2}
-                            onStartReached={!isInverted && hasMore ? loadOlder : undefined}
-                            onStartReachedThreshold={0.2}
-                        />
-                    )}
-
-                    {!busy && isAITyping && (
-                        <View style={[styles.typingRow, splitMode && styles.centered]}>
-                            <View style={styles.avatarContainer}>
-                                <FontAwesomeIcon icon={faRobot} size={14} color={colors.onPrimary} />
-                            </View>
-                            <View style={styles.typingBubble}>
-                                <Text style={styles.typingText}>Thinking…</Text>
-                            </View>
-                        </View>
-                    )}
-
-                    {/* Tokens are already flowing into the streaming bubble; this
-                        slim row makes it obvious the AI hasn't stalled mid-reply. */}
-                    {!busy && isStreaming && !!streamingContent && (
-                        <View style={[styles.streamingStatus, splitMode && styles.centered]}>
-                            <ActivityIndicator size="small" color={colors.primary} />
-                            <Text style={styles.streamingStatusText}>Generating…</Text>
-                        </View>
-                    )}
-
-                    {!readOnly && focusItems.length > 0 && (
-                        <ScrollView
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            style={[styles.focusBar, splitMode && styles.centered]}
-                            contentContainerStyle={styles.focusBarContent}
-                        >
-                            {focusItems.map((item) => (
-                                <View key={item.id} style={styles.focusChip}>
-                                    <View style={styles.focusChipAccent} />
-                                    <Text style={styles.focusChipText} numberOfLines={1}>
-                                        {item.label}
-                                    </Text>
-                                    {onRemoveFocusItem && (
-                                        <Pressable
-                                            onPress={() => onRemoveFocusItem(item.id)}
-                                            style={styles.focusChipClose}
-                                        >
-                                            <FontAwesomeIcon icon={faXmark} size={10} color={colors.textSecondary} />
-                                        </Pressable>
-                                    )}
-                                </View>
-                            ))}
-                        </ScrollView>
-                    )}
-
-                    {readOnly ? (
-                        // Finalized strategy: history stays readable, but there's
-                        // no composer — new turns would change a locked strategy.
-                        <View style={[styles.readOnlyFooter, splitMode && styles.centered]}>
-                            <FontAwesomeIcon icon={faLock} size={12} color={colors.textSecondary} />
-                            <Text style={styles.readOnlyFooterText} numberOfLines={2}>
-                                Chat is read-only — this strategy is finalized. Duplicate it to keep chatting.
-                            </Text>
-                        </View>
-                    ) : tokensExhausted ? (
-                        // Out of monthly AI tokens — keep the user in context with an
-                        // inline Upgrade / Add top-up block instead of redirecting.
-                        <View style={splitMode ? styles.centered : undefined}>
-                            <TokenMeterBlock tokens={tokens} safeBottom={safeBottom} />
-                        </View>
-                    ) : (
-                        composerStack
-                    )}
-                </>
-            )}
-        </KeyboardAvoidingView>
-
-        {/* Full-screen image preview */}
-        <Modal visible={!!lightboxUrl} transparent animationType="fade" onRequestClose={() => setLightboxUrl(null)}>
-            <Pressable style={styles.lightboxBackdrop} onPress={() => setLightboxUrl(null)}>
-                {lightboxUrl && (
-                    <Image source={{ uri: lightboxUrl }} style={styles.lightboxImage} resizeMode="contain" />
                 )}
-                <View style={styles.lightboxClose}>
-                    <FontAwesomeIcon icon={faXmark} size={18} color={colors.onPrimary} />
-                </View>
-            </Pressable>
-        </Modal>
+
+                {effectiveViewMode === "history" ? (
+                    <AIChatHistory
+                        threads={threads}
+                        activeThreadId={activeThreadId}
+                        onPickThread={onPickThread}
+                        onNewChat={onNewChat}
+                        onRenameThread={renameThread}
+                        onDeleteThread={deleteThread}
+                        showModuleBadge={scope === "all"}
+                    />
+                ) : showHero ? (
+                    // ── Hero empty state (Playground draft) ──────────────────────
+                    // Centered greeting + composer + quick-start chips. Replaced by
+                    // the normal thread view the moment the user sends.
+                    <ScrollView
+                        style={styles.fill}
+                        contentContainerStyle={styles.heroScroll}
+                        keyboardShouldPersistTaps="handled"
+                        showsVerticalScrollIndicator={false}
+                    >
+                        <View style={styles.heroInner}>
+                            {/* <View style={styles.heroIcon}>
+                                <FontAwesomeIcon icon={faWandMagicSparkles} size={24} color={colors.onPrimary} />
+                            </View> */}
+                            <Text style={styles.heroTitle}>{resolvedHeroTitle}</Text>
+                            {!!resolvedHeroDescription && (
+                                <Text style={styles.heroSubtitle}>{resolvedHeroDescription}</Text>
+                            )}
+                            <View style={styles.heroComposer}>{composerStack}</View>
+                            {heroSuggestionList.length > 0 && (
+                                <View style={styles.heroChips}>
+                                    {heroSuggestionList.map((s) => (
+                                        <Pressable
+                                            key={s}
+                                            onPress={() => setInput(s)}
+                                            style={({ pressed }) => [styles.heroChip, pressed && styles.heroChipPressed]}
+                                            accessibilityRole="button"
+                                            accessibilityLabel={s}
+                                        >
+                                            <Text style={styles.heroChipText} numberOfLines={1}>{s}</Text>
+                                        </Pressable>
+                                    ))}
+                                </View>
+                            )}
+                        </View>
+                    </ScrollView>
+                ) : (
+                    // ── Chat view ────────────────────────────────────────────────
+                    <>
+                        {busy ? (
+                            <View style={styles.initLoader}>
+                                <ActivityIndicator color={colors.primary} />
+                                <Text style={styles.initText}>Setting up your conversation…</Text>
+                            </View>
+                        ) : (
+                            <FlatList
+                                ref={listRef}
+                                data={renderedMessages}
+                                inverted={isInverted}
+                                keyExtractor={(item) => item.id}
+                                renderItem={renderMessage}
+                                contentContainerStyle={[styles.messageList, splitMode && styles.centered]}
+                                showsVerticalScrollIndicator={false}
+                                // Inverted: visual "scroll up" = approaching the end of
+                                // the data, so pagination hangs off onEndReached. The
+                                // wizard (non-inverted) keeps its top-of-list trigger.
+                                onEndReached={isInverted && hasMore ? loadOlder : undefined}
+                                onEndReachedThreshold={0.2}
+                                onStartReached={!isInverted && hasMore ? loadOlder : undefined}
+                                onStartReachedThreshold={0.2}
+                            />
+                        )}
+
+                        {!busy && isAITyping && (
+                            <View style={[styles.typingRow, splitMode && styles.centered]}>
+                                <View style={styles.avatarContainer}>
+                                    <FontAwesomeIcon icon={faRobot} size={14} color={colors.onPrimary} />
+                                </View>
+                                <View style={styles.typingBubble}>
+                                    <Text style={styles.typingText}>Thinking…</Text>
+                                </View>
+                            </View>
+                        )}
+
+                        {/* Tokens are already flowing into the streaming bubble; this
+                        slim row makes it obvious the AI hasn't stalled mid-reply. */}
+                        {!busy && isStreaming && !!streamingContent && (
+                            <View style={[styles.streamingStatus, splitMode && styles.centered]}>
+                                <ActivityIndicator size="small" color={colors.primary} />
+                                <Text style={styles.streamingStatusText}>Generating…</Text>
+                            </View>
+                        )}
+
+                        {!readOnly && focusItems.length > 0 && (
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                style={[styles.focusBar, splitMode && styles.centered]}
+                                contentContainerStyle={styles.focusBarContent}
+                            >
+                                {focusItems.map((item) => (
+                                    <View key={item.id} style={styles.focusChip}>
+                                        <View style={styles.focusChipAccent} />
+                                        <Text style={styles.focusChipText} numberOfLines={1}>
+                                            {item.label}
+                                        </Text>
+                                        {onRemoveFocusItem && (
+                                            <Pressable
+                                                onPress={() => onRemoveFocusItem(item.id)}
+                                                style={styles.focusChipClose}
+                                            >
+                                                <FontAwesomeIcon icon={faXmark} size={10} color={colors.textSecondary} />
+                                            </Pressable>
+                                        )}
+                                    </View>
+                                ))}
+                            </ScrollView>
+                        )}
+
+                        {readOnly ? (
+                            // Finalized strategy: history stays readable, but there's
+                            // no composer — new turns would change a locked strategy.
+                            <View style={[styles.readOnlyFooter, splitMode && styles.centered]}>
+                                <FontAwesomeIcon icon={faLock} size={12} color={colors.textSecondary} />
+                                <Text style={styles.readOnlyFooterText} numberOfLines={2}>
+                                    Chat is read-only — this strategy is finalized. Duplicate it to keep chatting.
+                                </Text>
+                            </View>
+                        ) : tokensExhausted ? (
+                            // Out of monthly AI tokens — keep the user in context with an
+                            // inline Upgrade / Add top-up block instead of redirecting.
+                            <View style={splitMode ? styles.centered : undefined}>
+                                <TokenMeterBlock tokens={tokens} safeBottom={safeBottom} />
+                            </View>
+                        ) : (
+                            composerStack
+                        )}
+                    </>
+                )}
+            </KeyboardAvoidingView>
+
+            {/* Full-screen image preview */}
+            <Modal visible={!!lightboxUrl} transparent animationType="fade" onRequestClose={() => setLightboxUrl(null)}>
+                <Pressable style={styles.lightboxBackdrop} onPress={() => setLightboxUrl(null)}>
+                    {lightboxUrl && (
+                        <Image source={{ uri: lightboxUrl }} style={styles.lightboxImage} resizeMode="contain" />
+                    )}
+                    <View style={styles.lightboxClose}>
+                        <FontAwesomeIcon icon={faXmark} size={18} color={colors.onPrimary} />
+                    </View>
+                </Pressable>
+            </Modal>
         </View>
     );
 };

@@ -1,3 +1,4 @@
+import { StrategyStatus } from "@/shared-libs/firestore/trendly-pro/models/strategies";
 import Colors from "@/shared-uis/constants/Colors";
 import { formatTimeToNow } from "@/utils/date";
 import { faArrowUp, faPenToSquare } from "@fortawesome/free-solid-svg-icons";
@@ -15,7 +16,6 @@ import {
     TouchableWithoutFeedback,
     View,
 } from "react-native";
-import { StrategyStatus } from "@/shared-libs/firestore/trendly-pro/models/strategies";
 import StrategyActionsMenu from "./StrategyActionsMenu";
 import { ContentStrategy, ReviewStatus } from "./types";
 
@@ -107,119 +107,120 @@ const EmptyPromptView: React.FC<EmptyPromptViewProps> = ({
                 disabled={Platform.OS === "web"}
             >
                 <View style={styles.container}>
-            <View style={styles.hero}>
-                <Text style={styles.heading}>What&apos;s your content strategy goal?</Text>
-                <Text style={styles.subheading}>
-                    Describe your campaign idea and I&apos;ll build a strategy tailored to your brand.
-                </Text>
-            </View>
-
-            {!hasResume && (
-                <View style={styles.suggestionsRow}>
-                    {SUGGESTIONS.map((s) => (
-                        <Pressable
-                            key={s}
-                            style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
-                            onPress={() => handleSuggestion(s)}
-                        >
-                            <Text style={styles.chipText}>{s}</Text>
-                        </Pressable>
-                    ))}
-                </View>
-            )}
-
-            <View style={styles.inputContainer}>
-                <TextInput
-                    style={[styles.input, { outline: "none" } as any]}
-                    placeholder="Describe your brand and what you want to achieve…"
-                    placeholderTextColor={colors.textSecondary}
-                    value={prompt}
-                    onChangeText={setPrompt}
-                    multiline
-                    // Native: the return key submits instead of inserting a
-                    // newline (multiline is kept only so long text wraps).
-                    submitBehavior="submit"
-                    onSubmitEditing={handleSubmit}
-                    onKeyPress={(e: any) => {
-                        // Web: Enter sends, Shift+Enter inserts a newline.
-                        if (
-                            Platform.OS === "web" &&
-                            e?.nativeEvent?.key === "Enter" &&
-                            !e?.nativeEvent?.shiftKey
-                        ) {
-                            e.preventDefault?.();
-                            handleSubmit();
-                        }
-                    }}
-                />
-                <Pressable
-                    style={({ pressed }) => [
-                        styles.sendBtn,
-                        pressed && styles.sendBtnPressed,
-                        !prompt.trim() && styles.sendBtnDisabled,
-                    ]}
-                    onPress={handleSubmit}
-                    disabled={!prompt.trim()}
-                >
-                    <FontAwesomeIcon icon={faArrowUp} size={16} color={colors.onPrimary} />
-                </Pressable>
-            </View>
-
-            {hasResume && (
-                <View style={styles.resumeSection}>
-                    <Text style={styles.resumeLabel}>PICK UP WHERE YOU LEFT OFF</Text>
-                    <View style={styles.resumeList}>
-                        {resumeStrategies.map((s) => {
-                            const pill = pillFor(s);
-                            const editedAt = s.lastEditedAt
-                                ? formatTimeToNow(new Date(s.lastEditedAt))
-                                : s.createdAt;
-                            return (
-                                <Pressable
-                                    key={s.id}
-                                    style={({ pressed }) => [
-                                        styles.resumeItem,
-                                        pressed && styles.resumeItemPressed,
-                                    ]}
-                                    onPress={() => onSelectStrategy?.(s)}
-                                >
-                                    <View style={styles.resumeIcon}>
-                                        <FontAwesomeIcon
-                                            icon={faPenToSquare}
-                                            size={14}
-                                            color={colors.primary}
-                                        />
-                                    </View>
-                                    <View style={styles.resumeInfo}>
-                                        <Text style={styles.resumeTitle} numberOfLines={1}>
-                                            {s.title}
-                                        </Text>
-                                        <View style={styles.resumeMetaRow}>
-                                            <Text style={styles.resumeDate} numberOfLines={1}>
-                                                {editedAt}
-                                            </Text>
-                                            <View
-                                                style={[styles.statusPill, { backgroundColor: pill.bg }]}
-                                            >
-                                                <Text style={[styles.statusPillText, { color: pill.text }]}>
-                                                    {pill.label}
-                                                </Text>
-                                            </View>
-                                        </View>
-                                    </View>
-                                    {onDuplicateStrategy && onDeleteStrategy ? (
-                                        <StrategyActionsMenu
-                                            onDuplicate={() => onDuplicateStrategy(s)}
-                                            onDelete={() => onDeleteStrategy(s)}
-                                            onShare={onShareStrategy ? () => onShareStrategy(s) : undefined}
-                                        />
-                                    ) : null}
-                                </Pressable>
-                            );
-                        })}
+                    <View style={styles.hero}>
+                        <Text style={styles.heading}>What&apos;s your content strategy goal?</Text>
+                        <Text style={styles.subheading}>
+                            Describe your campaign idea and I&apos;ll build a strategy tailored to your brand.
+                        </Text>
                     </View>
-                </View>
-            )}
+
+
+                    <View style={styles.inputContainer}>
+                        <TextInput
+                            style={[styles.input, { outline: "none" } as any]}
+                            placeholder="Describe your brand and what you want to achieve…"
+                            placeholderTextColor={colors.textSecondary}
+                            value={prompt}
+                            onChangeText={setPrompt}
+                            multiline
+                            // Native: the return key submits instead of inserting a
+                            // newline (multiline is kept only so long text wraps).
+                            submitBehavior="submit"
+                            onSubmitEditing={handleSubmit}
+                            onKeyPress={(e: any) => {
+                                // Web: Enter sends, Shift+Enter inserts a newline.
+                                if (
+                                    Platform.OS === "web" &&
+                                    e?.nativeEvent?.key === "Enter" &&
+                                    !e?.nativeEvent?.shiftKey
+                                ) {
+                                    e.preventDefault?.();
+                                    handleSubmit();
+                                }
+                            }}
+                        />
+                        <Pressable
+                            style={({ pressed }) => [
+                                styles.sendBtn,
+                                pressed && styles.sendBtnPressed,
+                                !prompt.trim() && styles.sendBtnDisabled,
+                            ]}
+                            onPress={handleSubmit}
+                            disabled={!prompt.trim()}
+                        >
+                            <FontAwesomeIcon icon={faArrowUp} size={16} color={colors.onPrimary} />
+                        </Pressable>
+                    </View>
+
+                    {!hasResume && (
+                        <View style={styles.suggestionsRow}>
+                            {SUGGESTIONS.map((s) => (
+                                <Pressable
+                                    key={s}
+                                    style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
+                                    onPress={() => handleSuggestion(s)}
+                                >
+                                    <Text style={styles.chipText}>{s}</Text>
+                                </Pressable>
+                            ))}
+                        </View>
+                    )}
+
+                    {hasResume && (
+                        <View style={styles.resumeSection}>
+                            <Text style={styles.resumeLabel}>PICK UP WHERE YOU LEFT OFF</Text>
+                            <View style={styles.resumeList}>
+                                {resumeStrategies.map((s) => {
+                                    const pill = pillFor(s);
+                                    const editedAt = s.lastEditedAt
+                                        ? formatTimeToNow(new Date(s.lastEditedAt))
+                                        : s.createdAt;
+                                    return (
+                                        <Pressable
+                                            key={s.id}
+                                            style={({ pressed }) => [
+                                                styles.resumeItem,
+                                                pressed && styles.resumeItemPressed,
+                                            ]}
+                                            onPress={() => onSelectStrategy?.(s)}
+                                        >
+                                            <View style={styles.resumeIcon}>
+                                                <FontAwesomeIcon
+                                                    icon={faPenToSquare}
+                                                    size={14}
+                                                    color={colors.primary}
+                                                />
+                                            </View>
+                                            <View style={styles.resumeInfo}>
+                                                <Text style={styles.resumeTitle} numberOfLines={1}>
+                                                    {s.title}
+                                                </Text>
+                                                <View style={styles.resumeMetaRow}>
+                                                    <Text style={styles.resumeDate} numberOfLines={1}>
+                                                        {editedAt}
+                                                    </Text>
+                                                    <View
+                                                        style={[styles.statusPill, { backgroundColor: pill.bg }]}
+                                                    >
+                                                        <Text style={[styles.statusPillText, { color: pill.text }]}>
+                                                            {pill.label}
+                                                        </Text>
+                                                    </View>
+                                                </View>
+                                            </View>
+                                            {onDuplicateStrategy && onDeleteStrategy ? (
+                                                <StrategyActionsMenu
+                                                    onDuplicate={() => onDuplicateStrategy(s)}
+                                                    onDelete={() => onDeleteStrategy(s)}
+                                                    onShare={onShareStrategy ? () => onShareStrategy(s) : undefined}
+                                                />
+                                            ) : null}
+                                        </Pressable>
+                                    );
+                                })}
+                            </View>
+                        </View>
+                    )}
                 </View>
             </TouchableWithoutFeedback>
         </KeyboardAvoidingView>

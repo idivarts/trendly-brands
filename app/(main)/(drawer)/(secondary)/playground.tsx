@@ -9,9 +9,6 @@ import { useTheme } from "@react-navigation/native";
 import React, { useCallback, useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
-const WELCOME =
-    "Start a new chat, or reopen any conversation from your strategies, calendar and content.";
-
 /**
  * AI Playground — a single hub that lists every AI conversation across all
  * modules (strategy, calendar, content, onboarding, general) and lets the user
@@ -79,7 +76,8 @@ const PlaygroundScreen = () => {
                     scope="all"
                     layout="split"
                     title="Playground"
-                    welcomeText={WELCOME}
+                    // Hero copy (heading/description/templates) comes from
+                    // constants/AIChatStarters.ts → "general".
                     // The panel's actions live in this screen's PageHeader instead.
                     hideHeader
                     onControlsChange={handleControlsChange}
