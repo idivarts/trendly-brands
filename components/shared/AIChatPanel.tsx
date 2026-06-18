@@ -41,6 +41,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAWSContext } from "@/shared-libs/contexts/aws-context.provider";
 import { pickMedia } from "@/shared-libs/utils/media-picker";
 
+// Readable column width for the conversation in the wide (split) layout — the
+// chat doesn't stretch full-bleed; messages + composer sit in a centered column.
+const CHAT_MAX_WIDTH = 760;
+
 // ─── Public types (kept for backward compatibility with existing screens) ─────
 
 export interface ChatMessage {
@@ -261,7 +265,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         loadOlder,
         sendMessage,
         loadThread,
-        createThread,
+        startNewChat,
         renameThread,
         deleteThread,
         refreshThreads,
@@ -269,7 +273,10 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         module,
         contextId,
         scope,
-        autoOpenLatest: !initialMessage,
+        // Playground (scope "all") opens to a blank placeholder chat — it does
+        // NOT resume the most recent conversation. The user opens past chats
+        // explicitly from the history pane.
+        autoOpenLatest: !initialMessage && scope !== "all",
         onOnboardingComplete,
     });
 
@@ -289,10 +296,19 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
 
     // Two-pane (Claude-style) layout only on desktop. On mobile (!xl) we fall
     // back to the single-column panel where the list lives behind the header
-    // toggle. In split mode the persistent LEFT pane owns history, so the right
-    // pane is always the chat view.
+    // toggle. In split mode the right pane is always the chat; the LEFT history
+    // pane is a closable column toggled by the header clock icon (closed by
+    // default, so the panel opens to the empty placeholder chat).
     const splitMode = layout === "split" && xl;
     const effectiveViewMode = splitMode ? "chat" : viewMode;
+    const [historyOpen, setHistoryOpen] = useState(false);
+
+    // Header clock icon: in split mode it opens/closes the left list; in the
+    // single-column panel it swaps the whole view to the history list.
+    const onToggleHistory = useCallback(() => {
+        if (splitMode) setHistoryOpen((v) => !v);
+        else setViewMode("history");
+    }, [splitMode]);
 
     // Chat-pane header label. In the Playground (scope "all") the list mixes
     // many conversations, so the header names the ACTIVE one rather than the
@@ -466,11 +482,16 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     const onPickThread = (id: string) => {
         loadThread(id);
         setViewMode("chat");
+        setHistoryOpen(false);
     };
 
-    const onNewChat = async () => {
-        await createThread();
+    // "New chat" starts a blank draft — no conversation is persisted until the
+    // user sends their first message (sendMessage creates it lazily). Until then
+    // the panel shows the empty/welcome state.
+    const onNewChat = () => {
+        startNewChat();
         setViewMode("chat");
+        setHistoryOpen(false);
     };
 
     // Send a control's answer back through the normal chat path as a user turn.
@@ -542,11 +563,21 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
             style={[styles.container, splitMode && styles.containerSplit]}
             onLayout={measureKbOffset}
         >
-        {/* Persistent conversation list (desktop split layout only). */}
-        {splitMode && (
+        {/* Closable conversation list (desktop split layout only). Hidden by
+            default; toggled open by the header clock icon. */}
+        {splitMode && historyOpen && (
             <View style={styles.historyPane}>
                 <View style={styles.historyPaneHeader}>
                     <Text style={styles.historyPaneTitle} numberOfLines={1}>Conversations</Text>
+                    <Pressable
+                        onPress={() => setHistoryOpen(false)}
+                        style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Close conversations"
+                        hitSlop={6}
+                    >
+                        <FontAwesomeIcon icon={faXmark} size={14} color={colors.textSecondary} />
+                    </Pressable>
                 </View>
                 <AIChatHistory
                     threads={threads}
@@ -583,19 +614,18 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                 </Text>
                 {effectiveViewMode === "chat" ? (
                     <>
-                        {/* In split mode the list is always visible on the left,
-                            so the history toggle is redundant. */}
-                        {!splitMode && (
-                            <Pressable
-                                onPress={() => setViewMode("history")}
-                                style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
-                                accessibilityRole="button"
-                                accessibilityLabel="Open past conversations"
-                                hitSlop={6}
-                            >
-                                <FontAwesomeIcon icon={faClockRotateLeft} size={14} color={colors.text} />
-                            </Pressable>
-                        )}
+                        <Pressable
+                            onPress={onToggleHistory}
+                            style={({ pressed }) => [
+                                styles.iconBtn,
+                                (pressed || (splitMode && historyOpen)) && styles.iconBtnPressed,
+                            ]}
+                            accessibilityRole="button"
+                            accessibilityLabel="Open past conversations"
+                            hitSlop={6}
+                        >
+                            <FontAwesomeIcon icon={faClockRotateLeft} size={14} color={colors.text} />
+                        </Pressable>
                         <Pressable
                             onPress={onNewChat}
                             style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
@@ -645,7 +675,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                             inverted={isInverted}
                             keyExtractor={(item) => item.id}
                             renderItem={renderMessage}
-                            contentContainerStyle={styles.messageList}
+                            contentContainerStyle={[styles.messageList, splitMode && styles.centered]}
                             showsVerticalScrollIndicator={false}
                             // Inverted: visual "scroll up" = approaching the end of
                             // the data, so pagination hangs off onEndReached. The
@@ -658,7 +688,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                     )}
 
                     {!busy && isAITyping && (
-                        <View style={styles.typingRow}>
+                        <View style={[styles.typingRow, splitMode && styles.centered]}>
                             <View style={styles.avatarContainer}>
                                 <FontAwesomeIcon icon={faRobot} size={14} color={colors.onPrimary} />
                             </View>
@@ -671,7 +701,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                     {/* Tokens are already flowing into the streaming bubble; this
                         slim row makes it obvious the AI hasn't stalled mid-reply. */}
                     {!busy && isStreaming && !!streamingContent && (
-                        <View style={styles.streamingStatus}>
+                        <View style={[styles.streamingStatus, splitMode && styles.centered]}>
                             <ActivityIndicator size="small" color={colors.primary} />
                             <Text style={styles.streamingStatusText}>Generating…</Text>
                         </View>
@@ -681,7 +711,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                         <ScrollView
                             horizontal
                             showsHorizontalScrollIndicator={false}
-                            style={styles.focusBar}
+                            style={[styles.focusBar, splitMode && styles.centered]}
                             contentContainerStyle={styles.focusBarContent}
                         >
                             {focusItems.map((item) => (
@@ -706,7 +736,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                     {readOnly ? (
                         // Finalized strategy: history stays readable, but there's
                         // no composer — new turns would change a locked strategy.
-                        <View style={styles.readOnlyFooter}>
+                        <View style={[styles.readOnlyFooter, splitMode && styles.centered]}>
                             <FontAwesomeIcon icon={faLock} size={12} color={colors.textSecondary} />
                             <Text style={styles.readOnlyFooterText} numberOfLines={2}>
                                 Chat is read-only — this strategy is finalized. Duplicate it to keep chatting.
@@ -715,18 +745,22 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                     ) : tokensExhausted ? (
                         // Out of monthly AI tokens — keep the user in context with an
                         // inline Upgrade / Add top-up block instead of redirecting.
-                        <TokenMeterBlock tokens={tokens} safeBottom={safeBottom} />
+                        <View style={splitMode ? styles.centered : undefined}>
+                            <TokenMeterBlock tokens={tokens} safeBottom={safeBottom} />
+                        </View>
                     ) : (
                         <>
                             {/* Low / critical token warning — non-blocking. */}
-                            <TokenMeterNotice tokens={tokens} />
+                            <View style={splitMode ? styles.centered : undefined}>
+                                <TokenMeterNotice tokens={tokens} />
+                            </View>
 
                             {/* Pending image attachments — chips with upload spinner + remove */}
                             {pendingImages.length > 0 && (
                                 <ScrollView
                                     horizontal
                                     showsHorizontalScrollIndicator={false}
-                                    style={styles.attachBar}
+                                    style={[styles.attachBar, splitMode && styles.centered]}
                                     contentContainerStyle={styles.attachBarContent}
                                 >
                                     {pendingImages.map((p) => (
@@ -757,7 +791,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
 
                             {/* Composer — full-width input on top, controls (image, model,
                                 tokens, send) on a roomy row below for easy mobile tapping. */}
-                            <View style={styles.inputArea}>
+                            <View style={[styles.inputArea, splitMode && styles.centered]}>
                                 <View style={styles.composer}>
                                     <TextInput
                                         style={styles.input}
@@ -869,17 +903,25 @@ function useStyles(
                     elevation: 8,
                 },
                 historyPaneHeader: {
-                    paddingHorizontal: 16,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    paddingLeft: 16,
+                    paddingRight: 8,
                     paddingTop: 14,
                     paddingBottom: 6,
                 },
                 historyPaneTitle: {
+                    flex: 1,
                     fontSize: 15,
                     fontWeight: "700",
                     color: colors.text,
                     letterSpacing: -0.2,
                 },
                 fill: { flex: 1 },
+                // Constrains the conversation content (messages + composer) to a
+                // readable centered column when the chat pane is wide (split layout).
+                centered: { width: "100%", maxWidth: CHAT_MAX_WIDTH, alignSelf: "center" },
                 panelHeader: {
                     flexDirection: "row",
                     alignItems: "center",

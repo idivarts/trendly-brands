@@ -304,6 +304,25 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
         return null;
     }, [brandId, module, contextId]);
 
+    // Start a blank draft conversation: no Firestore doc is created yet. The
+    // panel shows the empty/welcome state until the user sends their first
+    // message, at which point sendMessage lazily creates the real conversation
+    // (see the `if (!convId)` branch below). autoOpenedRef is pinned true so a
+    // later thread-list snapshot can't auto-open over the draft.
+    const startNewChat = useCallback(() => {
+        autoOpenedRef.current = true;
+        setActiveThreadId(null);
+        setCommitted([]);
+        setPendingUsers([]);
+        setLingerAssistant(null);
+        streamingRef.current = "";
+        pendingControlRef.current = null;
+        setStreamingContent("");
+        setIsStreaming(false);
+        setPageSize(MESSAGE_PAGE_SIZE);
+        setHasMore(false);
+    }, []);
+
     const deleteThread = useCallback(async (conversationId: string) => {
         await HttpWrapper.fetch(`/api/ai/conversations/${conversationId}`, { method: "DELETE" });
         if (activeThreadId === conversationId) {
@@ -464,6 +483,7 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
         hasMore,
         loadOlder,
         createThread,
+        startNewChat,
         loadThread,
         deleteThread,
         renameThread,
