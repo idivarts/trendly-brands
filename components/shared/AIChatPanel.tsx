@@ -17,6 +17,7 @@ import {
     faPaperPlane,
     faPenToSquare,
     faRobot,
+    faWandMagicSparkles,
     faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -68,6 +69,20 @@ export interface FocusItem {
     contextText?: string;
 }
 
+/**
+ * The panel's two header actions, lifted out so a host (e.g. the Playground
+ * page) can render them in its own PageHeader instead of the panel's header.
+ * Emitted via `onControlsChange`; pair with `hideHeader` to avoid duplicates.
+ */
+export interface AIChatControls {
+    /** Toggle the conversation history (left pane on desktop, list view on mobile). */
+    toggleHistory: () => void;
+    /** Start a new blank-draft chat. */
+    newChat: () => void;
+    /** Whether the history list is currently showing (for active-state styling). */
+    historyActive: boolean;
+}
+
 interface AIChatPanelProps {
     /** Which AI module backs this panel — drives system prompt + history filter. */
     module: AIModule;
@@ -95,6 +110,24 @@ interface AIChatPanelProps {
 
     /** Header label. Defaults to "AI Content Expert". */
     title?: string;
+
+    /**
+     * Emits the panel's header actions (history toggle + new chat) so a host can
+     * render them elsewhere — e.g. the Playground surfaces them in its PageHeader
+     * and passes `hideHeader` to suppress the panel's own header. Called whenever
+     * the actions or their active state change. Memoize the callback to avoid
+     * re-emits.
+     */
+    onControlsChange?: (controls: AIChatControls) => void;
+
+    /**
+     * Hero (empty-draft) state, shown when `scope="all"` and no conversation is
+     * open yet: a centered branded greeting + composer + quick-start chips
+     * instead of a bottom-pinned welcome bubble. `heroTitle` is the big greeting;
+     * `heroSuggestions` prefill the composer when tapped.
+     */
+    heroTitle?: string;
+    heroSuggestions?: string[];
 
     /**
      * If provided, the panel sends this as the first message on mount (or when
@@ -181,6 +214,9 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     scope = "module",
     layout = "panel",
     title = "AI Content Expert",
+    heroTitle = "What can I help you create?",
+    heroSuggestions,
+    onControlsChange,
     initialMessage,
     onInitialMessageSent,
     focusItems = [],
@@ -304,11 +340,14 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     const [historyOpen, setHistoryOpen] = useState(false);
 
     // Header clock icon: in split mode it opens/closes the left list; in the
-    // single-column panel it swaps the whole view to the history list.
+    // single-column panel it toggles the whole view between chat and history
+    // (toggle, not one-way, so a host header has a way back to chat too).
     const onToggleHistory = useCallback(() => {
         if (splitMode) setHistoryOpen((v) => !v);
-        else setViewMode("history");
+        else setViewMode((v) => (v === "history" ? "chat" : "history"));
     }, [splitMode]);
+    // Whether the history list is currently visible (drives active styling).
+    const historyActive = splitMode ? historyOpen : viewMode === "history";
 
     // Chat-pane header label. In the Playground (scope "all") the list mixes
     // many conversations, so the header names the ACTIVE one rather than the
@@ -316,6 +355,16 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     const activeThread = threads.find((t) => t.id === activeThreadId);
     const chatLabel = scope === "all" ? (activeThread?.title?.trim() || "New conversation") : title;
     const headerLabel = effectiveViewMode === "history" ? "Chat history" : chatLabel;
+
+    // Quick-start chips for the hero empty state. The content-oriented defaults
+    // only apply to the Playground (scope "all"); per-module panels show none
+    // unless the host passes its own, so a specific context never suggests an
+    // off-topic prompt.
+    const heroSuggestionList =
+        heroSuggestions ??
+        (scope === "all"
+            ? ["Plan a content calendar", "Write a post caption", "Brainstorm content ideas", "Draft a content strategy"]
+            : []);
 
     // True from the moment a queued initial message is dispatched until its
     // content is on screen. sendMessage creates the thread over HTTP first, so
@@ -356,6 +405,26 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     const initialPending =
         !!initialMessage && !readOnly && sentInitialRef.current !== initialMessage;
     const busy = notReady || initialPending || startingConversation;
+
+    // Centered hero empty state — shown for ANY module (and the Playground) when
+    // there's no conversation yet, instead of a lone welcome bubble. As soon as
+    // the user sends, an optimistic bubble lands / isStreaming flips and the hero
+    // gives way to the normal thread view. Guards:
+    //  - `!busy`: wait for load to settle so a module panel that auto-resumes its
+    //    latest thread doesn't flash the hero first.
+    //  - `!initialMessage`: hosts that auto-send a first message (strategy create
+    //    flow) skip the hero so it isn't shown for a frame before dispatch.
+    //  - `messageAlign === "bottom"`: excludes the onboarding wizard (top-aligned),
+    //    which has its own guided layout.
+    const showHero =
+        !busy &&
+        !initialMessage &&
+        messageAlign === "bottom" &&
+        !activeThreadId &&
+        aiMessages.length === 0 &&
+        !isStreaming &&
+        !readOnly &&
+        !tokensExhausted;
 
     // ── Compose state ────────────────────────────────────────────────────────
     const [input, setInput] = useState("");
@@ -488,11 +557,17 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     // "New chat" starts a blank draft — no conversation is persisted until the
     // user sends their first message (sendMessage creates it lazily). Until then
     // the panel shows the empty/welcome state.
-    const onNewChat = () => {
+    const onNewChat = useCallback(() => {
         startNewChat();
         setViewMode("chat");
         setHistoryOpen(false);
-    };
+    }, [startNewChat]);
+
+    // Surface the two header actions to a host (Playground → PageHeader). Re-emits
+    // only when a handler identity or the active state actually changes.
+    useEffect(() => {
+        onControlsChange?.({ toggleHistory: onToggleHistory, newChat: onNewChat, historyActive });
+    }, [onControlsChange, onToggleHistory, onNewChat, historyActive]);
 
     // Send a control's answer back through the normal chat path as a user turn.
     const handleControlSubmit = (text: string) => {
@@ -557,6 +632,118 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         );
     };
 
+    // Token notice + pending-image chips + composer. Extracted so the same
+    // composer renders both at the bottom of an active thread AND centered in
+    // the hero empty state.
+    const composerStack = (
+        <>
+            {/* Low / critical token warning — non-blocking. */}
+            <View style={splitMode ? styles.centered : undefined}>
+                <TokenMeterNotice tokens={tokens} />
+            </View>
+
+            {/* Pending image attachments — chips with upload spinner + remove */}
+            {pendingImages.length > 0 && (
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={[styles.attachBar, splitMode && styles.centered]}
+                    contentContainerStyle={styles.attachBarContent}
+                >
+                    {pendingImages.map((p) => (
+                        <View key={p.key} style={styles.attachChip}>
+                            <Image source={{ uri: p.uri }} style={styles.attachThumb} resizeMode="cover" />
+                            {p.uploading && (
+                                <View style={styles.attachOverlay}>
+                                    <ActivityIndicator size="small" color={colors.onPrimary} />
+                                </View>
+                            )}
+                            {p.failed && (
+                                <View style={styles.attachOverlay}>
+                                    <Text style={styles.attachFailedText}>!</Text>
+                                </View>
+                            )}
+                            <Pressable
+                                onPress={() => removePendingImage(p.key)}
+                                style={styles.attachRemove}
+                                hitSlop={6}
+                                accessibilityLabel="Remove attachment"
+                            >
+                                <FontAwesomeIcon icon={faXmark} size={9} color={colors.onPrimary} />
+                            </Pressable>
+                        </View>
+                    ))}
+                </ScrollView>
+            )}
+
+            {/* Composer — full-width input on top, controls (image, model,
+                tokens, send) on a roomy row below for easy mobile tapping. */}
+            <View style={[styles.inputArea, splitMode && styles.centered]}>
+                <View style={styles.composer}>
+                    <TextInput
+                        style={styles.input}
+                        placeholder={busy ? "Getting ready…" : placeholder}
+                        placeholderTextColor={colors.textSecondary}
+                        value={input}
+                        onChangeText={setInput}
+                        editable={!busy}
+                        multiline
+                        maxLength={1000}
+                        onKeyPress={(e: any) => {
+                            // Web: Enter sends, Shift+Enter inserts a newline.
+                            // Native multiline behaviour is left untouched.
+                            if (
+                                Platform.OS === "web" &&
+                                e?.nativeEvent?.key === "Enter" &&
+                                !e?.nativeEvent?.shiftKey
+                            ) {
+                                e.preventDefault?.();
+                                handleSend();
+                            }
+                        }}
+                    />
+                    <View style={styles.composerControls}>
+                        <Pressable
+                            style={({ pressed }) => [
+                                styles.attachBtn,
+                                pressed && styles.attachBtnPressed,
+                                busy && styles.sendBtnDisabled,
+                            ]}
+                            onPress={handleAttach}
+                            disabled={busy}
+                            hitSlop={8}
+                            accessibilityLabel="Attach image"
+                        >
+                            <FontAwesomeIcon icon={faImage} size={18} color={colors.primary} />
+                        </Pressable>
+                        <View style={styles.modelStripGrow}>
+                            <AIModelSelector
+                                models={models}
+                                selectedModel={selectedModel}
+                                onSelect={setSelectedModel}
+                                compact
+                            />
+                        </View>
+                        <TokenMeterBar tokens={tokens} />
+                        <Pressable
+                            style={({ pressed }) => [
+                                styles.sendBtn,
+                                pressed && styles.sendBtnPressed,
+                                !canSend && styles.sendBtnDisabled,
+                            ]}
+                            onPress={handleSend}
+                            disabled={!canSend}
+                            hitSlop={8}
+                            accessibilityLabel="Send message"
+                        >
+                            <FontAwesomeIcon icon={faPaperPlane} size={16} color={colors.onPrimary} />
+                        </Pressable>
+                    </View>
+                </View>
+            </View>
+        </>
+    );
+
     return (
         <View
             ref={rootRef}
@@ -618,7 +805,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                             onPress={onToggleHistory}
                             style={({ pressed }) => [
                                 styles.iconBtn,
-                                (pressed || (splitMode && historyOpen)) && styles.iconBtnPressed,
+                                (pressed || historyActive) && styles.iconBtnPressed,
                             ]}
                             accessibilityRole="button"
                             accessibilityLabel="Open past conversations"
@@ -660,6 +847,40 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                     onDeleteThread={deleteThread}
                     showModuleBadge={scope === "all"}
                 />
+            ) : showHero ? (
+                // ── Hero empty state (Playground draft) ──────────────────────
+                // Centered greeting + composer + quick-start chips. Replaced by
+                // the normal thread view the moment the user sends.
+                <ScrollView
+                    style={styles.fill}
+                    contentContainerStyle={styles.heroScroll}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={styles.heroInner}>
+                        <View style={styles.heroIcon}>
+                            <FontAwesomeIcon icon={faWandMagicSparkles} size={24} color={colors.onPrimary} />
+                        </View>
+                        <Text style={styles.heroTitle}>{heroTitle}</Text>
+                        {!!welcomeText && <Text style={styles.heroSubtitle}>{welcomeText}</Text>}
+                        <View style={styles.heroComposer}>{composerStack}</View>
+                        {heroSuggestionList.length > 0 && (
+                            <View style={styles.heroChips}>
+                                {heroSuggestionList.map((s) => (
+                                    <Pressable
+                                        key={s}
+                                        onPress={() => setInput(s)}
+                                        style={({ pressed }) => [styles.heroChip, pressed && styles.heroChipPressed]}
+                                        accessibilityRole="button"
+                                        accessibilityLabel={s}
+                                    >
+                                        <Text style={styles.heroChipText} numberOfLines={1}>{s}</Text>
+                                    </Pressable>
+                                ))}
+                            </View>
+                        )}
+                    </View>
+                </ScrollView>
             ) : (
                 // ── Chat view ────────────────────────────────────────────────
                 <>
@@ -749,112 +970,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                             <TokenMeterBlock tokens={tokens} safeBottom={safeBottom} />
                         </View>
                     ) : (
-                        <>
-                            {/* Low / critical token warning — non-blocking. */}
-                            <View style={splitMode ? styles.centered : undefined}>
-                                <TokenMeterNotice tokens={tokens} />
-                            </View>
-
-                            {/* Pending image attachments — chips with upload spinner + remove */}
-                            {pendingImages.length > 0 && (
-                                <ScrollView
-                                    horizontal
-                                    showsHorizontalScrollIndicator={false}
-                                    style={[styles.attachBar, splitMode && styles.centered]}
-                                    contentContainerStyle={styles.attachBarContent}
-                                >
-                                    {pendingImages.map((p) => (
-                                        <View key={p.key} style={styles.attachChip}>
-                                            <Image source={{ uri: p.uri }} style={styles.attachThumb} resizeMode="cover" />
-                                            {p.uploading && (
-                                                <View style={styles.attachOverlay}>
-                                                    <ActivityIndicator size="small" color={colors.onPrimary} />
-                                                </View>
-                                            )}
-                                            {p.failed && (
-                                                <View style={styles.attachOverlay}>
-                                                    <Text style={styles.attachFailedText}>!</Text>
-                                                </View>
-                                            )}
-                                            <Pressable
-                                                onPress={() => removePendingImage(p.key)}
-                                                style={styles.attachRemove}
-                                                hitSlop={6}
-                                                accessibilityLabel="Remove attachment"
-                                            >
-                                                <FontAwesomeIcon icon={faXmark} size={9} color={colors.onPrimary} />
-                                            </Pressable>
-                                        </View>
-                                    ))}
-                                </ScrollView>
-                            )}
-
-                            {/* Composer — full-width input on top, controls (image, model,
-                                tokens, send) on a roomy row below for easy mobile tapping. */}
-                            <View style={[styles.inputArea, splitMode && styles.centered]}>
-                                <View style={styles.composer}>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder={busy ? "Getting ready…" : placeholder}
-                                        placeholderTextColor={colors.textSecondary}
-                                        value={input}
-                                        onChangeText={setInput}
-                                        editable={!busy}
-                                        multiline
-                                        maxLength={1000}
-                                        onKeyPress={(e: any) => {
-                                            // Web: Enter sends, Shift+Enter inserts a newline.
-                                            // Native multiline behaviour is left untouched.
-                                            if (
-                                                Platform.OS === "web" &&
-                                                e?.nativeEvent?.key === "Enter" &&
-                                                !e?.nativeEvent?.shiftKey
-                                            ) {
-                                                e.preventDefault?.();
-                                                handleSend();
-                                            }
-                                        }}
-                                    />
-                                    <View style={styles.composerControls}>
-                                        <Pressable
-                                            style={({ pressed }) => [
-                                                styles.attachBtn,
-                                                pressed && styles.attachBtnPressed,
-                                                busy && styles.sendBtnDisabled,
-                                            ]}
-                                            onPress={handleAttach}
-                                            disabled={busy}
-                                            hitSlop={8}
-                                            accessibilityLabel="Attach image"
-                                        >
-                                            <FontAwesomeIcon icon={faImage} size={18} color={colors.primary} />
-                                        </Pressable>
-                                        <View style={styles.modelStripGrow}>
-                                            <AIModelSelector
-                                                models={models}
-                                                selectedModel={selectedModel}
-                                                onSelect={setSelectedModel}
-                                                compact
-                                            />
-                                        </View>
-                                        <TokenMeterBar tokens={tokens} />
-                                        <Pressable
-                                            style={({ pressed }) => [
-                                                styles.sendBtn,
-                                                pressed && styles.sendBtnPressed,
-                                                !canSend && styles.sendBtnDisabled,
-                                            ]}
-                                            onPress={handleSend}
-                                            disabled={!canSend}
-                                            hitSlop={8}
-                                            accessibilityLabel="Send message"
-                                        >
-                                            <FontAwesomeIcon icon={faPaperPlane} size={16} color={colors.onPrimary} />
-                                        </Pressable>
-                                    </View>
-                                </View>
-                            </View>
-                        </>
+                        composerStack
                     )}
                 </>
             )}
@@ -922,6 +1038,71 @@ function useStyles(
                 // Constrains the conversation content (messages + composer) to a
                 // readable centered column when the chat pane is wide (split layout).
                 centered: { width: "100%", maxWidth: CHAT_MAX_WIDTH, alignSelf: "center" },
+                // ── Hero empty state ─────────────────────────────────────────
+                heroScroll: {
+                    flexGrow: 1,
+                    justifyContent: "center",
+                    alignItems: "center",
+                    paddingHorizontal: isCompact ? 14 : 20,
+                    paddingVertical: isCompact ? 20 : 32,
+                },
+                heroInner: {
+                    width: "100%",
+                    maxWidth: isCompact ? 440 : 640,
+                    alignItems: "center",
+                    gap: isCompact ? 11 : 14,
+                },
+                heroIcon: {
+                    width: isCompact ? 48 : 56,
+                    height: isCompact ? 48 : 56,
+                    borderRadius: isCompact ? 24 : 28,
+                    backgroundColor: colors.primary,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowRadius: 16,
+                    shadowOpacity: 0.35,
+                    elevation: 6,
+                    marginBottom: 2,
+                },
+                heroTitle: {
+                    fontSize: isCompact ? 20 : 26,
+                    fontWeight: "700",
+                    color: colors.text,
+                    textAlign: "center",
+                    letterSpacing: -0.4,
+                },
+                heroSubtitle: {
+                    fontSize: 14,
+                    lineHeight: 20,
+                    color: colors.textSecondary,
+                    textAlign: "center",
+                    maxWidth: 480,
+                    marginBottom: 6,
+                },
+                // The shared composer renders full-width inside the hero column.
+                heroComposer: { width: "100%" },
+                heroChips: {
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    justifyContent: "center",
+                    gap: 8,
+                    marginTop: 2,
+                },
+                heroChip: {
+                    paddingHorizontal: 14,
+                    paddingVertical: 9,
+                    borderRadius: 20,
+                    backgroundColor: colors.tag,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 3,
+                    shadowOpacity: 0.04,
+                    elevation: 1,
+                },
+                heroChipPressed: { opacity: 0.7 },
+                heroChipText: { fontSize: 13, fontWeight: "500", color: colors.text },
                 panelHeader: {
                     flexDirection: "row",
                     alignItems: "center",
