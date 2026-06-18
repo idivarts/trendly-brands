@@ -71,6 +71,28 @@ interface AIChatPanelProps {
     contextId?: string;
 
     /**
+     * Thread-list scope (forwarded to useAIChat).
+     * - "module" (default): only this module's (+ contextId) conversations.
+     * - "all": every conversation across all modules — the Playground hub. New
+     *   chats still use `module` (Playground passes "general").
+     */
+    scope?: "module" | "all";
+
+    /**
+     * Panel layout.
+     * - "panel" (default): single column; past conversations open via the
+     *   header history toggle. Used by the per-module side panels + onboarding.
+     * - "split": on desktop (xl), a persistent conversation list sits to the
+     *   LEFT of the chat (Claude-style); on mobile (!xl) it falls back to the
+     *   "panel" behaviour so the list→tap→chat flow still works. Used by the
+     *   Playground.
+     */
+    layout?: "panel" | "split";
+
+    /** Header label. Defaults to "AI Content Expert". */
+    title?: string;
+
+    /**
      * If provided, the panel sends this as the first message on mount (or when
      * the message string changes). Used by screens with an empty → chat
      * onboarding step. Parent should clear it after observing send.
@@ -152,6 +174,9 @@ interface AIChatPanelProps {
 const AIChatPanel: React.FC<AIChatPanelProps> = ({
     module,
     contextId,
+    scope = "module",
+    layout = "panel",
+    title = "AI Content Expert",
     initialMessage,
     onInitialMessageSent,
     focusItems = [],
@@ -243,6 +268,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     } = useAIChat({
         module,
         contextId,
+        scope,
         autoOpenLatest: !initialMessage,
         onOnboardingComplete,
     });
@@ -260,6 +286,20 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
 
     // Mode toggle: chat (default) vs history list.
     const [viewMode, setViewMode] = useState<"chat" | "history">("chat");
+
+    // Two-pane (Claude-style) layout only on desktop. On mobile (!xl) we fall
+    // back to the single-column panel where the list lives behind the header
+    // toggle. In split mode the persistent LEFT pane owns history, so the right
+    // pane is always the chat view.
+    const splitMode = layout === "split" && xl;
+    const effectiveViewMode = splitMode ? "chat" : viewMode;
+
+    // Chat-pane header label. In the Playground (scope "all") the list mixes
+    // many conversations, so the header names the ACTIVE one rather than the
+    // panel; per-module panels keep their fixed `title`.
+    const activeThread = threads.find((t) => t.id === activeThreadId);
+    const chatLabel = scope === "all" ? (activeThread?.title?.trim() || "New conversation") : title;
+    const headerLabel = effectiveViewMode === "history" ? "Chat history" : chatLabel;
 
     // True from the moment a queued initial message is dispatched until its
     // content is on screen. sendMessage creates the thread over HTTP first, so
@@ -497,7 +537,28 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     };
 
     return (
-        <View ref={rootRef} style={styles.container} onLayout={measureKbOffset}>
+        <View
+            ref={rootRef}
+            style={[styles.container, splitMode && styles.containerSplit]}
+            onLayout={measureKbOffset}
+        >
+        {/* Persistent conversation list (desktop split layout only). */}
+        {splitMode && (
+            <View style={styles.historyPane}>
+                <View style={styles.historyPaneHeader}>
+                    <Text style={styles.historyPaneTitle} numberOfLines={1}>Conversations</Text>
+                </View>
+                <AIChatHistory
+                    threads={threads}
+                    activeThreadId={activeThreadId}
+                    onPickThread={onPickThread}
+                    onNewChat={onNewChat}
+                    onRenameThread={renameThread}
+                    onDeleteThread={deleteThread}
+                    showModuleBadge={scope === "all"}
+                />
+            </View>
+        )}
         <KeyboardAvoidingView
             style={styles.fill}
             behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -518,19 +579,23 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                     </Pressable>
                 )}
                 <Text style={styles.panelHeaderLabel} numberOfLines={1}>
-                    {viewMode === "history" ? "Chat history" : "AI Content Expert"}
+                    {headerLabel}
                 </Text>
-                {viewMode === "chat" ? (
+                {effectiveViewMode === "chat" ? (
                     <>
-                        <Pressable
-                            onPress={() => setViewMode("history")}
-                            style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
-                            accessibilityRole="button"
-                            accessibilityLabel="Open past conversations"
-                            hitSlop={6}
-                        >
-                            <FontAwesomeIcon icon={faClockRotateLeft} size={14} color={colors.text} />
-                        </Pressable>
+                        {/* In split mode the list is always visible on the left,
+                            so the history toggle is redundant. */}
+                        {!splitMode && (
+                            <Pressable
+                                onPress={() => setViewMode("history")}
+                                style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+                                accessibilityRole="button"
+                                accessibilityLabel="Open past conversations"
+                                hitSlop={6}
+                            >
+                                <FontAwesomeIcon icon={faClockRotateLeft} size={14} color={colors.text} />
+                            </Pressable>
+                        )}
                         <Pressable
                             onPress={onNewChat}
                             style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
@@ -555,7 +620,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
             </View>
             )}
 
-            {viewMode === "history" ? (
+            {effectiveViewMode === "history" ? (
                 <AIChatHistory
                     threads={threads}
                     activeThreadId={activeThreadId}
@@ -563,6 +628,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                     onNewChat={onNewChat}
                     onRenameThread={renameThread}
                     onDeleteThread={deleteThread}
+                    showModuleBadge={scope === "all"}
                 />
             ) : (
                 // ── Chat view ────────────────────────────────────────────────
@@ -788,6 +854,31 @@ function useStyles(
         () =>
             StyleSheet.create({
                 container: { flex: 1, backgroundColor: colors.card },
+                // Desktop two-pane: list column + chat column side by side.
+                containerSplit: { flexDirection: "row" },
+                // Left conversation list. Separated from the chat by a rightward
+                // shadow (panel divider via shadow, not a border — per design rules).
+                historyPane: {
+                    width: 300,
+                    backgroundColor: colors.card,
+                    zIndex: 2,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 6, height: 0 },
+                    shadowRadius: 16,
+                    shadowOpacity: 0.07,
+                    elevation: 8,
+                },
+                historyPaneHeader: {
+                    paddingHorizontal: 16,
+                    paddingTop: 14,
+                    paddingBottom: 6,
+                },
+                historyPaneTitle: {
+                    fontSize: 15,
+                    fontWeight: "700",
+                    color: colors.text,
+                    letterSpacing: -0.2,
+                },
                 fill: { flex: 1 },
                 panelHeader: {
                     flexDirection: "row",

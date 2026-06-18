@@ -26,6 +26,7 @@ import {
     faPlus,
     faShareNodes,
     faUsers,
+    faWandMagicSparkles,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Theme, useTheme } from "@react-navigation/native";
@@ -73,6 +74,12 @@ const BOTTOM_MENU_ITEMS = (
             label: name || "Profile",
         },
     ];
+
+const PLAYGROUND_ITEM = (): Tab => ({
+    href: "/playground",
+    icon: ({ focused }) => <DrawerIcon href="/playground" icon={faWandMagicSparkles} focused={focused} />,
+    label: "Playground",
+});
 
 const CONTENT_MENU_ITEMS = (theme: Theme): Tab[] => [
     {
@@ -401,6 +408,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
     if (isCollapsed) {
         // Gather all visible sections as flat groups for the collapsed view
         const groups: { items: Tab[]; proLockMap?: Record<number, boolean> }[] = [
+            { items: [PLAYGROUND_ITEM()] },
             { items: contentItems },
             { items: manageItems },
             { items: growthItems },
@@ -747,6 +755,13 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                         contentContainerStyle={styles.scrollContent}
                         showsVerticalScrollIndicator={false}
                     >
+                        {/* 0. PLAYGROUND — unified AI hub (sits just below the brand header) */}
+                        <View style={styles.section}>
+                            <View style={styles.menuItems}>
+                                <DrawerMenuItem tab={PLAYGROUND_ITEM()} />
+                            </View>
+                        </View>
+
                         {/* 1. CONTENT CREATION */}
                         {contentItems.length > 0 && (
                             <View style={styles.section}>

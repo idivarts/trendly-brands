@@ -32,7 +32,8 @@ import {
     faStar,
     faTriangleExclamation,
     faUsers,
-    faUserShield
+    faUserShield,
+    faWandMagicSparkles
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme, type Theme } from "@react-navigation/native";
@@ -324,6 +325,12 @@ const Menu = () => {
 
             {/* Quick actions */}
             <View style={styles.quickRow}>
+                <QuickChip
+                    icon={faWandMagicSparkles}
+                    label="Playground"
+                    theme={theme}
+                    onPress={() => navigate("/playground")}
+                />
                 <QuickChip
                     icon={faInbox}
                     label="Inbox"

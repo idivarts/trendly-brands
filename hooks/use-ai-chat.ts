@@ -80,6 +80,17 @@ interface UseAIChatOpts {
     module: AIModule;
     contextId?: string;
     /**
+     * Listing scope for the thread list.
+     * - "module" (default): only conversations for `module` (+ `contextId` when
+     *   given) — the per-module side panels.
+     * - "all": every conversation for this brand + user across ALL modules,
+     *   newest first — the Playground hub. New threads created in this scope
+     *   still use the passed `module` (the Playground passes "general"); opening
+     *   an existing thread from another module just works because the backend
+     *   derives module/contextId from the conversation doc, not the client.
+     */
+    scope?: "module" | "all";
+    /**
      * When true (default), the most recent conversation for this
      * module + contextId is loaded automatically on open. Pass false to
      * start blank — e.g. while an `initialMessage` is queued so it lands in a
@@ -105,7 +116,7 @@ function newClientMsgId(): string {
  * deltas accumulate into a transient streaming bubble that is replaced by the
  * committed Firestore message once the turn finishes (`done`).
  */
-export function useAIChat({ module, contextId, autoOpenLatest = true, onOnboardingComplete }: UseAIChatOpts) {
+export function useAIChat({ module, contextId, scope = "module", autoOpenLatest = true, onOnboardingComplete }: UseAIChatOpts) {
     const { selectedBrand } = useBrandContext();
     const { manager } = useAuthContext();
 
@@ -151,12 +162,18 @@ export function useAIChat({ module, contextId, autoOpenLatest = true, onOnboardi
             return;
         }
         setInitializing(true);
+        // "all" scope (Playground) lists every module's conversations, so it
+        // drops the module/contextId filters and queries on brandId + userId +
+        // updatedAt only (backed by its own composite index). "module" scope
+        // keeps the per-module (+ optional contextId) filter.
         const constraints: any[] = [
             where("brandId", "==", brandId),
             where("userId", "==", userId),
-            where("module", "==", module),
         ];
-        if (contextId) constraints.push(where("contextId", "==", contextId));
+        if (scope !== "all") {
+            constraints.push(where("module", "==", module));
+            if (contextId) constraints.push(where("contextId", "==", contextId));
+        }
         constraints.push(orderBy("updatedAt", "desc"));
         const q = query(collection(FirestoreDB, "ai_conversations"), ...constraints);
 
@@ -174,7 +191,7 @@ export function useAIChat({ module, contextId, autoOpenLatest = true, onOnboardi
             () => setInitializing(false)
         );
         return () => unsub();
-    }, [brandId, userId, module, contextId, autoOpenLatest]);
+    }, [brandId, userId, module, contextId, scope, autoOpenLatest]);
 
     // Reset the active thread + auto-open guard whenever the scope changes
     // (e.g. navigating Strategy A → B) so the new scope opens its own latest.
@@ -186,7 +203,7 @@ export function useAIChat({ module, contextId, autoOpenLatest = true, onOnboardi
         setLingerAssistant(null);
         setPageSize(MESSAGE_PAGE_SIZE);
         setHasMore(false);
-    }, [module, contextId]);
+    }, [module, contextId, scope]);
 
     // ── Message history: live subscription (newest page, paginated) ───────
     // Replaces the old GET /api/ai/conversations/:id. Orders by timestamp desc
