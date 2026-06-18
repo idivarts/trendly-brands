@@ -1193,6 +1193,10 @@ const CreateContentScreen = () => {
                             }
                             isCompact
                             onCollapse={() => setRightPanelMode("none")}
+                            // Tab bar owns the bottom inset (don't double it), but this
+                            // screen's AppLayout does NOT inset the top — so the panel
+                            // must keep its own top inset to clear the status bar.
+                            parentHandlesSafeBottom
                         />
                     }
                     previewSlot={

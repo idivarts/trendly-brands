@@ -12,6 +12,9 @@
  *  - Tapping the trigger expands a stack of labelled mini-FABs, one per
  *    available surface. Tapping a surface sets the mode (opening the sheet)
  *    and collapses the dial. A faint scrim lets the user tap-away to collapse.
+ *  - The trigger is draggable (drag past a small threshold to move it, tap to
+ *    open) so it can be parked away from content it would otherwise overlap.
+ *    The parked position is clamped on-screen and remembered for the session.
  *
  * The parent screen owns `mode` state and passes `onModeChange` — exactly the
  * same contract as RightSidePanel — so the two stay in lockstep.
@@ -36,10 +39,25 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, PanResponder, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { RightPanelMode } from "./RightSidePanel";
+
+const FAB_SIZE = 56;
+const EDGE_MARGIN = 18;
+/** Movement (px) before a press is treated as a drag rather than a tap. */
+const DRAG_THRESHOLD = 6;
+
+const clamp = (value: number, min: number, max: number) =>
+    Math.min(max, Math.max(min, value));
+
+/**
+ * Session-persisted parked offset, shared across remounts so navigating
+ * between screens keeps the dial where the user dragged it. Stored as a
+ * translate relative to the default bottom-right anchor (x≤0 = left, y≤0 = up).
+ */
+let persistedOffset = { x: 0, y: 0 };
 
 export interface RightPanelFabAction {
     /** Which RightSidePanel surface this entry opens. */
@@ -71,7 +89,7 @@ const RightPanelFab: React.FC<RightPanelFabProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const { xl } = useBreakpoints();
+    const { xl, width, height } = useBreakpoints();
     const insets = useSafeAreaInsets();
     const styles = useMemo(
         () => createStyles(colors, insets.bottom + bottomOffset),
@@ -80,6 +98,64 @@ const RightPanelFab: React.FC<RightPanelFabProps> = ({
 
     const [open, setOpen] = useState(false);
     const anim = useRef(new Animated.Value(0)).current;
+
+    // --- Drag state -------------------------------------------------------
+    // The cluster is anchored bottom-right; we translate it from there. The
+    // pan value holds the live translate, mirrored into currentRef so the
+    // PanResponder (created once) can read the latest position synchronously.
+    const pan = useRef(new Animated.ValueXY(persistedOffset)).current;
+    const startRef = useRef({ ...persistedOffset });
+    const currentRef = useRef({ ...persistedOffset });
+    const boundsRef = useRef({ minX: 0, maxX: 0, minY: 0, maxY: 0 });
+
+    // Allowed translate ranges, recomputed each render from the current
+    // viewport so the dial can travel the full screen but never off it. The
+    // bottom anchor already includes the safe-area + tab-bar offset.
+    const anchorBottom = insets.bottom + bottomOffset + EDGE_MARGIN;
+    boundsRef.current = {
+        minX: -Math.max(0, width - FAB_SIZE - EDGE_MARGIN * 2),
+        maxX: 0,
+        minY: -Math.max(0, height - FAB_SIZE - anchorBottom - (insets.top + EDGE_MARGIN)),
+        maxY: 0,
+    };
+
+    // Keep the parked position on-screen when the viewport changes (rotation,
+    // window resize) — a position valid on a tall screen may fall off a short one.
+    useEffect(() => {
+        const b = boundsRef.current;
+        const x = clamp(currentRef.current.x, b.minX, b.maxX);
+        const y = clamp(currentRef.current.y, b.minY, b.maxY);
+        currentRef.current = { x, y };
+        persistedOffset = { x, y };
+        pan.setValue({ x, y });
+    }, [width, height, pan]);
+
+    const panResponder = useRef(
+        PanResponder.create({
+            // Let taps through to the trigger's Pressable; only claim the
+            // gesture once the finger has clearly moved (= a drag).
+            onStartShouldSetPanResponder: () => false,
+            onMoveShouldSetPanResponder: (_e, g) =>
+                Math.abs(g.dx) > DRAG_THRESHOLD || Math.abs(g.dy) > DRAG_THRESHOLD,
+            onPanResponderGrant: () => {
+                setOpen(false);
+                startRef.current = { ...currentRef.current };
+            },
+            onPanResponderMove: (_e, g) => {
+                const b = boundsRef.current;
+                const x = clamp(startRef.current.x + g.dx, b.minX, b.maxX);
+                const y = clamp(startRef.current.y + g.dy, b.minY, b.maxY);
+                currentRef.current = { x, y };
+                pan.setValue({ x, y });
+            },
+            onPanResponderRelease: () => {
+                persistedOffset = { ...currentRef.current };
+            },
+            onPanResponderTerminate: () => {
+                persistedOffset = { ...currentRef.current };
+            },
+        })
+    ).current;
 
     useEffect(() => {
         Animated.timing(anim, {
@@ -133,7 +209,10 @@ const RightPanelFab: React.FC<RightPanelFabProps> = ({
                 />
             )}
 
-            <View style={styles.cluster} pointerEvents="box-none">
+            <Animated.View
+                style={[styles.cluster, { transform: pan.getTranslateTransform() }]}
+                pointerEvents="box-none"
+            >
                 <Animated.View
                     style={[styles.items, { opacity: anim }]}
                     pointerEvents={open ? "auto" : "none"}
@@ -188,15 +267,18 @@ const RightPanelFab: React.FC<RightPanelFabProps> = ({
                             </Animated.View>
                         </Pressable>
                     );
-                    return anchorId ? (
+                    const triggerNode = anchorId ? (
                         <CoachmarkAnchor id={anchorId} shape="pill">
                             {trigger}
                         </CoachmarkAnchor>
                     ) : (
                         trigger
                     );
+                    // The drag handle is the main trigger only — the mini-FABs
+                    // stay plain taps.
+                    return <View {...panResponder.panHandlers}>{triggerNode}</View>;
                 })()}
-            </View>
+            </Animated.View>
         </View>
     );
 };

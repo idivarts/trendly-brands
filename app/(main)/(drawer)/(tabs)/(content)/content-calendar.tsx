@@ -285,6 +285,10 @@ const ContentCalendarScreen = () => {
                     isCompact
                     welcomeText={CALENDAR_WELCOME}
                     placeholder="Ask the AI Expert..."
+                    // Tab bar owns the bottom inset (don't double it), but this
+                    // screen's AppLayout does NOT inset the top — so the panel must
+                    // keep its own top inset for the header to clear the status bar.
+                    parentHandlesSafeBottom
                 />
             }
         />

@@ -229,6 +229,38 @@ index c3cad89..d174fa3 100644
  // MARK: - Styles manipulation
  
  - (void)toggleRegularStyle:(StyleType)type {
+diff --git a/node_modules/react-native-enriched/ios/inputParser/InputParser.mm b/node_modules/react-native-enriched/ios/inputParser/InputParser.mm
+index b7dbdd0..b9ba8b3 100644
+--- a/node_modules/react-native-enriched/ios/inputParser/InputParser.mm
++++ b/node_modules/react-native-enriched/ios/inputParser/InputParser.mm
+@@ -574,6 +574,13 @@ - (void)applyProcessedStyles:(NSArray *)processedStyles
+          offsetFromBeginning:(NSInteger)offset
+              plainTextLength:(NSUInteger)plainTextLength {
+   for (NSArray *arr in processedStyles) {
++    // PATCH (trendly): never index arr[1] on a malformed (<2 element) style
++    // entry. A processed style is always [styleType, stylePair]; a 1-element
++    // entry (e.g. produced by an unsupported heading level falling through the
++    // parser) would otherwise throw NSRangeException here and abort the app.
++    if (arr.count < 2) {
++      continue;
++    }
+     // unwrap all info from processed style
+     NSNumber *styleType = (NSNumber *)arr[0];
+     StylePair *stylePair = (StylePair *)arr[1];
+@@ -1192,6 +1199,13 @@ - (NSArray *)getTextAndStylesFromHtml:(NSString *)fixedHtml {
+         [styleArr addObject:@([H2Style getStyleType])];
+       } else if ([tagName isEqualToString:@"h3"]) {
+         [styleArr addObject:@([H3Style getStyleType])];
++      } else {
++        // PATCH (trendly): unsupported heading levels (h4-h6) and any other
++        // h-prefixed tag (hr, header, …) add no style type. Without this skip
++        // the code falls through and appends only the StylePair, producing a
++        // 1-element styleArr that crashes applyProcessedStyles' arr[1] read.
++        // Skip it like every other unrecognised tag does below.
++        continue;
+       }
+     } else if ([tagName isEqualToString:@"ul"]) {
+       [styleArr addObject:@([UnorderedListStyle getStyleType])];
 diff --git a/node_modules/react-native-enriched/lib/module/EnrichedTextInput.js b/node_modules/react-native-enriched/lib/module/EnrichedTextInput.js
 index cc36fe2..6d5af64 100644
 --- a/node_modules/react-native-enriched/lib/module/EnrichedTextInput.js
