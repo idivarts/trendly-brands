@@ -10,30 +10,30 @@ import StrategiesDrawer from "@/components/content-strategy/StrategiesDrawer";
 import StrategyEditorPanel from "@/components/content-strategy/StrategyEditorPanel";
 import StrategyLoadingPanel from "@/components/content-strategy/StrategyLoadingPanel";
 import StrategyShimmerPanel from "@/components/content-strategy/StrategyShimmerPanel";
-import ShareModal from "@/components/sharing/ShareModal";
 import { ContentStrategy, ScreenState } from "@/components/content-strategy/types";
-import { StrategyStatus } from "@/shared-libs/firestore/trendly-pro/models/strategies";
-import { formatDateForWebInput } from "@/components/modals/DatePickerModal";
-import { useSidebarParam } from "@/components/drawer-layout/use-sidebar-param";
 import { useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapsed-context";
+import { useSidebarParam } from "@/components/drawer-layout/use-sidebar-param";
+import { GUIDE_TOUR_STRATEGY_MOBILE, GUIDE_TOUR_STRATEGY_WEB } from "@/components/guide-tour/guide-tour-config";
+import { formatDateForWebInput } from "@/components/modals/DatePickerModal";
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import { PanelComment } from "@/components/shared/CommentsPanel";
-import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
 import RightPanelFab from "@/components/shared/RightPanelFab";
+import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
+import ShareModal from "@/components/sharing/ShareModal";
 import { View } from "@/components/theme/Themed";
-import { faCommentDots, faRobot } from "@fortawesome/free-solid-svg-icons";
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
-import { GUIDE_TOUR_STRATEGY_MOBILE, GUIDE_TOUR_STRATEGY_WEB } from "@/components/guide-tour/guide-tour-config";
 import { useBreakpoints } from "@/hooks";
 import { useFeatureTour } from "@/hooks/use-feature-tour";
 import { EDIT_LOCK_TTL_MS, useStrategies } from "@/hooks/use-strategies";
 import { useStrategyComments } from "@/hooks/use-strategy-comments";
 import AppLayout from "@/layouts/app-layout";
+import { StrategyStatus } from "@/shared-libs/firestore/trendly-pro/models/strategies";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
-import Colors from "@/shared-uis/constants/Colors";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/shared-uis/constants/Colors";
+import { faCommentDots, faRobot } from "@fortawesome/free-solid-svg-icons";
 import { useTheme } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -836,7 +836,7 @@ const ContentStrategyDetail = () => {
                             onCollapse={() => setRightPanelMode("none")}
                             // Sheet sits inside this screen's AppLayout, which
                             // already insets top+bottom — don't double it.
-                            parentHandlesSafeArea
+                            parentHandlesSafeBottom
                         />
                     }
                 />

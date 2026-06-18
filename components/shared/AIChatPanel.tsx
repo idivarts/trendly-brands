@@ -1,12 +1,15 @@
 import AIModelSelector from "@/components/ai/AIModelSelector/AIModelSelector";
+import { TokenMeterBar, TokenMeterBlock, TokenMeterNotice } from "@/components/billing/TokenMeter";
 import AIAnswerControl from "@/components/shared/AIAnswerControl";
 import AIChatHistory from "@/components/shared/AIChatHistory";
 import MarkdownMessage from "@/components/shared/MarkdownMessage";
-import { TokenMeterBar, TokenMeterBlock, TokenMeterNotice } from "@/components/billing/TokenMeter";
+import { getAIChatStarter } from "@/constants/AIChatStarters";
+import { useBreakpoints } from "@/hooks";
 import { AIControl, AIModule, useAIChat } from "@/hooks/use-ai-chat";
 import { useAIModels } from "@/hooks/use-ai-models";
 import { useEntitlements } from "@/hooks/use-entitlements";
-import { useBreakpoints } from "@/hooks";
+import { useAWSContext } from "@/shared-libs/contexts/aws-context.provider";
+import { pickMedia } from "@/shared-libs/utils/media-picker";
 import Colors from "@/shared-uis/constants/Colors";
 import {
     faChevronLeft,
@@ -17,10 +20,13 @@ import {
     faPaperPlane,
     faPenToSquare,
     faRobot,
-    faXmark,
+    faUpRightAndDownLeftFromCenter,
+    faWandMagicSparkles,
+    faXmark
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
+import { router } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
@@ -38,8 +44,10 @@ import {
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useAWSContext } from "@/shared-libs/contexts/aws-context.provider";
-import { pickMedia } from "@/shared-libs/utils/media-picker";
+
+// Readable column width for the conversation in the wide (split) layout — the
+// chat doesn't stretch full-bleed; messages + composer sit in a centered column.
+const CHAT_MAX_WIDTH = 760;
 
 // ─── Public types (kept for backward compatibility with existing screens) ─────
 
@@ -62,6 +70,20 @@ export interface FocusItem {
      * chip still shows a short human label. Falls back to `label` when unset.
      */
     contextText?: string;
+}
+
+/**
+ * The panel's two header actions, lifted out so a host (e.g. the Playground
+ * page) can render them in its own PageHeader instead of the panel's header.
+ * Emitted via `onControlsChange`; pair with `hideHeader` to avoid duplicates.
+ */
+export interface AIChatControls {
+    /** Toggle the conversation history (left pane on desktop, list view on mobile). */
+    toggleHistory: () => void;
+    /** Start a new blank-draft chat. */
+    newChat: () => void;
+    /** Whether the history list is currently showing (for active-state styling). */
+    historyActive: boolean;
 }
 
 interface AIChatPanelProps {
@@ -91,6 +113,31 @@ interface AIChatPanelProps {
 
     /** Header label. Defaults to "AI Content Expert". */
     title?: string;
+
+    /**
+     * Open this conversation on mount instead of starting blank. Used by the
+     * Playground when reached via another panel's "expand" action (deep-link with
+     * a conversationId). One-shot — the user can navigate away afterwards.
+     */
+    initialConversationId?: string;
+
+    /**
+     * Emits the panel's header actions (history toggle + new chat) so a host can
+     * render them elsewhere — e.g. the Playground surfaces them in its PageHeader
+     * and passes `hideHeader` to suppress the panel's own header. Called whenever
+     * the actions or their active state change. Memoize the callback to avoid
+     * re-emits.
+     */
+    onControlsChange?: (controls: AIChatControls) => void;
+
+    /**
+     * Hero (empty-draft) state, shown when `scope="all"` and no conversation is
+     * open yet: a centered branded greeting + composer + quick-start chips
+     * instead of a bottom-pinned welcome bubble. `heroTitle` is the big greeting;
+     * `heroSuggestions` prefill the composer when tapped.
+     */
+    heroTitle?: string;
+    heroSuggestions?: string[];
 
     /**
      * If provided, the panel sends this as the first message on mount (or when
@@ -177,6 +224,10 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     scope = "module",
     layout = "panel",
     title = "AI Content Expert",
+    heroTitle,
+    heroSuggestions,
+    onControlsChange,
+    initialConversationId,
     initialMessage,
     onInitialMessageSent,
     focusItems = [],
@@ -261,7 +312,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         loadOlder,
         sendMessage,
         loadThread,
-        createThread,
+        startNewChat,
         renameThread,
         deleteThread,
         refreshThreads,
@@ -269,7 +320,10 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         module,
         contextId,
         scope,
-        autoOpenLatest: !initialMessage,
+        // Playground (scope "all") opens to a blank placeholder chat — it does
+        // NOT resume the most recent conversation. The user opens past chats
+        // explicitly from the history pane.
+        autoOpenLatest: !initialMessage && scope !== "all",
         onOnboardingComplete,
     });
 
@@ -289,10 +343,22 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
 
     // Two-pane (Claude-style) layout only on desktop. On mobile (!xl) we fall
     // back to the single-column panel where the list lives behind the header
-    // toggle. In split mode the persistent LEFT pane owns history, so the right
-    // pane is always the chat view.
+    // toggle. In split mode the right pane is always the chat; the LEFT history
+    // pane is a closable column toggled by the header clock icon (closed by
+    // default, so the panel opens to the empty placeholder chat).
     const splitMode = layout === "split" && xl;
     const effectiveViewMode = splitMode ? "chat" : viewMode;
+    const [historyOpen, setHistoryOpen] = useState(false);
+
+    // Header clock icon: in split mode it opens/closes the left list; in the
+    // single-column panel it toggles the whole view between chat and history
+    // (toggle, not one-way, so a host header has a way back to chat too).
+    const onToggleHistory = useCallback(() => {
+        if (splitMode) setHistoryOpen((v) => !v);
+        else setViewMode((v) => (v === "history" ? "chat" : "history"));
+    }, [splitMode]);
+    // Whether the history list is currently visible (drives active styling).
+    const historyActive = splitMode ? historyOpen : viewMode === "history";
 
     // Chat-pane header label. In the Playground (scope "all") the list mixes
     // many conversations, so the header names the ACTIVE one rather than the
@@ -301,6 +367,13 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     const chatLabel = scope === "all" ? (activeThread?.title?.trim() || "New conversation") : title;
     const headerLabel = effectiveViewMode === "history" ? "Chat history" : chatLabel;
 
+    // Hero (empty-state) copy comes from the per-module starter map, but any of
+    // the three pieces can be overridden per-mount via props.
+    const starter = getAIChatStarter(module);
+    const resolvedHeroTitle = heroTitle ?? starter.heading;
+    const resolvedHeroDescription = welcomeText ?? starter.description;
+    const heroSuggestionList = heroSuggestions ?? starter.templates;
+
     // True from the moment a queued initial message is dispatched until its
     // content is on screen. sendMessage creates the thread over HTTP first, so
     // there's a ~1-2s window where the history subscription hasn't started yet
@@ -308,6 +381,18 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     // added — without this the panel would render an empty chat. Keeping the
     // loader up across this window is what avoids the "blank panel" on first open.
     const [startingConversation, setStartingConversation] = useState(false);
+
+    // True until a deep-linked `initialConversationId` (Playground "expand") has
+    // been opened — keeps the loader up (and the hero suppressed) so the target
+    // conversation slides in directly instead of flashing the empty state.
+    const [pendingInitialOpen, setPendingInitialOpen] = useState(!!initialConversationId);
+    const openedInitialRef = useRef(false);
+    useEffect(() => {
+        if (!initialConversationId || openedInitialRef.current) return;
+        openedInitialRef.current = true;
+        loadThread(initialConversationId);
+        setPendingInitialOpen(false);
+    }, [initialConversationId, loadThread]);
 
     // Auto-send any queued initial message exactly once — but only after the
     // conversation has finished initializing, so it lands cleanly in the thread.
@@ -339,7 +424,27 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     // HTTP thread-creation window (startingConversation).
     const initialPending =
         !!initialMessage && !readOnly && sentInitialRef.current !== initialMessage;
-    const busy = notReady || initialPending || startingConversation;
+    const busy = notReady || initialPending || startingConversation || pendingInitialOpen;
+
+    // Centered hero empty state — shown for ANY module (and the Playground) when
+    // there's no conversation yet, instead of a lone welcome bubble. As soon as
+    // the user sends, an optimistic bubble lands / isStreaming flips and the hero
+    // gives way to the normal thread view. Guards:
+    //  - `!busy`: wait for load to settle so a module panel that auto-resumes its
+    //    latest thread doesn't flash the hero first.
+    //  - `!initialMessage`: hosts that auto-send a first message (strategy create
+    //    flow) skip the hero so it isn't shown for a frame before dispatch.
+    //  - `messageAlign === "bottom"`: excludes the onboarding wizard (top-aligned),
+    //    which has its own guided layout.
+    const showHero =
+        !busy &&
+        !initialMessage &&
+        messageAlign === "bottom" &&
+        !activeThreadId &&
+        aiMessages.length === 0 &&
+        !isStreaming &&
+        !readOnly &&
+        !tokensExhausted;
 
     // ── Compose state ────────────────────────────────────────────────────────
     const [input, setInput] = useState("");
@@ -466,12 +571,33 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     const onPickThread = (id: string) => {
         loadThread(id);
         setViewMode("chat");
+        setHistoryOpen(false);
     };
 
-    const onNewChat = async () => {
-        await createThread();
+    // "New chat" starts a blank draft — no conversation is persisted until the
+    // user sends their first message (sendMessage creates it lazily). Until then
+    // the panel shows the empty/welcome state.
+    const onNewChat = useCallback(() => {
+        startNewChat();
         setViewMode("chat");
-    };
+        setHistoryOpen(false);
+    }, [startNewChat]);
+
+    // Surface the two header actions to a host (Playground → PageHeader). Re-emits
+    // only when a handler identity or the active state actually changes.
+    useEffect(() => {
+        onControlsChange?.({ toggleHistory: onToggleHistory, newChat: onNewChat, historyActive });
+    }, [onControlsChange, onToggleHistory, onNewChat, historyActive]);
+
+    // "Expand" — open the active conversation in the full Playground. Deep-links
+    // with its id so the Playground opens it by default. Only meaningful from a
+    // module panel (the Playground IS the expanded view), and only when a
+    // conversation is actually open.
+    const canExpand = scope !== "all" && !!activeThreadId;
+    const onExpand = useCallback(() => {
+        if (!activeThreadId) return;
+        router.push({ pathname: "/playground", params: { conversationId: activeThreadId } });
+    }, [activeThreadId]);
 
     // Send a control's answer back through the normal chat path as a user turn.
     const handleControlSubmit = (text: string) => {
@@ -514,15 +640,15 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                         </View>
                     )}
                     {!!item.text && (
-                    <View style={[styles.bubble, isAI ? styles.aiBubble : styles.userBubble]}>
-                        {isAI ? (
-                            <MarkdownMessage content={item.text} compact={isCompact} />
-                        ) : (
-                            <Text style={[styles.bubbleText, styles.userText]}>
-                                {item.text}
-                            </Text>
-                        )}
-                    </View>
+                        <View style={[styles.bubble, isAI ? styles.aiBubble : styles.userBubble]}>
+                            {isAI ? (
+                                <MarkdownMessage content={item.text} compact={isCompact} />
+                            ) : (
+                                <Text style={[styles.bubbleText, styles.userText]}>
+                                    {item.text}
+                                </Text>
+                            )}
+                        </View>
                     )}
                     {showControl && item.control && (
                         <AIAnswerControl
@@ -536,307 +662,374 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         );
     };
 
+    // Token notice + pending-image chips + composer. Extracted so the same
+    // composer renders both at the bottom of an active thread AND centered in
+    // the hero empty state.
+    const composerStack = (
+        <>
+            {/* Low / critical token warning — non-blocking. */}
+            <View style={splitMode ? styles.centered : undefined}>
+                <TokenMeterNotice tokens={tokens} />
+            </View>
+
+            {/* Pending image attachments — chips with upload spinner + remove */}
+            {pendingImages.length > 0 && (
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={[styles.attachBar, splitMode && styles.centered]}
+                    contentContainerStyle={styles.attachBarContent}
+                >
+                    {pendingImages.map((p) => (
+                        <View key={p.key} style={styles.attachChip}>
+                            <Image source={{ uri: p.uri }} style={styles.attachThumb} resizeMode="cover" />
+                            {p.uploading && (
+                                <View style={styles.attachOverlay}>
+                                    <ActivityIndicator size="small" color={colors.onPrimary} />
+                                </View>
+                            )}
+                            {p.failed && (
+                                <View style={styles.attachOverlay}>
+                                    <Text style={styles.attachFailedText}>!</Text>
+                                </View>
+                            )}
+                            <Pressable
+                                onPress={() => removePendingImage(p.key)}
+                                style={styles.attachRemove}
+                                hitSlop={6}
+                                accessibilityLabel="Remove attachment"
+                            >
+                                <FontAwesomeIcon icon={faXmark} size={9} color={colors.onPrimary} />
+                            </Pressable>
+                        </View>
+                    ))}
+                </ScrollView>
+            )}
+
+            {/* Composer — full-width input on top, controls (image, model,
+                tokens, send) on a roomy row below for easy mobile tapping. */}
+            <View style={[styles.inputArea, splitMode && styles.centered]}>
+                <View style={styles.composer}>
+                    <TextInput
+                        style={styles.input}
+                        placeholder={busy ? "Getting ready…" : placeholder}
+                        placeholderTextColor={colors.textSecondary}
+                        value={input}
+                        onChangeText={setInput}
+                        editable={!busy}
+                        multiline
+                        maxLength={1000}
+                        onKeyPress={(e: any) => {
+                            // Web: Enter sends, Shift+Enter inserts a newline.
+                            // Native multiline behaviour is left untouched.
+                            if (
+                                Platform.OS === "web" &&
+                                e?.nativeEvent?.key === "Enter" &&
+                                !e?.nativeEvent?.shiftKey
+                            ) {
+                                e.preventDefault?.();
+                                handleSend();
+                            }
+                        }}
+                    />
+                    <View style={styles.composerControls}>
+                        <Pressable
+                            style={({ pressed }) => [
+                                styles.attachBtn,
+                                pressed && styles.attachBtnPressed,
+                                busy && styles.sendBtnDisabled,
+                            ]}
+                            onPress={handleAttach}
+                            disabled={busy}
+                            hitSlop={8}
+                            accessibilityLabel="Attach image"
+                        >
+                            <FontAwesomeIcon icon={faImage} size={18} color={colors.primary} />
+                        </Pressable>
+                        <View style={styles.modelStripGrow}>
+                            <AIModelSelector
+                                models={models}
+                                selectedModel={selectedModel}
+                                onSelect={setSelectedModel}
+                                compact
+                            />
+                        </View>
+                        <TokenMeterBar tokens={tokens} />
+                        <Pressable
+                            style={({ pressed }) => [
+                                styles.sendBtn,
+                                pressed && styles.sendBtnPressed,
+                                !canSend && styles.sendBtnDisabled,
+                            ]}
+                            onPress={handleSend}
+                            disabled={!canSend}
+                            hitSlop={8}
+                            accessibilityLabel="Send message"
+                        >
+                            <FontAwesomeIcon icon={faPaperPlane} size={16} color={colors.onPrimary} />
+                        </Pressable>
+                    </View>
+                </View>
+            </View>
+        </>
+    );
+
     return (
         <View
             ref={rootRef}
             style={[styles.container, splitMode && styles.containerSplit]}
             onLayout={measureKbOffset}
         >
-        {/* Persistent conversation list (desktop split layout only). */}
-        {splitMode && (
-            <View style={styles.historyPane}>
-                <View style={styles.historyPaneHeader}>
-                    <Text style={styles.historyPaneTitle} numberOfLines={1}>Conversations</Text>
-                </View>
-                <AIChatHistory
-                    threads={threads}
-                    activeThreadId={activeThreadId}
-                    onPickThread={onPickThread}
-                    onNewChat={onNewChat}
-                    onRenameThread={renameThread}
-                    onDeleteThread={deleteThread}
-                    showModuleBadge={scope === "all"}
-                />
-            </View>
-        )}
-        <KeyboardAvoidingView
-            style={styles.fill}
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            keyboardVerticalOffset={kbVerticalOffset}
-        >
-            {/* ── Header — capped at 3 elements (per design critique) ───── */}
-            {!hideHeader && (
-            <View style={styles.panelHeader}>
-                {onCollapse && (
-                    <Pressable
-                        onPress={onCollapse}
-                        style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
-                        accessibilityRole="button"
-                        accessibilityLabel="Collapse panel"
-                        hitSlop={6}
-                    >
-                        <FontAwesomeIcon icon={faChevronRight} size={11} color={colors.textSecondary} />
-                    </Pressable>
-                )}
-                <Text style={styles.panelHeaderLabel} numberOfLines={1}>
-                    {headerLabel}
-                </Text>
-                {effectiveViewMode === "chat" ? (
-                    <>
-                        {/* In split mode the list is always visible on the left,
-                            so the history toggle is redundant. */}
-                        {!splitMode && (
-                            <Pressable
-                                onPress={() => setViewMode("history")}
-                                style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
-                                accessibilityRole="button"
-                                accessibilityLabel="Open past conversations"
-                                hitSlop={6}
-                            >
-                                <FontAwesomeIcon icon={faClockRotateLeft} size={14} color={colors.text} />
-                            </Pressable>
-                        )}
+            {/* Closable conversation list (desktop split layout only). Hidden by
+            default; toggled open by the header clock icon. */}
+            {splitMode && historyOpen && (
+                <View style={styles.historyPane}>
+                    <View style={styles.historyPaneHeader}>
+                        <Text style={styles.historyPaneTitle} numberOfLines={1}>Conversations</Text>
                         <Pressable
-                            onPress={onNewChat}
+                            onPress={() => setHistoryOpen(false)}
                             style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
                             accessibilityRole="button"
-                            accessibilityLabel="Start a new chat"
+                            accessibilityLabel="Close conversations"
                             hitSlop={6}
                         >
-                            <FontAwesomeIcon icon={faPenToSquare} size={14} color={colors.text} />
+                            <FontAwesomeIcon icon={faXmark} size={14} color={colors.textSecondary} />
                         </Pressable>
-                    </>
-                ) : (
-                    <Pressable
-                        onPress={() => setViewMode("chat")}
-                        style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
-                        accessibilityRole="button"
-                        accessibilityLabel="Back to chat"
-                        hitSlop={6}
-                    >
-                        <FontAwesomeIcon icon={faChevronLeft} size={12} color={colors.text} />
-                    </Pressable>
-                )}
-            </View>
-            )}
-
-            {effectiveViewMode === "history" ? (
-                <AIChatHistory
-                    threads={threads}
-                    activeThreadId={activeThreadId}
-                    onPickThread={onPickThread}
-                    onNewChat={onNewChat}
-                    onRenameThread={renameThread}
-                    onDeleteThread={deleteThread}
-                    showModuleBadge={scope === "all"}
-                />
-            ) : (
-                // ── Chat view ────────────────────────────────────────────────
-                <>
-                    {busy ? (
-                        <View style={styles.initLoader}>
-                            <ActivityIndicator color={colors.primary} />
-                            <Text style={styles.initText}>Setting up your conversation…</Text>
-                        </View>
-                    ) : (
-                        <FlatList
-                            ref={listRef}
-                            data={renderedMessages}
-                            inverted={isInverted}
-                            keyExtractor={(item) => item.id}
-                            renderItem={renderMessage}
-                            contentContainerStyle={styles.messageList}
-                            showsVerticalScrollIndicator={false}
-                            // Inverted: visual "scroll up" = approaching the end of
-                            // the data, so pagination hangs off onEndReached. The
-                            // wizard (non-inverted) keeps its top-of-list trigger.
-                            onEndReached={isInverted && hasMore ? loadOlder : undefined}
-                            onEndReachedThreshold={0.2}
-                            onStartReached={!isInverted && hasMore ? loadOlder : undefined}
-                            onStartReachedThreshold={0.2}
-                        />
-                    )}
-
-                    {!busy && isAITyping && (
-                        <View style={styles.typingRow}>
-                            <View style={styles.avatarContainer}>
-                                <FontAwesomeIcon icon={faRobot} size={14} color={colors.onPrimary} />
-                            </View>
-                            <View style={styles.typingBubble}>
-                                <Text style={styles.typingText}>Thinking…</Text>
-                            </View>
-                        </View>
-                    )}
-
-                    {/* Tokens are already flowing into the streaming bubble; this
-                        slim row makes it obvious the AI hasn't stalled mid-reply. */}
-                    {!busy && isStreaming && !!streamingContent && (
-                        <View style={styles.streamingStatus}>
-                            <ActivityIndicator size="small" color={colors.primary} />
-                            <Text style={styles.streamingStatusText}>Generating…</Text>
-                        </View>
-                    )}
-
-                    {!readOnly && focusItems.length > 0 && (
-                        <ScrollView
-                            horizontal
-                            showsHorizontalScrollIndicator={false}
-                            style={styles.focusBar}
-                            contentContainerStyle={styles.focusBarContent}
-                        >
-                            {focusItems.map((item) => (
-                                <View key={item.id} style={styles.focusChip}>
-                                    <View style={styles.focusChipAccent} />
-                                    <Text style={styles.focusChipText} numberOfLines={1}>
-                                        {item.label}
-                                    </Text>
-                                    {onRemoveFocusItem && (
-                                        <Pressable
-                                            onPress={() => onRemoveFocusItem(item.id)}
-                                            style={styles.focusChipClose}
-                                        >
-                                            <FontAwesomeIcon icon={faXmark} size={10} color={colors.textSecondary} />
-                                        </Pressable>
-                                    )}
-                                </View>
-                            ))}
-                        </ScrollView>
-                    )}
-
-                    {readOnly ? (
-                        // Finalized strategy: history stays readable, but there's
-                        // no composer — new turns would change a locked strategy.
-                        <View style={styles.readOnlyFooter}>
-                            <FontAwesomeIcon icon={faLock} size={12} color={colors.textSecondary} />
-                            <Text style={styles.readOnlyFooterText} numberOfLines={2}>
-                                Chat is read-only — this strategy is finalized. Duplicate it to keep chatting.
-                            </Text>
-                        </View>
-                    ) : tokensExhausted ? (
-                        // Out of monthly AI tokens — keep the user in context with an
-                        // inline Upgrade / Add top-up block instead of redirecting.
-                        <TokenMeterBlock tokens={tokens} safeBottom={safeBottom} />
-                    ) : (
-                        <>
-                            {/* Low / critical token warning — non-blocking. */}
-                            <TokenMeterNotice tokens={tokens} />
-
-                            {/* Pending image attachments — chips with upload spinner + remove */}
-                            {pendingImages.length > 0 && (
-                                <ScrollView
-                                    horizontal
-                                    showsHorizontalScrollIndicator={false}
-                                    style={styles.attachBar}
-                                    contentContainerStyle={styles.attachBarContent}
-                                >
-                                    {pendingImages.map((p) => (
-                                        <View key={p.key} style={styles.attachChip}>
-                                            <Image source={{ uri: p.uri }} style={styles.attachThumb} resizeMode="cover" />
-                                            {p.uploading && (
-                                                <View style={styles.attachOverlay}>
-                                                    <ActivityIndicator size="small" color={colors.onPrimary} />
-                                                </View>
-                                            )}
-                                            {p.failed && (
-                                                <View style={styles.attachOverlay}>
-                                                    <Text style={styles.attachFailedText}>!</Text>
-                                                </View>
-                                            )}
-                                            <Pressable
-                                                onPress={() => removePendingImage(p.key)}
-                                                style={styles.attachRemove}
-                                                hitSlop={6}
-                                                accessibilityLabel="Remove attachment"
-                                            >
-                                                <FontAwesomeIcon icon={faXmark} size={9} color={colors.onPrimary} />
-                                            </Pressable>
-                                        </View>
-                                    ))}
-                                </ScrollView>
-                            )}
-
-                            {/* Composer — full-width input on top, controls (image, model,
-                                tokens, send) on a roomy row below for easy mobile tapping. */}
-                            <View style={styles.inputArea}>
-                                <View style={styles.composer}>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder={busy ? "Getting ready…" : placeholder}
-                                        placeholderTextColor={colors.textSecondary}
-                                        value={input}
-                                        onChangeText={setInput}
-                                        editable={!busy}
-                                        multiline
-                                        maxLength={1000}
-                                        onKeyPress={(e: any) => {
-                                            // Web: Enter sends, Shift+Enter inserts a newline.
-                                            // Native multiline behaviour is left untouched.
-                                            if (
-                                                Platform.OS === "web" &&
-                                                e?.nativeEvent?.key === "Enter" &&
-                                                !e?.nativeEvent?.shiftKey
-                                            ) {
-                                                e.preventDefault?.();
-                                                handleSend();
-                                            }
-                                        }}
-                                    />
-                                    <View style={styles.composerControls}>
-                                        <Pressable
-                                            style={({ pressed }) => [
-                                                styles.attachBtn,
-                                                pressed && styles.attachBtnPressed,
-                                                busy && styles.sendBtnDisabled,
-                                            ]}
-                                            onPress={handleAttach}
-                                            disabled={busy}
-                                            hitSlop={8}
-                                            accessibilityLabel="Attach image"
-                                        >
-                                            <FontAwesomeIcon icon={faImage} size={18} color={colors.primary} />
-                                        </Pressable>
-                                        <View style={styles.modelStripGrow}>
-                                            <AIModelSelector
-                                                models={models}
-                                                selectedModel={selectedModel}
-                                                onSelect={setSelectedModel}
-                                                compact
-                                            />
-                                        </View>
-                                        <TokenMeterBar tokens={tokens} />
-                                        <Pressable
-                                            style={({ pressed }) => [
-                                                styles.sendBtn,
-                                                pressed && styles.sendBtnPressed,
-                                                !canSend && styles.sendBtnDisabled,
-                                            ]}
-                                            onPress={handleSend}
-                                            disabled={!canSend}
-                                            hitSlop={8}
-                                            accessibilityLabel="Send message"
-                                        >
-                                            <FontAwesomeIcon icon={faPaperPlane} size={16} color={colors.onPrimary} />
-                                        </Pressable>
-                                    </View>
-                                </View>
-                            </View>
-                        </>
-                    )}
-                </>
-            )}
-        </KeyboardAvoidingView>
-
-        {/* Full-screen image preview */}
-        <Modal visible={!!lightboxUrl} transparent animationType="fade" onRequestClose={() => setLightboxUrl(null)}>
-            <Pressable style={styles.lightboxBackdrop} onPress={() => setLightboxUrl(null)}>
-                {lightboxUrl && (
-                    <Image source={{ uri: lightboxUrl }} style={styles.lightboxImage} resizeMode="contain" />
-                )}
-                <View style={styles.lightboxClose}>
-                    <FontAwesomeIcon icon={faXmark} size={18} color={colors.onPrimary} />
+                    </View>
+                    <AIChatHistory
+                        threads={threads}
+                        activeThreadId={activeThreadId}
+                        onPickThread={onPickThread}
+                        onNewChat={onNewChat}
+                        onRenameThread={renameThread}
+                        onDeleteThread={deleteThread}
+                        showModuleBadge={scope === "all"}
+                    />
                 </View>
-            </Pressable>
-        </Modal>
+            )}
+            <KeyboardAvoidingView
+                style={styles.fill}
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                keyboardVerticalOffset={kbVerticalOffset}
+            >
+                {/* ── Header — capped at 3 elements (per design critique) ───── */}
+                {!hideHeader && (
+                    <View style={styles.panelHeader}>
+                        {onCollapse && (
+                            <Pressable
+                                onPress={onCollapse}
+                                style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+                                accessibilityRole="button"
+                                accessibilityLabel="Collapse panel"
+                                hitSlop={6}
+                            >
+                                <FontAwesomeIcon icon={faChevronRight} size={11} color={colors.textSecondary} />
+                            </Pressable>
+                        )}
+                        <Text style={styles.panelHeaderLabel} numberOfLines={1}>
+                            {headerLabel}
+                        </Text>
+                        {effectiveViewMode === "chat" ? (
+                            <>
+                                {canExpand && (
+                                    <Pressable
+                                        onPress={onExpand}
+                                        style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Expand in Playground"
+                                        hitSlop={6}
+                                    >
+                                        <FontAwesomeIcon icon={faUpRightAndDownLeftFromCenter} size={13} color={colors.text} />
+                                    </Pressable>
+                                )}
+                                <Pressable
+                                    onPress={onToggleHistory}
+                                    style={({ pressed }) => [
+                                        styles.iconBtn,
+                                        (pressed || historyActive) && styles.iconBtnPressed,
+                                    ]}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Open past conversations"
+                                    hitSlop={6}
+                                >
+                                    <FontAwesomeIcon icon={faClockRotateLeft} size={14} color={colors.text} />
+                                </Pressable>
+                                <Pressable
+                                    onPress={onNewChat}
+                                    style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Start a new chat"
+                                    hitSlop={6}
+                                >
+                                    <FontAwesomeIcon icon={faPenToSquare} size={14} color={colors.text} />
+                                </Pressable>
+                            </>
+                        ) : (
+                            <Pressable
+                                onPress={() => setViewMode("chat")}
+                                style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+                                accessibilityRole="button"
+                                accessibilityLabel="Back to chat"
+                                hitSlop={6}
+                            >
+                                <FontAwesomeIcon icon={faChevronLeft} size={12} color={colors.text} />
+                            </Pressable>
+                        )}
+                    </View>
+                )}
+
+                {effectiveViewMode === "history" ? (
+                    <AIChatHistory
+                        threads={threads}
+                        activeThreadId={activeThreadId}
+                        onPickThread={onPickThread}
+                        onNewChat={onNewChat}
+                        onRenameThread={renameThread}
+                        onDeleteThread={deleteThread}
+                        showModuleBadge={scope === "all"}
+                    />
+                ) : showHero ? (
+                    // ── Hero empty state (Playground draft) ──────────────────────
+                    // Centered greeting + composer + quick-start chips. Replaced by
+                    // the normal thread view the moment the user sends.
+                    <ScrollView
+                        style={styles.fill}
+                        contentContainerStyle={styles.heroScroll}
+                        keyboardShouldPersistTaps="handled"
+                        showsVerticalScrollIndicator={false}
+                    >
+                        <View style={styles.heroInner}>
+                            {/* <View style={styles.heroIcon}>
+                                <FontAwesomeIcon icon={faWandMagicSparkles} size={24} color={colors.onPrimary} />
+                            </View> */}
+                            <Text style={styles.heroTitle}>{resolvedHeroTitle}</Text>
+                            {!!resolvedHeroDescription && (
+                                <Text style={styles.heroSubtitle}>{resolvedHeroDescription}</Text>
+                            )}
+                            <View style={styles.heroComposer}>{composerStack}</View>
+                            {heroSuggestionList.length > 0 && (
+                                <View style={styles.heroChips}>
+                                    {heroSuggestionList.map((s) => (
+                                        <Pressable
+                                            key={s}
+                                            onPress={() => setInput(s)}
+                                            style={({ pressed }) => [styles.heroChip, pressed && styles.heroChipPressed]}
+                                            accessibilityRole="button"
+                                            accessibilityLabel={s}
+                                        >
+                                            <Text style={styles.heroChipText} numberOfLines={1}>{s}</Text>
+                                        </Pressable>
+                                    ))}
+                                </View>
+                            )}
+                        </View>
+                    </ScrollView>
+                ) : (
+                    // ── Chat view ────────────────────────────────────────────────
+                    <>
+                        {busy ? (
+                            <View style={styles.initLoader}>
+                                <ActivityIndicator color={colors.primary} />
+                                <Text style={styles.initText}>Setting up your conversation…</Text>
+                            </View>
+                        ) : (
+                            <FlatList
+                                ref={listRef}
+                                data={renderedMessages}
+                                inverted={isInverted}
+                                keyExtractor={(item) => item.id}
+                                renderItem={renderMessage}
+                                contentContainerStyle={[styles.messageList, splitMode && styles.centered]}
+                                showsVerticalScrollIndicator={false}
+                                // Inverted: visual "scroll up" = approaching the end of
+                                // the data, so pagination hangs off onEndReached. The
+                                // wizard (non-inverted) keeps its top-of-list trigger.
+                                onEndReached={isInverted && hasMore ? loadOlder : undefined}
+                                onEndReachedThreshold={0.2}
+                                onStartReached={!isInverted && hasMore ? loadOlder : undefined}
+                                onStartReachedThreshold={0.2}
+                            />
+                        )}
+
+                        {!busy && isAITyping && (
+                            <View style={[styles.typingRow, splitMode && styles.centered]}>
+                                <View style={styles.avatarContainer}>
+                                    <FontAwesomeIcon icon={faRobot} size={14} color={colors.onPrimary} />
+                                </View>
+                                <View style={styles.typingBubble}>
+                                    <Text style={styles.typingText}>Thinking…</Text>
+                                </View>
+                            </View>
+                        )}
+
+                        {/* Tokens are already flowing into the streaming bubble; this
+                        slim row makes it obvious the AI hasn't stalled mid-reply. */}
+                        {!busy && isStreaming && !!streamingContent && (
+                            <View style={[styles.streamingStatus, splitMode && styles.centered]}>
+                                <ActivityIndicator size="small" color={colors.primary} />
+                                <Text style={styles.streamingStatusText}>Generating…</Text>
+                            </View>
+                        )}
+
+                        {!readOnly && focusItems.length > 0 && (
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                style={[styles.focusBar, splitMode && styles.centered]}
+                                contentContainerStyle={styles.focusBarContent}
+                            >
+                                {focusItems.map((item) => (
+                                    <View key={item.id} style={styles.focusChip}>
+                                        <View style={styles.focusChipAccent} />
+                                        <Text style={styles.focusChipText} numberOfLines={1}>
+                                            {item.label}
+                                        </Text>
+                                        {onRemoveFocusItem && (
+                                            <Pressable
+                                                onPress={() => onRemoveFocusItem(item.id)}
+                                                style={styles.focusChipClose}
+                                            >
+                                                <FontAwesomeIcon icon={faXmark} size={10} color={colors.textSecondary} />
+                                            </Pressable>
+                                        )}
+                                    </View>
+                                ))}
+                            </ScrollView>
+                        )}
+
+                        {readOnly ? (
+                            // Finalized strategy: history stays readable, but there's
+                            // no composer — new turns would change a locked strategy.
+                            <View style={[styles.readOnlyFooter, splitMode && styles.centered]}>
+                                <FontAwesomeIcon icon={faLock} size={12} color={colors.textSecondary} />
+                                <Text style={styles.readOnlyFooterText} numberOfLines={2}>
+                                    Chat is read-only — this strategy is finalized. Duplicate it to keep chatting.
+                                </Text>
+                            </View>
+                        ) : tokensExhausted ? (
+                            // Out of monthly AI tokens — keep the user in context with an
+                            // inline Upgrade / Add top-up block instead of redirecting.
+                            <View style={splitMode ? styles.centered : undefined}>
+                                <TokenMeterBlock tokens={tokens} safeBottom={safeBottom} />
+                            </View>
+                        ) : (
+                            composerStack
+                        )}
+                    </>
+                )}
+            </KeyboardAvoidingView>
+
+            {/* Full-screen image preview */}
+            <Modal visible={!!lightboxUrl} transparent animationType="fade" onRequestClose={() => setLightboxUrl(null)}>
+                <Pressable style={styles.lightboxBackdrop} onPress={() => setLightboxUrl(null)}>
+                    {lightboxUrl && (
+                        <Image source={{ uri: lightboxUrl }} style={styles.lightboxImage} resizeMode="contain" />
+                    )}
+                    <View style={styles.lightboxClose}>
+                        <FontAwesomeIcon icon={faXmark} size={18} color={colors.onPrimary} />
+                    </View>
+                </Pressable>
+            </Modal>
         </View>
     );
 };
@@ -869,17 +1062,90 @@ function useStyles(
                     elevation: 8,
                 },
                 historyPaneHeader: {
-                    paddingHorizontal: 16,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    paddingLeft: 16,
+                    paddingRight: 8,
                     paddingTop: 14,
                     paddingBottom: 6,
                 },
                 historyPaneTitle: {
+                    flex: 1,
                     fontSize: 15,
                     fontWeight: "700",
                     color: colors.text,
                     letterSpacing: -0.2,
                 },
                 fill: { flex: 1 },
+                // Constrains the conversation content (messages + composer) to a
+                // readable centered column when the chat pane is wide (split layout).
+                centered: { width: "100%", maxWidth: CHAT_MAX_WIDTH, alignSelf: "center" },
+                // ── Hero empty state ─────────────────────────────────────────
+                heroScroll: {
+                    flexGrow: 1,
+                    justifyContent: "center",
+                    alignItems: "center",
+                    paddingHorizontal: isCompact ? 14 : 20,
+                    paddingVertical: isCompact ? 20 : 32,
+                },
+                heroInner: {
+                    width: "100%",
+                    maxWidth: isCompact ? 440 : 640,
+                    alignItems: "center",
+                    gap: isCompact ? 11 : 14,
+                },
+                heroIcon: {
+                    width: isCompact ? 48 : 56,
+                    height: isCompact ? 48 : 56,
+                    borderRadius: isCompact ? 24 : 28,
+                    backgroundColor: colors.primary,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowRadius: 16,
+                    shadowOpacity: 0.35,
+                    elevation: 6,
+                    marginBottom: 2,
+                },
+                heroTitle: {
+                    fontSize: isCompact ? 20 : 26,
+                    fontWeight: "700",
+                    color: colors.text,
+                    textAlign: "center",
+                    letterSpacing: -0.4,
+                },
+                heroSubtitle: {
+                    fontSize: 14,
+                    lineHeight: 20,
+                    color: colors.textSecondary,
+                    textAlign: "center",
+                    maxWidth: 480,
+                    marginBottom: 6,
+                },
+                // The shared composer renders full-width inside the hero column.
+                heroComposer: { width: "100%" },
+                heroChips: {
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    justifyContent: "center",
+                    gap: 8,
+                    marginTop: 2,
+                },
+                heroChip: {
+                    paddingHorizontal: 14,
+                    paddingVertical: 9,
+                    borderRadius: 20,
+                    backgroundColor: colors.tag,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 3,
+                    shadowOpacity: 0.04,
+                    elevation: 1,
+                },
+                heroChipPressed: { opacity: 0.7 },
+                heroChipText: { fontSize: 13, fontWeight: "500", color: colors.text },
                 panelHeader: {
                     flexDirection: "row",
                     alignItems: "center",
