@@ -147,18 +147,18 @@ const MonthView: React.FC<MonthViewProps> = ({
         onMoveItem?.(itemId, newDate);
     };
 
-    // The inline month cells are cramped on mobile (`!xl`), so we drop the
-    // comment + AI-focus actions there. They remain reachable by tapping the
-    // chip (opens details) or via the day popover, which keeps its actions.
-    const inlineActions = xl;
-
+    // Month cells are too narrow to sit the comment + AI-focus buttons beside the
+    // meta badges without overlapping them. So inline actions stay OFF here; on
+    // desktop web we reveal them on hover (a floating cluster) instead. They also
+    // remain reachable by tapping the chip (opens details) or via the day popover.
     const renderChip = (item: CalendarItem) =>
         dndEnabled ? (
             <DraggableChip
                 key={item.id}
                 item={item}
                 titleLines={titleLines}
-                showActions={inlineActions}
+                showActions={false}
+                hoverActions={xl}
                 onFocusChat={onFocusChat}
                 onComment={onComment}
                 onOpen={onOpenItem}
@@ -169,7 +169,8 @@ const MonthView: React.FC<MonthViewProps> = ({
                 item={item}
                 compact
                 titleLines={titleLines}
-                showActions={inlineActions}
+                showActions={false}
+                hoverActions={xl}
                 onFocusChat={onFocusChat}
                 onComment={onComment}
                 onOpen={onOpenItem}
@@ -467,10 +468,11 @@ const DraggableChip: React.FC<{
     item: CalendarItem;
     titleLines?: number;
     showActions?: boolean;
+    hoverActions?: boolean;
     onFocusChat: (item: CalendarItem) => void;
     onComment: (item: CalendarItem) => void;
     onOpen: (item: CalendarItem) => void;
-}> = ({ item, titleLines, showActions, onFocusChat, onComment, onOpen }) => {
+}> = ({ item, titleLines, showActions, hoverActions, onFocusChat, onComment, onOpen }) => {
     const { attributes, listeners, setNodeRef, transform, isDragging } =
         useDraggable({ id: item.id });
     const { tabIndex, role, ...restAttributes } = attributes as any;
@@ -493,6 +495,7 @@ const DraggableChip: React.FC<{
                 compact
                 titleLines={titleLines}
                 showActions={showActions}
+                hoverActions={hoverActions}
                 onFocusChat={onFocusChat}
                 onComment={onComment}
                 onOpen={onOpen}
