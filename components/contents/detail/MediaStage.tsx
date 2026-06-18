@@ -36,9 +36,10 @@ interface MediaStageProps {
     onImagePromptChange: (v: string) => void;
     /**
      * Kick off generation/enhancement. `focusedSlideIndex` (carousel only) is the
-     * slide the prompt should act on; the backend decides edit-vs-add.
+     * slide the prompt should act on; the backend decides edit-vs-add. `model` is
+     * the AI model picked in the prompt's model selector (optional).
      */
-    onGenerateImage: (prompt?: string, focusedSlideIndex?: number) => void;
+    onGenerateImage: (prompt?: string, focusedSlideIndex?: number, model?: string) => void;
     isGeneratingImage: boolean;
     /** Backend image-generation error to surface (e.g. after a failed job). */
     generationError?: string | null;
@@ -344,12 +345,14 @@ const MediaStage: React.FC<MediaStageProps> = ({
                     placeholder="E.g. minimalist flat-lay of orthopedic sandals on a warm beige background…"
                     ctaLabel={isEnhance ? "Enhance" : spec.multi ? "Generate slide" : "Generate image"}
                     initialValue={imagePrompt}
+                    task="image"
                     onClose={() => setShowPrompt(false)}
-                    onGenerate={(prompt) => {
+                    onGenerate={(prompt, model) => {
                         onImagePromptChange(prompt);
                         onGenerateImage(
                             prompt,
-                            spec.multi && focusedSlideIndex !== null ? focusedSlideIndex : undefined
+                            spec.multi && focusedSlideIndex !== null ? focusedSlideIndex : undefined,
+                            model
                         );
                     }}
                 />

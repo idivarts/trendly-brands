@@ -1,3 +1,5 @@
+import AIModelSelector from "@/components/ai/AIModelSelector/AIModelSelector";
+import { useAIConfig } from "@/contexts/ai-config-context.provider";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 import {
@@ -42,8 +44,15 @@ export interface FloatingPromptInputProps {
     ctaLabel?: string;
     /** Seed the field (e.g. an existing prompt to refine). */
     initialValue?: string;
+    /**
+     * When set, shows an AI-model selector for this task (e.g. "caption",
+     * "hashtag", "image"). The chosen model is handed back via onGenerate's
+     * second arg so the caller can forward it to the generation request. The
+     * allowed models + plan-gating come from the app-wide AIConfig.
+     */
+    task?: string;
     onClose: () => void;
-    onGenerate: (prompt: string) => void;
+    onGenerate: (prompt: string, model?: string) => void;
 }
 
 const FloatingPromptInput: React.FC<FloatingPromptInputProps> = ({
@@ -53,6 +62,7 @@ const FloatingPromptInput: React.FC<FloatingPromptInputProps> = ({
     placeholder = "Describe what you want the AI to create…",
     ctaLabel = "Generate",
     initialValue = "",
+    task,
     onClose,
     onGenerate,
 }) => {
@@ -60,6 +70,14 @@ const FloatingPromptInput: React.FC<FloatingPromptInputProps> = ({
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
     const styles = useStyles(colors, xl);
+
+    const { modelsForTask, resolveForTask } = useAIConfig();
+    const taskModels = task ? modelsForTask(task) : [];
+    // Optional per-open model override; falls back to the best plan-unlocked
+    // model for the task. Reset when the task changes so a caption pick doesn't
+    // bleed into a hashtag prompt.
+    const [modelOverride, setModelOverride] = useState<string | undefined>(undefined);
+    const selectedModel = task ? resolveForTask(task, modelOverride).modelId ?? "" : "";
 
     const [prompt, setPrompt] = useState(initialValue);
 
@@ -69,12 +87,17 @@ const FloatingPromptInput: React.FC<FloatingPromptInputProps> = ({
         if (visible) setPrompt(initialValue);
     }, [visible, initialValue]);
 
+    useEffect(() => {
+        setModelOverride(undefined);
+    }, [task]);
+
     const submit = () => {
         const value = prompt.trim();
         if (!value) return;
-        // Hand the prompt off and get out of the way — the parent owns the
-        // request + its progress indicator, so the page stays usable.
-        onGenerate(value);
+        // Hand the prompt (and the chosen model, if any) off and get out of the
+        // way — the parent owns the request + its progress indicator, so the
+        // page stays usable.
+        onGenerate(value, task ? selectedModel || undefined : undefined);
         onClose();
     };
 
@@ -158,7 +181,19 @@ const FloatingPromptInput: React.FC<FloatingPromptInputProps> = ({
                             </Pressable>
                         </View>
 
-                        <Text style={styles.cta}>{`Press ↵ to ${ctaLabel.toLowerCase()}`}</Text>
+                        <View style={styles.footerRow}>
+                            {task && taskModels.length > 0 ? (
+                                <AIModelSelector
+                                    models={taskModels}
+                                    selectedModel={selectedModel}
+                                    onSelect={setModelOverride}
+                                    compact
+                                />
+                            ) : (
+                                <View />
+                            )}
+                            <Text style={styles.cta}>{`Press ↵ to ${ctaLabel.toLowerCase()}`}</Text>
+                        </View>
                     </View>
                 </LinearGradient>
             </View>
@@ -264,11 +299,17 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             shadowOpacity: 0,
             elevation: 0,
         },
+        footerRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+            marginTop: 10,
+        },
         cta: {
             fontSize: 11,
             fontWeight: "600",
             color: colors.textSecondary,
-            marginTop: 8,
             marginLeft: 2,
         },
         pressed: {

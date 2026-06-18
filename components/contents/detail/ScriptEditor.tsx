@@ -1,4 +1,6 @@
+import AIModelSelector from "@/components/ai/AIModelSelector/AIModelSelector";
 import RichTextEditor from "@/components/rich-text-editor";
+import { useAIConfig } from "@/contexts/ai-config-context.provider";
 import Colors from "@/shared-uis/constants/Colors";
 import {
     faChevronDown,
@@ -7,7 +9,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 interface ScriptEditorProps {
@@ -17,8 +19,11 @@ interface ScriptEditorProps {
     onScriptChange: (s: string) => void;
     aiPrompt: string;
     onAiPromptChange: (s: string) => void;
-    onEnhance: () => void;
+    /** Fires with the chosen AI model (when a selector is shown). */
+    onEnhance: (model?: string) => void;
     isGenerating: boolean;
+    /** When set, shows an AI-model selector for this task (e.g. "script"). */
+    task?: string;
     contentId?: string;
     onSendToChat: (text: string) => void;
     /** Reel: script is optional and collapsed by default. Live: always open. */
@@ -36,6 +41,7 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({
     onAiPromptChange,
     onEnhance,
     isGenerating,
+    task,
     contentId,
     onSendToChat,
     collapsible = false,
@@ -44,6 +50,11 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useStyles(colors);
+
+    const { modelsForTask, resolveForTask } = useAIConfig();
+    const taskModels = task ? modelsForTask(task) : [];
+    const [modelOverride, setModelOverride] = useState<string | undefined>(undefined);
+    const selectedModel = task ? resolveForTask(task, modelOverride).modelId ?? "" : "";
 
     // Reel: start collapsed unless a script already exists. Live: always expanded.
     const [expanded, setExpanded] = useState(!collapsible || !!script);
@@ -97,6 +108,18 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({
                     )}
 
                     {!readOnly && (
+                    <>
+                    {task && taskModels.length > 0 ? (
+                        <View style={styles.modelRow}>
+                            <Text style={styles.modelLabel}>Model</Text>
+                            <AIModelSelector
+                                models={taskModels}
+                                selectedModel={selectedModel}
+                                onSelect={setModelOverride}
+                                compact
+                            />
+                        </View>
+                    ) : null}
                     <View style={styles.aiPromptRow}>
                         <TextInput
                             style={[styles.input, styles.aiPromptInput]}
@@ -111,7 +134,7 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({
                                 (!aiPrompt.trim() || isGenerating) && styles.aiSendBtnDisabled,
                                 pressed && styles.btnPressed,
                             ]}
-                            onPress={onEnhance}
+                            onPress={() => onEnhance(task ? selectedModel || undefined : undefined)}
                             disabled={!aiPrompt.trim() || isGenerating}
                         >
                             <FontAwesomeIcon
@@ -124,6 +147,7 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({
                             </Text>
                         </Pressable>
                     </View>
+                    </>
                     )}
                 </>
             ) : null}
@@ -195,6 +219,17 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             shadowRadius: 3,
             shadowOpacity: 0.04,
             elevation: 1,
+        },
+        modelRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 10,
+        },
+        modelLabel: {
+            fontSize: 12,
+            fontWeight: "600",
+            color: colors.textSecondary,
         },
         aiPromptRow: {
             flexDirection: "row",

@@ -37,6 +37,7 @@ import Toaster from "@/shared-uis/components/toaster/Toaster";
 import PageHeader from "@/components/ui/page-header";
 import { useBreakpoints } from "@/hooks";
 import { CaptionVariant, HashtagGroup, useAIGenerate } from "@/hooks/use-ai-generate";
+import { LiveContent } from "@/hooks/use-ai-chat";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBrandSocialContext } from "@/contexts/brand-social-context.provider";
 import { useContents } from "@/hooks/use-contents";
@@ -539,7 +540,7 @@ const CreateContentScreen = () => {
     const hashtagSnapRef = useRef<HashtagGroup[] | null>(null);
 
     const handleMagicGenerate = useCallback(
-        (prompt: string) => {
+        (prompt: string, model?: string) => {
             const target = magicTarget;
             if (!target) return;
             // Use the content's primary targeted platform as prompt context.
@@ -567,6 +568,7 @@ const CreateContentScreen = () => {
                     platform,
                     format: contentType,
                     contextId: contentId,
+                    model,
                     ...liveContent,
                 });
             } else {
@@ -577,6 +579,7 @@ const CreateContentScreen = () => {
                     platform,
                     format: contentType,
                     contextId: contentId,
+                    model,
                     ...liveContent,
                 });
             }
@@ -584,7 +587,7 @@ const CreateContentScreen = () => {
         [magicTarget, contentType, contentId, title, idea, caption, hashtags, script, aiCaptions, aiHashtags, generateCaption, generateHashtags, targetPlatforms]
     );
 
-    const handleScriptAiEnhance = useCallback(() => {
+    const handleScriptAiEnhance = useCallback((model?: string) => {
         setScript("");
         const keyMessage = scriptAiPrompt.trim();
         if (!keyMessage) return;
@@ -595,6 +598,7 @@ const CreateContentScreen = () => {
             keyMessage,
             tone: "friendly",
             contextId: contentId,
+            model,
             // Live editor state so the script reflects the current piece.
             title,
             format: contentType,
@@ -604,7 +608,29 @@ const CreateContentScreen = () => {
         });
     }, [scriptAiPrompt, isReel, title, idea, contentType, caption, hashtags, contentId, generateScript]);
 
-    const handleImageGenerate = useCallback((promptArg?: string, focusedSlideIndex?: number) => {
+    // Snapshot the current (possibly unsaved) editor state for the AI chat, so
+    // every chat message reasons about exactly what's on screen now — not the
+    // last-saved Firestore doc. Read lazily by AIChatPanel at send time.
+    const getLiveChatContent = useCallback(
+        (): LiveContent => ({
+            title,
+            description: idea,
+            format: contentType,
+            platforms: targetPlatforms.map((p) => SOCIAL_PLATFORM_MAP[p]?.label ?? p),
+            caption,
+            hashtags,
+            script,
+            attachments: attachments.map((a) => ({
+                type: a.type,
+                imageUrl: a.imageUrl,
+                playUrl: a.playUrl,
+                appleUrl: a.appleUrl,
+            })),
+        }),
+        [title, idea, contentType, targetPlatforms, caption, hashtags, script, attachments]
+    );
+
+    const handleImageGenerate = useCallback((promptArg?: string, focusedSlideIndex?: number, model?: string) => {
         const p = (promptArg ?? imagePrompt).trim();
         if (!p) return;
         setImagePrompt(p);
@@ -617,6 +643,7 @@ const CreateContentScreen = () => {
             multi: MEDIA_SPEC[contentType].multi,
             // Carousel: which slide to act on. Backend decides edit-vs-add.
             focusedSlideIndex,
+            model,
         });
     }, [imagePrompt, contentType, contentId, generateImage]);
 
@@ -981,6 +1008,7 @@ const CreateContentScreen = () => {
                                     onAiPromptChange={setScriptAiPrompt}
                                     onEnhance={handleScriptAiEnhance}
                                     isGenerating={isGeneratingScript}
+                                    task="script"
                                     contentId={contentId}
                                     onSendToChat={handleSendToChat}
                                     collapsible={isReel}
@@ -1155,6 +1183,7 @@ const CreateContentScreen = () => {
                                     onRemoveFocusItem={(id) =>
                                         setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
                                     }
+                                    getLiveContent={getLiveChatContent}
                                     isCompact
                                 />
                             }
@@ -1191,6 +1220,7 @@ const CreateContentScreen = () => {
                             onRemoveFocusItem={(id) =>
                                 setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
                             }
+                            getLiveContent={getLiveChatContent}
                             isCompact
                             onCollapse={() => setRightPanelMode("none")}
                             // Tab bar owns the bottom inset (don't double it), but this
@@ -1244,6 +1274,7 @@ const CreateContentScreen = () => {
                         ? "E.g. punchy and playful, highlight free shipping…"
                         : "E.g. orthopedic sandals for women, wellness niche…"
                 }
+                task={magicTarget === "caption" ? "caption" : "hashtag"}
                 onClose={() => setMagicTarget(null)}
                 onGenerate={handleMagicGenerate}
             />
