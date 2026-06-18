@@ -120,13 +120,23 @@ interface AIChatPanelProps {
     messageAlign?: "top" | "bottom";
 
     /**
-     * Set when the host already insets for the notch/home-indicator (e.g. it
-     * sits inside an `AppLayout` whose `safeAreaEdges` include `top`/`bottom`).
-     * The panel then skips its own safe-area padding so the inset isn't applied
-     * twice — otherwise the header/input gain a doubled top/bottom gap on
-     * native. Defaults to false (panel self-insets, for edge-to-edge mounts).
+     * Set when the host already insets for BOTH the notch and the
+     * home-indicator (e.g. it sits inside an `AppLayout` whose `safeAreaEdges`
+     * include `top` AND `bottom`). The panel then skips its own safe-area
+     * padding on both axes so the inset isn't applied twice. Defaults to false
+     * (panel self-insets, for edge-to-edge mounts).
      */
     parentHandlesSafeArea?: boolean;
+
+    /**
+     * Set when only the BOTTOM is handled by the host — e.g. the screen sits in
+     * the tab navigator (the tab bar owns the home-indicator inset) but its
+     * `AppLayout` does NOT inset `top`. The panel then keeps insetting its own
+     * top (so its header clears the status bar) while skipping the bottom inset
+     * (which would otherwise double up above the tab bar). Ignored when
+     * `parentHandlesSafeArea` is set. Defaults to false.
+     */
+    parentHandlesSafeBottom?: boolean;
 }
 
 /**
@@ -155,6 +165,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     hideHeader = false,
     messageAlign = "bottom",
     parentHandlesSafeArea = false,
+    parentHandlesSafeBottom = false,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -163,11 +174,13 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     // On mobile (!xl) the panel mounts edge-to-edge (full-screen chat or the
     // floating sheet), so it must inset for the notch/home-indicator itself.
     // On desktop the surrounding AppLayout already handles safe area — as does
-    // any host that opts in via `parentHandlesSafeArea` (e.g. a screen whose
-    // AppLayout already insets top/bottom), which would otherwise double up.
-    const selfInset = !xl && !parentHandlesSafeArea;
-    const safeTop = selfInset ? insets.top : 0;
-    const rawSafeBottom = selfInset ? insets.bottom : 0;
+    // any host that opts in (which would otherwise double up). Top and bottom
+    // are decoupled: a tab-hosted screen (`parentHandlesSafeBottom`) keeps its
+    // top inset but lets the tab bar own the bottom.
+    const selfInsetTop = !xl && !parentHandlesSafeArea;
+    const selfInsetBottom = !xl && !parentHandlesSafeArea && !parentHandlesSafeBottom;
+    const safeTop = selfInsetTop ? insets.top : 0;
+    const rawSafeBottom = selfInsetBottom ? insets.bottom : 0;
 
     // While the keyboard is open it already covers the home-indicator area, so
     // the composer's own bottom safe-area inset would just float the input above
@@ -641,18 +654,6 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                         <>
                             {/* Low / critical token warning — non-blocking. */}
                             <TokenMeterNotice tokens={tokens} />
-                            {/* Model strip — sits right above the input */}
-                            <View style={styles.modelStrip}>
-                                <View style={styles.modelStripGrow}>
-                                    <AIModelSelector
-                                        models={models}
-                                        selectedModel={selectedModel}
-                                        onSelect={setSelectedModel}
-                                        compact
-                                    />
-                                </View>
-                                <TokenMeterBar tokens={tokens} />
-                            </View>
 
                             {/* Pending image attachments — chips with upload spinner + remove */}
                             {pendingImages.length > 0 && (
@@ -688,52 +689,70 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                                 </ScrollView>
                             )}
 
+                            {/* Composer — full-width input on top, controls (image, model,
+                                tokens, send) on a roomy row below for easy mobile tapping. */}
                             <View style={styles.inputArea}>
-                                <Pressable
-                                    style={({ pressed }) => [
-                                        styles.attachBtn,
-                                        pressed && styles.attachBtnPressed,
-                                        busy && styles.sendBtnDisabled,
-                                    ]}
-                                    onPress={handleAttach}
-                                    disabled={busy}
-                                    accessibilityLabel="Attach image"
-                                >
-                                    <FontAwesomeIcon icon={faImage} size={16} color={colors.primary} />
-                                </Pressable>
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder={busy ? "Getting ready…" : placeholder}
-                                    placeholderTextColor={colors.textSecondary}
-                                    value={input}
-                                    onChangeText={setInput}
-                                    editable={!busy}
-                                    multiline
-                                    maxLength={1000}
-                                    onKeyPress={(e: any) => {
-                                        // Web: Enter sends, Shift+Enter inserts a newline.
-                                        // Native multiline behaviour is left untouched.
-                                        if (
-                                            Platform.OS === "web" &&
-                                            e?.nativeEvent?.key === "Enter" &&
-                                            !e?.nativeEvent?.shiftKey
-                                        ) {
-                                            e.preventDefault?.();
-                                            handleSend();
-                                        }
-                                    }}
-                                />
-                                <Pressable
-                                    style={({ pressed }) => [
-                                        styles.sendBtn,
-                                        pressed && styles.sendBtnPressed,
-                                        !canSend && styles.sendBtnDisabled,
-                                    ]}
-                                    onPress={handleSend}
-                                    disabled={!canSend}
-                                >
-                                    <FontAwesomeIcon icon={faPaperPlane} size={16} color={colors.onPrimary} />
-                                </Pressable>
+                                <View style={styles.composer}>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder={busy ? "Getting ready…" : placeholder}
+                                        placeholderTextColor={colors.textSecondary}
+                                        value={input}
+                                        onChangeText={setInput}
+                                        editable={!busy}
+                                        multiline
+                                        maxLength={1000}
+                                        onKeyPress={(e: any) => {
+                                            // Web: Enter sends, Shift+Enter inserts a newline.
+                                            // Native multiline behaviour is left untouched.
+                                            if (
+                                                Platform.OS === "web" &&
+                                                e?.nativeEvent?.key === "Enter" &&
+                                                !e?.nativeEvent?.shiftKey
+                                            ) {
+                                                e.preventDefault?.();
+                                                handleSend();
+                                            }
+                                        }}
+                                    />
+                                    <View style={styles.composerControls}>
+                                        <Pressable
+                                            style={({ pressed }) => [
+                                                styles.attachBtn,
+                                                pressed && styles.attachBtnPressed,
+                                                busy && styles.sendBtnDisabled,
+                                            ]}
+                                            onPress={handleAttach}
+                                            disabled={busy}
+                                            hitSlop={8}
+                                            accessibilityLabel="Attach image"
+                                        >
+                                            <FontAwesomeIcon icon={faImage} size={18} color={colors.primary} />
+                                        </Pressable>
+                                        <View style={styles.modelStripGrow}>
+                                            <AIModelSelector
+                                                models={models}
+                                                selectedModel={selectedModel}
+                                                onSelect={setSelectedModel}
+                                                compact
+                                            />
+                                        </View>
+                                        <TokenMeterBar tokens={tokens} />
+                                        <Pressable
+                                            style={({ pressed }) => [
+                                                styles.sendBtn,
+                                                pressed && styles.sendBtnPressed,
+                                                !canSend && styles.sendBtnDisabled,
+                                            ]}
+                                            onPress={handleSend}
+                                            disabled={!canSend}
+                                            hitSlop={8}
+                                            accessibilityLabel="Send message"
+                                        >
+                                            <FontAwesomeIcon icon={faPaperPlane} size={16} color={colors.onPrimary} />
+                                        </Pressable>
+                                    </View>
+                                </View>
                             </View>
                         </>
                     )}
@@ -925,46 +944,49 @@ function useStyles(
                     paddingVertical: 6,
                 },
                 focusChipClose: { padding: 8 },
-                // ── Model strip + input ──────────────────────────────────────
-                modelStrip: {
-                    paddingHorizontal: isCompact ? 10 : 14,
-                    paddingBottom: 4,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 10,
-                    backgroundColor: colors.card,
-                },
-                modelStripGrow: { flex: 1 },
+                // ── Composer (input + controls) ──────────────────────────────
+                modelStripGrow: { flex: 1, minWidth: 0 },
+                // Floating bottom bar — holds the composer card. The composer carries
+                // its own lift shadow, so the bar itself stays flat (no upward edge line).
                 inputArea: {
-                    flexDirection: "row",
-                    alignItems: "flex-end",
-                    gap: 10,
                     paddingHorizontal: isCompact ? 10 : 14,
                     paddingBottom: (isCompact ? 10 : 14) + safeBottom,
                     paddingTop: 6,
                     backgroundColor: colors.card,
+                },
+                // Single rounded surface: full-width text on top, controls row below.
+                // Card-coloured + lifted so the tag-coloured chip / token track inside
+                // it stay legible (tag-on-tag would vanish).
+                composer: {
+                    backgroundColor: colors.card,
+                    borderRadius: 22,
+                    paddingHorizontal: 6,
+                    paddingTop: 4,
+                    paddingBottom: 6,
                     shadowColor: "#000",
-                    shadowOffset: { width: 0, height: -4 },
+                    shadowOffset: { width: 0, height: 2 },
                     shadowRadius: 8,
-                    shadowOpacity: 0.05,
-                    elevation: 4,
+                    shadowOpacity: 0.07,
+                    elevation: 3,
                 },
                 input: {
-                    flex: 1,
                     minHeight: 40,
-                    maxHeight: 120,
-                    borderRadius: 20,
-                    backgroundColor: colors.tag,
+                    maxHeight: 140,
                     color: colors.text,
-                    paddingHorizontal: 14,
-                    paddingVertical: 10,
-                    fontSize: 14,
-                    textAlignVertical: "center",
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowRadius: 3,
-                    shadowOpacity: 0.04,
-                    elevation: 1,
+                    paddingHorizontal: 12,
+                    paddingTop: 8,
+                    paddingBottom: 6,
+                    fontSize: 15,
+                    textAlignVertical: "top",
+                    // No blue focus ring on web — the composer surface already
+                    // signals the active field.
+                    ...Platform.select({ web: { outlineStyle: "none" } as any }),
+                },
+                composerControls: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    paddingHorizontal: 2,
                 },
                 sendBtn: {
                     width: 40,
@@ -986,16 +1008,11 @@ function useStyles(
                     width: 40,
                     height: 40,
                     borderRadius: 20,
-                    backgroundColor: colors.tag,
+                    backgroundColor: "transparent",
                     alignItems: "center",
                     justifyContent: "center",
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowRadius: 3,
-                    shadowOpacity: 0.04,
-                    elevation: 1,
                 },
-                attachBtnPressed: { opacity: 0.7 },
+                attachBtnPressed: { backgroundColor: colors.tag },
                 attachBar: { flexShrink: 0, maxHeight: 76, marginHorizontal: 12, marginBottom: 6 },
                 attachBarContent: { gap: 8, alignItems: "center", paddingVertical: 4 },
                 attachChip: {

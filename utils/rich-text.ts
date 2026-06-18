@@ -42,14 +42,46 @@ function stripHtmlWrapper(html: string): string {
     return (match ? match[1] : trimmed).trim();
 }
 
+/** Map standard HTML tags onto the enriched editor's vocabulary
+ *  (`<strong>`→`<b>`, `<em>`→`<i>`, `<del>/<strike>`→`<s>`, `<h4-6>`→`<h3>`,
+ *  `<pre>`→`<codeblock>`). Tags the parser doesn't recognise are left alone
+ *  (it ignores unknowns).
+ *
+ *  ⚠️ The `<h4-6>`→`<h3>` mapping is load-bearing on native: the native parser
+ *  (`react-native-enriched`) crashes on heading levels it doesn't support — an
+ *  unsupported `<h4>`/`<h5>`/`<h6>` produces a malformed style entry that aborts
+ *  the app (NSRangeException in InputParser.mm). Downgrading them to `<h3>` here
+ *  keeps the heading visible AND avoids the crash; the native patch guards the
+ *  same case defensively. Shared by both the load path (`ensureEnrichedHtml`)
+ *  and the AI Quick Edit path (`aiResultToEnrichedFragment`). */
+function mapStandardTagsToEnriched(html: string): string {
+    return html
+        .replace(/<\s*strong(\s[^>]*)?>/gi, "<b>")
+        .replace(/<\s*\/\s*strong\s*>/gi, "</b>")
+        .replace(/<\s*em(\s[^>]*)?>/gi, "<i>")
+        .replace(/<\s*\/\s*em\s*>/gi, "</i>")
+        .replace(/<\s*(del|strike)(\s[^>]*)?>/gi, "<s>")
+        .replace(/<\s*\/\s*(del|strike)\s*>/gi, "</s>")
+        .replace(/<\s*h[4-6](\s[^>]*)?>/gi, "<h3>")
+        .replace(/<\s*\/\s*h[4-6]\s*>/gi, "</h3>")
+        .replace(/<\s*pre(\s[^>]*)?>/gi, "<codeblock>")
+        .replace(/<\s*\/\s*pre\s*>/gi, "</codeblock>");
+}
+
 /**
  * Canonical normaliser used on load AND export by both editors. Converts legacy
- * markdown to HTML and wraps the result in `<html>…</html>`. Idempotent, so it
- * is safe to run on every change. Returns "" for empty content so the
- * placeholder shows cleanly.
+ * markdown to HTML, maps standard tags onto the editor's vocabulary, and wraps
+ * the result in `<html>…</html>`. Idempotent, so it is safe to run on every
+ * change. Returns "" for empty content so the placeholder shows cleanly.
+ *
+ * The tag mapping (notably `<h4-6>`→`<h3>`) is required on the load path: stored
+ * strategy HTML can carry unsupported heading levels that crash the native
+ * editor when fed as `defaultValue`.
  */
 export function ensureEnrichedHtml(content: string): string {
-    const inner = stripHtmlWrapper(ensureHtml(content || "")).trim();
+    const inner = mapStandardTagsToEnriched(
+        stripHtmlWrapper(ensureHtml(content || ""))
+    ).trim();
     if (!inner) return "";
     return `<html>\n${inner}\n</html>`;
 }
@@ -74,24 +106,6 @@ function mdInlineToEnriched(text: string): string {
     s = s.replace(/~~([^~]+)~~/g, "<s>$1</s>");
     s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
     return s;
-}
-
-/** Map standard HTML tags the AI might emit onto the enriched editor's
- *  vocabulary (`<strong>`→`<b>`, `<em>`→`<i>`, `<del>/<strike>`→`<s>`,
- *  `<h4-6>`→`<h3>`, `<pre>`→`<codeblock>`). Tags the parser doesn't recognise
- *  are left alone (it ignores unknowns). */
-function mapStandardTagsToEnriched(html: string): string {
-    return html
-        .replace(/<\s*strong(\s[^>]*)?>/gi, "<b>")
-        .replace(/<\s*\/\s*strong\s*>/gi, "</b>")
-        .replace(/<\s*em(\s[^>]*)?>/gi, "<i>")
-        .replace(/<\s*\/\s*em\s*>/gi, "</i>")
-        .replace(/<\s*(del|strike)(\s[^>]*)?>/gi, "<s>")
-        .replace(/<\s*\/\s*(del|strike)\s*>/gi, "</s>")
-        .replace(/<\s*h[4-6](\s[^>]*)?>/gi, "<h3>")
-        .replace(/<\s*\/\s*h[4-6]\s*>/gi, "</h3>")
-        .replace(/<\s*pre(\s[^>]*)?>/gi, "<codeblock>")
-        .replace(/<\s*\/\s*pre\s*>/gi, "</codeblock>");
 }
 
 /**
