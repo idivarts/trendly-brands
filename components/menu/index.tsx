@@ -24,7 +24,6 @@ import {
     faGears,
     faGem,
     faHandshake,
-    faInbox,
     faLock,
     faPenToSquare,
     faPeopleGroup,
@@ -32,7 +31,8 @@ import {
     faStar,
     faTriangleExclamation,
     faUsers,
-    faUserShield
+    faUserShield,
+    faWandMagicSparkles
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme, type Theme } from "@react-navigation/native";
@@ -325,10 +325,10 @@ const Menu = () => {
             {/* Quick actions */}
             <View style={styles.quickRow}>
                 <QuickChip
-                    icon={faInbox}
-                    label="Inbox"
+                    icon={faWandMagicSparkles}
+                    label="Playground"
                     theme={theme}
-                    onPress={() => navigate("/inbox")}
+                    onPress={() => navigate("/playground")}
                 />
                 <QuickChip
                     icon={faComment}

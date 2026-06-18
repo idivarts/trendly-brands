@@ -1,6 +1,16 @@
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
-import { faPenToSquare, faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
+import {
+    faCalendarDays,
+    faComments,
+    faLayerGroup,
+    faPenRuler,
+    faPenToSquare,
+    faPlus,
+    faSeedling,
+    faTrash,
+} from "@fortawesome/free-solid-svg-icons";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
@@ -18,6 +28,8 @@ export interface AIChatHistoryThread {
     id: string;
     title: string;
     updatedAt: number;
+    /** Which AI module the conversation belongs to (drives the origin badge). */
+    module?: string;
 }
 
 interface AIChatHistoryProps {
@@ -27,6 +39,25 @@ interface AIChatHistoryProps {
     onNewChat: () => void;
     onRenameThread: (id: string, title: string) => void;
     onDeleteThread: (id: string) => void;
+    /**
+     * When true, each thread shows a small badge for the module it came from.
+     * Used by the Playground, where one list mixes every module. Off by default
+     * for the per-module panels (the badge would be redundant there).
+     */
+    showModuleBadge?: boolean;
+}
+
+/** Friendly label + icon for each AI module, shared by the origin badge. */
+const MODULE_META: Record<string, { label: string; icon: IconDefinition }> = {
+    strategy: { label: "Strategy", icon: faPenRuler },
+    calendar: { label: "Calendar", icon: faCalendarDays },
+    content: { label: "Content", icon: faLayerGroup },
+    onboarding: { label: "Setup", icon: faSeedling },
+    general: { label: "General", icon: faComments },
+};
+
+function moduleMeta(module?: string) {
+    return (module && MODULE_META[module]) || MODULE_META.general;
 }
 
 function timeAgo(epoch: number): string {
@@ -47,6 +78,7 @@ const AIChatHistory: React.FC<AIChatHistoryProps> = ({
     onNewChat,
     onRenameThread,
     onDeleteThread,
+    showModuleBadge = false,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -123,11 +155,28 @@ const AIChatHistory: React.FC<AIChatHistoryProps> = ({
                                         >
                                             {t.title || "Untitled"}
                                         </Text>
-                                        <Text
-                                            style={[styles.threadMeta, active && styles.threadMetaActive]}
-                                        >
-                                            {timeAgo(t.updatedAt)}
-                                        </Text>
+                                        <View style={styles.threadMetaRow}>
+                                            {showModuleBadge && (
+                                                <View style={[styles.moduleBadge, active && styles.moduleBadgeActive]}>
+                                                    <FontAwesomeIcon
+                                                        icon={moduleMeta(t.module).icon}
+                                                        size={9}
+                                                        color={active ? colors.onPrimary : colors.textSecondary}
+                                                    />
+                                                    <Text
+                                                        style={[styles.moduleBadgeText, active && styles.moduleBadgeTextActive]}
+                                                        numberOfLines={1}
+                                                    >
+                                                        {moduleMeta(t.module).label}
+                                                    </Text>
+                                                </View>
+                                            )}
+                                            <Text
+                                                style={[styles.threadMeta, active && styles.threadMetaActive]}
+                                            >
+                                                {timeAgo(t.updatedAt)}
+                                            </Text>
+                                        </View>
                                     </Pressable>
                                 )}
                                 <View style={styles.threadActions}>
@@ -226,11 +275,37 @@ function useStyles(colors: ReturnType<typeof Colors>, safeBottom: number) {
                     shadowOpacity: 0.3,
                     elevation: 3,
                 },
-                threadPress: { flex: 1 },
+                threadPress: { flex: 1, minWidth: 0 },
                 threadTitle: { color: colors.text, fontSize: 13, fontWeight: "600" },
                 threadTitleActive: { color: colors.onPrimary },
-                threadMeta: { color: colors.textSecondary, fontSize: 11, marginTop: 2 },
+                threadMetaRow: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    marginTop: 3,
+                },
+                threadMeta: { color: colors.textSecondary, fontSize: 11 },
                 threadMetaActive: { color: colors.onPrimary, opacity: 0.8 },
+                // Module origin pill — neutral tag surface so it reads on the card
+                // background; flips to a translucent light fill on the active
+                // (primary-filled) row so it stays legible.
+                moduleBadge: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 4,
+                    paddingHorizontal: 6,
+                    paddingVertical: 2,
+                    borderRadius: 6,
+                    backgroundColor: colors.tag,
+                    flexShrink: 0,
+                },
+                moduleBadgeActive: { backgroundColor: colors.backdrop },
+                moduleBadgeText: {
+                    color: colors.textSecondary,
+                    fontSize: 10,
+                    fontWeight: "600",
+                },
+                moduleBadgeTextActive: { color: colors.onPrimary },
                 threadActions: { flexDirection: "row", gap: 2 },
                 threadActionBtn: {
                     width: 28,

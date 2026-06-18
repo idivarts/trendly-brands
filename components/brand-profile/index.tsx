@@ -8,7 +8,7 @@ import { Surface } from "react-native-paper";
 
 import BrandAge from "./BrandAge";
 import BrandDetails from "./BrandDetails";
-import BrandIndustry from "./BrandIndustry";
+import BrandMemory from "./BrandMemory";
 
 const STEP_ANIM_DURATION = 280;
 
@@ -133,7 +133,7 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
                             plainSection
                             compactLayout
                         />
-                        <BrandIndustry
+                        <BrandMemory
                             brandData={brandData}
                             setBrandData={setBrandData}
                             onBack={isCreate ? handleBack : undefined}
@@ -208,7 +208,7 @@ const BrandProfile: React.FC<BrandProfileProps> = ({
                         />
                     )}
                     {showSection(3) && (
-                        <BrandIndustry
+                        <BrandMemory
                             brandData={brandData}
                             setBrandData={setBrandData}
                             onBack={isCreate ? handleBack : undefined}

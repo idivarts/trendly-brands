@@ -11,7 +11,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { CalendarItem, CONTENT_TYPE_LABELS, contentTypeColor } from "./types";
 
@@ -19,15 +19,28 @@ import { CalendarItem, CONTENT_TYPE_LABELS, contentTypeColor } from "./types";
  * On web, surface the full (possibly truncated) title as a native browser
  * tooltip via the HTML `title` attribute. RN-web strips `title` from View/Text,
  * so we wrap in a real element here. No-op on native, where hover doesn't exist.
+ *
+ * This same wrapper also owns the hover state for the floating action cluster.
+ * We deliberately attach `mouseenter`/`mouseleave` to this DOM `div` (which
+ * contains BOTH the card and the overlay) rather than `onHoverIn`/`onHoverOut`
+ * on the inner Pressable: native `mouseleave` does NOT fire when the pointer
+ * moves onto a descendant, so sliding the cursor from the card onto the overlay
+ * keeps it open and clickable. Pressable's synthetic hover flickered it shut.
  */
-const TitleTooltip: React.FC<{ text: string; children: React.ReactNode }> = ({
-    text,
-    children,
-}) =>
+const TitleTooltip: React.FC<{
+    text: string;
+    onHoverChange?: (hovered: boolean) => void;
+    children: React.ReactNode;
+}> = ({ text, onHoverChange, children }) =>
     Platform.OS === "web"
         ? React.createElement(
               "div",
-              { title: text, style: { display: "flex", flexDirection: "column", minWidth: 0 } },
+              {
+                  title: text,
+                  onMouseEnter: onHoverChange ? () => onHoverChange(true) : undefined,
+                  onMouseLeave: onHoverChange ? () => onHoverChange(false) : undefined,
+                  style: { display: "flex", flexDirection: "column", minWidth: 0 },
+              },
               children
           )
         : (children as React.ReactElement);
@@ -46,12 +59,21 @@ interface ContentItemChipProps {
     /** Tapping the chip body opens the content details page for editing. */
     onOpen?: (item: CalendarItem) => void;
     /**
-     * Show the comment + AI-focus action buttons in the footer. Defaults to true.
-     * MonthView turns these off for the cramped inline chips on mobile (`!xl`),
-     * where there's no room for them — the actions stay reachable by opening the
-     * item or via the day popover.
+     * Show the comment + AI-focus action buttons inline in the footer. Defaults to
+     * true. Wide containers (week view, day popover) have room for this. MonthView
+     * turns it off — its cells are too narrow to sit buttons beside the meta badges
+     * without overlapping them (that's what `hoverActions` is for instead).
      */
     showActions?: boolean;
+    /**
+     * Web-only: reveal the action buttons as a floating cluster on hover instead of
+     * inline. MonthView uses this on desktop so a narrow month cell shows a clean
+     * title + meta at rest, and the quick actions appear (pinned top-right, on their
+     * own card surface) only when the user hovers — never colliding with the meta.
+     * No-op on native, where hover doesn't exist (actions stay reachable by opening
+     * the item or via the day popover).
+     */
+    hoverActions?: boolean;
 }
 
 /**
@@ -74,10 +96,15 @@ const ContentItemChip: React.FC<ContentItemChipProps> = ({
     onComment,
     onOpen,
     showActions = true,
+    hoverActions = false,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const typeColor = contentTypeColor(item.type, colors);
+    // Hover reveal is web-only (`onHoverIn`/`onHoverOut` no-op on native). When
+    // enabled, the actions live in a floating overlay shown only while hovered.
+    const canHover = hoverActions && Platform.OS === "web";
+    const [hovered, setHovered] = useState(false);
     // A lifecycle marker is shown only for the two "committed" states —
     // `scheduled` and `posted`. Working states (draft / in-progress / etc.)
     // stay unmarked so these two stand out as the exception.
@@ -93,8 +120,47 @@ const ContentItemChip: React.FC<ContentItemChipProps> = ({
         statusPalette?.bg ?? null
     );
 
+    // Shared by the inline footer (week/popover) and the hover overlay (month/web)
+    // so both paths stay identical. `iconSize` lets the overlay render a touch
+    // smaller to fit its compact floating surface.
+    const actionButtons = (iconSize: number) => (
+        <>
+            <Pressable
+                style={({ pressed }) => [
+                    styles.actionBtn,
+                    pressed && styles.actionBtnPressed,
+                ]}
+                onPress={() => onComment(item)}
+                hitSlop={6}
+            >
+                <FontAwesomeIcon
+                    icon={faComment}
+                    size={iconSize}
+                    color={colors.textSecondary}
+                />
+            </Pressable>
+            <Pressable
+                style={({ pressed }) => [
+                    styles.actionBtn,
+                    pressed && styles.actionBtnPressed,
+                ]}
+                onPress={() => onFocusChat(item)}
+                hitSlop={6}
+            >
+                <FontAwesomeIcon
+                    icon={faCrosshairs}
+                    size={iconSize}
+                    color={colors.primary}
+                />
+            </Pressable>
+        </>
+    );
+
     return (
-        <TitleTooltip text={item.title}>
+        <TitleTooltip
+            text={item.title}
+            onHoverChange={canHover ? setHovered : undefined}
+        >
         <Pressable
             style={({ pressed }) => [styles.chip, pressed && styles.chipPressed]}
             onPress={onOpen ? () => onOpen(item) : undefined}
@@ -135,39 +201,13 @@ const ContentItemChip: React.FC<ContentItemChipProps> = ({
                         </View>
                     </View>
                     {showActions && (
-                        <View style={styles.actions}>
-                            <Pressable
-                                style={({ pressed }) => [
-                                    styles.actionBtn,
-                                    pressed && styles.actionBtnPressed,
-                                ]}
-                                onPress={() => onComment(item)}
-                                hitSlop={6}
-                            >
-                                <FontAwesomeIcon
-                                    icon={faComment}
-                                    size={16}
-                                    color={colors.textSecondary}
-                                />
-                            </Pressable>
-                            <Pressable
-                                style={({ pressed }) => [
-                                    styles.actionBtn,
-                                    pressed && styles.actionBtnPressed,
-                                ]}
-                                onPress={() => onFocusChat(item)}
-                                hitSlop={6}
-                            >
-                                <FontAwesomeIcon
-                                    icon={faCrosshairs}
-                                    size={16}
-                                    color={colors.primary}
-                                />
-                            </Pressable>
-                        </View>
+                        <View style={styles.actions}>{actionButtons(16)}</View>
                     )}
                 </View>
             </View>
+            {canHover && hovered && (
+                <View style={styles.hoverActions}>{actionButtons(14)}</View>
+            )}
         </Pressable>
         </TitleTooltip>
     );
@@ -263,6 +303,25 @@ function useStyles(
                 actions: {
                     flexDirection: "row",
                     // gap: 6,
+                },
+                // Floating action cluster revealed on hover in narrow month cells.
+                // Sits on its own elevated card surface, pinned to the chip's top-
+                // right, so it reads cleanly over the title edge and never shares a
+                // row with the meta badges (which is what caused the overlap).
+                hoverActions: {
+                    position: "absolute",
+                    top: 3,
+                    right: 3,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    backgroundColor: colors.card,
+                    borderRadius: 7,
+                    paddingHorizontal: 1,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowRadius: 6,
+                    shadowOpacity: 0.12,
+                    elevation: 3,
                 },
                 actionBtn: {
                     padding: 5,
