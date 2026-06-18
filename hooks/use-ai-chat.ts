@@ -401,12 +401,12 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
     }, [activeThreadId]);
 
     const sendMessage = useCallback(
-        async (content: string, focusedText?: string, model?: string, images?: string[]) => {
-            if (!brandId || !manager?.id) return;
+        async (content: string, focusedText?: string, model?: string, images?: string[]): Promise<boolean> => {
+            if (!brandId || !manager?.id) return false;
             let convId = activeThreadId;
             if (!convId) {
                 convId = await createThread();
-                if (!convId) return;
+                if (!convId) return false;
             }
             const clientMsgId = newClientMsgId();
             const imgs = images && images.length > 0 ? images : undefined;
@@ -428,6 +428,7 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
                 model,
                 images: imgs,
             });
+            return true;
         },
         [brandId, manager?.id, activeThreadId, createThread]
     );

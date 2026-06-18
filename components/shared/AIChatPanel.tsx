@@ -554,7 +554,20 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
             focusItems.length > 0
                 ? focusItems.map((f) => f.contextText ?? f.label).join("\n")
                 : undefined;
-        sendMessage(trimmed, focusedText, selectedModel, readyImageUrls.length > 0 ? readyImageUrls : undefined);
+        // Starting a brand-new conversation (e.g. from the hero/starter) requires
+        // an async createThread round-trip before streaming begins. Flip on the
+        // loader now so the user leaves the starter immediately instead of sitting
+        // on it with no feedback; the effect below clears it once the optimistic
+        // bubble lands / streaming starts. Clear it too if the send never goes out.
+        const startingNew = !activeThreadId;
+        if (startingNew) setStartingConversation(true);
+        sendMessage(trimmed, focusedText, selectedModel, readyImageUrls.length > 0 ? readyImageUrls : undefined)
+            .then((sent) => {
+                if (startingNew && !sent) setStartingConversation(false);
+            })
+            .catch(() => {
+                if (startingNew) setStartingConversation(false);
+            });
         setInput("");
         setPendingImages([]);
         focusItems.forEach((f) => onRemoveFocusItem?.(f.id));
