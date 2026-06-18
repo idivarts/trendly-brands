@@ -20,10 +20,13 @@ import {
     faPaperPlane,
     faPenToSquare,
     faRobot,
+    faUpRightAndDownLeftFromCenter,
+    faWandMagicSparkles,
     faXmark
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
+import { router } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
@@ -110,6 +113,13 @@ interface AIChatPanelProps {
 
     /** Header label. Defaults to "AI Content Expert". */
     title?: string;
+
+    /**
+     * Open this conversation on mount instead of starting blank. Used by the
+     * Playground when reached via another panel's "expand" action (deep-link with
+     * a conversationId). One-shot — the user can navigate away afterwards.
+     */
+    initialConversationId?: string;
 
     /**
      * Emits the panel's header actions (history toggle + new chat) so a host can
@@ -217,6 +227,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     heroTitle,
     heroSuggestions,
     onControlsChange,
+    initialConversationId,
     initialMessage,
     onInitialMessageSent,
     focusItems = [],
@@ -371,6 +382,18 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     // loader up across this window is what avoids the "blank panel" on first open.
     const [startingConversation, setStartingConversation] = useState(false);
 
+    // True until a deep-linked `initialConversationId` (Playground "expand") has
+    // been opened — keeps the loader up (and the hero suppressed) so the target
+    // conversation slides in directly instead of flashing the empty state.
+    const [pendingInitialOpen, setPendingInitialOpen] = useState(!!initialConversationId);
+    const openedInitialRef = useRef(false);
+    useEffect(() => {
+        if (!initialConversationId || openedInitialRef.current) return;
+        openedInitialRef.current = true;
+        loadThread(initialConversationId);
+        setPendingInitialOpen(false);
+    }, [initialConversationId, loadThread]);
+
     // Auto-send any queued initial message exactly once — but only after the
     // conversation has finished initializing, so it lands cleanly in the thread.
     const sentInitialRef = useRef<string | null>(null);
@@ -401,7 +424,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     // HTTP thread-creation window (startingConversation).
     const initialPending =
         !!initialMessage && !readOnly && sentInitialRef.current !== initialMessage;
-    const busy = notReady || initialPending || startingConversation;
+    const busy = notReady || initialPending || startingConversation || pendingInitialOpen;
 
     // Centered hero empty state — shown for ANY module (and the Playground) when
     // there's no conversation yet, instead of a lone welcome bubble. As soon as
@@ -565,6 +588,16 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     useEffect(() => {
         onControlsChange?.({ toggleHistory: onToggleHistory, newChat: onNewChat, historyActive });
     }, [onControlsChange, onToggleHistory, onNewChat, historyActive]);
+
+    // "Expand" — open the active conversation in the full Playground. Deep-links
+    // with its id so the Playground opens it by default. Only meaningful from a
+    // module panel (the Playground IS the expanded view), and only when a
+    // conversation is actually open.
+    const canExpand = scope !== "all" && !!activeThreadId;
+    const onExpand = useCallback(() => {
+        if (!activeThreadId) return;
+        router.push({ pathname: "/playground", params: { conversationId: activeThreadId } });
+    }, [activeThreadId]);
 
     // Send a control's answer back through the normal chat path as a user turn.
     const handleControlSubmit = (text: string) => {
@@ -798,6 +831,17 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                         </Text>
                         {effectiveViewMode === "chat" ? (
                             <>
+                                {canExpand && (
+                                    <Pressable
+                                        onPress={onExpand}
+                                        style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Expand in Playground"
+                                        hitSlop={6}
+                                    >
+                                        <FontAwesomeIcon icon={faUpRightAndDownLeftFromCenter} size={13} color={colors.text} />
+                                    </Pressable>
+                                )}
                                 <Pressable
                                     onPress={onToggleHistory}
                                     style={({ pressed }) => [

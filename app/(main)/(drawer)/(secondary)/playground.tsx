@@ -6,6 +6,7 @@ import Colors from "@/shared-uis/constants/Colors";
 import { faClockRotateLeft, faPenToSquare } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
+import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
@@ -26,6 +27,10 @@ const PlaygroundScreen = () => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useStyles(colors);
+
+    // Deep-link target from another panel's "expand" action — opens that
+    // conversation by default.
+    const { conversationId } = useLocalSearchParams<{ conversationId?: string }>();
 
     const [controls, setControls] = useState<AIChatControls | null>(null);
     const handleControlsChange = useCallback((c: AIChatControls) => setControls(c), []);
@@ -78,6 +83,7 @@ const PlaygroundScreen = () => {
                     title="Playground"
                     // Hero copy (heading/description/templates) comes from
                     // constants/AIChatStarters.ts → "general".
+                    initialConversationId={conversationId}
                     // The panel's actions live in this screen's PageHeader instead.
                     hideHeader
                     onControlsChange={handleControlsChange}
