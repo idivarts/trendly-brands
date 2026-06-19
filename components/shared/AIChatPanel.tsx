@@ -5,7 +5,7 @@ import AIChatHistory from "@/components/shared/AIChatHistory";
 import MarkdownMessage from "@/components/shared/MarkdownMessage";
 import { getAIChatStarter } from "@/constants/AIChatStarters";
 import { useBreakpoints } from "@/hooks";
-import { AIControl, AIModule, useAIChat } from "@/hooks/use-ai-chat";
+import { AIControl, AIModule, LiveContent, useAIChat } from "@/hooks/use-ai-chat";
 import { useAIModels } from "@/hooks/use-ai-models";
 import { useEntitlements } from "@/hooks/use-entitlements";
 import { useAWSContext } from "@/shared-libs/contexts/aws-context.provider";
@@ -153,6 +153,15 @@ interface AIChatPanelProps {
     onRemoveFocusItem?: (id: string) => void;
 
     /**
+     * Lazily read the host editor's current (possibly unsaved) state at send
+     * time. Used by the content module so every chat message carries the live
+     * on-screen content (title/caption/script/attachments/…), letting the AI
+     * reason about what the user sees now rather than the last-saved doc. Read
+     * on demand (not via props) so keystrokes don't re-render the panel.
+     */
+    getLiveContent?: () => LiveContent | undefined;
+
+    /**
      * Read-only mode. History stays fully visible and scrollable, but the
      * composer, model selector and focus chips are removed — no new activity
      * can be started. Used when the backing strategy is finalized (locked).
@@ -232,6 +241,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     onInitialMessageSent,
     focusItems = [],
     onRemoveFocusItem,
+    getLiveContent,
     readOnly = false,
     isCompact = false,
     placeholder = "Ask the AI Expert...",
@@ -405,7 +415,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         if (sentInitialRef.current === initialMessage) return;
         sentInitialRef.current = initialMessage;
         setStartingConversation(true);
-        sendMessage(initialMessage, undefined, selectedModel);
+        sendMessage(initialMessage, undefined, selectedModel, undefined, getLiveContent?.());
         onInitialMessageSent?.();
     }, [initialMessage, notReady, sendMessage, selectedModel, onInitialMessageSent]);
 
@@ -561,7 +571,13 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         // bubble lands / streaming starts. Clear it too if the send never goes out.
         const startingNew = !activeThreadId;
         if (startingNew) setStartingConversation(true);
-        sendMessage(trimmed, focusedText, selectedModel, readyImageUrls.length > 0 ? readyImageUrls : undefined)
+        sendMessage(
+            trimmed,
+            focusedText,
+            selectedModel,
+            readyImageUrls.length > 0 ? readyImageUrls : undefined,
+            getLiveContent?.()
+        )
             .then((sent) => {
                 if (startingNew && !sent) setStartingConversation(false);
             })
@@ -615,7 +631,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     // Send a control's answer back through the normal chat path as a user turn.
     const handleControlSubmit = (text: string) => {
         if (!text.trim() || isStreaming) return;
-        sendMessage(text, undefined, selectedModel);
+        sendMessage(text, undefined, selectedModel, undefined, getLiveContent?.());
     };
 
     // ── Render helpers ───────────────────────────────────────────────────────

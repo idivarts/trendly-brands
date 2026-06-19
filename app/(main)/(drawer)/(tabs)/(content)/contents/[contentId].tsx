@@ -1,21 +1,17 @@
 import { CONTENT_TYPE_LABELS, ContentType } from "@/components/content-calendar/types";
-import { SOCIAL_PLATFORM_MAP } from "@/constants/Socials";
-import { isFormatPlatformCompatible } from "@/shared-libs/firestore/trendly-pro/constants/content-format";
-import { ALL_PLATFORMS } from "@/shared-libs/firestore/trendly-pro/constants/platform";
 import ContentCommentsPanel from "@/components/contents/ContentCommentsPanel";
-import AIGeneratingHint from "@/components/shared/AIGeneratingHint";
-import FloatingPromptInput from "@/components/shared/FloatingPromptInput";
+import ContentActionsMenu from "@/components/contents/detail/ContentActionsMenu";
+import ContentInfoModal from "@/components/contents/detail/ContentInfoModal";
 import { MEDIA_SPEC } from "@/components/contents/detail/media-spec";
 import MediaStage from "@/components/contents/detail/MediaStage";
-import PreviewPanel from "@/components/contents/detail/PreviewPanel";
-import ContentInfoModal from "@/components/contents/detail/ContentInfoModal";
-import PostingSummary from "@/components/contents/detail/PostingSummary";
-import PostPerformance from "@/components/contents/PostPerformance";
-import PublishModal from "@/components/contents/detail/PublishModal";
 import NoSocialsModal from "@/components/contents/detail/NoSocialsModal";
+import PostingSummary from "@/components/contents/detail/PostingSummary";
+import PreviewPanel from "@/components/contents/detail/PreviewPanel";
+import PublishModal from "@/components/contents/detail/PublishModal";
 import ScriptEditor from "@/components/contents/detail/ScriptEditor";
 import UnsavedChangesModal from "@/components/contents/detail/UnsavedChangesModal";
 import { MOCK_CONTENT_ITEMS } from "@/components/contents/mock-data";
+import PostPerformance from "@/components/contents/PostPerformance";
 import {
     CONTENT_STATUS_LABELS,
     ContentStatus,
@@ -23,25 +19,30 @@ import {
     SocialDestination,
     contentStatusColors,
 } from "@/components/contents/types";
-import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
+import AIGeneratingHint from "@/components/shared/AIGeneratingHint";
 import { PanelComment } from "@/components/shared/CommentsPanel";
-import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
+import FloatingPromptInput from "@/components/shared/FloatingPromptInput";
 import RightPanelFab from "@/components/shared/RightPanelFab";
-import ContentActionsMenu from "@/components/contents/detail/ContentActionsMenu";
+import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
 import ShareModal from "@/components/sharing/ShareModal";
 import { View } from "@/components/theme/Themed";
+import PageHeader from "@/components/ui/page-header";
+import { SOCIAL_PLATFORM_MAP } from "@/constants/Socials";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useBrandSocialContext } from "@/contexts/brand-social-context.provider";
+import { useBreakpoints } from "@/hooks";
+import { LiveContent } from "@/hooks/use-ai-chat";
+import { CaptionVariant, HashtagGroup, useAIGenerate } from "@/hooks/use-ai-generate";
+import { useContents } from "@/hooks/use-contents";
+import AppLayout from "@/layouts/app-layout";
+import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
+import { isFormatPlatformCompatible } from "@/shared-libs/firestore/trendly-pro/constants/content-format";
+import { ALL_PLATFORMS } from "@/shared-libs/firestore/trendly-pro/constants/platform";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import ReadMore from "@/shared-uis/components/ReadMore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import PageHeader from "@/components/ui/page-header";
-import { useBreakpoints } from "@/hooks";
-import { CaptionVariant, HashtagGroup, useAIGenerate } from "@/hooks/use-ai-generate";
-import { useBrandContext } from "@/contexts/brand-context.provider";
-import { useBrandSocialContext } from "@/contexts/brand-social-context.provider";
-import { useContents } from "@/hooks/use-contents";
-import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
-import AppLayout from "@/layouts/app-layout";
 import Colors from "@/shared-uis/constants/Colors";
 import {
     faCalendarXmark,
@@ -185,6 +186,14 @@ const CreateContentScreen = () => {
     const [dirty, setDirty] = useState(false);
     const skipDirtyRef = useRef(true);
     useEffect(() => {
+        // Scheduled / posted content is locked and cannot be edited, so it can
+        // never legitimately be dirty — never flag it (no Unsaved-Changes prompt
+        // on back). Also clear any stale dirty flag the moment it locks.
+        if (status === "scheduled" || status === "posted") {
+            skipDirtyRef.current = false;
+            setDirty(false);
+            return;
+        }
         if (skipDirtyRef.current) {
             skipDirtyRef.current = false;
             return;
@@ -456,7 +465,7 @@ const CreateContentScreen = () => {
                     "This content has already been published to your connected socials. Deleting it here wouldn't remove the live post — and the record is kept so its performance stays in your analytics.",
                 confirmText: "Got it",
                 cancelText: "",
-                confirmAction: () => {},
+                confirmAction: () => { },
             });
             return;
         }
@@ -539,7 +548,7 @@ const CreateContentScreen = () => {
     const hashtagSnapRef = useRef<HashtagGroup[] | null>(null);
 
     const handleMagicGenerate = useCallback(
-        (prompt: string) => {
+        (prompt: string, model?: string) => {
             const target = magicTarget;
             if (!target) return;
             // Use the content's primary targeted platform as prompt context.
@@ -567,6 +576,7 @@ const CreateContentScreen = () => {
                     platform,
                     format: contentType,
                     contextId: contentId,
+                    model,
                     ...liveContent,
                 });
             } else {
@@ -577,6 +587,7 @@ const CreateContentScreen = () => {
                     platform,
                     format: contentType,
                     contextId: contentId,
+                    model,
                     ...liveContent,
                 });
             }
@@ -584,7 +595,7 @@ const CreateContentScreen = () => {
         [magicTarget, contentType, contentId, title, idea, caption, hashtags, script, aiCaptions, aiHashtags, generateCaption, generateHashtags, targetPlatforms]
     );
 
-    const handleScriptAiEnhance = useCallback(() => {
+    const handleScriptAiEnhance = useCallback((model?: string) => {
         setScript("");
         const keyMessage = scriptAiPrompt.trim();
         if (!keyMessage) return;
@@ -595,6 +606,7 @@ const CreateContentScreen = () => {
             keyMessage,
             tone: "friendly",
             contextId: contentId,
+            model,
             // Live editor state so the script reflects the current piece.
             title,
             format: contentType,
@@ -604,7 +616,29 @@ const CreateContentScreen = () => {
         });
     }, [scriptAiPrompt, isReel, title, idea, contentType, caption, hashtags, contentId, generateScript]);
 
-    const handleImageGenerate = useCallback((promptArg?: string, focusedSlideIndex?: number) => {
+    // Snapshot the current (possibly unsaved) editor state for the AI chat, so
+    // every chat message reasons about exactly what's on screen now — not the
+    // last-saved Firestore doc. Read lazily by AIChatPanel at send time.
+    const getLiveChatContent = useCallback(
+        (): LiveContent => ({
+            title,
+            description: idea,
+            format: contentType,
+            platforms: targetPlatforms.map((p) => SOCIAL_PLATFORM_MAP[p]?.label ?? p),
+            caption,
+            hashtags,
+            script,
+            attachments: attachments.map((a) => ({
+                type: a.type,
+                imageUrl: a.imageUrl,
+                playUrl: a.playUrl,
+                appleUrl: a.appleUrl,
+            })),
+        }),
+        [title, idea, contentType, targetPlatforms, caption, hashtags, script, attachments]
+    );
+
+    const handleImageGenerate = useCallback((promptArg?: string, focusedSlideIndex?: number, model?: string) => {
         const p = (promptArg ?? imagePrompt).trim();
         if (!p) return;
         setImagePrompt(p);
@@ -617,6 +651,7 @@ const CreateContentScreen = () => {
             multi: MEDIA_SPEC[contentType].multi,
             // Carousel: which slide to act on. Backend decides edit-vs-add.
             focusedSlideIndex,
+            model,
         });
     }, [imagePrompt, contentType, contentId, generateImage]);
 
@@ -981,6 +1016,7 @@ const CreateContentScreen = () => {
                                     onAiPromptChange={setScriptAiPrompt}
                                     onEnhance={handleScriptAiEnhance}
                                     isGenerating={isGeneratingScript}
+                                    task="script"
                                     contentId={contentId}
                                     onSendToChat={handleSendToChat}
                                     collapsible={isReel}
@@ -1155,6 +1191,7 @@ const CreateContentScreen = () => {
                                     onRemoveFocusItem={(id) =>
                                         setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
                                     }
+                                    getLiveContent={getLiveChatContent}
                                     isCompact
                                 />
                             }
@@ -1191,6 +1228,7 @@ const CreateContentScreen = () => {
                             onRemoveFocusItem={(id) =>
                                 setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
                             }
+                            getLiveContent={getLiveChatContent}
                             isCompact
                             onCollapse={() => setRightPanelMode("none")}
                             // Tab bar owns the bottom inset (don't double it), but this
@@ -1244,6 +1282,7 @@ const CreateContentScreen = () => {
                         ? "E.g. punchy and playful, highlight free shipping…"
                         : "E.g. orthopedic sandals for women, wellness niche…"
                 }
+                task={magicTarget === "caption" ? "caption" : "hashtag"}
                 onClose={() => setMagicTarget(null)}
                 onGenerate={handleMagicGenerate}
             />
@@ -1663,6 +1702,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                 lockBannerBody: {
                     flex: 1,
                     minWidth: 0,
+                    backgroundColor: "transparent",
                 },
                 lockBannerTitle: {
                     fontSize: 14,

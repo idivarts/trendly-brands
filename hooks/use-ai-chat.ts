@@ -17,6 +17,31 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export type AIModule = "strategy" | "calendar" | "content" | "general" | "onboarding";
 
+/**
+ * LiveContent is the current (possibly unsaved) content-editor state forwarded
+ * with a chat message in the content module, so the AI reasons about exactly
+ * what's on screen now instead of the last-saved Firestore doc. Mirrors the
+ * backend liveContentPayload. All fields optional — only what's present is used.
+ */
+export interface LiveContentAttachment {
+    type: "image" | "video" | "reel";
+    imageUrl?: string;
+    playUrl?: string;
+    appleUrl?: string;
+}
+
+export interface LiveContent {
+    title?: string;
+    platform?: string;
+    platforms?: string[];
+    format?: string;
+    description?: string;
+    caption?: string;
+    hashtags?: string;
+    script?: string;
+    attachments?: LiveContentAttachment[];
+}
+
 /** How many messages to load in the first page, and per "load older" step. */
 const MESSAGE_PAGE_SIZE = 30;
 
@@ -152,6 +177,60 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
     // thread-list snapshot. Reset when the scope changes.
     const autoOpenedRef = useRef(false);
 
+    // ── Streaming watchdog / Firestore-fallback resolution ────────────────
+    // The exit from `isStreaming` must NOT depend solely on the WS `done` frame.
+    // A long turn (notably image generation runs synchronously in the WS lambda)
+    // can exceed the lambda timeout, or `done` can land on a connection that
+    // dropped + reconnected mid-turn — in either case the frame never reaches us
+    // and the panel would spin forever. Two backstops make Firestore the real
+    // source of truth for "the turn is over":
+    //   1. When the committed assistant doc arrives over the message
+    //      subscription, finish streaming (see the snapshot handler) — covers
+    //      "the turn finished and committed but `done` was lost".
+    //   2. A silence watchdog finishes streaming after a long gap with NO WS
+    //      activity at all — covers "the turn died before it could commit".
+    // Reset on every WS frame so a slow-but-alive image gen doesn't trip it.
+    const isStreamingRef = useRef(false);
+    isStreamingRef.current = isStreaming;
+    // Images pushed mid-turn via the `chat_image` frame, surfaced on the lingering
+    // bubble at `done` so they show before the committed doc syncs.
+    const streamImagesRef = useRef<string[]>([]);
+    const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // Generous: a single image gen + a second model round-trip can be silent for
+    // a while. This only fires when NOTHING (not even a token) arrived in window.
+    const STREAM_SILENCE_TIMEOUT_MS = 90_000;
+
+    const finishStreaming = useCallback(() => {
+        streamingRef.current = "";
+        pendingControlRef.current = null;
+        streamImagesRef.current = [];
+        setStreamingContent("");
+        setIsStreaming(false);
+        if (watchdogRef.current) {
+            clearTimeout(watchdogRef.current);
+            watchdogRef.current = null;
+        }
+    }, []);
+
+    const armWatchdog = useCallback(() => {
+        if (watchdogRef.current) clearTimeout(watchdogRef.current);
+        watchdogRef.current = setTimeout(() => {
+            watchdogRef.current = null;
+            if (!isStreamingRef.current) return;
+            // No WS activity for the whole window: the turn almost certainly died
+            // (lambda timeout / dropped connection). Stop the spinner and lean on
+            // Firestore — if the assistant doc committed it's already on screen;
+            // otherwise the user can retry.
+            finishStreaming();
+            Toaster.error("The AI took too long to respond. Please try again.");
+        }, STREAM_SILENCE_TIMEOUT_MS);
+    }, [finishStreaming]);
+
+    // Clear any pending watchdog when the hook unmounts.
+    useEffect(() => () => {
+        if (watchdogRef.current) clearTimeout(watchdogRef.current);
+    }, []);
+
     // ── Thread list: live subscription ────────────────────────────────────
     // Replaces the old GET /api/ai/conversations. Filters userId == self so the
     // query satisfies the author-only Firestore rule.
@@ -238,6 +317,17 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
                 setHasMore(snap.size >= pageSize);
                 setLoading(false);
 
+                // Firestore-fallback resolution: if we're still "streaming" and
+                // the newest committed message is an assistant reply, the turn
+                // has finished and committed — finish streaming even if the WS
+                // `done` frame never arrived (lost on a dropped/reconnected
+                // connection, or the lambda died right after committing). The
+                // committed doc — with any generated images — is already on
+                // screen, so there's nothing left to wait for.
+                if (isStreamingRef.current && docs.length > 0 && docs[docs.length - 1].role === "assistant") {
+                    finishStreaming();
+                }
+
                 // Reconcile optimistic/lingering bubbles against what's now committed.
                 const seenClientIds = new Set(docs.map((m) => m.clientMsgId).filter(Boolean));
                 const committedUserContent = new Set(
@@ -315,13 +405,10 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
         setCommitted([]);
         setPendingUsers([]);
         setLingerAssistant(null);
-        streamingRef.current = "";
-        pendingControlRef.current = null;
-        setStreamingContent("");
-        setIsStreaming(false);
+        finishStreaming();
         setPageSize(MESSAGE_PAGE_SIZE);
         setHasMore(false);
-    }, []);
+    }, [finishStreaming]);
 
     const deleteThread = useCallback(async (conversationId: string) => {
         await HttpWrapper.fetch(`/api/ai/conversations/${conversationId}`, { method: "DELETE" });
@@ -348,9 +435,24 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
         const remove = aiWS.addListener((msg: any) => {
             if (!activeThreadId) return;
             if (msg.conversationId && msg.conversationId !== activeThreadId) return;
+            // Any frame proves the turn is still alive — push the silence
+            // watchdog out so a slow-but-progressing image gen isn't aborted.
+            if (isStreamingRef.current) armWatchdog();
             if (msg.type === "token" && typeof msg.delta === "string") {
                 streamingRef.current += msg.delta;
                 setStreamingContent(streamingRef.current);
+            } else if (msg.type === "chat_image") {
+                // Images generated mid-turn (generate_image tool). Buffer them so
+                // they attach to the lingering bubble at `done`; meanwhile the
+                // frame itself keeps the watchdog from tripping during the long
+                // synchronous image-gen gap. (The committed Firestore doc carries
+                // the same URLs, so they render even if `done` is later lost.)
+                if (Array.isArray(msg.images)) {
+                    streamImagesRef.current = [
+                        ...streamImagesRef.current,
+                        ...(msg.images as string[]),
+                    ];
+                }
             } else if (msg.type === "control") {
                 pendingControlRef.current = (msg.control as AIControl) ?? null;
             } else if (msg.type === "onboarding_complete") {
@@ -358,13 +460,12 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
             } else if (msg.type === "done") {
                 const finalContent = streamingRef.current;
                 const control = pendingControlRef.current;
-                streamingRef.current = "";
-                pendingControlRef.current = null;
-                setStreamingContent("");
-                setIsStreaming(false);
+                const doneImages = Array.isArray(msg.images) && msg.images.length > 0
+                    ? (msg.images as string[])
+                    : (streamImagesRef.current.length > 0 ? streamImagesRef.current : undefined);
+                finishStreaming();
                 // Linger the finished assistant turn until Firestore delivers the
                 // committed doc (matched by messageId), so it never flickers.
-                const doneImages = Array.isArray(msg.images) ? (msg.images as string[]) : undefined;
                 if (finalContent || control || (doneImages && doneImages.length > 0)) {
                     setLingerAssistant({
                         id: msg.messageId,
@@ -376,10 +477,7 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
                     });
                 }
             } else if (msg.type === "upgrade_required") {
-                streamingRef.current = "";
-                pendingControlRef.current = null;
-                setStreamingContent("");
-                setIsStreaming(false);
+                finishStreaming();
                 if (msg.reason === "tokens_exhausted") {
                     // Out of monthly AI tokens — the composer already shows an
                     // in-context Upgrade/Top-up block. Don't yank the user to
@@ -391,17 +489,20 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
                     router.push("/billing");
                 }
             } else if (msg.type === "error") {
-                streamingRef.current = "";
-                pendingControlRef.current = null;
-                setStreamingContent("");
-                setIsStreaming(false);
+                finishStreaming();
             }
         });
         return remove;
     }, [activeThreadId]);
 
     const sendMessage = useCallback(
-        async (content: string, focusedText?: string, model?: string, images?: string[]): Promise<boolean> => {
+        async (
+            content: string,
+            focusedText?: string,
+            model?: string,
+            images?: string[],
+            liveContent?: LiveContent
+        ): Promise<boolean> => {
             if (!brandId || !manager?.id) return false;
             let convId = activeThreadId;
             if (!convId) {
@@ -416,8 +517,11 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
                 { role: "user", content, focusedText, images: imgs, clientMsgId, timestamp: Date.now() },
             ]);
             streamingRef.current = "";
+            streamImagesRef.current = [];
             setStreamingContent("");
             setIsStreaming(true);
+            // Backstop in case the turn dies before any frame comes back.
+            armWatchdog();
             await aiWS.send({
                 type: "message",
                 brandId,
@@ -427,10 +531,14 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
                 focusedText,
                 model,
                 images: imgs,
+                // Live (unsaved) content-editor state — backend prefers this over
+                // the saved doc when present. Sent via the generic `payload` field
+                // already plumbed through the WS envelope.
+                payload: liveContent ? { ...liveContent } : undefined,
             });
             return true;
         },
-        [brandId, manager?.id, activeThreadId, createThread]
+        [brandId, manager?.id, activeThreadId, createThread, armWatchdog]
     );
 
     // Rendered history = committed (Firestore) + any optimistic user bubbles not

@@ -22,27 +22,25 @@ export interface AIChatStarter {
 export const AI_CHAT_STARTERS: Record<AIModule, AIChatStarter> = {
     // Playground — a general, cross-module assistant.
     general: {
-        heading: "What can I help you create?",
-        description:
-            "Start a new chat, or reopen any conversation from your strategies, calendar and content.",
+        heading: "Hey, what are we thinking about?",
+        description: "Anything goes — bounce ideas off me, ask me anything, or just chat.",
         templates: [
-            "Plan a content calendar",
-            "Write a post caption",
-            "Brainstorm content ideas",
-            "Draft a content strategy",
+            "Let's brainstorm",
+            "Ask me anything",
+            "Help me decide",
+            "Surprise me with an idea",
         ],
     },
 
     // Content strategy builder.
     strategy: {
-        heading: "Let's shape your content strategy",
-        description:
-            "Tell me about your brand and goals, and I'll help you turn them into a content strategy you can act on.",
+        heading: "Your strategy, sharper",
+        description: "Get a second pair of eyes — critique, edits, and rewrites on whatever's on the page.",
         templates: [
-            "Build a 30-day content strategy",
-            "Define my content pillars",
-            "Who is my target audience?",
-            "Recommend a posting cadence",
+            "Critique this strategy",
+            "Rewrite this section",
+            "Find weak claims and fix them",
+            "Resolve the open comments",
         ],
     },
 
@@ -55,20 +53,20 @@ export const AI_CHAT_STARTERS: Record<AIModule, AIChatStarter> = {
             "Plan next week's posts",
             "Fill the gaps this month",
             "Balance reels, carousels and stories",
-            "Schedule around my product launch",
+            "Catch me up on what's scheduled",
         ],
     },
 
     // Single piece of content (caption, visual, script, etc.).
     content: {
-        heading: "Let's create this content",
+        heading: "Let's bring this content to life",
         description:
-            "I can write captions, generate visuals, sharpen your hook, or repurpose this into other formats.",
+            "Brainstorm the idea, craft a visual prompt, sharpen the hook, or write the caption and hashtags — whatever this piece needs next.",
         templates: [
-            "Write a caption for this",
-            "Generate a visual",
-            "Give me 5 hook ideas",
-            "Suggest relevant hashtags",
+            "Brainstorm this content idea with me",
+            "Write a detailed prompt for the visual",
+            "Give me 5 hook options",
+            "Write the caption and hashtags",
         ],
     },
 
