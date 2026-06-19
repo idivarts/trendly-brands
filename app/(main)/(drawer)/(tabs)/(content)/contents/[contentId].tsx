@@ -186,6 +186,14 @@ const CreateContentScreen = () => {
     const [dirty, setDirty] = useState(false);
     const skipDirtyRef = useRef(true);
     useEffect(() => {
+        // Scheduled / posted content is locked and cannot be edited, so it can
+        // never legitimately be dirty — never flag it (no Unsaved-Changes prompt
+        // on back). Also clear any stale dirty flag the moment it locks.
+        if (status === "scheduled" || status === "posted") {
+            skipDirtyRef.current = false;
+            setDirty(false);
+            return;
+        }
         if (skipDirtyRef.current) {
             skipDirtyRef.current = false;
             return;

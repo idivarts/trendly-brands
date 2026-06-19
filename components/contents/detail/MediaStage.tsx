@@ -5,12 +5,14 @@ import { useAWSContext } from "@/shared-libs/contexts/aws-context.provider";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { pickMedia } from "@/shared-libs/utils/media-picker";
 import Colors from "@/shared-uis/constants/Colors";
+import AssetPreviewModal from "@/shared-uis/components/carousel/asset-preview-modal";
 import {
     faArrowUpFromBracket,
     faChevronLeft,
     faChevronRight,
     faImage,
     faMagicWandSparkles,
+    faMagnifyingGlassPlus,
     faPlay,
     faXmark,
 } from "@fortawesome/free-solid-svg-icons";
@@ -79,6 +81,9 @@ const MediaStage: React.FC<MediaStageProps> = ({
     const [showPrompt, setShowPrompt] = useState(false);
     // Carousel: which slide an enhance prompt acts on. Tap a slide to focus it.
     const [focusedSlideIndex, setFocusedSlideIndex] = useState<number | null>(null);
+    // Full-screen image preview (tap the expand icon on a slide).
+    const [previewImage, setPreviewImage] = useState(false);
+    const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
     // Once an image exists (AI-generated OR uploaded), generation becomes an
     // image-to-image "Enhance" on the current image(s). Video types never enhance.
@@ -188,6 +193,20 @@ const MediaStage: React.FC<MediaStageProps> = ({
                                             accessibilityLabel="Remove media"
                                         >
                                             <FontAwesomeIcon icon={faXmark} size={11} color={colors.onPrimary} />
+                                        </Pressable>
+                                    ) : null}
+
+                                    {/* Expand to full-screen preview — images only */}
+                                    {!isVideo && a.imageUrl ? (
+                                        <Pressable
+                                            style={({ pressed }) => [styles.expandBtn, pressed && styles.pressed]}
+                                            onPress={() => {
+                                                setPreviewImageUrl(a.imageUrl ?? null);
+                                                setPreviewImage(true);
+                                            }}
+                                            accessibilityLabel="Preview image full screen"
+                                        >
+                                            <FontAwesomeIcon icon={faMagnifyingGlassPlus} size={11} color={colors.onPrimary} />
                                         </Pressable>
                                     ) : null}
 
@@ -344,7 +363,9 @@ const MediaStage: React.FC<MediaStageProps> = ({
                     }
                     placeholder="E.g. minimalist flat-lay of orthopedic sandals on a warm beige background…"
                     ctaLabel={isEnhance ? "Enhance" : spec.multi ? "Generate slide" : "Generate image"}
-                    initialValue={imagePrompt}
+                    // Always open empty — each generation/enhancement starts a fresh
+                    // prompt rather than re-showing the last one entered.
+                    initialValue=""
                     task="image"
                     onClose={() => setShowPrompt(false)}
                     onGenerate={(prompt, model) => {
@@ -355,6 +376,16 @@ const MediaStage: React.FC<MediaStageProps> = ({
                             model
                         );
                     }}
+                />
+            ) : null}
+
+            {/* Full-screen image preview */}
+            {previewImage ? (
+                <AssetPreviewModal
+                    previewImage={previewImage}
+                    previewImageUrl={previewImageUrl}
+                    setPreviewImage={setPreviewImage}
+                    theme={theme}
                 />
             ) : null}
         </View>
@@ -471,6 +502,17 @@ function useStyles(colors: ReturnType<typeof Colors>) {
         removeBtn: {
             position: "absolute",
             top: 5,
+            right: 5,
+            width: 22,
+            height: 22,
+            borderRadius: 11,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.backdropStrong,
+        },
+        expandBtn: {
+            position: "absolute",
+            bottom: 5,
             right: 5,
             width: 22,
             height: 22,

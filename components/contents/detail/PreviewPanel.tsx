@@ -5,8 +5,10 @@ import { isFormatPlatformCompatible } from "@/shared-libs/firestore/trendly-pro/
 import { Platform } from "@/shared-libs/firestore/trendly-pro/constants/platform";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import Colors from "@/shared-uis/constants/Colors";
+import { useBreakpoints } from "@/hooks";
 import {
     faBookmark,
+    faChevronLeft,
     faChevronRight,
     faComment,
     faHeart,
@@ -48,6 +50,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useStyles(colors);
+    const { xl } = useBreakpoints();
     const { socialAccounts } = useBrandSocialContext();
 
     // Only preview the platforms this content actually targets, and only those
@@ -77,6 +80,16 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
     const isVideo = attachments.some((a) => a.type === "video" || a.type === "reel");
     const slideCount = attachments.length;
 
+    // Carousel: which slide the preview is showing. Web gets arrows to flip
+    // through slides; `safeSlide` keeps the index valid as attachments change.
+    const isCarousel = contentType === "carousel";
+    const [activeSlide, setActiveSlide] = useState(0);
+    const safeSlide = slideCount > 0 ? Math.min(activeSlide, slideCount - 1) : 0;
+    const displayImage = isCarousel
+        ? attachments[safeSlide]?.imageUrl ?? firstImage
+        : firstImage;
+    const showArrows = isCarousel && xl && slideCount > 1;
+
     const accentColor = platformColor(active, colors);
 
     const mediaBox = (shape: "tall" | "square" | "landscape") => (
@@ -90,8 +103,8 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
                         : styles.mediaSquare,
             ]}
         >
-            {firstImage ? (
-                <Image source={{ uri: firstImage }} style={styles.mediaImg} resizeMode="cover" />
+            {displayImage ? (
+                <Image source={{ uri: displayImage }} style={styles.mediaImg} resizeMode="cover" />
             ) : isVideo ? (
                 <View style={styles.mediaPlaceholder}>
                     <FontAwesomeIcon icon={faPlay} size={26} color={colors.onPrimary} />
@@ -102,12 +115,33 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
                     <Text style={styles.mediaEmptyText}>Add media to preview</Text>
                 </View>
             )}
-            {contentType === "carousel" && slideCount > 1 ? (
+
+            {/* Web-only slide arrows — flip through carousel slides in the preview. */}
+            {showArrows && safeSlide > 0 ? (
+                <Pressable
+                    style={({ pressed }) => [styles.navBtn, styles.navBtnLeft, pressed && styles.pressed]}
+                    onPress={() => setActiveSlide(Math.max(0, safeSlide - 1))}
+                    accessibilityLabel="Previous slide"
+                >
+                    <FontAwesomeIcon icon={faChevronLeft} size={13} color={colors.black} />
+                </Pressable>
+            ) : null}
+            {showArrows && safeSlide < slideCount - 1 ? (
+                <Pressable
+                    style={({ pressed }) => [styles.navBtn, styles.navBtnRight, pressed && styles.pressed]}
+                    onPress={() => setActiveSlide(Math.min(slideCount - 1, safeSlide + 1))}
+                    accessibilityLabel="Next slide"
+                >
+                    <FontAwesomeIcon icon={faChevronRight} size={13} color={colors.black} />
+                </Pressable>
+            ) : null}
+
+            {isCarousel && slideCount > 1 ? (
                 <View style={styles.dots}>
                     {attachments.slice(0, 5).map((_, i) => (
                         <View
                             key={i}
-                            style={[styles.dot, { backgroundColor: i === 0 ? colors.white : "rgba(255,255,255,0.5)" }]}
+                            style={[styles.dot, { backgroundColor: i === safeSlide ? colors.white : "rgba(255,255,255,0.5)" }]}
                         />
                     ))}
                 </View>
@@ -400,6 +434,28 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             width: 6,
             height: 6,
             borderRadius: 3,
+        },
+        navBtn: {
+            position: "absolute",
+            top: "50%",
+            transform: [{ translateY: -14 }],
+            width: 28,
+            height: 28,
+            borderRadius: 14,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.white,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowRadius: 4,
+            shadowOpacity: 0.18,
+            elevation: 3,
+        },
+        navBtnLeft: {
+            left: 8,
+        },
+        navBtnRight: {
+            right: 8,
         },
         actions: {
             flexDirection: "row",
