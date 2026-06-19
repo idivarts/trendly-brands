@@ -1,21 +1,17 @@
 import { CONTENT_TYPE_LABELS, ContentType } from "@/components/content-calendar/types";
-import { SOCIAL_PLATFORM_MAP } from "@/constants/Socials";
-import { isFormatPlatformCompatible } from "@/shared-libs/firestore/trendly-pro/constants/content-format";
-import { ALL_PLATFORMS } from "@/shared-libs/firestore/trendly-pro/constants/platform";
 import ContentCommentsPanel from "@/components/contents/ContentCommentsPanel";
-import AIGeneratingHint from "@/components/shared/AIGeneratingHint";
-import FloatingPromptInput from "@/components/shared/FloatingPromptInput";
+import ContentActionsMenu from "@/components/contents/detail/ContentActionsMenu";
+import ContentInfoModal from "@/components/contents/detail/ContentInfoModal";
 import { MEDIA_SPEC } from "@/components/contents/detail/media-spec";
 import MediaStage from "@/components/contents/detail/MediaStage";
-import PreviewPanel from "@/components/contents/detail/PreviewPanel";
-import ContentInfoModal from "@/components/contents/detail/ContentInfoModal";
-import PostingSummary from "@/components/contents/detail/PostingSummary";
-import PostPerformance from "@/components/contents/PostPerformance";
-import PublishModal from "@/components/contents/detail/PublishModal";
 import NoSocialsModal from "@/components/contents/detail/NoSocialsModal";
+import PostingSummary from "@/components/contents/detail/PostingSummary";
+import PreviewPanel from "@/components/contents/detail/PreviewPanel";
+import PublishModal from "@/components/contents/detail/PublishModal";
 import ScriptEditor from "@/components/contents/detail/ScriptEditor";
 import UnsavedChangesModal from "@/components/contents/detail/UnsavedChangesModal";
 import { MOCK_CONTENT_ITEMS } from "@/components/contents/mock-data";
+import PostPerformance from "@/components/contents/PostPerformance";
 import {
     CONTENT_STATUS_LABELS,
     ContentStatus,
@@ -23,26 +19,30 @@ import {
     SocialDestination,
     contentStatusColors,
 } from "@/components/contents/types";
-import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
+import AIGeneratingHint from "@/components/shared/AIGeneratingHint";
 import { PanelComment } from "@/components/shared/CommentsPanel";
-import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
+import FloatingPromptInput from "@/components/shared/FloatingPromptInput";
 import RightPanelFab from "@/components/shared/RightPanelFab";
-import ContentActionsMenu from "@/components/contents/detail/ContentActionsMenu";
+import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
 import ShareModal from "@/components/sharing/ShareModal";
 import { View } from "@/components/theme/Themed";
+import PageHeader from "@/components/ui/page-header";
+import { SOCIAL_PLATFORM_MAP } from "@/constants/Socials";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useBrandSocialContext } from "@/contexts/brand-social-context.provider";
+import { useBreakpoints } from "@/hooks";
+import { LiveContent } from "@/hooks/use-ai-chat";
+import { CaptionVariant, HashtagGroup, useAIGenerate } from "@/hooks/use-ai-generate";
+import { useContents } from "@/hooks/use-contents";
+import AppLayout from "@/layouts/app-layout";
+import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
+import { isFormatPlatformCompatible } from "@/shared-libs/firestore/trendly-pro/constants/content-format";
+import { ALL_PLATFORMS } from "@/shared-libs/firestore/trendly-pro/constants/platform";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import ReadMore from "@/shared-uis/components/ReadMore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import PageHeader from "@/components/ui/page-header";
-import { useBreakpoints } from "@/hooks";
-import { CaptionVariant, HashtagGroup, useAIGenerate } from "@/hooks/use-ai-generate";
-import { LiveContent } from "@/hooks/use-ai-chat";
-import { useBrandContext } from "@/contexts/brand-context.provider";
-import { useBrandSocialContext } from "@/contexts/brand-social-context.provider";
-import { useContents } from "@/hooks/use-contents";
-import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
-import AppLayout from "@/layouts/app-layout";
 import Colors from "@/shared-uis/constants/Colors";
 import {
     faCalendarXmark,
@@ -465,7 +465,7 @@ const CreateContentScreen = () => {
                     "This content has already been published to your connected socials. Deleting it here wouldn't remove the live post — and the record is kept so its performance stays in your analytics.",
                 confirmText: "Got it",
                 cancelText: "",
-                confirmAction: () => {},
+                confirmAction: () => { },
             });
             return;
         }
@@ -1702,6 +1702,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                 lockBannerBody: {
                     flex: 1,
                     minWidth: 0,
+                    backgroundColor: "transparent",
                 },
                 lockBannerTitle: {
                     fontSize: 14,
