@@ -4,7 +4,7 @@
         "slug": "trendly-brands",
         "version": "3.0.0",
         "orientation": "portrait",
-        "icon": "./assets/images/icon2.png",
+        "icon": "./assets/images/branding/trendly-logo-with-bg.png",
         "scheme": "trendly-brands",
         "platforms": [
             "ios",
@@ -38,7 +38,7 @@
         },
         "android": {
             "adaptiveIcon": {
-                "foregroundImage": "./assets/images/icon2.png",
+                "foregroundImage": "./assets/images/branding/trendly-logo-with-bg.png",
                 "backgroundColor": "#ffffff"
             },
             "package": "pro.trendly.brands",
@@ -68,7 +68,7 @@
         "web": {
             "bundler": "metro",
             "output": "single",
-            "favicon": "./assets/images/icon2.png"
+            "favicon": "./assets/images/branding/trendly-symbol.png"
         },
         "plugins": [
             "expo-router",

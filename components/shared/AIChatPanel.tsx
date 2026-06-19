@@ -19,7 +19,6 @@ import {
     faLock,
     faPaperPlane,
     faPenToSquare,
-    faRobot,
     faUpRightAndDownLeftFromCenter,
     faWandMagicSparkles,
     faXmark
@@ -647,11 +646,6 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         const showControl = isAI && !!item.control && isLatest && !isStreaming && !readOnly;
         return (
             <View style={[styles.messageRow, isAI ? styles.aiRow : styles.userRow]}>
-                {isAI && (
-                    <View style={styles.avatarContainer}>
-                        <FontAwesomeIcon icon={faRobot} size={14} color={colors.onPrimary} />
-                    </View>
-                )}
                 <View style={[styles.messageColumn, isAI ? styles.messageColumnAI : styles.messageColumnUser]}>
                     {item.images && item.images.length > 0 && (
                         <View style={[styles.imageGrid, isAI ? styles.imageGridAI : styles.imageGridUser]}>
@@ -982,9 +976,6 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
 
                         {!busy && isAITyping && (
                             <View style={[styles.typingRow, splitMode && styles.centered]}>
-                                <View style={styles.avatarContainer}>
-                                    <FontAwesomeIcon icon={faRobot} size={14} color={colors.onPrimary} />
-                                </View>
                                 <View style={styles.typingBubble}>
                                     <Text style={styles.typingText}>Thinking…</Text>
                                 </View>
@@ -1232,16 +1223,6 @@ function useStyles(
                 },
                 aiRow: { justifyContent: "flex-start" },
                 userRow: { justifyContent: "flex-end" },
-                avatarContainer: {
-                    width: 28,
-                    height: 28,
-                    borderRadius: 14,
-                    backgroundColor: colors.primary,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                    marginTop: 2,
-                },
                 messageColumn: { maxWidth: "82%", gap: 6 },
                 messageColumnAI: { alignItems: "flex-start" },
                 messageColumnUser: { alignItems: "flex-end" },
