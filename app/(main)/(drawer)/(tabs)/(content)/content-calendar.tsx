@@ -36,10 +36,13 @@ import { Pressable, StyleSheet, Text } from "react-native";
 const CALENDAR_WELCOME =
     "Hi! I'm your AI Content Expert. Select items from the calendar and send them here — I can help you rewrite, rethink, or bulk-edit your content plan.";
 
-// One stable chat per brand for the Calendar module. brandId already scopes the
-// conversation query, so a constant contextId keeps the calendar on a single
-// thread regardless of which item (if any) is selected.
-const CALENDAR_CONTEXT_ID = "calendar";
+// One chat thread per CALENDAR MONTH. brandId scopes the conversation query and
+// a `calendar-YYYY-MM` contextId scopes it further to the month currently in
+// view — so each month keeps its own conversation/memory, and the backend reads
+// the month out of the contextId to load that month's posts + today's date into
+// the AI's context (so the model knows what "today" is relative to the items).
+const calendarContextId = (year: number, month0: number) =>
+    `calendar-${year}-${String(month0 + 1).padStart(2, "0")}`;
 
 const ContentCalendarScreen = () => {
     const theme = useTheme();
@@ -277,7 +280,7 @@ const ContentCalendarScreen = () => {
             chatSlot={
                 <AIChatPanel
                     module="calendar"
-                    contextId={CALENDAR_CONTEXT_ID}
+                    contextId={calendarContextId(calYear, calMonth)}
                     focusItems={focusItems}
                     onRemoveFocusItem={(id) =>
                         setFocusItems((prev) => prev.filter((f) => f.id !== id))
