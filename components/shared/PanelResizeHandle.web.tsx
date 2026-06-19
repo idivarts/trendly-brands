@@ -142,7 +142,7 @@ const PanelResizeHandle: React.FC<PanelResizeHandleProps> = (props) => {
         <View ref={nodeRef} style={styles.hitArea}>
             {/* Full-height seam line that brightens on hover/drag. */}
             <View
-                style={[styles.seam, active && { backgroundColor: colors.primary }]}
+                style={[styles.seam, active && { backgroundColor: colors.lightgray }]}
                 pointerEvents="none"
             />
             {/* Vertically-centred grab pill with grip dots — the visible handle. */}
