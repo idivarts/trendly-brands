@@ -841,14 +841,20 @@ const CreateContentScreen = () => {
                             <Text style={styles.headerTitleText} numberOfLines={1}>
                                 {title || "Create Content"}
                             </Text>
-                            <View
-                                style={[styles.statusBadge, { backgroundColor: statusColorSet.bg }]}
-                                accessibilityLabel={`Status: ${CONTENT_STATUS_LABELS[status]}`}
+                            <Pressable
+                                style={({ pressed }) => [
+                                    styles.statusBadge,
+                                    { backgroundColor: statusColorSet.bg },
+                                    pressed && styles.pressed,
+                                ]}
+                                onPress={() => setShowInfoModal(true)}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Status: ${CONTENT_STATUS_LABELS[status]}. Open content details`}
                             >
                                 <Text style={[styles.statusBadgeText, { color: statusColorSet.fg }]}>
                                     {CONTENT_STATUS_LABELS[status]}
                                 </Text>
-                            </View>
+                            </Pressable>
                         </View>
                         {xl ? (
                             <View style={styles.headerMetaRow}>
@@ -973,11 +979,16 @@ const CreateContentScreen = () => {
                                 <Text style={styles.contentTitle} numberOfLines={2}>
                                     {title || "Untitled content"}
                                 </Text>
-                                <View style={styles.typeTag}>
+                                <Pressable
+                                    style={({ pressed }) => [styles.typeTag, pressed && styles.pressed]}
+                                    onPress={() => setShowInfoModal(true)}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`${CONTENT_TYPE_LABELS[contentType]}. Open content details`}
+                                >
                                     <Text style={styles.typeTagText}>
                                         {CONTENT_TYPE_LABELS[contentType]}
                                     </Text>
-                                </View>
+                                </Pressable>
                             </View>
 
                             {idea ? (
@@ -1536,6 +1547,9 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     fontSize: 13,
                     fontWeight: "600",
                     color: colors.textSecondary,
+                },
+                pressed: {
+                    opacity: 0.72,
                 },
                 input: {
                     backgroundColor: colors.tag,
