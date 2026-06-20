@@ -1,5 +1,6 @@
 import { useColorScheme } from "@/components/theme/useColorScheme";
 import { Text } from "@/components/theme/Themed";
+import { CONTACT_URL, PRIVACY_URL, TERMS_URL } from "@/constants/App";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import { useAuthContext, useChatContext, useThemeOverride } from "@/contexts";
@@ -28,11 +29,6 @@ import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import PageHeader from "../ui/page-header";
 
 type ThemeMode = "light" | "dark";
-
-const WEBSITE_URL = "https://www.trendly.now";
-const PRIVACY_URL = `${WEBSITE_URL}/privacy`;
-const TERMS_URL = `${WEBSITE_URL}/terms`;
-const CONTACT_URL = `${WEBSITE_URL}/contact`;
 
 const Settings = () => {
     const { manager, updateManager, signOutManager } = useAuthContext();
