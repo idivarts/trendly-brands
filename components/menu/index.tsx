@@ -295,17 +295,23 @@ const Menu = () => {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
         >
-            <View style={styles.topRow}>
-                <Image
-                    source={imageUrl(selectedBrand?.image)}
-                    style={styles.avatarBrandImage}
-                />
-                <Text style={styles.brandName}>{selectedBrand?.name}</Text>
-                {selectedBrand?.profile?.about && (
-                    <Text style={styles.brandAbout}>
-                        {truncateText(selectedBrand?.profile?.about, 120)}
-                    </Text>
-                )}
+            <View style={styles.brandCard}>
+                <View style={styles.brandCardTop}>
+                    <Image
+                        source={imageUrl(selectedBrand?.image)}
+                        style={styles.avatarBrandImage}
+                    />
+                    <View style={styles.brandInfo}>
+                        <Text style={styles.brandName} numberOfLines={1}>
+                            {selectedBrand?.name}
+                        </Text>
+                        {selectedBrand?.profile?.about && (
+                            <Text style={styles.brandAbout} numberOfLines={2}>
+                                {truncateText(selectedBrand?.profile?.about, 90)}
+                            </Text>
+                        )}
+                    </View>
+                </View>
                 <Button
                     mode="contained"
                     style={styles.menuButton}
@@ -546,29 +552,47 @@ const createStyles = (theme: Theme) => {
             paddingBottom: 24,
             gap: 16,
         },
-        // ── Hub home: hero ────────────────────────────────────────────────
-        topRow: {
-            gap: 16,
+        // ── Hub home: brand card ──────────────────────────────────────────
+        brandCard: {
+            gap: 14,
+            backgroundColor: colors.card,
+            borderRadius: 16,
+            padding: 16,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowRadius: 8,
+            shadowOpacity: 0.07,
+            elevation: 3,
+        },
+        brandCardTop: {
+            flexDirection: "row",
             alignItems: "center",
-            paddingTop: 20,
+            gap: 14,
+            backgroundColor: "transparent",
+        },
+        brandInfo: {
+            flex: 1,
+            gap: 4,
+            backgroundColor: "transparent",
         },
         brandName: {
-            fontSize: 24,
-            textAlign: "center",
+            fontSize: 20,
+            fontWeight: "700",
+            letterSpacing: -0.3,
             color: colors.text,
         },
         brandAbout: {
-            fontSize: 16,
-            textAlign: "center",
-            color: colors.gray100,
+            fontSize: 13,
+            lineHeight: 18,
+            color: colors.textSecondary,
         },
         avatarBrandImage: {
             alignItems: "center",
             justifyContent: "center",
             backgroundColor: colors.primary,
-            width: 140,
-            height: 140,
-            borderRadius: 20,
+            width: 64,
+            height: 64,
+            borderRadius: 16,
         },
         menuButton: {
             backgroundColor: colors.primary,
