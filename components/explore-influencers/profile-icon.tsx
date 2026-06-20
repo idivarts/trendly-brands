@@ -12,13 +12,13 @@ import { View } from "../theme/Themed";
 const ProfileIcon = () => {
     const theme = useTheme();
     const { selectedBrand } = useBrandContext();
-    const styles = useMemo(() => useStyles(), []);
+    const styles = useStyles();
     return (
         <View style={styles.wrapper}>
                 <FontAwesomeIcon
                     color={Colors(theme).primary}
                     icon={faCircleNotch}
-                    size={32}
+                    size={26}
                     style={styles.badgeIcon}
                 />
                 <Image
@@ -35,17 +35,21 @@ function useStyles() {
             position: "relative",
             justifyContent: "center",
             alignItems: "center",
+            // Match the 22px FontAwesome icons used by the other tabs so the
+            // tab item height is consistent and the label aligns.
+            width: 26,
+            height: 26,
         },
         badgeIcon: {
-            left: -2,
             position: "absolute",
-            top: -2,
+            top: 0,
+            left: 0,
             zIndex: 1,
         },
         avatar: {
             borderRadius: 100,
-            height: 28,
-            width: 28,
+            height: 22,
+            width: 22,
         },
     });
 }

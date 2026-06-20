@@ -1,0 +1,356 @@
+diff --git a/node_modules/react-native-enriched/android/generated/java/com/facebook/react/viewmanagers/EnrichedTextInputViewManagerDelegate.java b/node_modules/react-native-enriched/android/generated/java/com/facebook/react/viewmanagers/EnrichedTextInputViewManagerDelegate.java
+index 43e2e98..e6ab4ff 100644
+--- a/node_modules/react-native-enriched/android/generated/java/com/facebook/react/viewmanagers/EnrichedTextInputViewManagerDelegate.java
++++ b/node_modules/react-native-enriched/android/generated/java/com/facebook/react/viewmanagers/EnrichedTextInputViewManagerDelegate.java
+@@ -147,6 +147,12 @@ public class EnrichedTextInputViewManagerDelegate<T extends View, U extends Base
+       case "requestHTML":
+         mViewManager.requestHTML(view, args.getInt(0));
+         break;
++      case "replaceRange":
++        mViewManager.replaceRange(view, args.getInt(0), args.getInt(1), args.getString(2));
++        break;
++      case "requestHTMLForRange":
++        mViewManager.requestHTMLForRange(view, args.getInt(0), args.getInt(1), args.getInt(2));
++        break;
+     }
+   }
+ }
+diff --git a/node_modules/react-native-enriched/android/generated/java/com/facebook/react/viewmanagers/EnrichedTextInputViewManagerInterface.java b/node_modules/react-native-enriched/android/generated/java/com/facebook/react/viewmanagers/EnrichedTextInputViewManagerInterface.java
+index 13f0db8..1da0243 100644
+--- a/node_modules/react-native-enriched/android/generated/java/com/facebook/react/viewmanagers/EnrichedTextInputViewManagerInterface.java
++++ b/node_modules/react-native-enriched/android/generated/java/com/facebook/react/viewmanagers/EnrichedTextInputViewManagerInterface.java
+@@ -54,4 +54,6 @@ public interface EnrichedTextInputViewManagerInterface<T extends View> extends V
+   void startMention(T view, String indicator);
+   void addMention(T view, String indicator, String text, String payload);
+   void requestHTML(T view, int requestId);
++  void replaceRange(T view, int start, int end, String html);
++  void requestHTMLForRange(T view, int requestId, int start, int end);
+ }
+diff --git a/node_modules/react-native-enriched/android/src/main/java/com/swmansion/enriched/EnrichedTextInputView.kt b/node_modules/react-native-enriched/android/src/main/java/com/swmansion/enriched/EnrichedTextInputView.kt
+index 55abf94..7ad55b6 100644
+--- a/node_modules/react-native-enriched/android/src/main/java/com/swmansion/enriched/EnrichedTextInputView.kt
++++ b/node_modules/react-native-enriched/android/src/main/java/com/swmansion/enriched/EnrichedTextInputView.kt
+@@ -124,6 +124,13 @@ class EnrichedTextInputView : AppCompatEditText {
+     setPadding(0, 0, 0, 0)
+     setBackgroundColor(Color.TRANSPARENT)
+ 
++    // PATCH (trendly): the library set no line spacing, so paragraphs and
++    // headings were packed far tighter than the web (Lexical) editor. Add a
++    // roomy line-height multiplier + a small extra gap so blocks breathe,
++    // mirroring iOS (lineHeightMultiple 1.4 + paragraph spacing).
++    val lineSpacingExtra = 4f * resources.displayMetrics.density
++    setLineSpacing(lineSpacingExtra, 1.4f)
++
+     addSpanWatcher(EnrichedSpanWatcher(this))
+     addTextChangedListener(EnrichedTextWatcher(this))
+   }
+@@ -277,6 +284,28 @@ class EnrichedTextInputView : AppCompatEditText {
+     }
+   }
+ 
++  // PATCH (trendly): replace the text in [start,end] with parsed HTML, scoped to
++  // that range (the library only had whole-document setValue). Powers
++  // selection-scoped AI Quick Edit. We mutate the existing Editable in place so
++  // the SpanWatcher stays attached; parseText() yields a pre-spanned fragment
++  // whose spans SpannableStringBuilder.replace copies into the range, and the
++  // TextWatcher's afterTextChanged emits onChangeHtml so JS stays in sync.
++  fun replaceRange(start: Int, end: Int, html: String) {
++    val editable = text ?: return
++    val length = editable.length
++    val from = start.coerceIn(0, length)
++    val to = end.coerceIn(from, length)
++
++    runAsATransaction {
++      val parsed = parseText(html)
++      editable.replace(from, to, parsed)
++
++      observeAsyncImages()
++
++      setSelection((from + parsed.length).coerceAtMost(text?.length ?: 0))
++    }
++  }
++
+   /**
+    * Finds all async images in the current text and sets up listeners
+    * to redraw the text layout when they finish downloading.
+@@ -592,6 +621,30 @@ class EnrichedTextInputView : AppCompatEditText {
+     dispatcher?.dispatchEvent(OnRequestHtmlResultEvent(surfaceId, id, requestId, html, experimentalSynchronousEvents))
+   }
+ 
++  // PATCH (trendly): serialize just the [start,end] range to HTML, returned over
++  // the same onRequestHtmlResult channel as requestHTML.
++  fun requestHTMLForRange(requestId: Int, start: Int, end: Int) {
++    val html = try {
++      val editable = text
++      if (editable == null) {
++        null
++      } else {
++        val len = editable.length
++        val from = start.coerceIn(0, len)
++        val to = end.coerceIn(from, len)
++        val selected = editable.subSequence(from, to) as Spannable
++        EnrichedParser.toHtml(selected)
++      }
++    } catch (e: Exception) {
++      null
++    }
++
++    val reactContext = context as ReactContext
++    val surfaceId = UIManagerHelper.getSurfaceId(reactContext)
++    val dispatcher = UIManagerHelper.getEventDispatcherForReactTag(reactContext, id)
++    dispatcher?.dispatchEvent(OnRequestHtmlResultEvent(surfaceId, id, requestId, html, experimentalSynchronousEvents))
++  }
++
+   // Sometimes setting up style triggers many changes in sequence
+   // Eg. removing conflicting styles -> changing text -> applying spans
+   // In such scenario we want to prevent from handling side effects (eg. onTextChanged)
+diff --git a/node_modules/react-native-enriched/android/src/main/java/com/swmansion/enriched/EnrichedTextInputViewManager.kt b/node_modules/react-native-enriched/android/src/main/java/com/swmansion/enriched/EnrichedTextInputViewManager.kt
+index 8c629cf..8a69210 100644
+--- a/node_modules/react-native-enriched/android/src/main/java/com/swmansion/enriched/EnrichedTextInputViewManager.kt
++++ b/node_modules/react-native-enriched/android/src/main/java/com/swmansion/enriched/EnrichedTextInputViewManager.kt
+@@ -274,6 +274,16 @@ class EnrichedTextInputViewManager : SimpleViewManager<EnrichedTextInputView>(),
+     view?.requestHTML(requestId)
+   }
+ 
++  // PATCH (trendly): selection-scoped replace with parsed HTML.
++  override fun replaceRange(view: EnrichedTextInputView?, start: Int, end: Int, html: String) {
++    view?.replaceRange(start, end, html)
++  }
++
++  // PATCH (trendly): serialize the [start,end] range to HTML (async via event).
++  override fun requestHTMLForRange(view: EnrichedTextInputView?, requestId: Int, start: Int, end: Int) {
++    view?.requestHTMLForRange(requestId, start, end)
++  }
++
+   override fun measure(
+     context: Context,
+     localData: ReadableMap?,
+diff --git a/node_modules/react-native-enriched/ios/EnrichedTextInputView.mm b/node_modules/react-native-enriched/ios/EnrichedTextInputView.mm
+index c3cad89..d174fa3 100644
+--- a/node_modules/react-native-enriched/ios/EnrichedTextInputView.mm
++++ b/node_modules/react-native-enriched/ios/EnrichedTextInputView.mm
+@@ -563,8 +563,17 @@ - (void)updateProps:(Props::Shared const &)props
+         [config primaryColor];
+     defaultTypingAttributes[NSStrikethroughColorAttributeName] =
+         [config primaryColor];
+-    defaultTypingAttributes[NSParagraphStyleAttributeName] =
+-        [[NSParagraphStyle alloc] init];
++    // PATCH (trendly): the library shipped a bare NSParagraphStyle, so every
++    // paragraph and heading was packed with no inter-block gap or line leading,
++    // looking far tighter than the web (Lexical) editor. Give the base
++    // paragraph style a roomy line height + paragraph spacing to mirror web.
++    // Headings, lists and quotes all mutableCopy this base style, so they
++    // inherit the spacing automatically (no per-style change needed).
++    NSMutableParagraphStyle *baseParagraphStyle =
++        [[NSMutableParagraphStyle alloc] init];
++    baseParagraphStyle.lineHeightMultiple = 1.4;
++    baseParagraphStyle.paragraphSpacing = 12.0;
++    defaultTypingAttributes[NSParagraphStyleAttributeName] = baseParagraphStyle;
+     textView.typingAttributes = defaultTypingAttributes;
+ 
+     // update the placeholder as well
+@@ -977,6 +986,19 @@ - (void)handleCommand:(const NSString *)commandName args:(const NSArray *)args {
+   } else if ([commandName isEqualToString:@"requestHTML"]) {
+     NSInteger requestId = [((NSNumber *)args[0]) integerValue];
+     [self requestHTML:requestId];
++  } else if ([commandName isEqualToString:@"replaceRange"]) {
++    // PATCH (trendly): selection-scoped replace with parsed HTML.
++    NSInteger start = [((NSNumber *)args[0]) integerValue];
++    NSInteger end = [((NSNumber *)args[1]) integerValue];
++    NSString *html = (NSString *)args[2];
++    [self replaceRange:start end:end fromHtml:html];
++  } else if ([commandName isEqualToString:@"requestHTMLForRange"]) {
++    // PATCH (trendly): serialize the [start,end] range to HTML, returned via
++    // the shared onRequestHtmlResult event (same channel as requestHTML).
++    NSInteger requestId = [((NSNumber *)args[0]) integerValue];
++    NSInteger start = [((NSNumber *)args[1]) integerValue];
++    NSInteger end = [((NSNumber *)args[2]) integerValue];
++    [self requestHTMLForRange:requestId start:start end:end];
+   }
+ }
+ 
+@@ -1013,6 +1035,29 @@ - (void)setValue:(NSString *)value {
+   [self anyTextMayHaveBeenModified];
+ }
+ 
++// PATCH (trendly): replace the text in [start,end] with parsed HTML, scoped to
++// that range. Reuses the parser's existing replaceFromHtml:range: (which sets
++// recentlyChangedRange via TextInsertionUtils and emits onChangeHtml through
++// anyTextMayHaveBeenModified). Powers selection-scoped AI Quick Edit.
++- (void)replaceRange:(NSInteger)start
++                 end:(NSInteger)end
++            fromHtml:(NSString *)html {
++  NSInteger len = (NSInteger)textView.textStorage.string.length;
++  if (start < 0) {
++    start = 0;
++  }
++  if (end > len) {
++    end = len;
++  }
++  if (end < start) {
++    return;
++  }
++  NSString *processed = [parser initiallyProcessHtml:html];
++  if (processed != nullptr) {
++    [parser replaceFromHtml:processed range:NSMakeRange(start, end - start)];
++  }
++}
++
+ - (void)emitOnLinkDetectedEvent:(NSString *)text
+                             url:(NSString *)url
+                           range:(NSRange)range {
+@@ -1091,6 +1136,29 @@ - (void)requestHTML:(NSInteger)requestId {
+   }
+ }
+ 
++// PATCH (trendly): serialize just the [start,end] range to HTML, returned over
++// the same onRequestHtmlResult channel as requestHTML. Powers fetching the
++// selection's HTML for AI Quick Edit.
++- (void)requestHTMLForRange:(NSInteger)requestId
++                      start:(NSInteger)start
++                        end:(NSInteger)end {
++  auto emitter = [self getEventEmitter];
++  if (emitter != nullptr) {
++    @try {
++      NSInteger len = (NSInteger)textView.textStorage.string.length;
++      NSInteger s = MAX((NSInteger)0, MIN(start, len));
++      NSInteger e = MAX(s, MIN(end, len));
++      NSString *htmlOutput =
++          [parser parseToHtmlFromRange:NSMakeRange(s, e - s)];
++      emitter->onRequestHtmlResult({.requestId = static_cast<int>(requestId),
++                                    .html = [htmlOutput toCppString]});
++    } @catch (NSException *exception) {
++      emitter->onRequestHtmlResult({.requestId = static_cast<int>(requestId),
++                                    .html = folly::dynamic(nullptr)});
++    }
++  }
++}
++
+ // MARK: - Styles manipulation
+ 
+ - (void)toggleRegularStyle:(StyleType)type {
+diff --git a/node_modules/react-native-enriched/ios/inputParser/InputParser.mm b/node_modules/react-native-enriched/ios/inputParser/InputParser.mm
+index b7dbdd0..b9ba8b3 100644
+--- a/node_modules/react-native-enriched/ios/inputParser/InputParser.mm
++++ b/node_modules/react-native-enriched/ios/inputParser/InputParser.mm
+@@ -574,6 +574,13 @@ - (void)applyProcessedStyles:(NSArray *)processedStyles
+          offsetFromBeginning:(NSInteger)offset
+              plainTextLength:(NSUInteger)plainTextLength {
+   for (NSArray *arr in processedStyles) {
++    // PATCH (trendly): never index arr[1] on a malformed (<2 element) style
++    // entry. A processed style is always [styleType, stylePair]; a 1-element
++    // entry (e.g. produced by an unsupported heading level falling through the
++    // parser) would otherwise throw NSRangeException here and abort the app.
++    if (arr.count < 2) {
++      continue;
++    }
+     // unwrap all info from processed style
+     NSNumber *styleType = (NSNumber *)arr[0];
+     StylePair *stylePair = (StylePair *)arr[1];
+@@ -1192,6 +1199,13 @@ - (NSArray *)getTextAndStylesFromHtml:(NSString *)fixedHtml {
+         [styleArr addObject:@([H2Style getStyleType])];
+       } else if ([tagName isEqualToString:@"h3"]) {
+         [styleArr addObject:@([H3Style getStyleType])];
++      } else {
++        // PATCH (trendly): unsupported heading levels (h4-h6) and any other
++        // h-prefixed tag (hr, header, …) add no style type. Without this skip
++        // the code falls through and appends only the StylePair, producing a
++        // 1-element styleArr that crashes applyProcessedStyles' arr[1] read.
++        // Skip it like every other unrecognised tag does below.
++        continue;
+       }
+     } else if ([tagName isEqualToString:@"ul"]) {
+       [styleArr addObject:@([UnorderedListStyle getStyleType])];
+diff --git a/node_modules/react-native-enriched/lib/module/EnrichedTextInput.js b/node_modules/react-native-enriched/lib/module/EnrichedTextInput.js
+index cc36fe2..6d5af64 100644
+--- a/node_modules/react-native-enriched/lib/module/EnrichedTextInput.js
++++ b/node_modules/react-native-enriched/lib/module/EnrichedTextInput.js
+@@ -88,6 +88,18 @@ export const EnrichedTextInput = ({
+         Commands.requestHTML(nullthrows(nativeRef.current), requestId);
+       });
+     },
++    // PATCH (trendly): resolve the HTML of the [start,end] range (reuses the
++    // requestHTML response channel).
++    getHTMLForRange: (start, end) => {
++      return new Promise((resolve, reject) => {
++        const requestId = nextHtmlRequestId.current++;
++        pendingHtmlRequests.current.set(requestId, {
++          resolve,
++          reject
++        });
++        Commands.requestHTMLForRange(nullthrows(nativeRef.current), requestId, start, end);
++      });
++    },
+     toggleBold: () => {
+       Commands.toggleBold(nullthrows(nativeRef.current));
+     },
+@@ -140,6 +152,10 @@ export const EnrichedTextInput = ({
+         warnAboutMissconfiguredMentions(indicator);
+       }
+       Commands.startMention(nullthrows(nativeRef.current), indicator);
++    },
++    // PATCH (trendly): replace [start,end] with parsed HTML.
++    replaceRange: (start, end, html) => {
++      Commands.replaceRange(nullthrows(nativeRef.current), start, end, html);
+     }
+   }));
+   const handleMentionEvent = e => {
+diff --git a/node_modules/react-native-enriched/lib/module/EnrichedTextInputNativeComponent.ts b/node_modules/react-native-enriched/lib/module/EnrichedTextInputNativeComponent.ts
+index 5bd119c..e61d35a 100644
+--- a/node_modules/react-native-enriched/lib/module/EnrichedTextInputNativeComponent.ts
++++ b/node_modules/react-native-enriched/lib/module/EnrichedTextInputNativeComponent.ts
+@@ -213,6 +213,23 @@ interface NativeCommands {
+     viewRef: React.ElementRef<ComponentType>,
+     requestId: Int32
+   ) => void;
++  // PATCH (trendly): replace the text in [start,end] with parsed HTML, scoped
++  // to that range (engine had only whole-document setValue). Powers
++  // selection-scoped AI Quick Edit.
++  replaceRange: (
++    viewRef: React.ElementRef<ComponentType>,
++    start: Int32,
++    end: Int32,
++    html: string
++  ) => void;
++  // PATCH (trendly): serialize the [start,end] range to HTML, returned async via
++  // the onRequestHtmlResult event (same channel as requestHTML).
++  requestHTMLForRange: (
++    viewRef: React.ElementRef<ComponentType>,
++    requestId: Int32,
++    start: Int32,
++    end: Int32
++  ) => void;
+ }
+ 
+ export const Commands: NativeCommands = codegenNativeCommands<NativeCommands>({
+@@ -240,6 +257,8 @@ export const Commands: NativeCommands = codegenNativeCommands<NativeCommands>({
+     'startMention',
+     'addMention',
+     'requestHTML',
++    'replaceRange',
++    'requestHTMLForRange',
+   ],
+ });
+ 
+diff --git a/node_modules/react-native-enriched/lib/typescript/src/EnrichedTextInput.d.ts b/node_modules/react-native-enriched/lib/typescript/src/EnrichedTextInput.d.ts
+index face251..0bcdc5b 100644
+--- a/node_modules/react-native-enriched/lib/typescript/src/EnrichedTextInput.d.ts
++++ b/node_modules/react-native-enriched/lib/typescript/src/EnrichedTextInput.d.ts
+@@ -6,6 +6,8 @@ export interface EnrichedTextInputInstance extends NativeMethods {
+     blur: () => void;
+     setValue: (value: string) => void;
+     getHTML: () => Promise<string>;
++    /** PATCH (trendly): resolve the HTML of the [start,end] range. */
++    getHTMLForRange: (start: number, end: number) => Promise<string>;
+     toggleBold: () => void;
+     toggleItalic: () => void;
+     toggleUnderline: () => void;
+@@ -22,6 +24,8 @@ export interface EnrichedTextInputInstance extends NativeMethods {
+     setImage: (src: string, width: number, height: number) => void;
+     startMention: (indicator: string) => void;
+     setMention: (indicator: string, text: string, attributes?: Record<string, string>) => void;
++    /** PATCH (trendly): replace the text in [start,end] with parsed HTML. */
++    replaceRange: (start: number, end: number, html: string) => void;
+ }
+ export interface OnChangeMentionEvent {
+     indicator: string;

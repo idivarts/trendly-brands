@@ -25,11 +25,74 @@ import {
     getDocs,
     orderBy,
     query,
+    where,
 } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Menu } from "react-native-paper";
 import { CollaborationCard, type CollaborationCardData } from "./CollaborationCard";
+
+export type CollaborationCMSLiveFilter = "none" | "live" | "not-live";
+
+export type CollaborationCMSBoardProps = {
+    liveFilter: CollaborationCMSLiveFilter;
+};
+
+export function CollaborationCMSCampaignFilter({
+    liveFilter,
+    onLiveFilterChange,
+}: {
+    liveFilter: CollaborationCMSLiveFilter;
+    onLiveFilterChange: (value: CollaborationCMSLiveFilter) => void;
+}) {
+    const [menuVisible, setMenuVisible] = useState(false);
+    const theme = useTheme();
+    const colors = Colors(theme);
+    const styles = useMemo(() => useCampaignFilterStyles(colors), [colors]);
+
+    return (
+        <Menu
+            visible={menuVisible}
+            onDismiss={() => setMenuVisible(false)}
+            anchor={
+                <Pressable
+                    onPress={() => setMenuVisible(true)}
+                    style={styles.filterBtn}
+                >
+                    <Text style={styles.filterBtnText}>
+                        {liveFilter === "none"
+                            ? "All Campaigns"
+                            : liveFilter === "live"
+                                ? "Live Campaigns"
+                                : "Not-Live Campaigns"}
+                    </Text>
+                </Pressable>
+            }
+        >
+            <Menu.Item
+                onPress={() => {
+                    onLiveFilterChange("none");
+                    setMenuVisible(false);
+                }}
+                title="None (All Campaigns)"
+            />
+            <Menu.Item
+                onPress={() => {
+                    onLiveFilterChange("live");
+                    setMenuVisible(false);
+                }}
+                title="Live Campaigns"
+            />
+            <Menu.Item
+                onPress={() => {
+                    onLiveFilterChange("not-live");
+                    setMenuVisible(false);
+                }}
+                title="Not-Live Campaigns"
+            />
+        </Menu>
+    );
+}
 
 export type KanbanCardT = CollaborationCardData & { isLive?: boolean };
 
@@ -39,7 +102,7 @@ export type KanbanColumnT = {
     cards: KanbanCardT[];
 };
 
-export default function CollaborationCMSBoard() {
+export default function CollaborationCMSBoard({ liveFilter }: CollaborationCMSBoardProps) {
     const [columns, setColumns] = useState<KanbanColumnT[]>([
         { id: "draft", title: "Draft Campaign", cards: [] },
         { id: "active", title: "Active Campaign", cards: [] },
@@ -50,23 +113,29 @@ export default function CollaborationCMSBoard() {
     const [activeCard, setActiveCard] = useState<KanbanCardT | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const [liveFilter, setLiveFilter] = useState<"none" | "live" | "not-live">("none");
-    const [menuVisible, setMenuVisible] = useState(false);
     const [allCollaborations, setAllCollaborations] = useState<KanbanCardT[]>([]);
     const { updateCollaboration } = useCollaborationContext();
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     useEffect(() => {
         const fetchCollaborations = async () => {
             setError(null);
             setLoading(true);
             try {
-                console.log("[Kanban] Fetching collaborations (all)");
+                console.log("[Kanban] Fetching collaborations", { liveFilter });
 
                 const collRef = collection(FirestoreDB, "collaborations");
-                const snapshot = await getDocs(query(collRef, orderBy("timeStamp", "desc")));
+                const snapshot = await getDocs(
+                    liveFilter === "none"
+                        ? query(collRef, orderBy("timeStamp", "desc"))
+                        : query(
+                            collRef,
+                            where("isLive", "==", liveFilter === "live"),
+                            orderBy("timeStamp", "desc")
+                        )
+                );
                 console.log("[Kanban] Collaborations found", snapshot.size);
 
                 const collabs: KanbanCardT[] = [];
@@ -86,8 +155,6 @@ export default function CollaborationCMSBoard() {
                 console.log("[Kanban] Total collaborations", collabs.length);
                 setAllCollaborations(collabs);
 
-                updateColumns(collabs, liveFilter);
-
             } catch (err: any) {
                 console.warn("Failed to fetch collaborations", err);
                 setError(err?.message || "Unable to load collaborations");
@@ -96,9 +163,9 @@ export default function CollaborationCMSBoard() {
             }
         };
         fetchCollaborations();
-    }, []);
+    }, [liveFilter]);
 
-    const updateColumns = (collabs: KanbanCardT[], filter: "none" | "live" | "not-live") => {
+    const updateColumns = (collabs: KanbanCardT[], filter: CollaborationCMSLiveFilter) => {
         const grouped: Record<string, KanbanCardT[]> = {
             draft: [],
             active: [],
@@ -133,9 +200,7 @@ export default function CollaborationCMSBoard() {
     };
 
     useEffect(() => {
-        if (allCollaborations.length > 0) {
-            updateColumns(allCollaborations, liveFilter);
-        }
+        updateColumns(allCollaborations, liveFilter);
     }, [liveFilter, allCollaborations]);
 
     const sensors = useSensors(
@@ -172,7 +237,7 @@ export default function CollaborationCMSBoard() {
         // Find source and dest columns
         const sourceColIndex = columns.findIndex(c => c.id === fromColumnId);
         const destColIndex = columns.findIndex(c => c.id === toColumnId);
-        
+
         if (sourceColIndex === -1 || destColIndex === -1) return;
 
         if (fromColumnId === toColumnId) {
@@ -182,33 +247,33 @@ export default function CollaborationCMSBoard() {
             const newIndex = toCardId ? column.cards.findIndex(c => c.id === toCardId) : column.cards.length;
 
             if (oldIndex !== newIndex && oldIndex !== -1) {
-                 const newCards = arrayMove(column.cards, oldIndex, newIndex);
-                 const newColumns = [...columns];
-                 newColumns[sourceColIndex] = { ...column, cards: newCards };
-                 setColumns(newColumns);
+                const newCards = arrayMove(column.cards, oldIndex, newIndex);
+                const newColumns = [...columns];
+                newColumns[sourceColIndex] = { ...column, cards: newCards };
+                setColumns(newColumns);
             }
         } else {
             // Move between columns
             const sourceCol = columns[sourceColIndex];
             const destCol = columns[destColIndex];
             const card = sourceCol.cards.find(c => c.id === fromCardId);
-            
+
             if (!card) return;
 
             const newSourceCards = sourceCol.cards.filter(c => c.id !== fromCardId);
             const newDestCards = [...destCol.cards];
-            
-            const insertIndex = toCardId 
+
+            const insertIndex = toCardId
                 ? newDestCards.findIndex(c => c.id === toCardId)
                 : newDestCards.length;
-            
+
             // Insert at index
             newDestCards.splice(insertIndex < 0 ? newDestCards.length : insertIndex, 0, card);
 
             const newColumns = [...columns];
             newColumns[sourceColIndex] = { ...sourceCol, cards: newSourceCards };
             newColumns[destColIndex] = { ...destCol, cards: newDestCards };
-            
+
             setColumns(newColumns);
 
             try {
@@ -220,36 +285,12 @@ export default function CollaborationCMSBoard() {
     };
 
     return (
-        <View style={{ flex: 1, backgroundColor: colors.white }}>
-             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
-                <View style={styles.header}>
-                    <Text style={styles.title}>Collaboration CMS</Text>
-                    <Menu
-                        visible={menuVisible}
-                        onDismiss={() => setMenuVisible(false)}
-                        anchor={
-                            <Pressable
-                                onPress={() => setMenuVisible(true)}
-                                style={[styles.filterBtn]}
-                            >
-                                <Text style={styles.filterBtnText}>
-                                    {liveFilter === "none"
-                                        ? "All Campaigns"
-                                        : liveFilter === "live"
-                                            ? "Live Campaigns"
-                                            : "Not-Live Campaigns"}
-                                </Text>
-                            </Pressable>
-                        }
-                    >
-                        <Menu.Item onPress={() => { setLiveFilter("none"); setMenuVisible(false); }} title="None (All Campaigns)" />
-                        <Menu.Item onPress={() => { setLiveFilter("live"); setMenuVisible(false); }} title="Live Campaigns" />
-                        <Menu.Item onPress={() => { setLiveFilter("not-live"); setMenuVisible(false); }} title="Not-Live Campaigns" />
-                    </Menu>
-                </View>
-
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
                 {loading && (
-                    <Text style={{ paddingVertical: 8, opacity: 0.7 }}>Loading collaborations…</Text>
+                    <Text style={{ paddingVertical: 8, opacity: 0.7, color: colors.textSecondary }}>
+                        Loading collaborations…
+                    </Text>
                 )}
                 {error && (
                     <Text style={{ color: colors.red, marginBottom: 8 }}>{error}</Text>
@@ -263,7 +304,7 @@ export default function CollaborationCMSBoard() {
                 >
                     <DragOverlay>
                         {activeCard ? (
-                             <View
+                            <View
                                 style={{
                                     padding: 12,
                                     borderRadius: 8,
@@ -274,7 +315,9 @@ export default function CollaborationCMSBoard() {
                                     borderColor: colors.border,
                                 }}
                             >
-                                <Text style={{ fontWeight: "700" }}>{activeCard.message || "Unknown Campaign"}</Text>
+                                <Text style={{ fontWeight: "700", color: colors.text }}>
+                                    {activeCard.message || "Unknown Campaign"}
+                                </Text>
                                 <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4 }}>ID: {activeCard.id}</Text>
                             </View>
                         ) : null}
@@ -301,14 +344,20 @@ export default function CollaborationCMSBoard() {
 const DroppableColumn = ({ column }: { column: KanbanColumnT }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
     const { setNodeRef, isOver } = useDroppable({ id: column.id });
-    const bgColor = isOver ? colors.aliceBlue : colors.aliceBlue;
+    const columnBg = theme.dark
+        ? isOver
+            ? colors.secondarySurface
+            : colors.glassTabBarSurface
+        : isOver
+            ? colors.primaryLight
+            : colors.aliceBlue;
 
     return (
         <View
             ref={setNodeRef as any}
-            style={[styles.column, { backgroundColor: bgColor }]}
+            style={[styles.column, { backgroundColor: columnBg }]}
         >
             <View style={styles.columnHeader}>
                 <Text
@@ -340,7 +389,14 @@ const DroppableColumn = ({ column }: { column: KanbanColumnT }) => {
                 </SortableContext>
 
                 {column.cards.length === 0 && (
-                    <Text style={{ textAlign: "center", opacity: 0.6, marginTop: 20 }}>
+                    <Text
+                        style={{
+                            textAlign: "center",
+                            opacity: 0.7,
+                            marginTop: 20,
+                            color: colors.textSecondary,
+                        }}
+                    >
                         Drop here to move card
                     </Text>
                 )}
@@ -372,17 +428,17 @@ const SortableCollaborationCard = ({
 
     // Filter out web-specific attributes
     const { tabIndex, role, ...restAttributes } = attributes as any;
-    
+
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
     };
-    
+
     // Using inline style specifically to avoid "touchAction: none" which blocks scrolling
     // and to match BrandCRMBoard's structure wrapper
-    
+
     return (
-         <View
+        <View
             ref={setNodeRef as any}
             {...restAttributes}
             {...listeners}
@@ -413,11 +469,11 @@ const SortableCollaborationCard = ({
                     }}
                 />
             )}
-            
+
             <Pressable
                 onPress={() => {
-                     console.log("[CollaborationCMSBoard] Opening collaboration:", card.id);
-                     router.push(`/collaboration-details/${card.id}`);
+                    console.log("[CollaborationCMSBoard] Opening collaboration:", card.id);
+                    router.push(`/collaboration-details/${card.id}`);
                 }}
             >
                 <CollaborationCard
@@ -430,16 +486,8 @@ const SortableCollaborationCard = ({
     );
 }
 
-const useStyles = (colors: ReturnType<typeof Colors>) =>
+const useCampaignFilterStyles = (colors: ReturnType<typeof Colors>) =>
     StyleSheet.create({
-        container: { flex: 1, padding: 20, backgroundColor: colors.white },
-        header: {
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 20,
-        },
-        title: { fontSize: 22, fontWeight: "700" },
         filterBtn: {
             backgroundColor: colors.primary,
             paddingHorizontal: 16,
@@ -447,6 +495,11 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             borderRadius: 8,
         },
         filterBtnText: { color: colors.white, fontWeight: "600", fontSize: 14 },
+    });
+
+const useStyles = (colors: ReturnType<typeof Colors>) =>
+    StyleSheet.create({
+        container: { flex: 1, padding: 20, backgroundColor: colors.background },
         row: {
             flexDirection: "row",
             gap: 16,
@@ -473,7 +526,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             paddingBottom: 8,
             marginBottom: 8,
         },
-        columnTitle: { fontSize: 16, fontWeight: "700" },
+        columnTitle: { fontSize: 16, fontWeight: "700", color: colors.text },
         columnScroll: {
             flex: 1,
             paddingBottom: 8,

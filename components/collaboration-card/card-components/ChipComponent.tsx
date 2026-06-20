@@ -13,7 +13,7 @@ interface ChipCardProps {
 
 const ChipCard: FC<ChipCardProps> = ({ chipText, chipIcon }) => {
     const theme = useTheme();
-    const styles = useMemo(() => useStyles(theme), [theme]);
+    const styles = useStyles(theme);
 
     return (
         <View style={styles.chip}>

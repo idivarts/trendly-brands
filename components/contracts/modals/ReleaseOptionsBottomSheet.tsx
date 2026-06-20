@@ -1,0 +1,247 @@
+import {
+    RELEASE_DATE_MAX_DAYS,
+    type ReleasePlanOption,
+} from "@/shared-constants/contract-status";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/shared-uis/constants/Colors";
+import { useTheme } from "@react-navigation/native";
+import React, { useMemo, useState } from "react";
+import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
+import DatePickerModal, {
+    formatDateForWebInput,
+    parseWebInputDate,
+} from "../../modals/DatePickerModal";
+import { Text } from "../../theme/Themed";
+import Button from "../../ui/button";
+import { scheduleRelease } from "../api/release-pending.api";
+import ContractActionOverlay from "../ContractActionOverlay";
+
+const RELEASE_OPTIONS: { value: ReleasePlanOption; label: string }[] = [
+    { value: "brand_and_influencer_post", label: "Brand + Influencer post as collaboration" },
+    { value: "influencer_posts_alone", label: "Influencer posts alone" },
+    { value: "brand_posts_alone", label: "Brand posts alone" },
+];
+
+const maxReleaseDate = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + RELEASE_DATE_MAX_DAYS);
+    return d;
+};
+
+export interface ReleaseOptionsBottomSheetProps {
+    visible: boolean;
+    onClose: () => void;
+    contractId: string;
+    onSuccess: () => void;
+}
+
+const ReleaseOptionsBottomSheet: React.FC<ReleaseOptionsBottomSheetProps> = ({
+    visible,
+    onClose,
+    contractId,
+    onSuccess,
+}) => {
+    const theme = useTheme();
+    const colors = Colors(theme);
+    const styles = useMemo(() => createStyles(colors), [colors]);
+    const webDateInputStyle = useMemo(
+        () =>
+            ({
+                width: "100%" as const,
+                height: 44,
+                paddingVertical: 10,
+                paddingHorizontal: 16,
+                borderRadius: 8,
+                border: `1px solid ${colors.budgetCardBorder}`,
+                backgroundColor: colors.secondarySurface ?? colors.card,
+                color: colors.text,
+                fontSize: 15,
+                boxSizing: "border-box" as const,
+            }),
+        [colors.budgetCardBorder, colors.card, colors.secondarySurface, colors.text]
+    );
+
+    const [selectedOption, setSelectedOption] = useState<ReleasePlanOption | null>(null);
+    const [date, setDate] = useState(() => {
+        const d = new Date();
+        d.setDate(d.getDate() + 7);
+        return d;
+    });
+    const [submitting, setSubmitting] = useState(false);
+    const [dateModalVisible, setDateModalVisible] = useState(false);
+
+    const handleConfirm = async () => {
+        if (!selectedOption) return;
+        const ts = Math.min(date.getTime(), maxReleaseDate().getTime());
+        setSubmitting(true);
+        try {
+            await scheduleRelease({
+                contractId,
+                scheduledReleaseAt: ts,
+                option: selectedOption,
+            });
+            Toaster.success("Release scheduled");
+            onSuccess();
+            onClose();
+        } catch (e) {
+            const message = e instanceof Error ? e.message : undefined;
+            Toaster.error(
+                message ? `Failed to schedule release: ${message}` : "Failed to schedule release"
+            );
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const maxDate = maxReleaseDate();
+
+    const content = (
+        <View style={styles.container}>
+            <Text style={styles.title}>Plan Release</Text>
+            <Text style={styles.subtitle}>How will the video be published?</Text>
+            {RELEASE_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                    key={opt.value}
+                    style={[
+                        styles.optionRow,
+                        selectedOption === opt.value && styles.optionRowSelected,
+                    ]}
+                    onPress={() => {
+                        setSelectedOption(opt.value);
+                        // Native opens the system picker on select. Web shows an
+                        // inline date input below — no second modal.
+                        if (Platform.OS !== "web") setDateModalVisible(true);
+                    }}
+                >
+                    <Text
+                        style={[
+                            styles.optionLabel,
+                            selectedOption === opt.value && styles.optionLabelSelected,
+                        ]}
+                    >
+                        {opt.label}
+                    </Text>
+                </TouchableOpacity>
+            ))}
+            {selectedOption ? (
+                <>
+                    <Text style={[styles.subtitle, styles.dateLabel]}>
+                        Release date (max 30 days)
+                    </Text>
+                    {Platform.OS === "web" ? (
+                        React.createElement("input", {
+                            type: "date",
+                            value: formatDateForWebInput(date),
+                            min: formatDateForWebInput(new Date()),
+                            max: formatDateForWebInput(maxDate),
+                            onChange: (e: { target?: { value?: string } }) => {
+                                const parsed = parseWebInputDate(e?.target?.value ?? "");
+                                if (!parsed) return;
+                                const capped = Math.min(parsed.getTime(), maxDate.getTime());
+                                setDate(new Date(capped));
+                            },
+                            style: webDateInputStyle,
+                        })
+                    ) : !dateModalVisible ? (
+                        <Text style={styles.dateDisplayText}>
+                            {date.toLocaleDateString(undefined, {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                            })}
+                        </Text>
+                    ) : null}
+                </>
+            ) : null}
+            {Platform.OS !== "web" ? (
+                <DatePickerModal
+                    visible={dateModalVisible}
+                    title="Select release date"
+                    value={date}
+                    onChange={setDate}
+                    onClose={() => setDateModalVisible(false)}
+                    minimumDate={new Date()}
+                    maximumDate={maxDate}
+                    submitText="Done"
+                    cancelText="Cancel"
+                />
+            ) : null}
+            <View style={styles.actions}>
+                <Button mode="outlined" style={styles.button} onPress={onClose}>
+                    Cancel
+                </Button>
+                <Button
+                    mode="contained"
+                    style={styles.button}
+                    onPress={handleConfirm}
+                    disabled={!selectedOption || submitting}
+                >
+                    Schedule Release
+                </Button>
+            </View>
+        </View>
+    );
+
+    return (
+        <ContractActionOverlay
+            visible={visible}
+            onClose={onClose}
+            mode="auto"
+            snapPointsRange={["50%", "90%"]}
+            modalMaxWidth={520}
+        >
+            {content}
+        </ContractActionOverlay>
+    );
+};
+
+function createStyles(colors: ReturnType<typeof Colors>) {
+    return StyleSheet.create({
+        container: {
+            padding: 20,
+            paddingBottom: 32,
+        },
+        title: {
+            fontSize: 18,
+            fontWeight: "600",
+            color: colors.text,
+            marginBottom: 4,
+        },
+        subtitle: {
+            fontSize: 14,
+            color: colors.gray300,
+            marginBottom: 12,
+        },
+        dateLabel: { marginTop: 16 },
+        optionRow: {
+            paddingVertical: 14,
+            paddingHorizontal: 16,
+            borderRadius: 8,
+            backgroundColor: colors.tag ?? "rgba(0,0,0,0.06)",
+            marginBottom: 8,
+        },
+        optionRowSelected: {
+            backgroundColor: colors.primary,
+        },
+        optionLabel: {
+            fontSize: 15,
+            color: colors.text,
+        },
+        optionLabelSelected: {
+            color: colors.white,
+        },
+        dateDisplayText: {
+            fontSize: 15,
+            fontWeight: "600",
+            color: colors.text,
+            marginBottom: 20,
+        },
+        actions: {
+            flexDirection: "row",
+            gap: 12,
+        },
+        button: { flex: 1 },
+    });
+}
+
+export default ReleaseOptionsBottomSheet;

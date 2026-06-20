@@ -10,7 +10,7 @@ import {
     useLocalSearchParams,
     usePathname,
     useRouter,
-    useSegments,
+    useSegments
 } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
@@ -20,16 +20,20 @@ import "react-native-reanimated";
 
 import DownloadApp from "@/components/download";
 import { useColorScheme } from "@/components/theme/useColorScheme";
+import { DEFAULT_MEMBER_LANDING_PAGE } from "@/constants/App";
 import CustomPaperTheme from "@/constants/Themes/Theme";
 import {
     AuthContextProvider,
     AWSContextProvider,
+    LocationContextProvider,
+    NicheProvider,
     ThemeOverrideProvider,
     TransitionProvider,
     useAuthContext,
     useThemeOverride
 } from "@/contexts";
 import UpdateProvider from "@/shared-libs/contexts/update-provider";
+import MarketingPixels from "@/shared-libs/marketing/MarketingPixels";
 import { ConfirmationModalProvider } from "@/shared-uis/components/ConfirmationModal";
 import { GlobalErrorFallback } from "@/shared-uis/components/GlobalErrorFallback";
 import { toastConfig } from "@/shared-uis/components/toaster/Toaster";
@@ -78,11 +82,14 @@ export default function RootLayout() {
 
     return (
         <GestureHandlerRootView>
+            <MarketingPixels />
             <UpdateProvider force={true}>
                 <AuthContextProvider>
-                    <ThemeOverrideProvider>
-                        <RootLayoutStack />
-                    </ThemeOverrideProvider>
+                    <LocationContextProvider>
+                        <ThemeOverrideProvider>
+                            <RootLayoutStack />
+                        </ThemeOverrideProvider>
+                    </LocationContextProvider>
                 </AuthContextProvider>
             </UpdateProvider>
         </GestureHandlerRootView>
@@ -115,14 +122,14 @@ const RootLayoutStack = () => {
 
         if (session && (inAuthGroup || pathname === "/")) {
             // On boot up, session exist and user is in auth group or /, redirect to collaborations
-            resetAndNavigate("/discover");
+            resetAndNavigate(DEFAULT_MEMBER_LANDING_PAGE);
         } else if (!session && (inMainGroup || pathname === "/")) {
             // On boot up, session doesn't exist and user is in main group or /, redirect to pre-signin
             // resetAndNavigate("/pre-signin");
             resetAndNavigate("/lets-start");
         }
         // Redirect to respective screen
-    }, [session, isLoading]);
+    }, [session, isLoading, pathname]);
 
     return (
         <ThemeProvider value={navigationTheme}>
@@ -132,15 +139,17 @@ const RootLayoutStack = () => {
                         <DownloadApp />
                         <ConfirmationModalProvider>
                             <BottomSheetModalProvider>
-                                <Stack
-                                    screenOptions={{
-                                        headerShown: false,
-                                    }}
-                                >
-                                    <Stack.Screen name="index" />
-                                    <Stack.Screen name="+not-found" />
-                                </Stack>
-                                <Toast config={toastConfig} />
+                                <NicheProvider>
+                                    <Stack
+                                        screenOptions={{
+                                            headerShown: false,
+                                        }}
+                                    >
+                                        <Stack.Screen name="index" />
+                                        <Stack.Screen name="+not-found" />
+                                    </Stack>
+                                    <Toast config={toastConfig} />
+                                </NicheProvider>
                             </BottomSheetModalProvider>
                         </ConfirmationModalProvider>
                     </TransitionProvider>

@@ -4,6 +4,7 @@ import Button from "@/components/ui/button";
 import PageHeader from "@/components/ui/page-header";
 import TopTabNavigation from "@/components/ui/top-tab-navigation";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useOrganizationContext } from "@/contexts/organization-context.provider";
 import { useBreakpoints } from "@/hooks";
 import usePublishCollaboration from "@/hooks/usePublishCollaboration";
 import { IBrands } from "@/shared-libs/firestore/trendly-pro/models/brands";
@@ -54,8 +55,9 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
     const colors = Colors(theme);
     const [loading, setLoading] = useState(true);
     const { xl } = useBreakpoints();
-    const styles = useMemo(() => useStyles(theme), [theme]);
-    const { isOnFreeTrial } = useBrandContext();
+    const styles = useStyles(theme);
+    const { hasCapability, isIndiaBased } = useBrandContext();
+    const { isOnFreeTrial } = useOrganizationContext();
     const { openModal } = useConfirmationModel();
     const nav = useMyNavigation();
     const expoRouter = useRouter();
@@ -235,16 +237,22 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
                 <InvitationsTabContent key={"invitations"} pageID={pageID} />
             ),
         },
-        {
-            id: "Invitations-Sent",
-            title: "Invited Members",
-            component: (
-                <InvitedMemberTabContent
-                    key={"invited-members"}
-                    pageID={pageID}
-                />
-            ),
-        },
+        // "Invited Members" lists in-app invitations, which only exist for India
+        // brands (non-India brands invite purely via shared link). Hide it there.
+        ...(isIndiaBased
+            ? [
+                {
+                    id: "Invitations-Sent",
+                    title: "Invited Members",
+                    component: (
+                        <InvitedMemberTabContent
+                            key={"invited-members"}
+                            pageID={pageID}
+                        />
+                    ),
+                },
+            ]
+            : []),
     ];
 
     useEffect(() => {
@@ -269,7 +277,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
         return null;
     }
 
-    const isDraft = collaboration.status === "draft";
+    const isDraft = collaboration.status === "draft" && hasCapability("manage_collaborations");
     const campaignHeaderActions = isDraft
         ? [
             <Button
@@ -305,7 +313,7 @@ const CollaborationDetails: React.FC<CollaborationDetailsProps> = ({
                 title="Campaign Details"
                 subtitle={collaboration.name}
                 showBackButton
-                onBackPress={() => expoRouter.replace("/(main)/(drawer)/(tabs)/collaborations")}
+                onBackPress={() => expoRouter.replace("/collaborations")}
                 actionButtons={campaignHeaderActions}
                 rightComponent={
                     <Pressable

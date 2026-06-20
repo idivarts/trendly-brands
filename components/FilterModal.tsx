@@ -77,7 +77,7 @@ const CollaborationFilter = ({
     };
 
     const theme = useTheme();
-    const styles = useMemo(() => useStyles(theme), [theme]);
+    const styles = useStyles(theme);
 
     const snapPoints = useMemo(() => ["25%", "50%", "75%", "100%"], []);
 

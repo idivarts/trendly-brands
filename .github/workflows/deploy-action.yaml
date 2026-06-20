@@ -6,6 +6,10 @@ on:
       - master
       - dev
 
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   deploy:
     name: deploy
@@ -42,6 +46,8 @@ jobs:
     - name: Build Web
       env:
         EXPO_PUBLIC_APP_STAGE: ${{ env.STAGE }}
+        EXPO_PUBLIC_WEBSOCKET_TRENDLY: ${{ env.STAGE == 'prod' && vars.WEBSOCKET_PROD_TRENDLY || vars.WEBSOCKET_DEV_TRENDLY }}
+        EXPO_PUBLIC_FIRESTORE_DATABASE_ID: ${{ env.STAGE == 'prod' && vars.FIRESTORE_DATABASE_PROD_ID || vars.FIRESTORE_DATABASE_DEV_ID }}
       run: npm run build
 
     - name: Deploy with Serverless

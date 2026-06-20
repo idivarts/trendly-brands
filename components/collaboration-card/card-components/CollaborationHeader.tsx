@@ -36,7 +36,7 @@ const CollaborationHeader: FC<CollaborationHeaderProps> = ({
     onOpenBottomSheet,
 }) => {
     const theme = useTheme();
-    const styles = useMemo(() => useStyles(theme), [theme]);
+    const styles = useStyles(theme);
 
     return (
         <Pressable

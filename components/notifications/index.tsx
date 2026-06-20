@@ -1,12 +1,22 @@
 import EmptyState from "@/components/ui/empty-state";
 import AppLayout from "@/layouts/app-layout";
+import Colors from "@/shared-uis/constants/Colors";
 import { Notification } from "@/types/Notification";
 import { useTheme, type Theme } from "@react-navigation/native";
-import React, { useMemo } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
-import Colors from "@/shared-uis/constants/Colors";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+    ActivityIndicator,
+    FlatList,
+    Platform,
+    type NativeScrollEvent,
+    type NativeSyntheticEvent,
+    StyleSheet,
+} from "react-native";
 import { NotificationCard } from "../NotificationCard";
 import { View as ThemedView } from "../theme/Themed";
+
+/** Items revealed per batch as the user scrolls (~90% depth). */
+const NOTIFICATION_PAGE_SIZE = 25;
 
 interface NotificationsProps {
     notifications: Notification[];
@@ -19,6 +29,67 @@ const Notifications: React.FC<NotificationsProps> = ({
 }) => {
     const theme = useTheme();
     const styles = useMemo(() => useNotificationStyles(theme), [theme]);
+
+    const [displayCount, setDisplayCount] = useState(() =>
+        Math.min(NOTIFICATION_PAGE_SIZE, notifications.length)
+    );
+    const scrollLoadGateRef = useRef(false);
+
+    useEffect(() => {
+        if (notifications.length === 0) {
+            setDisplayCount(0);
+            return;
+        }
+        setDisplayCount((prev) => {
+            const capped = Math.min(prev, notifications.length);
+            if (prev === 0) {
+                return Math.min(NOTIFICATION_PAGE_SIZE, notifications.length);
+            }
+            return capped;
+        });
+    }, [notifications.length]);
+
+    const visibleNotifications = useMemo(
+        () => notifications.slice(0, displayCount),
+        [notifications, displayCount]
+    );
+
+    const hasMoreToShow = displayCount < notifications.length;
+
+    const handleScroll = useCallback(
+        (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+            if (!hasMoreToShow) return;
+            const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+            if (contentSize.height <= 0) return;
+
+            const viewportBottom = contentOffset.y + layoutMeasurement.height;
+            const scrolledRatio = viewportBottom / contentSize.height;
+
+            if (scrolledRatio < 0.82) {
+                scrollLoadGateRef.current = false;
+                return;
+            }
+
+            if (scrolledRatio >= 0.9 && !scrollLoadGateRef.current) {
+                scrollLoadGateRef.current = true;
+                setDisplayCount((prev) => {
+                    const next = Math.min(
+                        prev + NOTIFICATION_PAGE_SIZE,
+                        notifications.length
+                    );
+                    if (next > prev) {
+                        setTimeout(() => {
+                            scrollLoadGateRef.current = false;
+                        }, 200);
+                    } else {
+                        scrollLoadGateRef.current = false;
+                    }
+                    return next;
+                });
+            }
+        },
+        [hasMoreToShow, notifications.length]
+    );
 
     return (
         <AppLayout withWebPadding={false} safeAreaEdges={["left", "right", "bottom"]}>
@@ -36,11 +107,10 @@ const Notifications: React.FC<NotificationsProps> = ({
                     <FlatList
                         style={styles.container}
                         contentContainerStyle={styles.contentContainer}
-                        data={notifications}
+                        data={visibleNotifications}
                         keyExtractor={(item) => item.id}
                         renderItem={({ item }) =>
                             <NotificationCard
-                                // avatar="https://cdn.iconscout.com/icon/free/png-256/avatar-370-456322.png"
                                 data={{
                                     collaborationId: item.data?.collaborationId,
                                     groupId: item.data?.groupId,
@@ -54,9 +124,19 @@ const Notifications: React.FC<NotificationsProps> = ({
                                 type={item.type}
                             />
                         }
-                        initialNumToRender={10}
-                        maxToRenderPerBatch={10}
+                        ListFooterComponent={
+                            hasMoreToShow ? (
+                                <ThemedView style={styles.footer}>
+                                    <ActivityIndicator color={Colors(theme).primary} />
+                                </ThemedView>
+                            ) : null
+                        }
+                        onScroll={handleScroll}
+                        scrollEventThrottle={16}
+                        initialNumToRender={12}
+                        maxToRenderPerBatch={NOTIFICATION_PAGE_SIZE}
                         windowSize={5}
+                        removeClippedSubviews={Platform.OS !== "web"}
                     />
                 )
             }
@@ -74,6 +154,11 @@ function useNotificationStyles(theme: Theme) {
         contentContainer: {
             gap: 16,
             paddingBottom: 24,
+        },
+        footer: {
+            paddingVertical: 16,
+            alignItems: "center",
+            justifyContent: "center",
         },
         card: {
             padding: 16,

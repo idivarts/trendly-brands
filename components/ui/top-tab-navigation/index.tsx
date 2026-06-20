@@ -44,6 +44,7 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
     const [activeTab, setActiveTab] = useState(tabs[defaultSelection]);
     const [tabLayout, setTabLayout] = useState<any>({});
     const prevTabIndex = useRef(0);
+    const prevDefaultSelection = useRef(defaultSelection);
     const scrollViewRef = useRef<ScrollView>(null);
     const theme = useTheme();
     const styles = stylesFn(theme);
@@ -99,8 +100,21 @@ const TopTabNavigation: React.FC<TopTabNavigationProps> = ({
         }).start();
     }, [isCollapsed, canCollapse]);
     useEffect(() => {
-        setActiveTab(tabs[defaultSelection]);
-    }, [tabs, defaultSelection]);
+        // NOTE: `tabs` is often re-created by parents on any rerender.
+        // Only reset selection when it's truly necessary:
+        // - `defaultSelection` changed, or
+        // - current `activeTab` is no longer present in the new tabs list.
+        const nextDefault = tabs[defaultSelection];
+        const activeStillExists = !!tabs.find((t) => t.id === activeTab?.id);
+
+        const shouldReset =
+            prevDefaultSelection.current !== defaultSelection || !activeStillExists;
+
+        if (shouldReset && nextDefault) {
+            setActiveTab(nextDefault);
+        }
+        prevDefaultSelection.current = defaultSelection;
+    }, [tabs, defaultSelection, activeTab?.id]);
 
     const renderTabContent = () => {
         let content;

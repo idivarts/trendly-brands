@@ -1,20 +1,31 @@
 import Menu from "@/components/menu";
-import Button from "@/components/ui/button";
+import { Text } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
+import { OpenDrawerSubject } from "@/shared-uis/components/CustomDrawer";
 import ImageComponent from "@/shared-uis/components/image-component";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/shared-uis/constants/Colors";
+import { faCopy } from "@fortawesome/free-regular-svg-icons";
+import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useTheme } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
-import React from "react";
-import { Platform, Pressable } from "react-native";
+import React, { useMemo } from "react";
+import { Platform, Pressable, StyleSheet } from "react-native";
 
 const MenuScreen = () => {
     const router = useRouter();
-    const { selectedBrand } = useBrandContext();
+    const { selectedBrand, brands } = useBrandContext();
     const { manager } = useAuthContext();
+    const theme = useTheme();
+    const { xl } = useBreakpoints();
+    const colors = Colors(theme);
+    const styles = useMemo(() => makeStyles(colors), [colors]);
 
     const copyBrandId = async () => {
         if (!selectedBrand?.id) return;
@@ -33,7 +44,7 @@ const MenuScreen = () => {
     const profileButton = (
         <Pressable
             onPress={() => router.push("/profile")}
-            style={{ padding: 8 }}
+            style={styles.profileButton}
             accessibilityLabel="Open profile"
         >
             <ImageComponent
@@ -47,25 +58,72 @@ const MenuScreen = () => {
         </Pressable>
     );
 
+    const brandTitleContent = (
+        <Pressable onPress={() => OpenDrawerSubject.next(true)} style={styles.brandTitleRow}>
+            <Text style={styles.brandTitle}>{selectedBrand?.name ?? "My Brand"}</Text>
+            {brands.length > 1 && !xl && (
+                <FontAwesomeIcon
+                    color={colors.text}
+                    icon={faChevronDown}
+                    size={14}
+                    style={styles.chevronIcon}
+                />)}
+        </Pressable>
+    );
+
     return (
         <AppLayout withWebPadding={false} safeAreaEdges={["left", "right"]}>
             <PageHeader
                 title="My Brand"
-                subtitle={selectedBrand?.name}
                 showBackButton={false}
                 mobileActions="all"
+                customMainContent={brandTitleContent}
                 actionButtons={[
-                    <Button key="copy" mode="outlined" onPress={copyBrandId} size="small">
-                        Copy Brand ID
-                    </Button>,
+                    <Pressable
+                        key="copy"
+                        onPress={copyBrandId}
+                        style={styles.iconButton}
+                        accessibilityLabel="Copy Brand ID"
+                        accessibilityRole="button"
+                    >
+                        <FontAwesomeIcon icon={faCopy} size={16} color={colors.text} />
+                    </Pressable>,
                 ]}
                 rightComponent={profileButton}
             />
             <AppLayout withWebPadding={true}>
-                <Menu />
+                <Menu key={selectedBrand?.id} />
             </AppLayout>
         </AppLayout>
     );
 };
 
 export default MenuScreen;
+
+const makeStyles = (colors: ReturnType<typeof Colors>) =>
+    StyleSheet.create({
+        brandTitleRow: {
+            flex: 1,
+            flexDirection: "row",
+            alignItems: "center",
+        },
+        brandTitle: {
+            fontSize: 22,
+            fontWeight: "700",
+            color: colors.text,
+        },
+        chevronIcon: {
+            marginLeft: 6,
+        },
+        profileButton: {
+            padding: 8,
+        },
+        iconButton: {
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.tag,
+        },
+    });

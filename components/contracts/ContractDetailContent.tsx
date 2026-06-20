@@ -1,32 +1,36 @@
 import UserResponse from "@/components/contract-card/UserResponse";
-import Colors from "@/shared-uis/constants/Colors";
+import { CURRENCY } from "@/constants/Unit";
 import { useBreakpoints } from "@/hooks";
 import {
     IApplications,
     ICollaboration,
 } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
-import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+import {
+    ContractStatus,
+    IContracts,
+} from "@/shared-libs/firestore/trendly-pro/models/contracts";
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 import Carousel from "@/shared-uis/components/carousel/carousel";
+import AssetPreviewModal from "@/shared-uis/components/carousel/asset-preview-modal";
 import RenderMediaItem from "@/shared-uis/components/carousel/render-media-item";
 import ImageComponent from "@/shared-uis/components/image-component";
 import { Text } from "@/shared-uis/components/theme/Themed";
+import Colors from "@/shared-uis/constants/Colors";
 import { truncateText } from "@/shared-uis/utils/text";
 import { stylesFn } from "@/styles/CollaborationDetails.styles";
 import { processRawAttachment } from "@/utils/attachments";
 import { formatTimeToNow } from "@/utils/date";
-import { CURRENCY } from "@/constants/Unit";
 import { faArrowRight, faVideo } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import React, { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
-import { Card, Portal } from "react-native-paper";
+import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Card } from "react-native-paper";
 import ActionContainer from "./ActionContainer";
 import AddMembersModal from "./AddMemberModal";
-import FeedbackModal from "./FeedbackModal";
 import MemberContainer from "./MemberContainer";
+import BrandFeedbackModal from "./modals/BrandFeedbackModal";
 
 interface CollaborationDetailsContentProps {
     collaborationDetail: ICollaboration;
@@ -34,6 +38,9 @@ interface CollaborationDetailsContentProps {
     userData: IUsers;
     contractData: IContracts;
     refreshData: () => void;
+    /** Dev only: override contract status for UI testing */
+    devOverrideStatus?: number | null;
+    onMenuItemsChange?: (items: import("./ContractActionsMenu").ContractActionsMenuItem[]) => void;
 }
 
 const CONTENT_MAX_WIDTH = 720;
@@ -53,6 +60,11 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
     const [addMemberModal, setAddMemberModal] = useState(false);
     const [feedbackModalVisible, setFeedbackModalVisible] = useState(false);
     const [updateMemberContainer, setUpdateMemberContainer] = useState(0);
+    const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+    const [previewImage, setPreviewImage] = useState(false);
+
+    const effectiveStatus = (props.devOverrideStatus ??
+        props.contractData.status) as number;
 
     const attachments =
         props?.applicationData?.attachments?.map((a) =>
@@ -63,16 +75,172 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
         props.userData.profile?.content?.socialMediaHighlight ||
         (props.userData.profile?.content?.about
             ? truncateText(
-                  props.userData.profile.content.about as string,
-                  60
-              ).split("\n")[0]
+                props.userData.profile.content.about as string,
+                60
+            ).split("\n")[0]
             : null) ||
         "—";
     const nicheDisplay =
         props.userData.profile?.category?.length &&
-        Array.isArray(props.userData.profile.category)
+            Array.isArray(props.userData.profile.category)
             ? props.userData.profile.category.join(" & ")
             : "—";
+
+    const revisionNotes =
+        props.contractData.deliverable?.revisionNotes?.filter(
+            (n): n is string => typeof n === "string" && n.trim().length > 0
+        ) ?? [];
+
+    const renderRevisionNotesSection = () => {
+        if (!revisionNotes.length) return null;
+
+        const newestFirst = [...revisionNotes].reverse();
+
+        return (
+            <View style={styles.revisionSection}>
+                <Text style={styles.sectionLabel}>REQUESTED REVISIONS</Text>
+                <View style={styles.revisionCard}>
+                    {newestFirst.map((note, idx) => (
+                        <View key={`${idx}-${note.slice(0, 24)}`} style={styles.revisionItem}>
+                            <View style={styles.revisionIndexPill}>
+                                <Text style={styles.revisionIndexText}>
+                                    {revisionNotes.length - idx}
+                                </Text>
+                            </View>
+                            <Text style={styles.revisionText}>{note}</Text>
+                        </View>
+                    ))}
+                </View>
+            </View>
+        );
+    };
+
+    const renderProductReceivedProofSection = () => {
+        if (effectiveStatus !== ContractStatus.VideoPending) return null;
+
+        const proofImage = props.contractData.shipment?.packageScreenshots?.[0] || null;
+        const notes =
+            props.contractData.shipment?.receivedNotes ||
+            props.contractData.shipment?.notes ||
+            null;
+
+        return (
+            <View style={styles.postProofSection}>
+                <Text style={styles.sectionLabel}>PROOF OF PRODUCT RECEIVED</Text>
+                <View style={styles.postProofCard}>
+                    <View style={styles.postProofRow}>
+                        <Text style={styles.postProofLabel}>Product Proof Image</Text>
+                        {proofImage ? (
+                            <Pressable
+                                style={styles.postProofImageWrap}
+                                onPress={() => {
+                                    setPreviewImageUrl(proofImage);
+                                    setPreviewImage(true);
+                                }}
+                            >
+                                <ImageComponent
+                                    url={proofImage}
+                                    altText="Product received proof"
+                                    initials=" "
+                                    shape="square"
+                                    size="large"
+                                    style={styles.postProofImage}
+                                />
+                            </Pressable>
+                        ) : (
+                            <Text style={styles.postProofValueMuted}>—</Text>
+                        )}
+                    </View>
+
+                    <View style={styles.postProofDivider} />
+
+                    <View style={styles.postProofRow}>
+                        <Text style={styles.postProofLabel}>Notes</Text>
+                        <Text
+                            style={[
+                                styles.postProofNotes,
+                                !notes ? styles.postProofValueMuted : null,
+                            ]}
+                        >
+                            {notes || "—"}
+                        </Text>
+                    </View>
+                </View>
+            </View>
+        );
+    };
+
+    const renderPostProofSection = () => {
+        if (effectiveStatus !== ContractStatus.SettlementPending) return null;
+
+        const proofScreenshot = props.contractData.posting?.proofScreenshot || null;
+        const postUrl =
+            props.contractData.posting?.postUrl ||
+            props.contractData.posting?.postedLinks?.[0] ||
+            null;
+        const notes = props.contractData.posting?.notes || null;
+
+        return (
+            <View style={styles.postProofSection}>
+                <Text style={styles.sectionLabel}>PROOF OF VIDEO POSTED</Text>
+                <View style={styles.postProofCard}>
+                    <View style={styles.postProofRow}>
+                        <Text style={styles.postProofLabel}>Post Proof Image</Text>
+                        {proofScreenshot ? (
+                            <Pressable
+                                style={styles.postProofImageWrap}
+                                onPress={() => {
+                                    setPreviewImageUrl(proofScreenshot);
+                                    setPreviewImage(true);
+                                }}
+                            >
+                                <ImageComponent
+                                    url={proofScreenshot}
+                                    altText="Post proof"
+                                    initials=" "
+                                    shape="square"
+                                    size="large"
+                                    style={styles.postProofImage}
+                                />
+                            </Pressable>
+                        ) : (
+                            <Text style={styles.postProofValueMuted}>—</Text>
+                        )}
+                    </View>
+
+                    <View style={styles.postProofDivider} />
+
+                    <View style={styles.postProofRow}>
+                        <Text style={styles.postProofLabel}>Link added by the user</Text>
+                        {postUrl ? (
+                            <Pressable
+                                onPress={() => Linking.openURL(postUrl)}
+                                style={styles.postProofLinkPressable}
+                            >
+                                <Text style={styles.postProofLinkText}>{postUrl}</Text>
+                            </Pressable>
+                        ) : (
+                            <Text style={styles.postProofValueMuted}>—</Text>
+                        )}
+                    </View>
+
+                    <View style={styles.postProofDivider} />
+
+                    <View style={styles.postProofRow}>
+                        <Text style={styles.postProofLabel}>Notes</Text>
+                        <Text
+                            style={[
+                                styles.postProofNotes,
+                                !notes ? styles.postProofValueMuted : null,
+                            ]}
+                        >
+                            {notes || "—"}
+                        </Text>
+                    </View>
+                </View>
+            </View>
+        );
+    };
 
     const renderMediaSection = () => {
         if (!attachments.length) return null;
@@ -85,7 +253,7 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                             index={0}
                             height={MEDIA_CARD_SIZE}
                             width={MEDIA_CARD_SIZE}
-                            handleImagePress={() => {}}
+                            handleImagePress={() => { }}
                         />
                     </View>
                     <View style={[styles.mediaCard, styles.profileImageCard]}>
@@ -126,7 +294,7 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                         </View>
                     ) : null}
                 </View>
-                <View style={styles.taglineRow}>
+                {/* <View style={styles.taglineRow}>
                     <View style={styles.taglineIconWrap}>
                         <FontAwesomeIcon
                             icon={faVideo}
@@ -135,13 +303,13 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                         />
                     </View>
                     <Text style={styles.taglineText}>{tagline}</Text>
-                </View>
-                <Text style={styles.aboutText}>
+                </View> */}
+                {/* <Text style={styles.aboutText}>
                     {truncateText(
                         (props.userData.profile?.content?.about as string) || "",
                         160
                     )}
-                </Text>
+                </Text> */}
             </View>
 
             {xl ? (
@@ -152,7 +320,12 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                         setFeedbackModalVisible(true)
                     }
                     userData={props.userData}
+                    collaborationData={props.collaborationDetail}
+                    applicationQuotation={props.applicationData?.quotation ?? null}
+                    paymentStatus={props.contractData.payment?.status}
                     slot="buttons"
+                    devOverrideStatus={props.devOverrideStatus}
+                    onMenuItemsChange={props.onMenuItemsChange}
                 />
             ) : null}
 
@@ -177,12 +350,18 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                 </View>
             )}
 
+            {renderRevisionNotesSection()}
+
+            {renderProductReceivedProofSection()}
+
+            {renderPostProofSection()}
+
             <UserResponse
                 application={props.applicationData}
                 influencerQuestions={
                     props?.collaborationDetail?.questionsToInfluencers
                 }
-                setConfirmationModalVisible={() => {}}
+                setConfirmationModalVisible={() => { }}
             />
 
             <Pressable
@@ -236,7 +415,11 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                     setFeedbackModalVisible(true)
                 }
                 userData={props.userData}
+                collaborationData={props.collaborationDetail}
+                applicationQuotation={props.applicationData?.quotation ?? null}
+                paymentStatus={props.contractData.payment?.status}
                 slot="feedback-and-info"
+                devOverrideStatus={props.devOverrideStatus}
             />
         </View>
     );
@@ -274,7 +457,18 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                         setFeedbackModalVisible(true)
                     }
                     userData={props.userData}
+                    collaborationData={props.collaborationDetail}
+                    applicationQuotation={props.applicationData?.quotation ?? null}
+                    paymentStatus={props.contractData.payment?.status}
+                    devOverrideStatus={props.devOverrideStatus}
+                    onMenuItemsChange={props.onMenuItemsChange}
                 />
+
+                {renderRevisionNotesSection()}
+
+                {renderProductReceivedProofSection()}
+
+                {renderPostProofSection()}
 
                 <MemberContainer
                     //@ts-ignore
@@ -290,7 +484,7 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                     influencerQuestions={
                         props?.collaborationDetail?.questionsToInfluencers
                     }
-                    setConfirmationModalVisible={() => {}}
+                    setConfirmationModalVisible={() => { }}
                 />
                 <Pressable
                     style={styles.activeCampaignCard}
@@ -352,21 +546,21 @@ const ContractDetailsContent = (props: CollaborationDetailsContentProps) => {
                     setUpdateMemberContainer((prev) => prev + 1)
                 }
             />
-            {feedbackModalVisible && (
-                <Portal>
-                    <FeedbackModal
-                        feedbackGiven={false}
-                        setVisibility={() =>
-                            setFeedbackModalVisible(false)
-                        }
-                        star={
-                            props.contractData.feedbackFromBrand?.ratings || 0
-                        }
-                        visible={feedbackModalVisible}
-                        contract={props.contractData}
-                        refreshData={props.refreshData}
-                    />
-                </Portal>
+            <BrandFeedbackModal
+                visible={feedbackModalVisible}
+                onClose={() => setFeedbackModalVisible(false)}
+                initialRating={props.contractData.feedbackFromBrand?.ratings || 0}
+                contractId={props.contractData.streamChannelId}
+                refreshData={props.refreshData}
+            />
+
+            {previewImage && (
+                <AssetPreviewModal
+                    previewImage={previewImage}
+                    previewImageUrl={previewImageUrl}
+                    setPreviewImage={setPreviewImage}
+                    theme={theme}
+                />
             )}
         </ScrollView>
     );
@@ -379,9 +573,9 @@ function createStyles(
 ) {
     const contentMaxWidth = xl
         ? Math.min(
-              width - DESKTOP_HORIZONTAL_PADDING * 2,
-              CONTENT_MAX_WIDTH
-          )
+            width - DESKTOP_HORIZONTAL_PADDING * 2,
+            CONTENT_MAX_WIDTH
+        )
         : undefined;
     return StyleSheet.create({
         scrollContainer: {
@@ -420,10 +614,10 @@ function createStyles(
             height: MEDIA_CARD_SIZE,
             borderRadius: 12,
             overflow: "hidden",
-            backgroundColor: colors.gray200,
+            backgroundColor: colors.secondarySurface,
         },
         profileImageCard: {
-            backgroundColor: colors.gray200,
+            backgroundColor: colors.secondarySurface,
         },
         profileImageWrap: {
             width: "100%",
@@ -452,11 +646,11 @@ function createStyles(
             paddingHorizontal: 8,
             paddingVertical: 4,
             borderRadius: 12,
-            backgroundColor: colors.gray200,
+            backgroundColor: colors.secondarySurface,
         },
         timestampText: {
             fontSize: 12,
-            color: colors.gray100,
+            color: colors.textSecondary,
         },
         taglineRow: {
             flexDirection: "row",
@@ -467,7 +661,7 @@ function createStyles(
         taglineIconWrap: { marginTop: 2 },
         taglineText: {
             fontSize: 14,
-            color: colors.gray100,
+            color: colors.textSecondary,
         },
         aboutText: {
             color: colors.text,
@@ -479,10 +673,18 @@ function createStyles(
             width: "100%",
             gap: 12,
         },
+        revisionSection: {
+            width: "100%",
+            gap: 12,
+        },
+        postProofSection: {
+            width: "100%",
+            gap: 12,
+        },
         sectionLabel: {
             fontSize: 12,
             fontWeight: "600",
-            color: colors.gray100,
+            color: colors.textSecondary,
             letterSpacing: 0.5,
         },
         nicheQuoteRow: {
@@ -492,13 +694,100 @@ function createStyles(
         fieldCard: {
             flex: 1,
             minWidth: 0,
-            backgroundColor: colors.gray200,
+            backgroundColor: colors.secondarySurface,
             borderRadius: 8,
             padding: 12,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: colors.secondaryBorder,
+        },
+        revisionCard: {
+            width: "100%",
+            backgroundColor: colors.secondarySurface,
+            borderRadius: 8,
+            padding: 12,
+            gap: 10,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: colors.secondaryBorder,
+        },
+        postProofCard: {
+            width: "100%",
+            backgroundColor: colors.secondarySurface,
+            borderRadius: 8,
+            padding: 12,
+            gap: 12,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: colors.secondaryBorder,
+        },
+        postProofRow: {
+            gap: 8,
+        },
+        postProofLabel: {
+            fontSize: 12,
+            color: colors.textSecondary,
+        },
+        postProofValueMuted: {
+            fontSize: 14,
+            color: colors.textSecondary,
+            opacity: 0.85,
+        },
+        postProofImageWrap: {
+            alignSelf: "flex-start",
+            borderRadius: 10,
+            overflow: "hidden",
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: colors.secondaryBorder,
+            backgroundColor: colors.card,
+        },
+        postProofImage: {
+            width: 160,
+            height: 160,
+        } as const,
+        postProofDivider: {
+            height: StyleSheet.hairlineWidth,
+            backgroundColor: colors.secondaryBorder,
+        },
+        postProofLinkPressable: {
+            alignSelf: "flex-start",
+        },
+        postProofLinkText: {
+            fontSize: 14,
+            color: colors.primary,
+            textDecorationLine: "underline",
+        },
+        postProofNotes: {
+            fontSize: 14,
+            lineHeight: 20,
+            color: colors.text,
+        },
+        revisionItem: {
+            flexDirection: "row",
+            alignItems: "flex-start",
+            gap: 10,
+        },
+        revisionIndexPill: {
+            minWidth: 22,
+            paddingHorizontal: 6,
+            height: 22,
+            borderRadius: 11,
+            backgroundColor: colors.gray300,
+            justifyContent: "center",
+            alignItems: "center",
+        },
+        revisionIndexText: {
+            fontSize: 12,
+            fontWeight: "700",
+            color: colors.text,
+        },
+        revisionText: {
+            flex: 1,
+            minWidth: 0,
+            fontSize: 14,
+            lineHeight: 20,
+            color: colors.text,
         },
         fieldLabel: {
             fontSize: 12,
-            color: colors.gray100,
+            color: colors.textSecondary,
             marginBottom: 4,
         },
         fieldValue: {
@@ -543,7 +832,7 @@ function createStyles(
         },
         collaborationDescription: {
             fontSize: 14,
-            color: colors.gray100,
+            color: colors.textSecondary,
             lineHeight: 20,
         },
     });

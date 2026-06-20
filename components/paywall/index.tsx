@@ -1,14 +1,19 @@
 import { useBrandContext } from '@/contexts/brand-context.provider'
+import { useOrganizationContext } from '@/contexts/organization-context.provider'
 import { useBreakpoints } from '@/hooks'
+import { IOrgTokenWallet } from '@/shared-libs/firestore/trendly-pro/models/organizations'
 import { ModelStatus } from '@/shared-libs/firestore/trendly-pro/models/status'
 import { FirestoreDB } from '@/shared-libs/utils/firebase/firestore'
 import { View } from '@/shared-uis/components/theme/Themed'
 import Toaster from '@/shared-uis/components/toaster/Toaster'
 import Colors from '@/shared-uis/constants/Colors'
+import { faArrowRight, faBullhorn, faChartLine, faCoins, faMagicWandSparkles, faUsers } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import { useTheme } from '@react-navigation/native'
+import { router } from 'expo-router'
 import { collection, doc, onSnapshot } from 'firebase/firestore'
 import { default as React, useEffect, useMemo, useState } from 'react'
-import { ScrollView, StyleSheet } from 'react-native'
+import { Pressable, ScrollView, StyleSheet } from 'react-native'
 import { Text } from 'react-native-paper'
 import CancelPlanModal from './CancelPlanModal'
 import PlanWrapper from './plans/PlanWrapper'
@@ -25,6 +30,7 @@ const PayWallComponent = () => {
     )
 
     const { selectedBrand, setSelectedBrand } = useBrandContext()
+    const { selectedOrgBilling, selectedOrgWallet } = useOrganizationContext()
 
     const [cancelPlan, setCancelPlan] = useState(false)
 
@@ -45,19 +51,26 @@ const PayWallComponent = () => {
     }, [selectedBrand?.id])
 
 
-    const Header = <View style={styles.header}>
-        <Text variant="headlineMedium" style={styles.headerTitle}>Our Pricing</Text>
-        <Text style={styles.headerSubtitle}>
-            Explore our flexible pricing designed to fit every brand’s budget and objectives.
-        </Text>
-    </View>
+    // const Header = <View style={styles.header}>
+    //     <Text variant="headlineMedium" style={styles.headerTitle}>Our Pricing</Text>
+    //     <Text style={styles.headerSubtitle}>
+    //         Explore our flexible pricing designed to fit every brand’s budget and objectives.
+    //     </Text>
+    // </View>
 
     return (
         <>
             <ScrollView contentContainerStyle={styles.scrollContent}>
-                {Header}
+                {/* {Header} */}
+
+                {selectedOrgWallet ? (
+                    <TokenUsageCard wallet={selectedOrgWallet} colors={colors} isMobile={isMobile} />
+                ) : null}
 
                 <PlanWrapper />
+
+                {/* Hire Us */}
+                <HireUsCard colors={colors} isMobile={isMobile} />
 
                 {/* Contact Support */}
                 <View style={styles.contactSection}>
@@ -67,7 +80,7 @@ const PayWallComponent = () => {
                     </Text>
                 </View>
 
-                {selectedBrand?.billing?.status == ModelStatus.Accepted &&
+                {selectedOrgBilling?.status == ModelStatus.Accepted &&
                     <View style={styles.cancelSection}>
                         <Text
                             variant="bodyLarge"
@@ -81,6 +94,249 @@ const PayWallComponent = () => {
             {cancelPlan && <CancelPlanModal onClose={() => setCancelPlan(false)} />}
         </>
     )
+}
+
+// ─── Hire Us Card ─────────────────────────────────────────────────────────────
+
+const HIRE_US_FEATURES = [
+    { icon: faMagicWandSparkles, label: "Content Strategy & Creation" },
+    { icon: faUsers, label: "End-to-End Influencer Campaigns" },
+    { icon: faBullhorn, label: "Strategic Ad Spend Management" },
+    { icon: faChartLine, label: "Performance Marketing & ROAS" },
+] as const;
+
+interface HireUsCardProps {
+    colors: ReturnType<typeof Colors>;
+    isMobile: boolean;
+}
+
+const HireUsCard: React.FC<HireUsCardProps> = ({ colors, isMobile }) => {
+    const cardStyles = useMemo(() => createHireUsStyles(colors, isMobile), [colors, isMobile]);
+
+    return (
+        <View style={cardStyles.wrapper}>
+            {/* Accent stripe */}
+            <View style={cardStyles.accentRow}>
+                <View style={cardStyles.accentStripe} />
+                <View style={cardStyles.accentContent}>
+                    <Text style={cardStyles.eyebrow}>FULL-SERVICE AGENCY</Text>
+                    <Text style={cardStyles.heading}>Want us to do it all for you?</Text>
+                    <Text style={cardStyles.subheading}>
+                        Let Trendly run your entire marketing operation — influencers, content,
+                        ads, and performance tracking — under one roof. You brief us once; we
+                        deliver results every month.
+                    </Text>
+
+                    <View style={cardStyles.featureGrid}>
+                        {HIRE_US_FEATURES.map(({ icon, label }) => (
+                            <View key={label} style={cardStyles.featureRow}>
+                                <View style={cardStyles.featureIconWrap}>
+                                    <FontAwesomeIcon icon={icon} size={14} color={colors.primary} />
+                                </View>
+                                <Text style={cardStyles.featureLabel}>{label}</Text>
+                            </View>
+                        ))}
+                    </View>
+
+                    <Pressable
+                        style={cardStyles.cta}
+                        onPress={() => router.push("/(main)/(drawer)/(secondary)/(modal)/hire-us")}
+                    >
+                        <Text style={cardStyles.ctaText}>Hire Trendly as Your Agency</Text>
+                        <FontAwesomeIcon icon={faArrowRight} size={14} color={colors.white} />
+                    </Pressable>
+                </View>
+            </View>
+        </View>
+    );
+};
+
+function createHireUsStyles(colors: ReturnType<typeof Colors>, isMobile: boolean) {
+    return StyleSheet.create({
+        wrapper: {
+            marginTop: 48,
+            borderRadius: 20,
+            backgroundColor: colors.budgetCardBg,
+            overflow: "hidden",
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 6 },
+            shadowRadius: 20,
+            shadowOpacity: 0.18,
+            elevation: 6,
+        },
+        accentRow: {
+            flexDirection: "row",
+            backgroundColor: "transparent",
+        },
+        accentStripe: {
+            width: 5,
+            backgroundColor: colors.primary,
+        },
+        accentContent: {
+            flex: 1,
+            padding: isMobile ? 20 : 32,
+            gap: 16,
+            backgroundColor: "transparent",
+        },
+        eyebrow: {
+            fontSize: 11,
+            fontWeight: "700",
+            letterSpacing: 1.2,
+            color: colors.primary,
+            textTransform: "uppercase",
+        },
+        heading: {
+            fontSize: isMobile ? 20 : 24,
+            fontWeight: "800",
+            color: colors.text,
+            lineHeight: isMobile ? 26 : 32,
+        },
+        subheading: {
+            fontSize: 14,
+            color: colors.textSecondary,
+            lineHeight: 22,
+        },
+        featureGrid: {
+            gap: 10,
+            backgroundColor: "transparent",
+        },
+        featureRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+            backgroundColor: "transparent",
+        },
+        featureIconWrap: {
+            width: 30,
+            height: 30,
+            borderRadius: 8,
+            backgroundColor: colors.card,
+            alignItems: "center",
+            justifyContent: "center",
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 2 },
+            shadowRadius: 6,
+            shadowOpacity: 0.12,
+            elevation: 2,
+        },
+        featureLabel: {
+            fontSize: 14,
+            fontWeight: "500",
+            color: colors.text,
+        },
+        cta: {
+            marginTop: 8,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 10,
+            backgroundColor: colors.primary,
+            borderRadius: 12,
+            paddingVertical: 14,
+            paddingHorizontal: 24,
+            alignSelf: isMobile ? "stretch" : "flex-start",
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 4 },
+            shadowRadius: 12,
+            shadowOpacity: 0.35,
+            elevation: 4,
+        },
+        ctaText: {
+            fontSize: 15,
+            fontWeight: "700",
+            color: colors.white,
+        },
+    });
+}
+
+// ─── Token Usage Card ─────────────────────────────────────────────────────────
+
+interface TokenUsageCardProps {
+    wallet: IOrgTokenWallet;
+    colors: ReturnType<typeof Colors>;
+    isMobile: boolean;
+}
+
+// formatTokens renders large AI-token counts compactly (1.2M, 350K, 980).
+function formatTokens(n: number): string {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`;
+    if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
+    return `${n}`;
+}
+
+const TokenUsageCard: React.FC<TokenUsageCardProps> = ({ wallet, colors, isMobile }) => {
+    const styles = createTokenStyles(colors, isMobile);
+    const allotment = Math.max(wallet.monthlyAllotment || 0, 0);
+    const balance = Math.max(wallet.balance || 0, 0);
+    const used = Math.max(allotment - balance, 0);
+    const pct = allotment > 0 ? Math.min(Math.round((used / allotment) * 100), 100) : 0;
+    const resetLabel = wallet.periodResetAt
+        ? new Date(wallet.periodResetAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })
+        : "the 1st";
+
+    return (
+        <View style={styles.wrapper}>
+            <View style={styles.headerRow}>
+                <View style={styles.iconWrap}>
+                    <FontAwesomeIcon icon={faCoins} size={16} color={colors.primary} />
+                </View>
+                <View style={styles.headerText}>
+                    <Text style={styles.title}>AI tokens this month</Text>
+                    <Text style={styles.subtitle}>Renews on {resetLabel} · platform usage is free — tokens cover AI</Text>
+                </View>
+            </View>
+
+            <View style={styles.barTrack}>
+                <View style={[styles.barFill, { width: `${pct}%` }]} />
+            </View>
+
+            <View style={styles.statsRow}>
+                <Text style={styles.statsText}>{formatTokens(balance)} left of {formatTokens(allotment)}</Text>
+                {wallet.topupBalance > 0 ? (
+                    <Text style={styles.topupText}>+{formatTokens(wallet.topupBalance)} top-up</Text>
+                ) : null}
+            </View>
+        </View>
+    );
+};
+
+function createTokenStyles(colors: ReturnType<typeof Colors>, isMobile: boolean) {
+    return StyleSheet.create({
+        wrapper: {
+            marginBottom: 28,
+            borderRadius: 16,
+            backgroundColor: colors.card,
+            padding: isMobile ? 16 : 20,
+            gap: 14,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowRadius: 8,
+            shadowOpacity: 0.07,
+            elevation: 3,
+        },
+        headerRow: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "transparent" },
+        iconWrap: {
+            width: 34,
+            height: 34,
+            borderRadius: 9,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.tag,
+        },
+        headerText: { flex: 1, backgroundColor: "transparent" },
+        title: { fontSize: 16, fontWeight: "700", color: colors.text },
+        subtitle: { fontSize: 12, color: colors.textSecondary, marginTop: 2 },
+        barTrack: { height: 10, borderRadius: 6, backgroundColor: colors.tag, overflow: "hidden" },
+        barFill: { height: 10, borderRadius: 6, backgroundColor: colors.primary },
+        statsRow: {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+            backgroundColor: "transparent",
+        },
+        statsText: { fontSize: 13, fontWeight: "600", color: colors.text },
+        topupText: { fontSize: 12, fontWeight: "600", color: colors.primary },
+    });
 }
 
 function createStyles(

@@ -57,7 +57,7 @@ export default function InviteManagementBoard() {
     const { manager } = useAuthContext();
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     useEffect(() => {
         const fetchInvites = async () => {
@@ -225,12 +225,9 @@ export default function InviteManagementBoard() {
 
     return (
         <View style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.title}>Trendly Admin Invites</Text>
-            </View>
 
             {loading && (
-                <Text style={{ paddingVertical: 8, opacity: 0.7 }}>
+                <Text style={{ paddingVertical: 8, opacity: 0.7, color: colors.textSecondary }}>
                     Loading invites…
                 </Text>
             )}
@@ -262,14 +259,20 @@ export default function InviteManagementBoard() {
 const DroppableColumn = ({ column }: { column: KanbanColumnT }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
     const { setNodeRef, isOver } = useDroppable({ id: column.id });
-    const bgColor = isOver ? colors.aliceBlue : colors.aliceBlue;
+    const columnBg = theme.dark
+        ? isOver
+            ? colors.secondarySurface
+            : colors.glassTabBarSurface
+        : isOver
+            ? colors.primaryLight
+            : colors.aliceBlue;
 
     return (
         <View
             ref={setNodeRef as any}
-            style={[styles.column, { backgroundColor: bgColor }]}
+            style={[styles.column, { backgroundColor: columnBg }]}
         >
             <View style={styles.columnHeader}>
                 <Text
@@ -296,7 +299,13 @@ const DroppableColumn = ({ column }: { column: KanbanColumnT }) => {
             </SortableContext>
 
             {column.cards.length === 0 && (
-                <Text style={{ textAlign: "center", opacity: 0.6 }}>
+                <Text
+                    style={{
+                        textAlign: "center",
+                        opacity: 0.7,
+                        color: colors.textSecondary,
+                    }}
+                >
                     Drop here to move card
                 </Text>
             )}
@@ -321,7 +330,7 @@ const SortableCard = ({
     };
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     return (
         // @ts-ignore
@@ -341,7 +350,7 @@ const SortableCard = ({
         >
             <Text style={styles.cardTitle}>
                 {card.socialProfile?.name || "Unknown"}{" "}
-                <Text style={{ fontWeight: "400", opacity: 0.7 }}>
+                <Text style={{ fontWeight: "400", opacity: 0.7, color: colors.textSecondary }}>
                     @{card.socialProfile?.username || ""}
                 </Text>
             </Text>
@@ -371,7 +380,7 @@ const SortableCard = ({
 
 const useStyles = (colors: ReturnType<typeof Colors>) =>
     StyleSheet.create({
-        container: { flex: 1, padding: 20, backgroundColor: colors.white },
+        container: { flex: 1, padding: 20, backgroundColor: colors.background },
         header: {
             flexDirection: "row",
             justifyContent: "space-between",
@@ -410,19 +419,20 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
             paddingBottom: 8,
             marginBottom: 8,
         },
-        columnTitle: { fontSize: 16, fontWeight: "700" },
+        columnTitle: { fontSize: 16, fontWeight: "700", color: colors.text },
         card: {
-            backgroundColor: colors.white,
+            backgroundColor: colors.card,
             borderRadius: 8,
             padding: 10,
             marginBottom: 8,
+            borderWidth: 1,
+            borderColor: colors.border,
         },
         cardTitle: {
             fontWeight: "600",
-            // borderBottomWidth: 1
-            // borderColor: "#D1D5DB",
             paddingBottom: 4,
             marginBottom: 4,
+            color: colors.text,
         },
         cardDesc: {
             marginTop: 0,

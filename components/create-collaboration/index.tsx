@@ -5,6 +5,7 @@ import ScreenOne from "@/components/create-collaboration/screen-one";
 import ScreenTwo from "@/components/create-collaboration/screen-two";
 import { useCollaborationContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useOrganizationContext } from "@/contexts/organization-context.provider";
 import { useProcess } from "@/hooks";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { PromotionType } from "@/shared-libs/firestore/trendly-pro/constants/promotion-type";
@@ -103,6 +104,7 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
         },
         externalLinks: [],
         questionsToInfluencers: [],
+        maxRevisions: 3,
         preferences: {},
         status: "",
         timeStamp: 0,
@@ -137,7 +139,8 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
     } = useProcess();
     const [attachments, setAttachments] = useState<Attachment[]>([]);
 
-    const { selectedBrand, isOnFreeTrial } = useBrandContext();
+    const { selectedBrand } = useBrandContext();
+    const { isOnFreeTrial } = useOrganizationContext();
     const { getCollaborationById, createCollaboration, updateCollaboration } =
         useCollaborationContext();
 
@@ -149,10 +152,11 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
 
         setAttachments(collaboration?.attachments || []);
 
-        if (collaboration.location.latlong) {
+        const latlong = collaboration.location?.latlong;
+        if (latlong) {
             setMapRegion({
-                latitude: collaboration.location.latlong.lat,
-                longitude: collaboration.location.latlong.long,
+                latitude: latlong.lat,
+                longitude: latlong.long,
                 latitudeDelta: 0.0922,
                 longitudeDelta: 0.0421,
             });

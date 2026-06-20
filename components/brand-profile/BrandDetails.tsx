@@ -46,7 +46,7 @@ const BrandDetails: React.FC<BrandDetailsProps> = ({
     const Wrapper = plainSection ? View : Surface;
     const wrapperProps = plainSection
         ? { style: styles.wrapperPlain }
-        : { style: styles.wrapperCard, elevation: 1 };
+        : { style: styles.wrapperCard, elevation: 1 as const };
 
     return (
         <Wrapper {...wrapperProps}>

@@ -90,18 +90,7 @@ export const CollaborationContextProvider: React.FC<PropsWithChildren> = ({
     const createCollaboration = async (
         collaboration: Partial<ICollaboration>,
     ): Promise<string | null> => {
-        const collaborationCredits = Number(selectedBrand?.credits?.collaboration);
-        if (Number.isFinite(collaborationCredits) && collaborationCredits <= 0) {
-            openModal({
-                title: "No Collaboration Credit",
-                description: "You seem to have exhausted the collaboration credit. Contact support or upgrade your plan to recharge the credits",
-                confirmText: "Upgrade Plan",
-                confirmAction: () => {
-                    router.push("/billing")
-                }
-            })
-            return null;
-        }
+        // Collaboration creation is no longer credit-gated (old credit system removed).
         const collaborationRef = collection(FirestoreDB, "collaborations");
 
         const collabDoc = await addDoc(collaborationRef, collaboration);

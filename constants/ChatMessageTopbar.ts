@@ -1,10 +1,12 @@
-export const CHAT_MESSAGE_TOPBAR_DESCRIPTION = {
-    first:
-        "Please make sure to use this chat to first understand the influencer. Post that, you can start your collaboration here.",
-    second:
-        "Once the task is done, please make sure you end the collaboration from the collaboration details screen.",
-    third:
-        "Thanks for working through Trendly. We would love you to give feedback about this client.",
-    fourth:
-        "Your collaboration is over. However you can connect talk to the brand and be part of this group as long as you want.",
+import { ContractStatus } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+
+export const CHAT_MESSAGE_TOPBAR_DESCRIPTION: Partial<Record<ContractStatus, string>> = {
+    [ContractStatus.Pending]:
+        "Use this chat to align with the influencer. Once ready, proceed to fund the contract.",
+    [ContractStatus.ShipmentPending]:
+        "Coordinate delivery details here. Once shipped, add the tracking info from the contract screen.",
+    [ContractStatus.ReviewPending]:
+        "The influencer has uploaded the deliverable. Review it and approve or request revisions.",
+    [ContractStatus.SettlementPending]:
+        "The video is live! Submit your feedback to close the contract and release the payout.",
 };

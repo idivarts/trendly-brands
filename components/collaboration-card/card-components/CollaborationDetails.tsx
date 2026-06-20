@@ -52,7 +52,7 @@ const CollaborationDetails: FC<CollaborationDetailsProps> = ({
 }) => {
     const theme = useTheme();
     const router = useRouter();
-    const styles = useMemo(() => useStyles(theme), [theme]);
+    const styles = useStyles(theme);
 
     return (
         <View style={styles.container}>
@@ -162,7 +162,7 @@ function useStyles(theme: ReturnType<typeof useTheme>) {
             color: Colors(theme).text,
         },
         descriptionText: {
-            color: Colors(theme).gray100,
+            color: Colors(theme).textSecondary,
         },
         chipsRow: {
             flexDirection: "row",

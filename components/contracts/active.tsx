@@ -1,6 +1,5 @@
 import BottomSheetActions from "@/components/BottomSheetActions";
 import { View } from "@/components/theme/Themed";
-import Colors from "@/shared-uis/constants/Colors";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
@@ -8,11 +7,15 @@ import {
     IApplications,
     ICollaboration,
 } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
-import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+import {
+    ContractStatus,
+    IContracts,
+} from "@/shared-libs/firestore/trendly-pro/models/contracts";
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 import { Console } from "@/shared-libs/utils/console";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import Colors from "@/shared-uis/constants/Colors";
 import { stylesFn } from "@/styles/Proposal.styles";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
@@ -78,7 +81,9 @@ const ActiveContracts = ({ isPast = false }: { isPast?: boolean }) => {
             const contractQuery = query(
                 contractsCol,
                 where("brandId", "==", selectedBrand?.id),
-                ...(!isPast ? [where("status", "in", [1])] : [where("status", "in", [2, 3])]), // Exclude pending and completed contracts
+                ...(!isPast
+                    ? [where("status", "not-in", [ContractStatus.Pending, ContractStatus.SettlementPending, ContractStatus.Settled])]
+                    : [where("status", "in", [ContractStatus.SettlementPending, ContractStatus.Settled])]), // Exclude pending and completed contracts
             );
             const contractsSnapshot = await getDocs(contractQuery);
 
@@ -129,7 +134,7 @@ const ActiveContracts = ({ isPast = false }: { isPast?: boolean }) => {
 
     useEffect(() => {
         fetchProposals();
-    }, [user, selectedBrand]);
+    }, [user, selectedBrand?.id]);
 
     const filteredProposals = useMemo(() => {
         return proposals

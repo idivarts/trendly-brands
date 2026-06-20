@@ -37,7 +37,7 @@ export const CollaborationCard = ({
 }: CollaborationCardProps) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     const [brandData, setBrandData] = useState<BrandData | null>(null);
     const [loadingBrand, setLoadingBrand] = useState(false);
@@ -170,10 +170,12 @@ export const CollaborationCard = ({
 const useStyles = (colors: ReturnType<typeof Colors>) =>
     StyleSheet.create({
         card: {
-            backgroundColor: colors.white,
+            backgroundColor: colors.card,
             borderRadius: 8,
             padding: 10,
             marginBottom: 8,
+            borderWidth: 1,
+            borderColor: colors.border,
         },
         brandSection: {
             flexDirection: "row",

@@ -13,7 +13,7 @@ import { OpenDrawerSubject } from "@/shared-uis/components/CustomDrawer";
 const Header: React.FC = (props) => {
     const theme = useTheme();
     const { xl } = useBreakpoints();
-    const styles = useMemo(() => useStyles(theme), [theme]);
+    const styles = useStyles(theme);
     const { selectedBrand } = useBrandContext();
 
     return (

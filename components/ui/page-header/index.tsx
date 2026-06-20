@@ -17,7 +17,30 @@ export interface PageHeaderProps {
     /** Show back button. On mobile (!xl), defaults to true unless explicitly false. */
     showBackButton?: boolean;
     onBackPress?: () => void;
+    /**
+     * Generic action buttons rendered on the right (legacy single-group API).
+     * For two-group split with divider/second-row behavior, use
+     * viewingActionButtons + workflowActionButtons instead.
+     */
     actionButtons?: React.ReactNode[];
+    /**
+     * Lightweight, navigation-oriented buttons (presence, comments, chat
+     * toggles). On xl, render on the right before the divider. On !xl,
+     * stay on the right of the header row.
+     */
+    viewingActionButtons?: React.ReactNode[];
+    /**
+     * High-stakes workflow buttons (Send for Review, New Strategy, etc.).
+     * On xl, render on the right after the divider. On !xl, drop to a
+     * second row below the header.
+     */
+    workflowActionButtons?: React.ReactNode[];
+    /**
+     * Rendered on the left, immediately after the back button (if any)
+     * and before the title. Use for sibling-document switchers like a
+     * hamburger that opens a list drawer.
+     */
+    leftAction?: React.ReactNode;
     rightComponent?: React.ReactNode;
     /** On mobile, hide action buttons/rightComponent except when explicitly allowed */
     mobileActions?: "none" | "notification-only" | "all";
@@ -30,6 +53,9 @@ const PageHeader: React.FC<PageHeaderProps> = ({
     showBackButton,
     onBackPress,
     actionButtons = [],
+    viewingActionButtons = [],
+    workflowActionButtons = [],
+    leftAction,
     rightComponent,
     mobileActions = "none",
 }) => {
@@ -60,34 +86,57 @@ const PageHeader: React.FC<PageHeaderProps> = ({
         (mobileActions === "notification-only" && rightComponent);
 
     const hasActionButtons = actionButtons && actionButtons.length > 0;
+    const hasViewingButtons = viewingActionButtons && viewingActionButtons.length > 0;
+    const hasWorkflowButtons = workflowActionButtons && workflowActionButtons.length > 0;
     const hasRightComponent = Boolean(rightComponent);
+    const hasSplitButtons = hasViewingButtons || hasWorkflowButtons;
+    // Workflow actions render inline next to viewing actions, separated by a
+    // divider on xl. On !xl they sit flush (screens are expected to render
+    // them as icon-only to fit). Screens with too many actions to fit
+    // comfortably should host workflow buttons elsewhere (e.g. a toolbar
+    // row), not pass them here.
+    const showWorkflowInline = hasWorkflowButtons;
 
     return (
-        <View style={styles.header}>
-            {showBack && (
-                <Pressable onPress={handleBack} style={styles.headerBack}>
-                    <FontAwesomeIcon
-                        icon={faArrowLeft}
-                        size={20}
-                        color={colors.text}
-                    />
-                </Pressable>
-            )}
-            {customMainContent ? customMainContent :
-                <View style={styles.headerTitleBlock}>
-                    <Text style={styles.headerTitle}>{title}</Text>
-                    {subtitle ? (
-                        <Text style={styles.headerSubtitle}>{subtitle}</Text>
-                    ) : null}
-                </View>}
-            {showActions && (hasActionButtons || hasRightComponent) && (
-                <View style={styles.headerActions}>
-                    {hasActionButtons && actionButtons.map((btn, index) => (
-                        <React.Fragment key={index}>{btn}</React.Fragment>
-                    ))}
-                    {hasRightComponent && rightComponent}
-                </View>
-            )}
+        <View style={styles.headerWrapper}>
+            <View style={styles.headerRow}>
+                {showBack && (
+                    <Pressable onPress={handleBack} style={styles.headerBack}>
+                        <FontAwesomeIcon
+                            icon={faArrowLeft}
+                            size={20}
+                            color={colors.text}
+                        />
+                    </Pressable>
+                )}
+                {leftAction ? (
+                    <View style={styles.headerLeftAction}>{leftAction}</View>
+                ) : null}
+                {customMainContent ? customMainContent :
+                    <View style={styles.headerTitleBlock}>
+                        <Text style={styles.headerTitle}>{title}</Text>
+                        {subtitle && xl ? (
+                            <Text style={styles.headerSubtitle}>{subtitle}</Text>
+                        ) : null}
+                    </View>}
+                {showActions && (hasActionButtons || hasSplitButtons || hasRightComponent) && (
+                    <View style={styles.headerActions}>
+                        {hasActionButtons && actionButtons.map((btn, index) => (
+                            <React.Fragment key={`a-${index}`}>{btn}</React.Fragment>
+                        ))}
+                        {hasViewingButtons && viewingActionButtons.map((btn, index) => (
+                            <React.Fragment key={`v-${index}`}>{btn}</React.Fragment>
+                        ))}
+                        {showWorkflowInline && hasViewingButtons && xl && (
+                            <View style={styles.headerDivider} />
+                        )}
+                        {showWorkflowInline && workflowActionButtons.map((btn, index) => (
+                            <React.Fragment key={`w-${index}`}>{btn}</React.Fragment>
+                        ))}
+                        {hasRightComponent && rightComponent}
+                    </View>
+                )}
+            </View>
         </View>
     );
 };
@@ -96,15 +145,12 @@ function useStyles(colors: ReturnType<typeof Colors>, topInset: number, xl: bool
     return useMemo(
         () =>
             StyleSheet.create({
-                header: {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    paddingHorizontal: 16,
-                    paddingTop: 12 + topInset,
-                    paddingBottom: 12,
-                    // Use subtle shadow instead of a border for elevation/distinction.
+                headerWrapper: {
+                    // Shadow + background live on the wrapper so the second
+                    // row (mobile workflow actions) sits inside the elevated
+                    // surface instead of below it.
                     shadowColor: colors.panelShadow,
-                    shadowOffset: { width: 0, height: 2 }, // positive = shadow below
+                    shadowOffset: { width: 0, height: 2 },
                     shadowRadius: 8,
                     shadowOpacity: 0.6,
                     elevation: 2,
@@ -112,9 +158,20 @@ function useStyles(colors: ReturnType<typeof Colors>, topInset: number, xl: bool
                     overflow: "visible",
                     backgroundColor: colors.background,
                 },
+                headerRow: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    paddingHorizontal: xl ? 16 : 12,
+                    paddingTop: 12 + topInset,
+                    paddingBottom: 12,
+                },
                 headerBack: {
-                    padding: 8,
-                    marginRight: 8,
+                    padding: xl ? 8 : 6,
+                    marginRight: xl ? 8 : 4,
+                },
+                headerLeftAction: {
+                    marginRight: 12,
+                    flexShrink: 0,
                 },
                 headerTitleBlock: {
                     flex: 1,
@@ -136,8 +193,14 @@ function useStyles(colors: ReturnType<typeof Colors>, topInset: number, xl: bool
                 headerActions: {
                     flexDirection: "row",
                     alignItems: "center",
-                    gap: 12,
+                    gap: xl ? 12 : 6,
                     flexShrink: 0,
+                },
+                headerDivider: {
+                    width: 1,
+                    height: 24,
+                    backgroundColor: colors.border,
+                    marginHorizontal: 4,
                 },
             }),
         [colors, topInset, xl]

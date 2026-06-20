@@ -2,8 +2,8 @@ import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 import { Brand } from "@/types/Brand";
 import { useTheme } from "@react-navigation/native";
-import React, { useEffect, useMemo, useRef } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
 
 import BrandAgeSelect from "./BrandAgeSelect";
 import BrandDetailsForm from "./BrandDetailsForm";
@@ -38,6 +38,22 @@ const CreateNewBrandForm: React.FC<CreateNewBrandFormProps> = ({
         [colors, xl, width]
     );
     const blobUrlRef = useRef<string | null>(null);
+
+    // KeyboardAvoidingView's `padding` math uses a parent-relative frame against a
+    // screen-space keyboard, so the form (which sits below the screen header) needs
+    // its on-screen Y as keyboardVerticalOffset — otherwise the keyboard overlaps
+    // the lower fields. Measure it and feed it back. iOS-only — Android/web use
+    // `height` behaviour + system resize.
+    const kbRootRef = useRef<View>(null);
+    const [kbVerticalOffset, setKbVerticalOffset] = useState(0);
+    const measureKbOffset = useCallback(() => {
+        if (Platform.OS !== "ios") return;
+        kbRootRef.current?.measureInWindow((_x, y) => {
+            if (typeof y === "number" && Number.isFinite(y)) {
+                setKbVerticalOffset((prev) => (Math.abs(prev - y) > 1 ? y : prev));
+            }
+        });
+    }, []);
 
     useEffect(() => {
         return () => {
@@ -104,6 +120,12 @@ const CreateNewBrandForm: React.FC<CreateNewBrandFormProps> = ({
     );
 
     return (
+        <View ref={kbRootRef} style={styles.fill} onLayout={measureKbOffset}>
+        <KeyboardAvoidingView
+            style={styles.fill}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={kbVerticalOffset}
+        >
         <ScrollView
             style={styles.scroll}
             contentContainerStyle={styles.scrollContent}
@@ -122,6 +144,8 @@ const CreateNewBrandForm: React.FC<CreateNewBrandFormProps> = ({
                 </View>
             )}
         </ScrollView>
+        </KeyboardAvoidingView>
+        </View>
     );
 };
 
@@ -132,6 +156,7 @@ function createStyles(
 ) {
     const maxWidth = Math.min(width - 48, 1024);
     return StyleSheet.create({
+        fill: { flex: 1 },
         scroll: {
             flex: 1,
         },

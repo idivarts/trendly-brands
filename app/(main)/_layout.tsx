@@ -1,9 +1,14 @@
-import { ChatContextProvider, CloudMessagingContextProvider, CollaborationContextProvider, ContractContextProvider, FirebaseStorageContextProvider, NicheProvider, NotificationContextProvider, useAuthContext } from "@/contexts";
+import { ChatContextProvider, CloudMessagingContextProvider, CollaborationContextProvider, ContractContextProvider, FirebaseStorageContextProvider, NotificationContextProvider, useAuthContext } from "@/contexts";
 import { BrandContextProvider } from "@/contexts/brand-context.provider";
-import { createGuideTourStorageAdapter } from "@/contexts/guide-tour-storage-adapter";
+import { OrganizationProvider } from "@/contexts/organization-context.provider";
+import { AIConfigProvider } from "@/contexts/ai-config-context.provider";
+import { BrandSocialContextProvider, useBrandSocialContext } from "@/contexts/brand-social-context.provider";
 import { streamClient } from "@/contexts/chat-context.provider";
+import { createGuideTourStorageAdapter } from "@/contexts/guide-tour-storage-adapter";
 import { ScrollProvider } from "@/shared-libs/contexts/scroll-context";
 import TrackingProvider from "@/shared-libs/contexts/tracking-provider";
+import { useMyNavigation } from "@/shared-libs/utils/router";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { ConfirmationModalProvider } from "@/shared-uis/components/ConfirmationModal";
 import {
     CoachmarkOverlay,
@@ -11,9 +16,58 @@ import {
     defaultTheme,
 } from "@edwardloopez/react-native-coachmark";
 import { Stack } from "expo-router";
-import React from "react";
-import { View } from "react-native";
+import React, { useEffect } from "react";
+import { Linking, Platform, View } from "react-native";
 import { AutocompleteDropdownContextProvider } from "react-native-autocomplete-dropdown";
+
+// Handles the trendly-brands://social-connected deep link returned by connect.trendly.now
+// Must sit inside BrandSocialContextProvider to access refreshSocials.
+const BrandSocialConnectHandler: React.FC = () => {
+    const { refreshSocials } = useBrandSocialContext();
+
+    const handleURL = (url: string) => {
+        try {
+            const parsed = new URL(url);
+            const path = parsed.pathname || parsed.hostname;
+            if (!path.includes("social-connected")) return;
+
+            const status = parsed.searchParams.get("status");
+            const platform = parsed.searchParams.get("platform") || "social";
+            const message = parsed.searchParams.get("message");
+
+            if (status === "success") {
+                Toaster.success(`${platform.charAt(0).toUpperCase() + platform.slice(1)} connected to your brand!`);
+                refreshSocials();
+            } else {
+                Toaster.error(message || `Failed to connect ${platform}. Please try again.`);
+            }
+        } catch {
+            // ignore malformed URLs
+        }
+    };
+
+    useEffect(() => {
+        if (Platform.OS === "web") {
+            const url = window.location.href;
+            if (url.includes("social-connected")) {
+                handleURL(url);
+            }
+            return;
+        }
+
+        const subscription = Linking.addEventListener("url", ({ url }) => {
+            handleURL(url);
+        });
+
+        Linking.getInitialURL().then((url) => {
+            if (url) handleURL(url);
+        });
+
+        return () => subscription.remove();
+    }, []);
+
+    return null;
+};
 
 const MainLayout = () => {
     const { manager, updateManager } = useAuthContext();
@@ -24,16 +78,18 @@ const MainLayout = () => {
 
     return (
         <TrackingProvider>
-            <NicheProvider>
-                <ConfirmationModalProvider>
-                    <FirebaseStorageContextProvider>
-                        <NotificationContextProvider>
-                            <CloudMessagingContextProvider
-                                userOrmanager={manager}
-                                updateUserOrManager={updateManager}
-                                streamClient={streamClient}
-                            >
-                                <BrandContextProvider>
+            <ConfirmationModalProvider>
+                <FirebaseStorageContextProvider>
+                    <NotificationContextProvider>
+                        <CloudMessagingContextProvider
+                            userOrmanager={manager}
+                            updateUserOrManager={updateManager}
+                            streamClient={streamClient}
+                        >
+                            <BrandContextProvider>
+                            <OrganizationProvider>
+                                <AIConfigProvider>
+                                <BrandSocialContextProvider>
                                     <CoachmarkProvider
                                         storage={storage}
                                         theme={defaultTheme}
@@ -44,6 +100,7 @@ const MainLayout = () => {
                                                     <AutocompleteDropdownContextProvider>
                                                         <ChatContextProvider>
                                                             <ScrollProvider>
+                                                                <BrandSocialConnectHandler />
                                                                 <Stack
                                                                     screenOptions={{
                                                                         headerShown:
@@ -58,12 +115,14 @@ const MainLayout = () => {
                                             <CoachmarkOverlay />
                                         </View>
                                     </CoachmarkProvider>
-                                </BrandContextProvider>
-                            </CloudMessagingContextProvider>
-                        </NotificationContextProvider>
-                    </FirebaseStorageContextProvider>
-                </ConfirmationModalProvider>
-            </NicheProvider>
+                                </BrandSocialContextProvider>
+                                </AIConfigProvider>
+                            </OrganizationProvider>
+                            </BrandContextProvider>
+                        </CloudMessagingContextProvider>
+                    </NotificationContextProvider>
+                </FirebaseStorageContextProvider>
+            </ConfirmationModalProvider>
         </TrackingProvider>
     );
 };

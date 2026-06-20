@@ -219,7 +219,7 @@ const TrendlyAnalyticsEmbed = React.forwardRef<any, IProps>(
 
             loadInfluencer();
             // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, [selectedBrand, influencer.id, initialSocial, initialAnalytics, onLoadingChange]);
+        }, [selectedBrand?.id, influencer.id, initialSocial, initialAnalytics, onLoadingChange]);
 
         const formatCompactNumber = (n: number) => {
             const abs = Math.abs(n);

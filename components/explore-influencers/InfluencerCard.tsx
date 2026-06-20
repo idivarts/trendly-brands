@@ -175,7 +175,7 @@ const NameSection = ({
                         </Text>
                     </View>
                 ) : (
-                    <InviteToCampaignButton label="Invite Now" openModal={openModal} influencerIds={[item.id]} influencerName={item.name} />
+                    <InviteToCampaignButton label="Invite Now" openModal={openModal} influencerIds={[item.id]} influencerName={item.name} isDiscover={item.isDiscover === true} />
                 )}
             </View>
         </View>
@@ -228,7 +228,7 @@ const InfluencerCard: React.FC<InfluencerCardProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
     const [parentWidth, setParentWidth] = useState(0);
 
     const formatTimeAgo = (timestampMs?: number) => {

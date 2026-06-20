@@ -15,6 +15,7 @@ import ProfileBottomSheet from "@/shared-uis/components/ProfileModal/Profile-Mod
 import { MAX_WIDTH_WEB } from "@/constants/Container";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useOrganizationContext } from "@/contexts/organization-context.provider";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useInfiniteIdScroll } from "@/shared-libs/utils/infinite-id-scroll";
@@ -75,11 +76,12 @@ const ExploreInfluencers: React.FC<IProps> = ({ connectedInfluencers = false }) 
 
     const { manager } = useAuthContext()
     const theme = useTheme();
-    const { selectedBrand, isOnFreeTrial, isProfileLocked } = useBrandContext()
+    const { selectedBrand, isProfileLocked } = useBrandContext()
+    const { isOnFreeTrial } = useOrganizationContext()
     const preferences = selectedBrand?.preferences || {}
 
     const { xl, width: bpWidth, height: bpHeight } = useBreakpoints();
-    const styles = useMemo(() => useStyles(theme), [theme]);
+    const styles = useStyles(theme);
 
     const [influencerIds, setInfluencerIds] = useState<string[]>([])
 

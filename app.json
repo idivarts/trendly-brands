@@ -1,10 +1,10 @@
 {
     "expo": {
-        "name": "Trendly Brands",
+        "name": "Trendly - AI Social Planner",
         "slug": "trendly-brands",
-        "version": "2.0.0",
+        "version": "3.0.0",
         "orientation": "portrait",
-        "icon": "./assets/images/icon2.png",
+        "icon": "./assets/images/branding/app-icon.png",
         "scheme": "trendly-brands",
         "platforms": [
             "ios",
@@ -30,7 +30,7 @@
             "googleServicesFile": "./GoogleService-Info.plist",
             "infoPlist": {
                 "ITSAppUsesNonExemptEncryption": false,
-                "CFBundleDisplayName": "Trendly Brands",
+                "CFBundleDisplayName": "Trendly AI",
                 "NSUserNotificationUsageDescription": "Trendly would like to send you notifications about new collaborations, updates, and important activity related to your account.",
                 "NSUserTrackingUsageDescription": "Trendly uses your data to improve app performance, enhance user experience, and resolve issues more effectively"
             },
@@ -38,7 +38,7 @@
         },
         "android": {
             "adaptiveIcon": {
-                "foregroundImage": "./assets/images/icon2.png",
+                "foregroundImage": "./assets/images/branding/app-icon.png",
                 "backgroundColor": "#ffffff"
             },
             "package": "pro.trendly.brands",
@@ -68,7 +68,7 @@
         "web": {
             "bundler": "metro",
             "output": "single",
-            "favicon": "./assets/images/icon2.png"
+            "favicon": "./assets/images/branding/trendly-symbol.png"
         },
         "plugins": [
             "expo-router",
@@ -82,6 +82,7 @@
                     }
                 }
             ],
+            "./plugins/with-ios-fmt-xcode26-fix.js",
             "expo-notifications",
             "@react-native-google-signin/google-signin",
             [

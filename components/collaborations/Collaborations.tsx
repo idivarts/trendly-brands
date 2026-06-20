@@ -5,6 +5,7 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import { Console } from "@/shared-libs/utils/console";
+import { IS_LIVE } from "@/shared-libs/utils/environment";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import ScrollMedia from "@/shared-uis/components/carousel/scroll-media";
@@ -56,7 +57,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
 
     const theme = useTheme();
     const { xl } = useBreakpoints();
-    const styles = useMemo(() => useStyles(theme, xl), [theme, xl]);
+    const styles = useStyles(theme, xl);
     const stylesFromFn = stylesFn(theme);
     const user = AuthApp.currentUser;
 
@@ -79,6 +80,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
             const q = query(
                 collaborationCol,
                 where("brandId", "==", selectedBrand?.id),
+                where("isLive", "==", IS_LIVE),
                 (active ? where("status", "in", ["active", "draft", "stopped"]) : where("status", "in", ["inactive"])),
                 orderBy("timeStamp", "desc")
             );
@@ -145,7 +147,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
 
     useEffect(() => {
         fetchProposals();
-    }, [user, selectedBrand]);
+    }, [user, selectedBrand?.id]);
 
     useEffect(() => {
         const checkAndRedirectIfNoCampaigns = async () => {
@@ -154,6 +156,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
                 const countQuery = query(
                     collaborationCol,
                     where("brandId", "==", selectedBrand.id),
+                    where("isLive", "==", IS_LIVE),
                     limit(1)
                 );
                 const snapshot = await getDocs(countQuery);
@@ -163,7 +166,7 @@ const CollaborationList = ({ active }: { active: boolean }) => {
             }
         };
         checkAndRedirectIfNoCampaigns();
-    }, [isLoading, proposals, selectedBrand]);
+    }, [isLoading, proposals, selectedBrand?.id]);
 
     const filteredProposals = proposals;
 

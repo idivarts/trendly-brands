@@ -1,13 +1,24 @@
-import Colors from "@/shared-uis/constants/Colors";
 import { useChatContext } from "@/contexts";
-import { IContracts } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import {
+    ContractStatus,
+    isContractBlockedByKYC,
+    normalizeStatus,
+} from "@/shared-constants/contract-status";
+import { ICollaboration } from "@/shared-libs/firestore/trendly-pro/models/collaborations";
+import type { Payment } from "@/shared-libs/firestore/trendly-pro/models/contracts";
+import { IContracts, PaymentStatus } from "@/shared-libs/firestore/trendly-pro/models/contracts";
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import { IUsers } from "@/shared-libs/firestore/trendly-pro/models/users";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
-import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
-import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
+import {
+    ContractActionsWithMessage,
+    type ContractActionButton,
+    type ContractActionsMessage,
+} from "@/shared-uis/components/contract-actions-with-message";
 import ImageComponent from "@/shared-uis/components/image-component";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/shared-uis/constants/Colors";
 import {
     faCircleInfo,
     faStar,
@@ -16,18 +27,73 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import React, { FC, useEffect, useMemo, useState } from "react";
+import { doc, getDoc } from "firebase/firestore";
+import React, { FC, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, StyleSheet } from "react-native";
 import { Text, View } from "../theme/Themed";
-import Button from "../ui/button";
+import { acknowledgeSelfManagedPayment } from "./api/payment-pending.api";
+import { getShipmentStatus } from "./api/shipment-pending.api";
+import { requestDeliverableWithUX } from "./api/video-pending.api";
+import { useRazorpayContractPayment } from "./hooks/useRazorpayContractPayment";
+import InfluencerUploadedVideo from "./InfluencerUploadedVideo";
+import AcknowledgeSelfManagedPaymentBottomSheet from "./modals/AcknowledgeSelfManagedPaymentBottomSheet";
+import ApproveVideoReleaseBottomSheet from "./modals/ApproveVideoReleaseBottomSheet";
+import ChangeReleaseDateSheet from "./modals/ChangeReleaseDateSheet";
+import KycBlockedStartContractModal from "./modals/KycBlockedStartContractModal";
+import MarkAsDeliveredModal from "./modals/MarkAsDeliveredModal";
+import RazorpayCheckoutModal from "./modals/RazorpayCheckoutModal";
+import { type ContractActionsMenuItem } from "./ContractActionsMenu";
+import RaiseDisputeModal from "./modals/RaiseDisputeModal";
+import ReleaseOptionsBottomSheet from "./modals/ReleaseOptionsBottomSheet";
+import RequestCancellationModal from "./modals/RequestCancellationModal";
+import RequestRevisionModal from "./modals/RequestRevisionModal";
+import RespondToCancellationModal from "./modals/RespondToCancellationModal";
+import ShippingAddressModal from "./modals/ShippingAddressModal";
+import StartContractPaymentBottomSheet, {
+    formatContractMoneyLabel,
+    formatInfluencerHandleFromUser,
+} from "./modals/StartContractPaymentBottomSheet";
+import ViewInfluencerAddressOverlay from "./modals/ViewInfluencerAddressOverlayComponent";
+import { getInfluencerKycShippingAddress } from "./utils/influencer-kyc-shipping-address";
+
+/** True if collaboration requires product shipping (shipment → delivery → acknowledgement → video). */
+function isProductShipping(collab?: ICollaboration | null): boolean {
+    return collab?.promotionSubject === "physical-product";
+}
+
+/**
+ * Brand has a Razorpay order on the contract but checkout was not completed (e.g. app closed during payment).
+ * Shown with **Continue payment** when contract status is Started (1 / OrderCreated), not on Pending (0).
+ */
+function hasOutstandingContractPaymentOrder(contract: IContracts): boolean {
+    const orderId = contract.payment?.orderId?.trim();
+    if (!orderId) return false;
+    const st = contract.payment?.status;
+    if (st === PaymentStatus.Paid || st === PaymentStatus.TransferProcessed) return false;
+    return true;
+}
+
+/** True once the brand has submitted feedback (mirrors settlement CTA / feedback modal). */
+function brandHasSubmittedFeedback(contract: IContracts): boolean {
+    return (
+        (contract.feedbackFromBrand?.ratings ?? 0) >= 1 ||
+        Boolean(contract.feedbackFromBrand?.timeSubmitted)
+    );
+}
 
 interface ActionContainerProps {
     contract: IContracts;
     refreshData: () => void;
     feedbackModalVisible: () => void;
     userData: IUsers;
+    collaborationData?: ICollaboration | null;
+    /** Quoted amount from the influencer application (contract budget / pay amount). */
+    applicationQuotation?: number | null;
+    paymentStatus?: Payment["status"];
     slot?: "all" | "buttons" | "feedback-and-info";
+    /** Dev only: override status for UI testing (no Firestore write) */
+    devOverrideStatus?: number | null;
+    onMenuItemsChange?: (items: ContractActionsMenuItem[]) => void;
 }
 
 const ActionContainer: FC<ActionContainerProps> = ({
@@ -35,11 +101,121 @@ const ActionContainer: FC<ActionContainerProps> = ({
     refreshData,
     feedbackModalVisible,
     userData,
+    collaborationData = null,
+    applicationQuotation = null,
     slot = "all",
+    devOverrideStatus = null,
+    onMenuItemsChange,
 }) => {
     const theme = useTheme();
     const [manager, setManager] = useState<IManagers>();
     const { fetchChannelCid } = useChatContext();
+
+    // Backend expects Firestore contract doc id for `/monetize/brands/contracts/:contractId/...`.
+    // We attach `id` on the contract screen; fall back to streamChannelId for safety.
+    const contractIdForApi =
+        (contract as IContracts & { id?: string }).id ?? contract.streamChannelId;
+
+    const [showShippingModal, setShowShippingModal] = useState(false);
+    const [showViewAddress, setShowViewAddress] = useState(false);
+    const [showRevisionModal, setShowRevisionModal] = useState(false);
+    const [showReleaseSheet, setShowReleaseSheet] = useState(false);
+    const [showChangeDateSheet, setShowChangeDateSheet] = useState(false);
+    const [showMarkAsDeliveredModal, setShowMarkAsDeliveredModal] = useState(false);
+    const [showApproveVideoSheet, setShowApproveVideoSheet] = useState(false);
+    const [showStartContractPaymentSheet, setShowStartContractPaymentSheet] = useState(false);
+    const [showAckSelfManagedSheet, setShowAckSelfManagedSheet] = useState(false);
+    const [ackSelfManagedLoading, setAckSelfManagedLoading] = useState(false);
+    const [showKycBlockedStartContractModal, setShowKycBlockedStartContractModal] = useState(false);
+    const [showRaiseDisputeModal, setShowRaiseDisputeModal] = useState(false);
+    const [showRequestCancellationModal, setShowRequestCancellationModal] = useState(false);
+    const [showRespondToCancellationModal, setShowRespondToCancellationModal] = useState(false);
+    const [deliveryStatusLoading, setDeliveryStatusLoading] = useState(false);
+    const [goToMessagesLoading, setGoToMessagesLoading] = useState(false);
+    const goToMessagesInFlightRef = useRef(false);
+    const [requestVideoLoading, setRequestVideoLoading] = useState(false);
+    const requestVideoInFlightRef = useRef(false);
+
+    const [fetchedInfluencerUser, setFetchedInfluencerUser] = useState<IUsers | null>(null);
+    const [shippingAddressLoading, setShippingAddressLoading] = useState(false);
+    const [shippingAddressError, setShippingAddressError] = useState<string | null>(null);
+
+    const closeAddressModal = useCallback(() => {
+        setShowViewAddress(false);
+        setFetchedInfluencerUser(null);
+        setShippingAddressError(null);
+    }, []);
+
+    useEffect(() => {
+        if (!showViewAddress) return;
+        let cancelled = false;
+        setShippingAddressLoading(true);
+        setShippingAddressError(null);
+        (async () => {
+            try {
+                const userRef = doc(FirestoreDB, "users", contract.userId);
+                const snap = await getDoc(userRef);
+                if (cancelled) return;
+                if (snap.exists()) {
+                    setFetchedInfluencerUser(snap.data() as IUsers);
+                } else {
+                    setFetchedInfluencerUser(null);
+                    setShippingAddressError("Influencer profile could not be found.");
+                }
+            } catch (e) {
+                if (!cancelled) {
+                    setFetchedInfluencerUser(null);
+                    setShippingAddressError(
+                        e instanceof Error ? e.message : "Failed to load address"
+                    );
+                }
+            } finally {
+                if (!cancelled) setShippingAddressLoading(false);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [showViewAddress, contract.userId]);
+
+    const kycShippingAddress = useMemo(
+        () => getInfluencerKycShippingAddress(fetchedInfluencerUser),
+        [fetchedInfluencerUser]
+    );
+    const displayInfluencerName = fetchedInfluencerUser?.name ?? userData.name;
+
+    const status =
+        devOverrideStatus != null ? normalizeStatus(devOverrideStatus) : normalizeStatus(contract.status);
+    const showContinueContractPayment = hasOutstandingContractPaymentOrder(contract);
+    const productShipping = isProductShipping(collaborationData);
+    /** KYC is a gate: block Make Payment / Start Contract until influencer KYC is done. Not a contract state. */
+    const kycBlocked = (status === ContractStatus.Pending || contract.status === ContractStatus.Pending) && isContractBlockedByKYC(userData);
+
+    const hasPendingCancellationFromInfluencer =
+        contract.cancellationRequest?.status === "pending" &&
+        contract.cancellationRequest?.requestedByRole === "influencer";
+
+    const canRaiseDispute =
+        status >= ContractStatus.ShipmentPending &&
+        status <= ContractStatus.SettlementPending;
+
+    const canRequestCancellation =
+        status >= ContractStatus.Pending &&
+        status <= ContractStatus.ReviewPending;
+
+    const maxRevisions = (collaborationData as any)?.maxRevisions ?? 3;
+    const revisionCount = contract.deliverable?.revisionCount ?? 0;
+    const isRevisionLimitExceeded = revisionCount > 0 && revisionCount >= maxRevisions;
+
+    const brandSubmittedFeedback = brandHasSubmittedFeedback(contract);
+    const canShowReviewsByStatus =
+        status === ContractStatus.SettlementPending
+            ? brandSubmittedFeedback
+            : status === ContractStatus.Settled;
+    const showInfluencerFeedbackCard =
+        canShowReviewsByStatus &&
+        Boolean(contract.feedbackFromInfluencer) &&
+        brandSubmittedFeedback;
 
     const renderStars = (rating: number) => {
         const fullStars = Math.floor(rating);
@@ -66,23 +242,6 @@ const ActionContainer: FC<ActionContainerProps> = ({
         );
     };
 
-    const startContract = async () => {
-        const contractRef = doc(FirestoreDB, "contracts", contract.streamChannelId);
-        const timeStarted = new Date().getTime();
-        await updateDoc(contractRef, {
-            status: 1,
-            contractTimestamp: {
-                startedOn: timeStarted,
-            },
-        })
-        await HttpWrapper.fetch(`/api/collabs/contracts/${contract.streamChannelId}`, {
-            method: "POST",
-        }).then(r => {
-            Toaster.success("Your Contract has started")
-        })
-        refreshData();
-    };
-
     const fetchManager = async () => {
         if (!contract.feedbackFromBrand?.managerId) return;
         const managerRef = doc(
@@ -98,131 +257,623 @@ const ActionContainer: FC<ActionContainerProps> = ({
         fetchManager();
     }, [contract.feedbackFromBrand?.managerId]);
 
-    const { openModal } = useConfirmationModel();
     const colors = Colors(theme);
-    const styles = useMemo(() => createStyles(colors, contract.status), [colors, contract.status]);
+    const styles = useMemo(() => createStyles(colors), [colors]);
+
+    const { hasCapability, isIndiaBased } = useBrandContext();
+    // Funding a contract requires the fund_contracts capability. Gate every
+    // payment entry point through this guard; the backend also enforces it.
+    const guardFund = useCallback(
+        (fn: () => void) => () => {
+            if (!hasCapability("fund_contracts")) {
+                Toaster.error("You don't have permission to fund contracts");
+                return;
+            }
+            fn();
+        },
+        [hasCapability]
+    );
+
+    const { paymentButtonLoading, startPayment: handlePendingPayment, razorpayModalProps } =
+        useRazorpayContractPayment({
+            contractId: contractIdForApi,
+            themeColor: colors.primary,
+            prefill: {
+                name: userData?.name,
+                email: userData?.email,
+                contact: userData?.phoneNumber,
+            },
+            onRefresh: refreshData,
+        });
+
+    const openStartContractPaymentSheet = useCallback(() => {
+        setShowStartContractPaymentSheet(true);
+    }, []);
+
+    const handleStartContractPress = useCallback(() => {
+        // Non-India brands settle off-platform: no Razorpay, no influencer KYC
+        // gate. Show the acknowledge sheet and advance on confirmation.
+        if (!isIndiaBased) {
+            setShowAckSelfManagedSheet(true);
+            return;
+        }
+
+        // KYC gate: prefetch order side-effects if any, then show blocking modal (no payment summary).
+        if (kycBlocked) {
+            void handlePendingPayment({ resumeExistingOrder: showContinueContractPayment, prefetchOnly: true });
+            setShowKycBlockedStartContractModal(true);
+            return;
+        }
+
+        // Show pay summary (collaboration, budget, amount) before Razorpay; Pay Now continues in `handlePayNowFromSheet`.
+        openStartContractPaymentSheet();
+    }, [
+        handlePendingPayment,
+        isIndiaBased,
+        kycBlocked,
+        openStartContractPaymentSheet,
+        showContinueContractPayment,
+    ]);
+
+    const handlePayNowFromSheet = useCallback(async () => {
+        setShowStartContractPaymentSheet(false);
+        await handlePendingPayment();
+    }, [handlePendingPayment]);
+
+    const handleAcknowledgeSelfManaged = useCallback(async () => {
+        setAckSelfManagedLoading(true);
+        try {
+            await acknowledgeSelfManagedPayment({ contractId: contractIdForApi });
+            setShowAckSelfManagedSheet(false);
+            Toaster.success("Contract started");
+            refreshData();
+        } catch (e) {
+            const message = e instanceof Error ? e.message : undefined;
+            Toaster.error(message ?? "Could not start the contract");
+        } finally {
+            setAckSelfManagedLoading(false);
+        }
+    }, [contractIdForApi, refreshData]);
+
+    const handleGetDeliveryStatus = useCallback(async () => {
+        setDeliveryStatusLoading(true);
+        try {
+            await getShipmentStatus({ contractId: contractIdForApi });
+            Toaster.success("Delivery status refreshed");
+            refreshData();
+        } catch (e) {
+            const message = e instanceof Error ? e.message : undefined;
+            Toaster.error(message ? `Could not get delivery status: ${message}` : "Could not get delivery status");
+        } finally {
+            setDeliveryStatusLoading(false);
+        }
+    }, [contractIdForApi, refreshData]);
 
     const showButtons = slot === "all" || slot === "buttons";
     const showFeedbackAndInfo = slot === "all" || slot === "feedback-and-info";
 
+    const goToMessages = useCallback(async () => {
+        if (goToMessagesInFlightRef.current) return;
+        goToMessagesInFlightRef.current = true;
+        setGoToMessagesLoading(true);
+        try {
+            if (Platform.OS === "web") {
+                router.navigate(`/messages?channelId=${contract.streamChannelId}`);
+            } else {
+                const channelCid = await fetchChannelCid(contract.streamChannelId);
+                router.navigate(`/channel/${channelCid}`);
+            }
+        } finally {
+            goToMessagesInFlightRef.current = false;
+            setGoToMessagesLoading(false);
+        }
+    }, [fetchChannelCid, contract.streamChannelId]);
+
+    const handleRequestDeliverable = useCallback(async () => {
+        if (requestVideoInFlightRef.current) return;
+        requestVideoInFlightRef.current = true;
+        setRequestVideoLoading(true);
+        try {
+            await requestDeliverableWithUX(
+                { contractId: contractIdForApi },
+                { onSuccess: refreshData }
+            );
+        } finally {
+            requestVideoInFlightRef.current = false;
+            setRequestVideoLoading(false);
+        }
+    }, [contractIdForApi, refreshData]);
+
+    const actionsConfig = useMemo((): {
+        buttons: [] | [ContractActionButton] | [ContractActionButton, ContractActionButton];
+        message: ContractActionsMessage;
+    } => {
+        const infoIcon = <FontAwesomeIcon icon={faCircleInfo} size={18} color={colors.primary} />;
+        const messageForStatus = (): ContractActionsMessage => {
+            if (kycBlocked)
+                return {
+                    variant: "warning",
+                    text: "You cannot start the contract with the influencer unless they are verified with us. You can remind them via chat.",
+                    icon: infoIcon,
+                };
+            if (status === ContractStatus.Pending)
+                return {
+                    variant: "info",
+                    text: "Use the chat to align with the influencer, then proceed with payment and contract steps.",
+                    icon: infoIcon,
+                };
+            if (status === ContractStatus.Started && showContinueContractPayment)
+                return {
+                    variant: "warning",
+                    text: "Checkout was not completed. Tap Continue payment to finish paying before the next contract steps.",
+                    icon: infoIcon,
+                };
+            if (status === ContractStatus.PaymentFailed)
+                return {
+                    variant: "error",
+                    text: "Payment failed. You can retry payment using the button above.",
+                    icon: infoIcon,
+                };
+            if (status === ContractStatus.SettlementPending)
+                return {
+                    variant: "info",
+                    text: "Contract is wrapping up. Please submit your feedback to close it.",
+                    icon: infoIcon,
+                };
+            if (status === ContractStatus.PostingPending) {
+                const scheduledText = contract.posting?.scheduledDate
+                    ? new Date(contract.posting.scheduledDate).toLocaleDateString(undefined, {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                    })
+                    : null;
+                return {
+                    variant: "warning",
+                    text: scheduledText
+                        ? `Release scheduled for ${scheduledText}. You can change the date if needed.`
+                        : "Posting and release are pending. Set or update the release date when ready.",
+                    icon: infoIcon,
+                };
+            }
+            if (status <= ContractStatus.PostingPending)
+                return {
+                    variant: "warning",
+                    text: "Complete the current step to move the contract forward. Use chat for any coordination.",
+                    icon: infoIcon,
+                };
+            return {
+                variant: "success",
+                text: "You can create a new collaboration and invite this influencer again.",
+                icon: infoIcon,
+            };
+        };
+
+        if (status === ContractStatus.Pending) {
+            return {
+                buttons: [
+                    {
+                        label: "Go to Messages",
+                        variant: "outlined",
+                        onPress: goToMessages,
+                        loading: goToMessagesLoading,
+                    },
+                    {
+                        label: "Start Contract",
+                        variant: "contained",
+                        onPress: guardFund(handleStartContractPress),
+                        loading: paymentButtonLoading,
+                    },
+                ],
+                message: {
+                    variant: "warning",
+                    text: "The contract is still not funded. Once you communicate with the influencer and everything aligns you can fund and start the contract.",
+                    icon: infoIcon,
+                },
+            };
+        }
+        if (status === ContractStatus.PaymentFailed) {
+            return {
+                buttons: [
+                    {
+                        label: "Go to Messages",
+                        variant: "outlined",
+                        onPress: goToMessages,
+                        loading: goToMessagesLoading,
+                    },
+                    {
+                        label: "Retry Payment",
+                        variant: "contained",
+                        onPress: guardFund(() => {
+                            void handlePendingPayment();
+                        }),
+                        loading: paymentButtonLoading,
+                    },
+                ],
+                message: messageForStatus(),
+            };
+        }
+        if (status === ContractStatus.Started) {
+            // Backend OrderCreated (1): after order exists, payment may still be open in Razorpay.
+            return {
+                buttons: [
+                    {
+                        label: "Go to Messages",
+                        variant: "outlined",
+                        onPress: goToMessages,
+                        loading: goToMessagesLoading,
+                    },
+                    {
+                        label: "Continue payment",
+                        variant: "contained",
+                        onPress: guardFund(() => {
+                            void handlePendingPayment({ resumeExistingOrder: true });
+                        }),
+                        loading: paymentButtonLoading,
+                    },
+                ],
+                message: messageForStatus(),
+            };
+        }
+        if (status === ContractStatus.ShipmentPending) {
+            return {
+                buttons: [
+                    {
+                        label: "View Influencer Address",
+                        variant: "outlined",
+                        onPress: () => {
+                            setShowShippingModal(false);
+                            setShowViewAddress(true);
+                        },
+                        loading: showViewAddress && shippingAddressLoading,
+                    },
+                    {
+                        label: "Add Shipment Details",
+                        variant: "contained",
+                        onPress: () => {
+                            setShowViewAddress(false);
+                            setShowShippingModal(true);
+                        },
+                    },
+                ],
+                message: {
+                    variant: "warning",
+                    text: "Please get the shipping address and ship the product to the influencer. Don't forget to mark it as shipped once the product is dispatched.",
+                    icon: infoIcon,
+                },
+            };
+        }
+        if (status === ContractStatus.DeliveryPending) {
+            return {
+                buttons: [
+                    {
+                        label: "Go to Messages",
+                        variant: "outlined",
+                        onPress: goToMessages,
+                        loading: goToMessagesLoading,
+                    },
+                    {
+                        label: "Mark as Delivered",
+                        variant: "contained",
+                        onPress: () => setShowMarkAsDeliveredModal(true),
+                    },
+                ],
+                message: messageForStatus(),
+            };
+        }
+        if (status === ContractStatus.DeliveryAcknowledgementPending) {
+            return {
+                buttons: [
+                    {
+                        label: "Go to Messages",
+                        variant: "outlined",
+                        onPress: goToMessages,
+                        loading: goToMessagesLoading,
+                    },
+                    {
+                        label: "Nudge Influencer",
+                        variant: "contained",
+                        onPress: () => {
+                            void handleGetDeliveryStatus();
+                        },
+                        loading: deliveryStatusLoading,
+                    },
+                ],
+                message: messageForStatus(),
+            };
+        }
+        if (status === ContractStatus.VideoPending) {
+            return {
+                buttons: [
+                    {
+                        label: "Go to Messages",
+                        variant: "outlined",
+                        onPress: goToMessages,
+                        loading: goToMessagesLoading,
+                    },
+                    {
+                        label: "Request Video",
+                        variant: "contained",
+                        onPress: () => {
+                            void handleRequestDeliverable();
+                        },
+                        loading: requestVideoLoading,
+                    },
+                ],
+                message: messageForStatus(),
+            };
+        }
+        if (status === ContractStatus.ReviewPending) {
+            return {
+                buttons: [
+                    {
+                        label: "Request Revision",
+                        variant: "outlined",
+                        onPress: () => setShowRevisionModal(true),
+                    },
+                    {
+                        label: "Approve Video",
+                        variant: "contained",
+                        onPress: () => setShowApproveVideoSheet(true),
+                    },
+                ],
+                message: isRevisionLimitExceeded
+                    ? {
+                          variant: "warning",
+                          text: `You have requested ${revisionCount} revisions — exceeding the agreed limit of ${maxRevisions}. Further requests may allow the influencer to escalate.`,
+                          icon: infoIcon,
+                      }
+                    : messageForStatus(),
+            };
+        }
+        if (status === ContractStatus.PostingPending) {
+            return {
+                buttons: [
+                    {
+                        label: "Go to Messages",
+                        variant: "outlined",
+                        onPress: goToMessages,
+                        loading: goToMessagesLoading,
+                    },
+                    {
+                        label: "Change Release Date",
+                        variant: "contained",
+                        onPress: () => setShowChangeDateSheet(true),
+                    },
+                ],
+                message: messageForStatus(),
+            };
+        }
+        if (status === ContractStatus.SettlementPending) {
+            if (brandSubmittedFeedback) {
+                return {
+                    buttons: [
+                        {
+                            label: "Go to Messages",
+                            variant: "contained",
+                            onPress: goToMessages,
+                            loading: goToMessagesLoading,
+                        },
+                    ],
+                    message: messageForStatus(),
+                };
+            }
+
+            return {
+                buttons: [
+                    {
+                        label: "Go to Messages",
+                        variant: "outlined",
+                        onPress: goToMessages,
+                        loading: goToMessagesLoading,
+                    },
+                    {
+                        label: "Give Feedback",
+                        variant: "contained",
+                        onPress: () => feedbackModalVisible(),
+                    },
+                ],
+                message: messageForStatus(),
+            };
+        }
+        if (status === ContractStatus.Settled) {
+            if (brandSubmittedFeedback) {
+                return {
+                    buttons: [
+                        {
+                            label: "Go to Messages",
+                            variant: "contained",
+                            onPress: goToMessages,
+                            loading: goToMessagesLoading,
+                        },
+                    ],
+                    message: messageForStatus(),
+                };
+            }
+            return {
+                buttons: [
+                    {
+                        label: "Go to Messages",
+                        variant: "outlined",
+                        onPress: goToMessages,
+                        loading: goToMessagesLoading,
+                    },
+                    {
+                        label: "Give Feedback",
+                        variant: "contained",
+                        onPress: () => feedbackModalVisible(),
+                    },
+                ],
+                message: messageForStatus(),
+            };
+        }
+        if (status === ContractStatus.Cancelled) {
+            return {
+                buttons: [
+                    {
+                        label: "Go to Messages",
+                        variant: "contained",
+                        onPress: goToMessages,
+                        loading: goToMessagesLoading,
+                    },
+                ],
+                message: { variant: "warning", text: "This contract has been cancelled.", icon: infoIcon },
+            };
+        }
+        if (status === ContractStatus.Disputed) {
+            return {
+                buttons: [
+                    {
+                        label: "Go to Messages",
+                        variant: "contained",
+                        onPress: goToMessages,
+                        loading: goToMessagesLoading,
+                    },
+                ],
+                message: {
+                    variant: "warning",
+                    text: "A dispute is open on this contract. It is on hold while our team reviews.",
+                    icon: infoIcon,
+                },
+            };
+        }
+        return { buttons: [], message: messageForStatus() };
+    }, [
+        status,
+        kycBlocked,
+        productShipping,
+        contract.status,
+        contract.collaborationId,
+        contract.userId,
+        contract.streamChannelId,
+        contract.posting?.scheduledDate,
+        colors.primary,
+        feedbackModalVisible,
+        goToMessages,
+        goToMessagesLoading,
+        handleRequestDeliverable,
+        requestVideoLoading,
+        showViewAddress,
+        shippingAddressLoading,
+        handlePendingPayment,
+        handleStartContractPress,
+        contract.shipment,
+        contract.deliverable,
+        contract.feedbackFromBrand?.ratings,
+        contract.feedbackFromBrand?.timeSubmitted,
+        brandSubmittedFeedback,
+        devOverrideStatus,
+        refreshData,
+        paymentButtonLoading,
+        applicationQuotation,
+        contract.payment?.amount,
+        contract.payment?.orderId,
+        contract.payment?.status,
+        showContinueContractPayment,
+        handleGetDeliveryStatus,
+        deliveryStatusLoading,
+        isRevisionLimitExceeded,
+        revisionCount,
+        maxRevisions,
+    ]);
+
+    const overflowMenuItems = useMemo((): ContractActionsMenuItem[] => {
+        if (
+            status === ContractStatus.Cancelled ||
+            status === ContractStatus.Disputed ||
+            status === ContractStatus.Settled
+        ) return [];
+        const items: ContractActionsMenuItem[] = [];
+        if (hasPendingCancellationFromInfluencer) {
+            items.push({
+                label: "Respond to Cancellation Request",
+                onPress: () => setShowRespondToCancellationModal(true),
+            });
+        }
+        if (canRaiseDispute) {
+            items.push({ label: "Raise a Dispute", onPress: () => setShowRaiseDisputeModal(true), destructive: true });
+        }
+        if (canRequestCancellation && !hasPendingCancellationFromInfluencer) {
+            items.push({ label: "Request Cancellation", onPress: () => setShowRequestCancellationModal(true), destructive: true });
+        }
+        return items;
+    }, [
+        status,
+        hasPendingCancellationFromInfluencer,
+        canRaiseDispute,
+        canRequestCancellation,
+    ]);
+
+    useEffect(() => {
+        if (showButtons) {
+            onMenuItemsChange?.(overflowMenuItems);
+        }
+    }, [overflowMenuItems, onMenuItemsChange, showButtons]);
+
     return (
         <View style={styles.root}>
-            {showButtons && contract.status < 2 && (
-                <View style={styles.buttonsRow}>
-                    {contract.status === 0 && (
-                        <>
-                            <Button
-                                mode="outlined"
-                                style={styles.buttonFlex}
-                                onPress={() => {
-                                    HttpWrapper.fetch(`/api/collabs/collaborations/${contract.collaborationId}/applications/${contract.userId}/revise`, {
-                                        method: "POST",
-                                    }).then(r => {
-                                        Toaster.success("Successfully notified influencer to revise quotation")
-                                    })
-                                }}
-                            >
-                                Ask To Revise Quote
-                            </Button>
-                            <Button
-                                mode="contained"
-                                style={styles.buttonFlex}
-                                onPress={() => {
-                                    openModal({
-                                        confirmAction: startContract,
-                                        confirmText: "Confirm",
-                                        title: "Start this Contract?",
-                                        description: "Are you sure? Make sure you discuss the pricing and final deliverable before starting the contract"
-                                    })
-                                }}
-                            >
-                                Start Contract
-                            </Button>
-                        </>
-                    )}
-                    {contract.status === 1 && (
-                        <>
-                            <Button
-                                mode="contained-tonal"
-                                style={styles.buttonFlex}
-                                onPress={() => {
-                                    openModal({
-                                        confirmAction: feedbackModalVisible,
-                                        confirmText: "End Contract",
-                                        title: "End your contract?",
-                                        description: "Are you sure you want to end the contract? This action cant be reversed."
-                                    })
-                                }}
-                            >
-                                End Contract
-                            </Button>
-                            <Button
-                                mode="contained"
-                                style={styles.buttonFlex}
-                                onPress={async () => {
-
-                                    if (Platform.OS == "web")
-                                        router.navigate(`/messages?channelId=${contract.streamChannelId}`);
-                                    else {
-                                        const channelCid = await fetchChannelCid(
-                                            contract.streamChannelId
-                                        );
-                                        router.navigate(`/channel/${channelCid}`);
-                                    }
-                                }}
-                            >
-                                Go to Messages
-                            </Button>
-                        </>
-                    )}
-                </View>
-            )}
-            {showFeedbackAndInfo && (
-                <View style={styles.infoBox}>
-                    <FontAwesomeIcon icon={faCircleInfo} size={20} />
-                    <Text style={styles.infoText}>
-                        {contract.status === 0
-                            ? "Please make sure to use this chat to first understand the the influencer. Post that, you can start your collaboration here"
-                            : contract.status === 1
-                                ? "Please note, if your collaboration is done, we would need you to close the collaboration here. Having open collaborations idle for a long time can end up reducing the rating"
-                                : contract.status === 2
-                                    ? "Feedbacks are important for us. Our platform works on what people give feedback to each other. You see that other persons feedback only if you give your feedback"
-                                    : "You can create new collaboration and invite user to collaboration"}
+            <RazorpayCheckoutModal
+                visible={razorpayModalProps.visible}
+                options={razorpayModalProps.options}
+                onSuccess={razorpayModalProps.onSuccess}
+                onClose={razorpayModalProps.onClose}
+                onError={razorpayModalProps.onError}
+            />
+            {hasPendingCancellationFromInfluencer && showButtons && (
+                <View style={styles.cancellationBanner}>
+                    <Text style={styles.cancellationBannerTitle}>Cancellation Requested</Text>
+                    <Text style={styles.cancellationBannerText}>
+                        The influencer has requested to cancel this contract. Tap ⋮ to respond.
                     </Text>
                 </View>
             )}
-            {showFeedbackAndInfo && (contract.feedbackFromBrand || contract.feedbackFromInfluencer) && (
-                <Text style={styles.reviewsHeading}>Reviews & Ratings</Text>
+            {(showButtons || showFeedbackAndInfo) && (
+                <ContractActionsWithMessage
+                    buttons={showButtons ? actionsConfig.buttons : []}
+                    message={actionsConfig.message}
+                    customMessageContent={
+                        showButtons && status === ContractStatus.ReviewPending ? (
+                            <InfluencerUploadedVideo contract={contract} />
+                        ) : undefined
+                    }
+                />
             )}
-            {showFeedbackAndInfo && contract.feedbackFromBrand && (
-                <View style={styles.feedbackCard}>
-                    <View style={styles.starsRow}>
-                        {renderStars(contract.feedbackFromBrand.ratings || 0)}
-                    </View>
-                    <View style={styles.feedbackInner}>
-                        <ImageComponent
-                            url={manager?.profileImage || ""}
-                            altText={manager?.name || ""}
-                            initials={manager?.name || ""}
-                            shape="circle"
-                            size="small"
-                            style={styles.avatar}
-                        />
-                        <View style={styles.feedbackTextWrap}>
-                            <Text style={styles.feedbackLabel}>
-                                From Brand ({manager?.name})
-                            </Text>
-                            <Text style={styles.feedbackReview}>
-                                {contract.feedbackFromBrand.feedbackReview}
-                            </Text>
+            {showFeedbackAndInfo &&
+                canShowReviewsByStatus &&
+                (contract.feedbackFromBrand || showInfluencerFeedbackCard) && (
+                    <Text style={styles.reviewsHeading}>Reviews & Ratings</Text>
+                )}
+            {showFeedbackAndInfo &&
+                canShowReviewsByStatus &&
+                contract.feedbackFromBrand && (
+                    <View style={styles.feedbackCard}>
+                        <View style={styles.starsRow}>
+                            {renderStars(contract.feedbackFromBrand.ratings || 0)}
+                        </View>
+                        <View style={styles.feedbackInner}>
+                            <ImageComponent
+                                url={manager?.profileImage || ""}
+                                altText={manager?.name || ""}
+                                initials={manager?.name || ""}
+                                shape="circle"
+                                size="small"
+                                style={styles.avatar}
+                            />
+                            <View style={styles.feedbackTextWrap}>
+                                <Text style={styles.feedbackLabel}>
+                                    From Brand ({manager?.name})
+                                </Text>
+                                <Text style={styles.feedbackReview}>
+                                    {contract.feedbackFromBrand.feedbackReview}
+                                </Text>
+                            </View>
                         </View>
                     </View>
-                </View>
-            )}
-            {showFeedbackAndInfo && contract.feedbackFromInfluencer && (
+                )}
+            {showFeedbackAndInfo && canShowReviewsByStatus && showInfluencerFeedbackCard && (
                 <View style={styles.feedbackCard}>
                     <View style={styles.starsRow}>
-                        {renderStars(contract.feedbackFromInfluencer.ratings || 0)}
+                        {renderStars(contract.feedbackFromInfluencer?.ratings || 0)}
                     </View>
                     <View style={styles.feedbackInner}>
                         <ImageComponent
@@ -244,12 +895,122 @@ const ActionContainer: FC<ActionContainerProps> = ({
                     </View>
                 </View>
             )}
+
+            <ViewInfluencerAddressOverlay
+                visible={showViewAddress}
+                onClose={closeAddressModal}
+                influencerName={displayInfluencerName}
+                address={kycShippingAddress}
+                loading={shippingAddressLoading}
+                errorMessage={shippingAddressError}
+            />
+            {showShippingModal && (
+                <ShippingAddressModal
+                    visible
+                    onClose={() => setShowShippingModal(false)}
+                    contractId={contractIdForApi}
+                    onSuccess={refreshData}
+                />
+            )}
+            {showMarkAsDeliveredModal && (
+                <MarkAsDeliveredModal
+                    visible
+                    onClose={() => setShowMarkAsDeliveredModal(false)}
+                    contractId={contractIdForApi}
+                    onSuccess={refreshData}
+                />
+            )}
+            <RequestRevisionModal
+                visible={showRevisionModal}
+                onClose={() => setShowRevisionModal(false)}
+                contractId={contractIdForApi}
+                onSuccess={refreshData}
+            />
+            <ApproveVideoReleaseBottomSheet
+                visible={showApproveVideoSheet}
+                onClose={() => setShowApproveVideoSheet(false)}
+                contractId={contractIdForApi}
+                onSuccess={refreshData}
+            />
+            <ReleaseOptionsBottomSheet
+                visible={showReleaseSheet}
+                onClose={() => setShowReleaseSheet(false)}
+                contractId={contractIdForApi}
+                onSuccess={refreshData}
+            />
+            <ChangeReleaseDateSheet
+                visible={showChangeDateSheet}
+                initialDate={contract.posting?.scheduledDate}
+                onClose={() => setShowChangeDateSheet(false)}
+                contractId={contractIdForApi}
+                hasExistingScheduledDate={!!contract.posting?.scheduledDate}
+                contractStatus={status}
+                onSuccess={refreshData}
+            />
+            <StartContractPaymentBottomSheet
+                visible={showStartContractPaymentSheet}
+                onClose={() => setShowStartContractPaymentSheet(false)}
+                onPayNow={() => {
+                    void handlePayNowFromSheet();
+                }}
+                payNowLoading={paymentButtonLoading}
+                influencerName={userData.name}
+                influencerHandle={formatInfluencerHandleFromUser(userData.primarySocial)}
+                influencerProfileImageUrl={userData.profileImage}
+                collaborationTitle={collaborationData?.name ?? "Collaboration"}
+                contractBudgetLabel={formatContractMoneyLabel(
+                    applicationQuotation ?? contract.payment?.amount
+                )}
+                paymentAmountLabel={formatContractMoneyLabel(
+                    applicationQuotation ?? contract.payment?.amount
+                )}
+            />
+            <AcknowledgeSelfManagedPaymentBottomSheet
+                visible={showAckSelfManagedSheet}
+                onClose={() => setShowAckSelfManagedSheet(false)}
+                onConfirm={() => {
+                    void handleAcknowledgeSelfManaged();
+                }}
+                confirmLoading={ackSelfManagedLoading}
+                influencerName={userData.name}
+                influencerHandle={formatInfluencerHandleFromUser(userData.primarySocial)}
+                influencerProfileImageUrl={userData.profileImage}
+                collaborationTitle={collaborationData?.name ?? "Collaboration"}
+                contractBudgetLabel={formatContractMoneyLabel(
+                    applicationQuotation ?? contract.payment?.amount
+                )}
+            />
+            <KycBlockedStartContractModal
+                visible={showKycBlockedStartContractModal}
+                onClose={() => setShowKycBlockedStartContractModal(false)}
+            />
+            <RaiseDisputeModal
+                visible={showRaiseDisputeModal}
+                onClose={() => setShowRaiseDisputeModal(false)}
+                contractId={contractIdForApi}
+                onSuccess={refreshData}
+            />
+            <RequestCancellationModal
+                visible={showRequestCancellationModal}
+                onClose={() => setShowRequestCancellationModal(false)}
+                contractId={contractIdForApi}
+                contractStatus={status}
+                onSuccess={refreshData}
+            />
+            {contract.cancellationRequest && (
+                <RespondToCancellationModal
+                    visible={showRespondToCancellationModal}
+                    onClose={() => setShowRespondToCancellationModal(false)}
+                    contractId={contractIdForApi}
+                    cancellationRequest={contract.cancellationRequest}
+                    onSuccess={refreshData}
+                />
+            )}
         </View>
     );
 }
 
-function createStyles(colors: ReturnType<typeof Colors>, status: number) {
-    const infoBoxBg = status === 0 || status === 1 || status === 2 ? colors.gold : colors.green;
+function createStyles(colors: ReturnType<typeof Colors>) {
     return StyleSheet.create({
         root: {
             width: "100%",
@@ -257,13 +1018,25 @@ function createStyles(colors: ReturnType<typeof Colors>, status: number) {
             gap: 16,
             backgroundColor: "transparent",
         },
-        buttonsRow: {
-            flexDirection: "row",
-            justifyContent: "space-between",
-            gap: 16,
-            backgroundColor: "transparent",
+        cancellationBanner: {
+            width: "100%",
+            backgroundColor: colors.errorBannerBg,
+            borderWidth: 1,
+            borderColor: colors.errorBannerBorder,
+            borderRadius: 8,
+            paddingVertical: 10,
+            paddingHorizontal: 14,
+            gap: 4,
         },
-        buttonFlex: { flex: 1 },
+        cancellationBannerTitle: {
+            fontSize: 13,
+            fontWeight: "700",
+            color: colors.errorBannerText,
+        },
+        cancellationBannerText: {
+            fontSize: 13,
+            color: colors.errorBannerText,
+        },
         reviewsHeading: {
             fontSize: 16,
             fontWeight: "bold",
@@ -298,15 +1071,6 @@ function createStyles(colors: ReturnType<typeof Colors>, status: number) {
             lineHeight: 22,
             color: colors.text,
         },
-        infoBox: {
-            backgroundColor: infoBoxBg,
-            padding: 16,
-            borderRadius: 5,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 10,
-        },
-        infoText: { fontSize: 16, width: "95%" },
     });
 }
 

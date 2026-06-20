@@ -620,7 +620,7 @@ const OverviewTabContent = (props: CollaborationDetailsContentProps) => {
     const renderLocationDetailsCard = () => {
         const loc = c.location;
 
-        if (loc.type !== CollaborationLocationType.OnSite) return null;
+        if (loc?.type !== CollaborationLocationType.OnSite) return null;
 
         const name = loc?.name?.trim();
         const latlong = loc?.latlong;

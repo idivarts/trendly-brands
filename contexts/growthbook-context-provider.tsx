@@ -58,11 +58,13 @@ interface GBFeatures {
     videoUrl: string;
     getStarted?: ExplainerConfig,
     createBrand?: ExplainerConfig,
+    contentGoals?: ExplainerConfig,
     aboutBrand?: ExplainerConfig,
     pricingPage?: ExplainerConfig,
     businessFeatures?: string[]
     growthFeatures?: string[]
     hideAboutBrand?: boolean,
+    hideContentGoals?: boolean,
     payWall?: boolean,
     showDetailsOnMobile?: boolean
 }
@@ -119,6 +121,7 @@ const GBProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
 
     const getStarted: any = useFeatureValue<JSONValue>("get-started", null);
     const createBrand: any = useFeatureValue<JSONValue>("create-brand", null);
+    const contentGoals: any = useFeatureValue<JSONValue>("content-goals", null);
     const aboutBrand: any = useFeatureValue<JSONValue>("about-brand", null);
     const pricingPage: any = useFeatureValue<JSONValue>("pricing-page", null);
 
@@ -129,6 +132,7 @@ const GBProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
     const growthFeatures: any = useFeatureValue<string[] | null>("growth-features", null);
 
     const hideAboutBrand: any = useFeatureValue<boolean>("hide-about-brand", false);
+    const hideContentGoals: any = useFeatureValue<boolean>("hide-content-goals", false);
 
     const features: GBFeatures = {
         actionType,
@@ -143,11 +147,13 @@ const GBProvider: React.FC<GrowthBookProviderProps> = ({ children }) => {
         videoUrl,
         getStarted,
         createBrand,
+        contentGoals,
         aboutBrand,
         pricingPage,
         businessFeatures,
         growthFeatures,
         hideAboutBrand,
+        hideContentGoals,
         payWall,
         showDetailsOnMobile
     };

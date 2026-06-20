@@ -50,7 +50,7 @@ export default function BrandDetailsBottomSheet({
 }: Props) {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => useStyles(colors), [colors]);
+    const styles = useStyles(colors);
 
     if (!brand) return null;
 
@@ -180,7 +180,7 @@ export default function BrandDetailsBottomSheet({
                                                 onPress={() => {
                                                     console.log("[BrandDetailsBottomSheet] Opening influencer:", inf.id);
                                                     router.push({
-                                                        pathname: "/(main)/(drawer)/(tabs)/discover",
+                                                        pathname: "/discover",
                                                         params: { influencerId: inf.id }
                                                     });
                                                 }}

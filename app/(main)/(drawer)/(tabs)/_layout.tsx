@@ -2,88 +2,27 @@ import { Tabs } from "expo-router";
 import React from "react";
 
 import ProfileIcon from "@/components/explore-influencers/profile-icon";
-import NotificationIcon from "@/components/notifications/notification-icon";
-import { View } from "@/components/theme/Themed";
 import { useClientOnlyValue } from "@/components/useClientOnlyValue";
-import { useChatContext } from "@/contexts";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
-import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import {
-    faComment,
-    faGem,
-    faHeart,
-    faStar
-} from "@fortawesome/free-regular-svg-icons";
-import {
-    faComment as faCommentSolid,
-    faGem as faGemSolid,
-    faHeart as faHeartSolid,
-    faStar as faStarSolid
+    faCalendarDays,
+    faFileLines,
+    faInbox,
+    faPenRuler,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { StyleSheet } from "react-native";
-import { Badge } from "react-native-paper";
-
-const useStyles = (theme: ReturnType<typeof useTheme>, xl: boolean) =>
-    StyleSheet.create({
-        headerRightRowSimple: {
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-        },
-        badge: {
-            backgroundColor: Colors(theme).red,
-            zIndex: 1,
-            position: "absolute",
-            top: 0,
-            right: 20,
-        },
-    });
 
 const TabLayout = () => {
     const { xl } = useBreakpoints();
     const theme = useTheme();
-    const styles = React.useMemo(() => useStyles(theme, xl), [theme, xl]);
-    const { unreadCount } = useChatContext();
 
-    const campaignsTabButton = (color: string, focused: boolean) =>
-        !xl ? (
-            <CoachmarkAnchor
-                id="guide-tour-campaigns-mobile"
-                shape="pill"
-                style={{ flex: 1 }}
-            >
-                <FontAwesomeIcon
-                    color={color}
-                    icon={focused ? faStarSolid : faStar}
-                    size={22}
-                />
-            </CoachmarkAnchor>
-        ) : (
-            <FontAwesomeIcon
-                color={color}
-                icon={focused ? faStarSolid : faStar}
-                size={22}
-            />
-        );
-
-    const menuTabButton = (color: string, focused: boolean) =>
-        !xl ? (
-            <CoachmarkAnchor
-                id="guide-tour-menu-mobile"
-                shape="pill"
-                style={{ flex: 1 }}
-            >
-                <ProfileIcon />
-            </CoachmarkAnchor>
-        ) : (
-            <ProfileIcon />
-        );
+    const menuTabButton = () => <ProfileIcon />;
 
     return (
         <Tabs
+            backBehavior="history"
             screenOptions={{
                 tabBarActiveTintColor: Colors(theme).primary,
                 tabBarInactiveTintColor: Colors(theme).text,
@@ -119,81 +58,112 @@ const TabLayout = () => {
                 },
             }}
         >
+            {/* Tab 1: Content Strategy (index) */}
             <Tabs.Screen
-                name="explore-influencers"
+                name="(content)/content-strategies/index"
                 options={{
-                    title: xl ? "Influencer Spotlights" : "Spotlights",
+                    title: "Strategy",
                     headerShown: false,
                     tabBarIcon: ({ color, focused }) => (
                         <FontAwesomeIcon
                             color={color}
-                            icon={focused ? faHeartSolid : faHeart}
+                            icon={faPenRuler}
                             size={22}
                         />
-                    ),
-                }}
-            />
-            <Tabs.Screen
-                name="messages"
-                options={{
-                    tabBarIcon: ({ color, focused }) => (
-                        <>
-                            <FontAwesomeIcon
-                                color={color}
-                                icon={focused ? faCommentSolid : faComment}
-                                size={22}
-                            />
-                            {(unreadCount > 0) && (
-                                <Badge
-                                    visible={true}
-                                    size={16}
-                                    selectionColor={Colors(theme).red}
-                                    style={styles.badge}
-                                >
-                                    {unreadCount}
-                                </Badge>
-                            )}
-                        </>
-                    ),
-                    title: "Messages",
-                    headerTitleAlign: "left",
-                    headerRight: () => (
-                        <View style={styles.headerRightRowSimple}>
-                            <NotificationIcon />
-                        </View>
                     ),
                 }}
             />
 
+            {/* Hidden: content-strategies detail route */}
             <Tabs.Screen
-                name="discover"
+                name="(content)/content-strategies/[strategyId]"
                 options={{
-                    title: xl ? "Discover Influencers" : "Discover",
+                    tabBarItemStyle: { display: "none" },
+                    headerShown: false,
+                }}
+                getId={({ params }) => params?.strategyId as string}
+            />
+
+            {/* Tab 2: Content Calendar */}
+            <Tabs.Screen
+                name="(content)/content-calendar"
+                options={{
+                    title: "Calendar",
                     headerShown: false,
                     tabBarIcon: ({ color, focused }) => (
                         <FontAwesomeIcon
                             color={color}
-                            icon={focused ? faGemSolid : faGem}
+                            icon={faCalendarDays}
                             size={22}
                         />
                     ),
                 }}
             />
+
+            {/* Tab 3 (center): Content — the contents list. */}
             <Tabs.Screen
-                name="collaborations"
+                name="(content)/contents/index"
                 options={{
-                    title: "Campaigns",
+                    title: "Content",
                     headerShown: false,
-                    tabBarIcon: ({ color, focused }) => campaignsTabButton(color, focused),
+                    tabBarIcon: ({ color, focused }) => (
+                        <FontAwesomeIcon
+                            color={color}
+                            icon={faFileLines}
+                            size={22}
+                        />
+                    ),
                 }}
             />
+
+            {/* Tab 4: Inbox — unified messages & comments */}
+            <Tabs.Screen
+                name="inbox"
+                options={{
+                    title: "Inbox",
+                    headerShown: false,
+                    tabBarIcon: ({ color, focused }) => (
+                        <FontAwesomeIcon
+                            color={color}
+                            icon={faInbox}
+                            size={22}
+                        />
+                    ),
+                }}
+            />
+
+            {/* Tab 5: Brand Menu */}
             <Tabs.Screen
                 name="menu"
                 options={{
                     title: "My Brand",
                     headerShown: false,
-                    tabBarIcon: ({ color, focused }) => menuTabButton(color, focused),
+                    tabBarIcon: () => menuTabButton(),
                 }}
+            />
+
+            {/* Hidden: content detail (not in tab bar) */}
+            <Tabs.Screen
+                name="(content)/contents/[contentId]"
+                options={{
+                    tabBarItemStyle: { display: "none" },
+                    headerShown: false,
+                }}
+                getId={({ params }) => params?.contentId as string}
+            />
+
+            {/* Hidden: gallery-only content library pages (triple-dot menu) */}
+            <Tabs.Screen
+                name="(content)/contents/scheduled"
+                options={{ tabBarItemStyle: { display: "none" }, headerShown: false }}
+            />
+            <Tabs.Screen
+                name="(content)/contents/posted"
+                options={{ tabBarItemStyle: { display: "none" }, headerShown: false }}
+            />
+            <Tabs.Screen
+                name="(content)/contents/archived"
+                options={{ tabBarItemStyle: { display: "none" }, headerShown: false }}
             />
         </Tabs>
     );

@@ -12,9 +12,7 @@ import {
 import { cleanFilters, hasMeaningfulFilters } from "@/components/discover/utils/filter-utils";
 import {
     GUIDE_TOUR_MOBILE,
-    GUIDE_TOUR_MOBILE_SKIP_FIRST,
     GUIDE_TOUR_WEB,
-    GUIDE_TOUR_WEB_SKIP_FIRST,
 } from "@/components/guide-tour/guide-tour-config";
 import { View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts";
@@ -31,10 +29,7 @@ import React, { useEffect, useRef, useState } from "react";
 const DiscoverComponent = ({
     showRightPanel = true,
     showTopPanel = true,
-    advanceFilter = false,
-    statusFilter = false,
     isStatusCard = false,
-    onStatusChange,
     defaultAdvanceFilters,
     /**
      * If false -> ignore the brand-saved persisted filters and only honour defaultAdvanceFilters.
@@ -48,10 +43,7 @@ const DiscoverComponent = ({
 }: {
     showRightPanel?: boolean;
     showTopPanel?: boolean;
-    advanceFilter?: boolean;
-    statusFilter?: boolean;
     isStatusCard?: boolean;
-    onStatusChange?: (status: string) => void;
     defaultAdvanceFilters?: IAdvanceFilters;
     useStoredFilters?: boolean;
     initialInfluencerId?: string;
@@ -59,9 +51,10 @@ const DiscoverComponent = ({
 }) => {
     const { manager } = useAuthContext();
     const { selectedBrand, updateBrand } = useBrandContext();
-    const { start: startCoachmark, isActive } = useCoachmark();
+    const { start: startCoachmark } = useCoachmark();
     const hasStartedTourRef = useRef(false);
     const [firstInfluencerCardReady, setFirstInfluencerCardReady] = useState(false);
+    const [pendingTourStart, setPendingTourStart] = useState(false);
     const [rightPanel, setRightPanel] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
     const [filterOverlayVisible, setFilterOverlayVisible] = useState(false);
@@ -169,92 +162,36 @@ const DiscoverComponent = ({
 
         setShowSurvey(false);
         if (skipGuideTour) return;
-        if (guideTourShownKey) {
-            // Mark as shown immediately so refresh/dismiss doesn't re-trigger it.
-            await PersistentStorage.set(guideTourShownKey, "true");
-        }
-        hasStartedTourRef.current = true;
-        startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
+        // Defer the coach-mark tour until the first influencer card has actually
+        // mounted — the opening step anchors to that card, so starting now (while
+        // Discover is still loading results) would highlight nothing. The effect
+        // below fires the tour once the card is ready.
+        setPendingTourStart(true);
     };
 
+    // Start the post-survey coach-mark tour only after the first influencer card
+    // has loaded, so the opening step has a live anchor to point at.
     useEffect(() => {
         if (
-            skipGuideTour ||
-            !surveyCheckDone ||
-            showSurvey ||
-            !manager ||
-            !selectedBrand?.id ||
-            isActive ||
+            !pendingTourStart ||
+            !firstInfluencerCardReady ||
             hasStartedTourRef.current
         ) {
             return;
         }
-        let cancelled = false;
-
-        const shouldSkipBecauseShown = async () => {
-            if (!guideTourShownKey) return false;
-            try {
-                const shown = await PersistentStorage.get(guideTourShownKey);
-                if (shown === "true") {
-                    hasStartedTourRef.current = true;
-                    return true;
-                }
-            } catch {
-                // If storage fails, fall back to showing once per session.
-            }
-            return false;
-        };
-
-        const markShown = async () => {
-            if (!guideTourShownKey) return;
-            try {
-                await PersistentStorage.set(guideTourShownKey, "true");
-            } catch {
-                // Ignore storage errors; showOnce-per-session still prevents loops.
-            }
-        };
-
-        (async () => {
-            if (await shouldSkipBecauseShown()) return;
-            if (cancelled) return;
-
-            if (firstInfluencerCardReady) {
-                await markShown();
-                if (cancelled) return;
-                hasStartedTourRef.current = true;
-                startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
-                return;
-            }
-
-            // No card yet (e.g. empty list): start tour without first step after a short delay
-            const t = setTimeout(async () => {
-                if (cancelled || hasStartedTourRef.current) return;
-                if (await shouldSkipBecauseShown()) return;
-                await markShown();
-                if (cancelled || hasStartedTourRef.current) return;
-                hasStartedTourRef.current = true;
-                startCoachmark(
-                    xl ? GUIDE_TOUR_WEB_SKIP_FIRST : GUIDE_TOUR_MOBILE_SKIP_FIRST
-                );
-            }, 1000);
-
-            return () => clearTimeout(t);
-        })();
-
-        return () => {
-            cancelled = true;
-        };
+        hasStartedTourRef.current = true;
+        setPendingTourStart(false);
+        if (guideTourShownKey) {
+            // Mark as shown so a refresh/dismiss doesn't re-trigger it.
+            PersistentStorage.set(guideTourShownKey, "true").catch(() => {});
+        }
+        startCoachmark(xl ? GUIDE_TOUR_WEB : GUIDE_TOUR_MOBILE);
     }, [
-        skipGuideTour,
-        surveyCheckDone,
-        showSurvey,
-        manager,
-        selectedBrand?.id,
-        xl,
-        isActive,
+        pendingTourStart,
         firstInfluencerCardReady,
-        startCoachmark,
         guideTourShownKey,
+        xl,
+        startCoachmark,
     ]);
 
     if (!surveyCheckDone)
@@ -312,9 +249,6 @@ const DiscoverComponent = ({
                     {showTopPanel && <DiscoverScreenHeader />}
                     <View style={{ width: "100%", flexDirection: "row", flex: 1, minHeight: 0 }}>
                         <DiscoverInfluencer
-                            advanceFilter={advanceFilter}
-                            statusFilter={statusFilter}
-                            onStatusChange={onStatusChange}
                             isStatusCard={isStatusCard}
                             defaultAdvanceFilters={filtersToUse}
                             initialInfluencerId={initialInfluencerId}

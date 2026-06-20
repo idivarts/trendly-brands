@@ -3,8 +3,6 @@ import Colors from "@/shared-uis/constants/Colors";
 import { useTheme, type Theme } from "@react-navigation/native";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { Console } from "@/shared-libs/utils/console";
-import { AuthApp } from "@/shared-libs/utils/firebase/auth";
-import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import React, { useMemo } from "react";
 import {
@@ -17,6 +15,8 @@ import {
 import { Modal, Portal } from "react-native-paper";
 import Button from "../button";
 import TextInput from "../text-input";
+import AccessControls from "@/components/access/AccessControls";
+import { inviteMember, listTeams, Team } from "@/components/access/api";
 
 interface MembersModalProps {
     visible: boolean;
@@ -35,14 +35,26 @@ const MembersModal: React.FC<MembersModalProps> = ({
     const colors = Colors(theme);
     const layoutStyles = React.useMemo(() => StyleSheet.create({
         modalRoot: { justifyContent: "center", alignItems: "center" },
-        scroll: { borderRadius: 10, backgroundColor: colors.background, gap: 12 },
+        scroll: { borderRadius: 10, backgroundColor: colors.background, gap: 12, maxHeight: 560 },
         scrollContent: { paddingBottom: 16 },
     }), [colors]);
 
     const [email, setEmail] = React.useState("");
     const [name, setName] = React.useState("");
     const [loading, setLoading] = React.useState(false);
+    const [teams, setTeams] = React.useState<Team[]>([]);
+    const [selectedTeamId, setSelectedTeamId] = React.useState("");
     const { selectedBrand } = useBrandContext();
+
+    React.useEffect(() => {
+        if (!visible || !selectedBrand) return;
+        listTeams(selectedBrand.id)
+            .then((t) => {
+                setTeams(t);
+                setSelectedTeamId(t.find((x) => x.isDefault)?.id ?? t[0]?.id ?? "");
+            })
+            .catch(() => setTeams([]));
+    }, [visible, selectedBrand]);
 
     const addMember = async () => {
         if (!selectedBrand) return;
@@ -60,19 +72,13 @@ const MembersModal: React.FC<MembersModalProps> = ({
             Toaster.error("Name must be at least 3 characters long");
             return;
         }
-        const user = await AuthApp.currentUser?.getIdToken();
         setLoading(true);
 
-        await HttpWrapper.fetch("/api/v2/brands/members", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-                brandId: selectedBrand.id,
-                email,
-                name
-            })
-        }).then(async (res) => {
-            const data = await res.json()
+        await inviteMember(selectedBrand.id, {
+            email,
+            name,
+            teamId: selectedTeamId,
+        }).then(() => {
             Toaster.success("User Invited Successfully");
             refresh();
         }).catch((e) => {
@@ -82,6 +88,7 @@ const MembersModal: React.FC<MembersModalProps> = ({
             handleModalClose();
             setEmail("");
             setName("");
+            setSelectedTeamId(teams.find((x) => x.isDefault)?.id ?? "");
             setLoading(false);
         });
     };
@@ -121,6 +128,13 @@ const MembersModal: React.FC<MembersModalProps> = ({
                                     value={name}
                                     onChangeText={(value) => setName(value)}
                                     style={styles.input}
+                                />
+
+                                <AccessControls
+                                    theme={theme}
+                                    teams={teams}
+                                    selectedTeamId={selectedTeamId}
+                                    onTeamChange={setSelectedTeamId}
                                 />
 
                                 <Button
@@ -173,7 +187,8 @@ function useMembersStyles(theme: Theme) {
             gap: 16,
             borderRadius: 10,
             backgroundColor: Colors(theme).background,
-            width: 300,
+            width: 360,
+            maxWidth: "92%",
         },
         modalInputContainer: {
             marginBottom: 10,
@@ -194,6 +209,7 @@ function useMembersStyles(theme: Theme) {
         },
         addButton: {
             alignItems: "center",
+            marginTop: 16,
         },
         noDataContainer: {
             flex: 1,

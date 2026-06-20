@@ -36,7 +36,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) =>
 interface InfluencerInterface { id: string, images: { imageUrl: string, id: string }[], totalImages: number, user?: IUsers }
 const InfluencerList = () => {
     const theme = useTheme();
-    const styles = useMemo(() => useStyles(theme), [theme]);
+    const styles = useStyles(theme);
 
     const [influencerList, setInfluencerList] = useState<InfluencerInterface[]>([])
     const [loading, setLoading] = useState(true)

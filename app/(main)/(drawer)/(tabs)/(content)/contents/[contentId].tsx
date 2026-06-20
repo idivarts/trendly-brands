@@ -1,0 +1,1756 @@
+import { CONTENT_TYPE_LABELS, ContentType } from "@/components/content-calendar/types";
+import ContentCommentsPanel from "@/components/contents/ContentCommentsPanel";
+import ContentActionsMenu from "@/components/contents/detail/ContentActionsMenu";
+import ContentInfoModal from "@/components/contents/detail/ContentInfoModal";
+import { MEDIA_SPEC } from "@/components/contents/detail/media-spec";
+import MediaStage from "@/components/contents/detail/MediaStage";
+import NoSocialsModal from "@/components/contents/detail/NoSocialsModal";
+import PostingSummary from "@/components/contents/detail/PostingSummary";
+import PreviewPanel from "@/components/contents/detail/PreviewPanel";
+import PublishModal from "@/components/contents/detail/PublishModal";
+import ScriptEditor from "@/components/contents/detail/ScriptEditor";
+import UnsavedChangesModal from "@/components/contents/detail/UnsavedChangesModal";
+import { MOCK_CONTENT_ITEMS } from "@/components/contents/mock-data";
+import PostPerformance from "@/components/contents/PostPerformance";
+import {
+    CONTENT_STATUS_LABELS,
+    ContentStatus,
+    ScheduleMode,
+    SocialDestination,
+    contentStatusColors,
+} from "@/components/contents/types";
+import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
+import AIGeneratingHint from "@/components/shared/AIGeneratingHint";
+import { PanelComment } from "@/components/shared/CommentsPanel";
+import FloatingPromptInput from "@/components/shared/FloatingPromptInput";
+import RightPanelFab from "@/components/shared/RightPanelFab";
+import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
+import ShareModal from "@/components/sharing/ShareModal";
+import { View } from "@/components/theme/Themed";
+import PageHeader from "@/components/ui/page-header";
+import { SOCIAL_PLATFORM_MAP } from "@/constants/Socials";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useBrandSocialContext } from "@/contexts/brand-social-context.provider";
+import { useBreakpoints } from "@/hooks";
+import { LiveContent } from "@/hooks/use-ai-chat";
+import { CaptionVariant, HashtagGroup, useAIGenerate } from "@/hooks/use-ai-generate";
+import { useContents } from "@/hooks/use-contents";
+import AppLayout from "@/layouts/app-layout";
+import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
+import { isFormatPlatformCompatible } from "@/shared-libs/firestore/trendly-pro/constants/content-format";
+import { ALL_PLATFORMS } from "@/shared-libs/firestore/trendly-pro/constants/platform";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
+import ReadMore from "@/shared-uis/components/ReadMore";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
+import Colors from "@/shared-uis/constants/Colors";
+import {
+    faCalendarXmark,
+    faCheck,
+    faCommentDots,
+    faEye,
+    faHandshake,
+    faLock,
+    faMagicWandSparkles,
+    faPaperPlane,
+    faRobot,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { useTheme } from "@react-navigation/native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+} from "react-native";
+
+// ─── Main Screen ─────────────────────────────────────────────────────────────
+
+// Convert a *local-midnight* Date (what the date picker produces) into the
+// epoch for that same calendar day at UTC midnight — the convention every
+// content writer uses for `postingTimeStamp` (see toIContent / calendar drag).
+// Using date.toISOString() here would be wrong: in a positive-offset timezone
+// (e.g. IST) local midnight is the *previous* day in UTC, shifting the stored
+// day back by one.
+const localDateToUtcMidnight = (d: Date): number =>
+    Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+
+// Order-sensitive equality for two attachment lists (by media URL), so the AI
+// image reconciliation can no-op when the server state already matches local.
+const sameAttachments = (a: Attachment[], b: Attachment[]): boolean => {
+    if (a.length !== b.length) return false;
+    const key = (x: Attachment) => x.imageUrl ?? x.playUrl ?? x.appleUrl ?? "";
+    for (let i = 0; i < a.length; i++) {
+        if (key(a[i]) !== key(b[i])) return false;
+    }
+    return true;
+};
+
+const CreateContentScreen = () => {
+    const theme = useTheme();
+    const colors = Colors(theme);
+    const { xl } = useBreakpoints();
+    const { contentId, title: paramTitle, idea: paramIdea, type: paramType, date: paramDate } =
+        useLocalSearchParams<{
+            contentId: string;
+            title?: string;
+            idea?: string;
+            type?: string;
+            date?: string;
+        }>();
+    const styles = useStyles(colors, xl);
+
+    const router = useRouter();
+    const { items, updateContent, deleteContent } = useContents();
+    const { socialAccounts } = useBrandSocialContext();
+    const { selectedBrand, hasCapability } = useBrandContext();
+    const { openModal } = useConfirmationModel();
+
+    // Resolve the live item from the real contents list first; fall back to
+    // mock data so demo/test contentIds still work in dev.
+    const seedItem = useMemo(
+        () =>
+            items.find((i) => i.id === contentId) ??
+            MOCK_CONTENT_ITEMS.find((i) => i.id === contentId) ??
+            null,
+        [items, contentId]
+    );
+
+    const [title, setTitle] = useState(seedItem?.title ?? paramTitle ?? "");
+    const [idea, setIdea] = useState(seedItem?.idea ?? paramIdea ?? "");
+    const [date, setDate] = useState<Date>(
+        seedItem?.date
+            ? new Date(seedItem.date + "T00:00:00")
+            : paramDate
+                ? new Date(paramDate + "T00:00:00")
+                : new Date()
+    );
+    const [status, setStatus] = useState<ContentStatus>(seedItem?.status ?? "draft");
+    const [caption, setCaption] = useState(seedItem?.caption ?? "");
+    const [hashtags, setHashtags] = useState(seedItem?.hashtags ?? "");
+    const [script, setScript] = useState(seedItem?.script ?? "");
+    const [imagePrompt, setImagePrompt] = useState(seedItem?.imagePrompt ?? "");
+    const [attachments, setAttachments] = useState<Attachment[]>(seedItem?.attachments ?? []);
+    const [destinations, setDestinations] = useState<SocialDestination[]>(seedItem?.destinations ?? []);
+    const [scheduleMode, setScheduleMode] = useState<ScheduleMode>(seedItem?.scheduleMode ?? "scheduled");
+    const [publishing, setPublishing] = useState(false);
+    const [unscheduling, setUnscheduling] = useState(false);
+    const [scriptAiPrompt, setScriptAiPrompt] = useState("");
+    const [timeOfPosting, setTimeOfPosting] = useState(seedItem?.timeOfPosting ?? "");
+    // The platforms this content is planned for (publishing intent). Editable
+    // from the Content details modal; hydrated from the live item below.
+    const [targetPlatforms, setTargetPlatforms] = useState(seedItem?.platforms ?? []);
+    const [showInfoModal, setShowInfoModal] = useState(false);
+    const [showPublishModal, setShowPublishModal] = useState(false);
+    const [showNoSocialsModal, setShowNoSocialsModal] = useState(false);
+    const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+    const [showShareModal, setShowShareModal] = useState(false);
+
+    // Firestore items arrive after first render. Hydrate local form state the
+    // first time the real item shows up for this contentId. Tracked per-id so
+    // navigating to a different content reseeds the form, but subsequent edits
+    // on the same id aren't clobbered by snapshot replays.
+    const hydratedForRef = useRef<string | null>(null);
+    useEffect(() => {
+        if (!seedItem) return;
+        if (hydratedForRef.current === seedItem.id) return;
+        hydratedForRef.current = seedItem.id;
+
+        setTitle(seedItem.title ?? "");
+        setIdea(seedItem.idea ?? "");
+        setStatus(seedItem.status ?? "draft");
+        setCaption(seedItem.caption ?? "");
+        setHashtags(seedItem.hashtags ?? "");
+        setScript(seedItem.script ?? "");
+        setImagePrompt(seedItem.imagePrompt ?? "");
+        setAttachments(seedItem.attachments ?? []);
+        setDestinations(seedItem.destinations ?? []);
+        setScheduleMode(seedItem.scheduleMode ?? "scheduled");
+        setTimeOfPosting(seedItem.timeOfPosting ?? "");
+        setTargetPlatforms(seedItem.platforms ?? []);
+        if (seedItem.date) {
+            setDate(new Date(seedItem.date + "T00:00:00"));
+        }
+        // Freshly hydrated state is "clean" — skip the next dirty-watch tick.
+        skipDirtyRef.current = true;
+        setDirty(false);
+    }, [seedItem]);
+
+    // ── Unsaved-changes (dirty) tracking ─────────────────────────────────────
+    const [dirty, setDirty] = useState(false);
+    const skipDirtyRef = useRef(true);
+    useEffect(() => {
+        // Scheduled / posted content is locked and cannot be edited, so it can
+        // never legitimately be dirty — never flag it (no Unsaved-Changes prompt
+        // on back). Also clear any stale dirty flag the moment it locks.
+        if (status === "scheduled" || status === "posted") {
+            skipDirtyRef.current = false;
+            setDirty(false);
+            return;
+        }
+        if (skipDirtyRef.current) {
+            skipDirtyRef.current = false;
+            return;
+        }
+        setDirty(true);
+    }, [title, idea, caption, hashtags, script, imagePrompt, status, timeOfPosting, attachments, destinations, scheduleMode, date, targetPlatforms]);
+
+    // ── Right side panel (comments + AI chat) ────────────────────────────────
+    const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("none");
+    const [chatFocusItems, setChatFocusItems] = useState<FocusItem[]>([]);
+    // Measured width of the split row — feeds the RightSidePanel resize bounds.
+    const [splitWidth, setSplitWidth] = useState(0);
+
+    const handleSendToChat = useCallback((text: string) => {
+        const label = text.length > 120 ? text.slice(0, 120) + "…" : text;
+        setChatFocusItems((prev) => [...prev, { id: `focus-${Date.now()}`, label }]);
+        setRightPanelMode("chat");
+    }, []);
+
+    // "Send to AI" on a comment: focus its text in the chat (opens the panel).
+    const handleCommentToChat = useCallback(
+        (comment: PanelComment) => handleSendToChat(comment.text),
+        [handleSendToChat]
+    );
+
+    // `magicTarget` drives ONLY the prompt modal (which field's prompt is open).
+    // The in-flight state is tracked per-field below so the modal can close the
+    // instant the prompt is submitted while generation continues in the
+    // background — caption and hashtags can even generate concurrently.
+    const [magicTarget, setMagicTarget] = useState<"caption" | "hashtags" | null>(null);
+    const [captionGenerating, setCaptionGenerating] = useState(false);
+    const [hashtagGenerating, setHashtagGenerating] = useState(false);
+    const [isGeneratingScript, setIsGeneratingScript] = useState(false);
+    const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+
+    const contentType = (seedItem?.type ?? paramType ?? "post") as ContentType;
+    const isReel = contentType === "reel";
+    const isTextPost = contentType === "text";
+    const mediaSpec = MEDIA_SPEC[contentType];
+
+    // Platforms a destination may use: the content's targeted platforms (or all,
+    // for legacy docs with none) that also support the chosen format. This is the
+    // single source for both the publish picker and destination pruning, and
+    // replaces the old Instagram-only text-post special-case with the shared
+    // platform↔format matrix.
+    const allowedPlatforms = useMemo(() => {
+        const base = targetPlatforms.length ? targetPlatforms : ALL_PLATFORMS;
+        return new Set(base.filter((p) => isFormatPlatformCompatible(contentType, p)));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [targetPlatforms.join(","), contentType]);
+
+    // Only offer connected accounts whose platform the content is targeting.
+    const publishableAccounts = useMemo(
+        () => socialAccounts.filter((a) => allowedPlatforms.has(a.platform)),
+        [socialAccounts, allowedPlatforms]
+    );
+
+    // Drop any destination whose platform is no longer allowed (e.g. the format
+    // changed, or the platform isn't targeted). Platform-level so it doesn't
+    // wipe destinations while connected socials are still loading.
+    useEffect(() => {
+        setDestinations((prev) => {
+            const next = prev.filter((d) => allowedPlatforms.has(d.platform));
+            return next.length === prev.length ? prev : next;
+        });
+    }, [allowedPlatforms]);
+
+    const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+    const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Real AI generation hooks — backed by /api/ai + OpenRouter.
+    const {
+        captions: aiCaptions,
+        captionLoading,
+        generateCaption,
+        hashtags: aiHashtags,
+        hashtagLoading,
+        generateHashtags,
+        script: aiScript,
+        scriptStreaming,
+        generateScript,
+        images: aiImages,
+        imagesStreaming,
+        generateImage,
+    } = useAIGenerate();
+
+    // Scheduled / posted content is locked: every edit + Save is disabled.
+    // A "scheduled" post can be unlocked by unscheduling it (reverts to
+    // "approved"); a "posted" one is locked permanently.
+    const locked = status === "scheduled" || status === "posted";
+
+    // Returns true when the content was persisted, false otherwise (no-op or
+    // failure) — the unsaved-changes leave flow relies on this to decide whether
+    // it's safe to navigate away.
+    const handleSave = useCallback(async (): Promise<boolean> => {
+        if (!contentId || saveState === "saving" || locked) return false;
+        setSaveState("saving");
+        try {
+            await updateContent(contentId, {
+                title,
+                description: idea,
+                status: status as any,
+                caption,
+                hashtags,
+                timeOfPosting,
+                script,
+                imagePrompt,
+                attachments,
+                platforms: targetPlatforms,
+                postingTimeStamp: date ? localDateToUtcMidnight(date) : undefined,
+            });
+        } catch (e) {
+            console.warn("Save error:", e);
+            setSaveState("idle");
+            return false;
+        }
+        setDirty(false);
+        setSaveState("saved");
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = setTimeout(() => setSaveState("idle"), 2000);
+        return true;
+    }, [contentId, saveState, locked, updateContent, title, idea, status, caption, hashtags, timeOfPosting, script, imagePrompt, attachments, date, targetPlatforms]);
+
+    // Publish now / schedule. Persists the latest edits + destinations to
+    // Firestore so the backend reads fresh data, then calls the publish /
+    // schedule endpoint (functions/trendly_v2 → internal/trendlyapis/publishing).
+    const handlePublish = useCallback(async (mode: ScheduleMode = scheduleMode) => {
+        if (!contentId || publishing || destinations.length === 0 || locked) return;
+        const brandId = selectedBrand?.id;
+        if (!brandId) return;
+        // Persist the chosen mode so the saved content reflects how it went out.
+        if (mode !== scheduleMode) setScheduleMode(mode);
+        setPublishing(true);
+
+        // Derive the precise publish epoch: "now" → current time; otherwise the
+        // selected date combined with the chosen HH:MM (defaulting to 09:00).
+        let scheduledAt = Date.now();
+        if (mode === "scheduled") {
+            const d = new Date(date);
+            if (/^\d{1,2}:\d{2}$/.test(timeOfPosting)) {
+                const [hh, mm] = timeOfPosting.split(":").map(Number);
+                d.setHours(hh, mm, 0, 0);
+            } else {
+                d.setHours(9, 0, 0, 0);
+            }
+            scheduledAt = d.getTime();
+        }
+
+        try {
+            // 1. Persist current state so the backend publishes the latest content.
+            await updateContent(contentId, {
+                title,
+                description: idea,
+                caption,
+                hashtags,
+                script,
+                imagePrompt,
+                attachments,
+                timeOfPosting,
+                destinations,
+                scheduleMode: mode,
+                scheduledAt,
+                postingTimeStamp: localDateToUtcMidnight(date),
+            });
+
+            // 2. Trigger publish-now or schedule on the backend.
+            // Publishing locally flips `status`, a watched dependency of the
+            // dirty-tracking effect. Suppress that next run so the effect does
+            // not re-flag the content as dirty after we've just saved + published
+            // (mirrors handleUnschedule). Set BEFORE the setStatus calls so the
+            // single batched re-render is the one that gets skipped.
+            skipDirtyRef.current = true;
+            if (mode === "now") {
+                const res = await HttpWrapper.fetch(
+                    `/api/v2/brands/${brandId}/contents/${contentId}/publish`,
+                    { method: "POST" }
+                );
+                if (!res.ok) throw new Error(`Publish failed (${res.status})`);
+                setStatus("posted");
+            } else {
+                const res = await HttpWrapper.fetch(
+                    `/api/v2/brands/${brandId}/contents/${contentId}/schedule`,
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ scheduledAt }),
+                    }
+                );
+                if (!res.ok) throw new Error(`Schedule failed (${res.status})`);
+                setStatus("scheduled");
+            }
+            setDirty(false);
+            setShowPublishModal(false);
+        } catch (e) {
+            // Surface via console for now; a toast is added in the Phase 6 polish.
+            console.warn("Publish/schedule error:", e);
+        } finally {
+            setPublishing(false);
+        }
+    }, [contentId, publishing, locked, destinations, scheduleMode, date, timeOfPosting, updateContent, selectedBrand?.id, title, idea, caption, hashtags, script, imagePrompt, attachments]);
+
+    // Guard the publish entry point: if the brand has no connected social
+    // accounts, surface a blocking modal that routes to Connected Accounts
+    // instead of opening the publish/schedule sheet.
+    const handleOpenPublish = useCallback(() => {
+        if (publishableAccounts.length === 0) {
+            setShowNoSocialsModal(true);
+            return;
+        }
+        setShowPublishModal(true);
+    }, [publishableAccounts.length]);
+
+    // Unschedule a scheduled post: cancels the backend Step Functions execution
+    // and reverts status to "approved", which unlocks the editor again. Returns
+    // true on success so callers (e.g. delete) can sequence off it.
+    const handleUnschedule = useCallback(async (): Promise<boolean> => {
+        if (!contentId || unscheduling) return false;
+        const brandId = selectedBrand?.id;
+        if (!brandId) return false;
+        setUnscheduling(true);
+        try {
+            const res = await HttpWrapper.fetch(
+                `/api/v2/brands/${brandId}/contents/${contentId}/schedule`,
+                { method: "DELETE" }
+            );
+            if (!res.ok) throw new Error(`Unschedule failed (${res.status})`);
+            setStatus("approved");
+            skipDirtyRef.current = true;
+            setDirty(false);
+            return true;
+        } catch (e) {
+            console.warn("Unschedule error:", e);
+            return false;
+        } finally {
+            setUnscheduling(false);
+        }
+    }, [contentId, unscheduling, selectedBrand?.id]);
+
+    const handleCreateCollab = useCallback(() => {
+        router.push("/hire-us");
+    }, [router]);
+
+    // Shared success path: drop the doc-gone page back to the contents list,
+    // skipping the unsaved-changes guard (the doc no longer exists).
+    const leaveAfterDelete = useCallback(() => {
+        Toaster.success("Content deleted", `"${title || "Content"}" was removed.`);
+        if (router.canGoBack()) {
+            router.back();
+        } else {
+            router.replace("/contents");
+        }
+    }, [title, router]);
+
+    // Permanently delete this content (frontend Firestore delete, gated by the
+    // `delete_content` capability + a confirmation modal). Locked states are
+    // guarded:
+    //   • posted   → blocked. The live social post isn't ours to remove, and the
+    //                record is kept for analytics history.
+    //   • scheduled → must unschedule first (cancels the backend Step Functions
+    //                 job), otherwise the delete would orphan it. We chain
+    //                 unschedule → delete behind a single confirm.
+    const handleDelete = useCallback(() => {
+        if (!contentId) return;
+
+        if (status === "posted") {
+            openModal({
+                title: "Can't delete a posted item",
+                description:
+                    "This content has already been published to your connected socials. Deleting it here wouldn't remove the live post — and the record is kept so its performance stays in your analytics.",
+                confirmText: "Got it",
+                cancelText: "",
+                confirmAction: () => { },
+            });
+            return;
+        }
+
+        if (status === "scheduled") {
+            openModal({
+                title: "Unschedule & delete?",
+                description: `"${title || "This content"}" is scheduled to publish. To delete it we'll cancel the schedule first, then permanently remove it. This cannot be undone.`,
+                confirmText: "Unschedule & Delete",
+                cancelText: "Cancel",
+                confirmAction: async () => {
+                    const unscheduled = await handleUnschedule();
+                    if (!unscheduled) {
+                        Toaster.error("Couldn't unschedule", "Please try again.");
+                        return;
+                    }
+                    const ok = await deleteContent(contentId);
+                    if (!ok) {
+                        Toaster.error("Couldn't delete", "Unscheduled, but the delete failed. Please try again.");
+                        return;
+                    }
+                    leaveAfterDelete();
+                },
+            });
+            return;
+        }
+
+        openModal({
+            title: "Delete content?",
+            description: `"${title || "This content"}" will be permanently deleted. This is an irreversible action and cannot be undone.`,
+            confirmText: "Delete Content",
+            cancelText: "Cancel",
+            confirmAction: async () => {
+                const ok = await deleteContent(contentId);
+                if (!ok) {
+                    Toaster.error("Couldn't delete", "Please try again.");
+                    return;
+                }
+                leaveAfterDelete();
+            },
+        });
+    }, [contentId, status, title, openModal, deleteContent, handleUnschedule, leaveAfterDelete]);
+
+    // ── Back navigation with an unsaved-changes guard ────────────────────────
+    const doNavigateBack = useCallback(() => {
+        if (router.canGoBack()) {
+            router.back();
+        } else {
+            router.replace("/contents");
+        }
+    }, [router]);
+
+    // Header back press: prompt to save/discard when there are unsaved edits,
+    // otherwise leave straight away.
+    const handleBackPress = useCallback(() => {
+        if (dirty) {
+            setShowLeaveConfirm(true);
+        } else {
+            doNavigateBack();
+        }
+    }, [dirty, doNavigateBack]);
+
+    const handleLeaveSave = useCallback(async () => {
+        const ok = await handleSave();
+        if (!ok) return; // save failed — keep the prompt open so the user can retry or discard
+        setShowLeaveConfirm(false);
+        doNavigateBack();
+    }, [handleSave, doNavigateBack]);
+
+    const handleLeaveDiscard = useCallback(() => {
+        setShowLeaveConfirm(false);
+        doNavigateBack();
+    }, [doNavigateBack]);
+
+    // Snapshots of the last AI result, captured the moment a new request fires.
+    // The apply-effects use these to tell a fresh result apart from a stale one
+    // left over from a previous run (e.g. when a request fails and the hook
+    // never replaces its result array).
+    const captionSnapRef = useRef<CaptionVariant[] | null>(null);
+    const hashtagSnapRef = useRef<HashtagGroup[] | null>(null);
+
+    const handleMagicGenerate = useCallback(
+        (prompt: string, model?: string) => {
+            const target = magicTarget;
+            if (!target) return;
+            // Use the content's primary targeted platform as prompt context.
+            const primaryPlatform = targetPlatforms[0];
+            const platform = primaryPlatform
+                ? SOCIAL_PLATFORM_MAP[primaryPlatform]?.label ?? "Instagram"
+                : "Instagram";
+            // Pass the current (possibly unsaved) editor state so the AI writes
+            // with the context of what's on screen right now, not the last save.
+            const liveContent = {
+                title,
+                description: idea,
+                caption,
+                hashtags,
+                script,
+            };
+            // Flip the per-field flag and fire the request. The modal closes
+            // itself (onClose) — the user is free to keep editing while the
+            // inline hint shows progress and the result lands automatically.
+            if (target === "caption") {
+                captionSnapRef.current = aiCaptions;
+                setCaptionGenerating(true);
+                generateCaption({
+                    topic: prompt,
+                    platform,
+                    format: contentType,
+                    contextId: contentId,
+                    model,
+                    ...liveContent,
+                });
+            } else {
+                hashtagSnapRef.current = aiHashtags;
+                setHashtagGenerating(true);
+                generateHashtags({
+                    topic: prompt,
+                    platform,
+                    format: contentType,
+                    contextId: contentId,
+                    model,
+                    ...liveContent,
+                });
+            }
+        },
+        [magicTarget, contentType, contentId, title, idea, caption, hashtags, script, aiCaptions, aiHashtags, generateCaption, generateHashtags, targetPlatforms]
+    );
+
+    const handleScriptAiEnhance = useCallback((model?: string) => {
+        setScript("");
+        const keyMessage = scriptAiPrompt.trim();
+        if (!keyMessage) return;
+        setIsGeneratingScript(true);
+        generateScript({
+            videoType: isReel ? "Reel" : "Video",
+            topic: title || idea || "Brand content",
+            keyMessage,
+            tone: "friendly",
+            contextId: contentId,
+            model,
+            // Live editor state so the script reflects the current piece.
+            title,
+            format: contentType,
+            description: idea,
+            caption,
+            hashtags,
+        });
+    }, [scriptAiPrompt, isReel, title, idea, contentType, caption, hashtags, contentId, generateScript]);
+
+    // Snapshot the current (possibly unsaved) editor state for the AI chat, so
+    // every chat message reasons about exactly what's on screen now — not the
+    // last-saved Firestore doc. Read lazily by AIChatPanel at send time.
+    const getLiveChatContent = useCallback(
+        (): LiveContent => ({
+            title,
+            description: idea,
+            format: contentType,
+            platforms: targetPlatforms.map((p) => SOCIAL_PLATFORM_MAP[p]?.label ?? p),
+            caption,
+            hashtags,
+            script,
+            attachments: attachments.map((a) => ({
+                type: a.type,
+                imageUrl: a.imageUrl,
+                playUrl: a.playUrl,
+                appleUrl: a.appleUrl,
+            })),
+        }),
+        [title, idea, contentType, targetPlatforms, caption, hashtags, script, attachments]
+    );
+
+    const handleImageGenerate = useCallback((promptArg?: string, focusedSlideIndex?: number, model?: string) => {
+        const p = (promptArg ?? imagePrompt).trim();
+        if (!p) return;
+        setImagePrompt(p);
+        setIsGeneratingImage(true);
+        generateImage({
+            description: p,
+            aspectRatio: MEDIA_SPEC[contentType].aspectRatios[0] ?? "1:1",
+            count: 1,
+            contextId: contentId,
+            multi: MEDIA_SPEC[contentType].multi,
+            // Carousel: which slide to act on. Backend decides edit-vs-add.
+            focusedSlideIndex,
+            model,
+        });
+    }, [imagePrompt, contentType, contentId, generateImage]);
+
+    // React to AI generation results streaming back from the backend.
+
+    // Captions: when the request settles (loading true → false), take the first
+    // variant and apply it, then release the field. The snapshot guard skips a
+    // stale array (e.g. a failed call left the previous result untouched) so we
+    // never overwrite the caption with old data — but we always clear the flag.
+    const prevCaptionLoadingRef = useRef(false);
+    useEffect(() => {
+        const settled = prevCaptionLoadingRef.current && !captionLoading;
+        prevCaptionLoadingRef.current = captionLoading;
+        if (!settled || !captionGenerating) return;
+        if (aiCaptions.length > 0 && aiCaptions !== captionSnapRef.current) {
+            setCaption(aiCaptions[0].text);
+        }
+        setCaptionGenerating(false);
+    }, [captionLoading, captionGenerating, aiCaptions]);
+
+    // Hashtags: flatten all tier groups into a single space-separated #tag string.
+    const prevHashtagLoadingRef = useRef(false);
+    useEffect(() => {
+        const settled = prevHashtagLoadingRef.current && !hashtagLoading;
+        prevHashtagLoadingRef.current = hashtagLoading;
+        if (!settled || !hashtagGenerating) return;
+        if (aiHashtags.length > 0 && aiHashtags !== hashtagSnapRef.current) {
+            const joined = aiHashtags
+                .flatMap((g) => g.tags)
+                .map((t) => `#${t}`)
+                .join(" ");
+            setHashtags(joined);
+        }
+        setHashtagGenerating(false);
+    }, [hashtagLoading, hashtagGenerating, aiHashtags]);
+
+    // Script: stream into the script field. Append on first run; replace the
+    // streamed block on subsequent token updates so the user sees it grow live.
+    const scriptStreamStartRef = useRef<number | null>(null);
+    useEffect(() => {
+        if (!isGeneratingScript) return;
+        if (!aiScript) return;
+        if (scriptStreamStartRef.current === null) {
+            // Mark insertion point right before the streamed content lands.
+            scriptStreamStartRef.current = (script ? script.length + 2 : 0);
+        }
+        const start = scriptStreamStartRef.current;
+        setScript((prev) => {
+            const base = prev.slice(0, start);
+            return (base ? base + (base.endsWith("\n\n") ? "" : "\n\n") : "") + aiScript;
+        });
+        if (!scriptStreaming) {
+            setScriptAiPrompt("");
+            setIsGeneratingScript(false);
+            scriptStreamStartRef.current = null;
+        }
+    }, [aiScript, scriptStreaming, isGeneratingScript]);
+
+    // Image (websocket fast-path): once the stream settles, just release the local
+    // generating flag for snappy feedback. The displayed gallery is reconciled
+    // from the content doc below (the backend persists results there), so we do
+    // NOT mutate attachments here — append/replace-last would be wrong for an
+    // in-place slide edit. Firestore (onSnapshot) is the source of truth.
+    useEffect(() => {
+        if (!isGeneratingImage) return;
+        if (imagesStreaming) return;
+        if (aiImages.length === 0) return;
+        setIsGeneratingImage(false);
+    }, [aiImages, imagesStreaming, isGeneratingImage]);
+
+    // Image (backend-driven reconciliation): the job's status + result live on the
+    // content doc, so a generation survives a websocket drop or a page reload.
+    // On each generation tick (and on done/error) adopt the server's attachments
+    // WHOLESALE — index-correct for generate, enhance-edit-at-index, and
+    // enhance-add alike. Keyed off the job signature so it fires only while a job
+    // progresses, never reverting the user's own later manual edits.
+    const lastGenSyncRef = useRef<string>("");
+    useEffect(() => {
+        const gen = seedItem?.imageGeneration;
+        if (!gen) return;
+        const sig = `${gen.startedAt ?? 0}-${gen.status}-${gen.completedCount ?? 0}`;
+        if (lastGenSyncRef.current === sig) return;
+        lastGenSyncRef.current = sig;
+
+        if (gen.status === "done" || gen.status === "error") {
+            setIsGeneratingImage(false);
+        }
+        const serverAtt = seedItem?.attachments ?? [];
+        setAttachments((local) => {
+            if (sameAttachments(local, serverAtt)) return local;
+            // Backend already persisted these — don't flag the form as dirty.
+            skipDirtyRef.current = true;
+            return serverAtt;
+        });
+    }, [seedItem?.imageGeneration, seedItem?.attachments]);
+
+    // Derived image-generation UI state: show progress while either the local
+    // request or the backend job is running; surface backend errors.
+    const imageGenStatus = seedItem?.imageGeneration?.status;
+    const imageGenerating = isGeneratingImage || imageGenStatus === "generating";
+    const imageGenError =
+        imageGenStatus === "error"
+            ? seedItem?.imageGeneration?.error || "Image generation failed. Please try again."
+            : null;
+
+    const formattedDate = date.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    });
+
+    const statusColorSet = contentStatusColors(status, colors);
+
+    const headerActions = useMemo(
+        () => [
+            // Comments / AI Chat / Preview moved to the mobile RightPanelFab
+            // (bottom-right); desktop keeps them in the RightSidePanel rail.
+
+            // ⋮ Overflow menu — Content details, Share, and Delete. Grouping the
+            // secondary + destructive actions here keeps the header lean (esp.
+            // on !xl, where Publish + Save already fill the row).
+            <ContentActionsMenu
+                key="menu"
+                onDetails={() => setShowInfoModal(true)}
+                onShare={
+                    selectedBrand?.id && contentId && hasCapability("manage_content")
+                        ? () => setShowShareModal(true)
+                        : undefined
+                }
+                onDelete={hasCapability("delete_content") ? handleDelete : undefined}
+            />,
+            // 🚀 Publish / schedule — hidden once locked (scheduled / posted)
+            locked ? null : (
+                <Pressable
+                    key="publish"
+                    style={({ pressed }) => [
+                        xl ? styles.publishHeaderBtn : styles.iconBtn,
+                        pressed && styles.iconBtnPressed,
+                    ]}
+                    onPress={handleOpenPublish}
+                    accessibilityRole="button"
+                    accessibilityLabel="Publish or schedule"
+                >
+                    <FontAwesomeIcon icon={faPaperPlane} size={13} color={colors.primary} />
+                    {xl && <Text style={styles.publishHeaderText}>Publish</Text>}
+                </Pressable>
+            ),
+            // Save — hidden once locked (scheduled / posted)
+            locked ? null : (
+                <Pressable
+                    key="save"
+                    style={({ pressed }) => [
+                        xl ? styles.saveBtn : styles.saveBtnIcon,
+                        !dirty && styles.saveBtnSaved,
+                        pressed && styles.btnPressed,
+                    ]}
+                    onPress={handleSave}
+                    disabled={saveState === "saving" || !dirty}
+                    accessibilityRole="button"
+                    accessibilityLabel={dirty ? "Save (unsaved changes)" : "Saved"}
+                >
+                    {saveState === "saving" ? (
+                        xl ? <Text style={styles.saveBtnText}>Saving…</Text> : <ActivityIndicator size="small" color={colors.onPrimary} />
+                    ) : (
+                        <>
+                            <FontAwesomeIcon icon={faCheck} size={13} color={colors.onPrimary} />
+                            {xl && <Text style={styles.saveBtnText}>{dirty ? "Save" : "Saved"}</Text>}
+                        </>
+                    )}
+                </Pressable>
+            ),
+        ],
+        [styles, colors, handleSave, saveState, xl, dirty, locked, selectedBrand?.id, contentId, hasCapability, handleOpenPublish, handleDelete]
+    );
+
+    return (
+        <AppLayout>
+            <PageHeader
+                title={title || "Create Content"}
+                showBackButton
+                onBackPress={handleBackPress}
+                actionButtons={headerActions}
+                mobileActions="all"
+                customMainContent={
+                    <View style={styles.headerMain}>
+                        <View style={styles.headerTitleRow}>
+                            <Text style={styles.headerTitleText} numberOfLines={1}>
+                                {title || "Create Content"}
+                            </Text>
+                            <Pressable
+                                style={({ pressed }) => [
+                                    styles.statusBadge,
+                                    { backgroundColor: statusColorSet.bg },
+                                    pressed && styles.pressed,
+                                ]}
+                                onPress={() => setShowInfoModal(true)}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Status: ${CONTENT_STATUS_LABELS[status]}. Open content details`}
+                            >
+                                <Text style={[styles.statusBadgeText, { color: statusColorSet.fg }]}>
+                                    {CONTENT_STATUS_LABELS[status]}
+                                </Text>
+                            </Pressable>
+                        </View>
+                        {xl ? (
+                            <View style={styles.headerMetaRow}>
+                                <Text style={styles.headerTypeText}>
+                                    {CONTENT_TYPE_LABELS[contentType]}
+                                </Text>
+                                {targetPlatforms.length > 0 ? (
+                                    <>
+                                        <Text style={styles.headerMetaDot}>·</Text>
+                                        <View style={styles.headerPlatformRow}>
+                                            {targetPlatforms.map((p) => (
+                                                <View key={p} style={styles.headerPlatformChip}>
+                                                    <View
+                                                        style={[
+                                                            styles.headerPlatformDot,
+                                                            {
+                                                                backgroundColor:
+                                                                    colors[SOCIAL_PLATFORM_MAP[p]?.colorKey] ??
+                                                                    colors.textSecondary,
+                                                            },
+                                                        ]}
+                                                    />
+                                                    <Text style={styles.headerPlatformText}>
+                                                        {SOCIAL_PLATFORM_MAP[p]?.label ?? p}
+                                                    </Text>
+                                                </View>
+                                            ))}
+                                        </View>
+                                    </>
+                                ) : null}
+                            </View>
+                        ) : null}
+                    </View>
+                }
+            />
+
+            {/* ── Split layout: form (left) + comments panel (right) ─────── */}
+            <View
+                style={styles.splitContainer}
+                onLayout={(e) => setSplitWidth(e.nativeEvent.layout.width)}
+            >
+                {/* Left: scrollable form */}
+                <KeyboardAvoidingView
+                    style={styles.flex1}
+                    behavior={Platform.OS === "ios" ? "padding" : undefined}
+                >
+                    <ScrollView
+                        contentContainerStyle={styles.scroll}
+                        showsVerticalScrollIndicator={false}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        {/* ── Lock banner: scheduled / posted content is read-only ── */}
+                        {locked ? (
+                            <View style={styles.section}>
+                                <View style={styles.lockBanner}>
+                                    <View style={styles.lockIconWrap}>
+                                        <FontAwesomeIcon icon={faLock} size={14} color={colors.primary} />
+                                    </View>
+                                    <View style={styles.lockBannerBody}>
+                                        <Text style={styles.lockBannerTitle}>
+                                            {status === "posted" ? "Posted — locked" : "Scheduled — locked"}
+                                        </Text>
+                                        <Text style={styles.lockBannerSub}>
+                                            {status === "posted"
+                                                ? "This content has been posted and can no longer be edited."
+                                                : "Editing is paused while this post is scheduled. Unschedule it to make changes."}
+                                        </Text>
+                                    </View>
+                                    {status === "scheduled" ? (
+                                        <Pressable
+                                            style={({ pressed }) => [
+                                                styles.unscheduleBtn,
+                                                pressed && styles.btnPressed,
+                                            ]}
+                                            onPress={handleUnschedule}
+                                            disabled={unscheduling}
+                                            accessibilityRole="button"
+                                            accessibilityLabel="Unschedule post"
+                                        >
+                                            {unscheduling ? (
+                                                <ActivityIndicator size="small" color={colors.primary} />
+                                            ) : (
+                                                <FontAwesomeIcon icon={faCalendarXmark} size={13} color={colors.primary} />
+                                            )}
+                                            <Text style={styles.unscheduleBtnText}>
+                                                {unscheduling ? "Unscheduling…" : "Unschedule"}
+                                            </Text>
+                                        </Pressable>
+                                    ) : null}
+                                </View>
+                            </View>
+                        ) : null}
+
+                        {/* ── Posting summary (only once configured) ──────────── */}
+                        {destinations.length > 0 ? (
+                            <View style={styles.section}>
+                                <PostingSummary
+                                    socialAccounts={publishableAccounts}
+                                    destinations={destinations}
+                                    scheduleMode={scheduleMode}
+                                    formattedDate={formattedDate}
+                                    timeOfPosting={timeOfPosting}
+                                    onEdit={() => setShowPublishModal(true)}
+                                    locked={status === "posted"}
+                                    postedAt={
+                                        status === "posted" ? seedItem?.scheduledAt : undefined
+                                    }
+                                />
+                            </View>
+                        ) : null}
+
+                        {/* ── Post performance (live analytics + comments) ────── */}
+                        {status === "posted" && seedItem ? (
+                            <View style={styles.section}>
+                                <PostPerformance content={seedItem} />
+                            </View>
+                        ) : null}
+
+                        {/* ── Content heading: title + type ────────────────────── */}
+                        <View style={styles.section}>
+                            <View style={styles.contentHeading}>
+                                <Text style={styles.contentTitle} numberOfLines={2}>
+                                    {title || "Untitled content"}
+                                </Text>
+                                <Pressable
+                                    style={({ pressed }) => [styles.typeTag, pressed && styles.pressed]}
+                                    onPress={() => setShowInfoModal(true)}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`${CONTENT_TYPE_LABELS[contentType]}. Open content details`}
+                                >
+                                    <Text style={styles.typeTagText}>
+                                        {CONTENT_TYPE_LABELS[contentType]}
+                                    </Text>
+                                </Pressable>
+                            </View>
+
+                            {idea ? (
+                                <ReadMore
+                                    text={idea}
+                                    lineCount={1}
+                                    style={styles.ideaText}
+                                />
+                            ) : null}
+
+                            {mediaSpec.kind !== "none" && (
+                                <MediaStage
+                                    contentType={contentType}
+                                    attachments={attachments}
+                                    onAttachmentsChange={setAttachments}
+                                    imagePrompt={imagePrompt}
+                                    onImagePromptChange={setImagePrompt}
+                                    onGenerateImage={handleImageGenerate}
+                                    isGeneratingImage={imageGenerating}
+                                    generationError={imageGenError}
+                                    readOnly={locked}
+                                />
+                            )}
+
+                            {mediaSpec.hasScript && (
+                                <ScriptEditor
+                                    title={isReel ? "Reel Script" : "Script"}
+                                    subtitle={
+                                        isReel
+                                            ? "Optional — add a shot-by-shot script, or just upload your finished video above."
+                                            : "Outline the talking points and flow for your live session."
+                                    }
+                                    script={script}
+                                    onScriptChange={setScript}
+                                    aiPrompt={scriptAiPrompt}
+                                    onAiPromptChange={setScriptAiPrompt}
+                                    onEnhance={handleScriptAiEnhance}
+                                    isGenerating={isGeneratingScript}
+                                    task="script"
+                                    contentId={contentId}
+                                    onSendToChat={handleSendToChat}
+                                    collapsible={isReel}
+                                    readOnly={locked}
+                                />
+                            )}
+                        </View>
+
+                        {/* ── Caption / Content ────────────────────────────────── */}
+                        <View style={styles.section}>
+                            <Text style={styles.sectionLabel}>
+                                {contentType === "text" ? "CONTENT" : "CAPTION"}
+                            </Text>
+                            <View style={styles.card}>
+                                <View style={styles.inputWithWand}>
+                                    <TextInput
+                                        style={[
+                                            styles.input,
+                                            styles.inputFlex,
+                                            contentType === "text"
+                                                ? styles.textAreaTall
+                                                : styles.textAreaShort,
+                                        ]}
+                                        placeholder={
+                                            contentType === "text"
+                                                ? "Write your post..."
+                                                : "Write a compelling caption for this post..."
+                                        }
+                                        placeholderTextColor={colors.textSecondary}
+                                        value={caption}
+                                        onChangeText={setCaption}
+                                        multiline
+                                        maxLength={2200}
+                                        textAlignVertical="top"
+                                        editable={!locked}
+                                    />
+                                    {!locked ? (
+                                        <Pressable
+                                            style={({ pressed }) => [
+                                                styles.wandBtn,
+                                                pressed && styles.btnPressed,
+                                            ]}
+                                            onPress={() => setMagicTarget("caption")}
+                                            disabled={captionGenerating}
+                                        >
+                                            {captionGenerating ? (
+                                                <ActivityIndicator size="small" color={colors.primary} />
+                                            ) : (
+                                                <FontAwesomeIcon
+                                                    icon={faMagicWandSparkles}
+                                                    size={16}
+                                                    color={colors.primary}
+                                                />
+                                            )}
+                                        </Pressable>
+                                    ) : null}
+                                </View>
+                            </View>
+                            {captionGenerating ? (
+                                <View style={styles.aiHintWrap}>
+                                    <AIGeneratingHint
+                                        title={contentType === "text" ? "Writing your post…" : "Writing your caption…"}
+                                        subtitle="You can keep working — it'll drop in here automatically when it's ready."
+                                    />
+                                </View>
+                            ) : null}
+                        </View>
+
+                        {/* ── Hashtags ──────────────────────────────────────────── */}
+                        <View style={styles.section}>
+                            <Text style={styles.sectionLabel}>HASHTAGS</Text>
+                            <View style={styles.card}>
+                                <View style={styles.inputWithWand}>
+                                    <TextInput
+                                        style={[styles.input, styles.inputFlex]}
+                                        placeholder="#YourBrand #Product #Niche"
+                                        placeholderTextColor={colors.textSecondary}
+                                        value={hashtags}
+                                        onChangeText={setHashtags}
+                                        maxLength={500}
+                                        editable={!locked}
+                                    />
+                                    {!locked ? (
+                                        <Pressable
+                                            style={({ pressed }) => [
+                                                styles.wandBtn,
+                                                pressed && styles.btnPressed,
+                                            ]}
+                                            onPress={() => setMagicTarget("hashtags")}
+                                            disabled={hashtagGenerating}
+                                        >
+                                            {hashtagGenerating ? (
+                                                <ActivityIndicator size="small" color={colors.primary} />
+                                            ) : (
+                                                <FontAwesomeIcon
+                                                    icon={faMagicWandSparkles}
+                                                    size={16}
+                                                    color={colors.primary}
+                                                />
+                                            )}
+                                        </Pressable>
+                                    ) : null}
+                                </View>
+                            </View>
+                            {hashtagGenerating ? (
+                                <View style={styles.aiHintWrap}>
+                                    <AIGeneratingHint
+                                        title="Finding the best hashtags…"
+                                        subtitle="You can keep working — they'll fill in automatically when they're ready."
+                                    />
+                                </View>
+                            ) : null}
+                        </View>
+
+                        {/* ── Reel Collab CTA ───────────────────────────────────── */}
+                        {isReel && (
+                            <View style={styles.section}>
+                                <View style={styles.collabBanner}>
+                                    <View style={styles.collabAccent} />
+                                    <View style={styles.collabBody}>
+                                        <Text style={styles.collabTitle}>
+                                            Want influencers to create this reel?
+                                        </Text>
+                                        <Text style={styles.collabSub}>
+                                            Post this reel as a collaboration requirement so creators can
+                                            discover it, apply, and bring your script to life.
+                                        </Text>
+                                        <Pressable
+                                            style={({ pressed }) => [
+                                                styles.collabBtn,
+                                                pressed && styles.btnPressed,
+                                            ]}
+                                            onPress={handleCreateCollab}
+                                        >
+                                            <FontAwesomeIcon
+                                                icon={faHandshake}
+                                                size={14}
+                                                color={colors.onPrimary}
+                                            />
+                                            <Text style={styles.collabBtnText}>
+                                                Create Collab Requirement
+                                            </Text>
+                                        </Pressable>
+                                    </View>
+                                </View>
+                            </View>
+                        )}
+
+                        <View style={styles.bottomPad} />
+                    </ScrollView>
+                </KeyboardAvoidingView>
+
+                {/* Right: split-pane comments on desktop only. Mobile uses
+                    the floating overlay rendered below. */}
+                {xl && (
+                    <View style={styles.rightPanel}>
+                        <RightSidePanel
+                            mode={rightPanelMode}
+                            onModeChange={setRightPanelMode}
+                            containerWidth={splitWidth}
+                            commentsSlot={
+                                <ContentCommentsPanel
+                                    contentId={contentId ?? null}
+                                    onSendToAI={handleCommentToChat}
+                                />
+                            }
+                            chatSlot={
+                                <AIChatPanel
+                                    module="content"
+                                    contextId={contentId}
+                                    focusItems={chatFocusItems}
+                                    onRemoveFocusItem={(id) =>
+                                        setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
+                                    }
+                                    getLiveContent={getLiveChatContent}
+                                    isCompact
+                                />
+                            }
+                            previewSlot={
+                                <PreviewPanel
+                                    contentType={contentType}
+                                    targetPlatforms={targetPlatforms}
+                                    attachments={attachments}
+                                    caption={caption}
+                                    hashtags={hashtags}
+                                />
+                            }
+                        />
+                    </View>
+                )}
+            </View>
+
+            {!xl && (
+                <RightSidePanel
+                    mode={rightPanelMode}
+                    onModeChange={setRightPanelMode}
+                    commentsSlot={
+                        <ContentCommentsPanel
+                            contentId={contentId ?? null}
+                            onCollapse={() => setRightPanelMode("none")}
+                            onSendToAI={handleCommentToChat}
+                        />
+                    }
+                    chatSlot={
+                        <AIChatPanel
+                            module="content"
+                            contextId={contentId}
+                            focusItems={chatFocusItems}
+                            onRemoveFocusItem={(id) =>
+                                setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
+                            }
+                            getLiveContent={getLiveChatContent}
+                            isCompact
+                            onCollapse={() => setRightPanelMode("none")}
+                            // Tab bar owns the bottom inset (don't double it), but this
+                            // screen's AppLayout does NOT inset the top — so the panel
+                            // must keep its own top inset to clear the status bar.
+                            parentHandlesSafeBottom
+                        />
+                    }
+                    previewSlot={
+                        <PreviewPanel
+                            contentType={contentType}
+                            targetPlatforms={targetPlatforms}
+                            attachments={attachments}
+                            caption={caption}
+                            hashtags={hashtags}
+                            onCollapse={() => setRightPanelMode("none")}
+                        />
+                    }
+                />
+            )}
+
+            {/* Mobile: panel surfaces live in a bottom-right speed-dial FAB.
+                bottomOffset clears the 70px bottom tab bar. */}
+            {!xl && (
+                <RightPanelFab
+                    mode={rightPanelMode}
+                    onModeChange={setRightPanelMode}
+                    bottomOffset={70}
+                    actions={[
+                        { mode: "comments", icon: faCommentDots, label: "Comments" },
+                        { mode: "chat", icon: faRobot, label: "AI Chat" },
+                        { mode: "preview", icon: faEye, label: "Preview" },
+                    ]}
+                />
+            )}
+
+            <FloatingPromptInput
+                visible={magicTarget !== null}
+                title={
+                    magicTarget === "caption"
+                        ? "Generate caption with AI"
+                        : "Generate hashtags with AI"
+                }
+                subtitle={
+                    magicTarget === "caption"
+                        ? "Set the tone, or paste a draft to refine."
+                        : "Describe your niche, product, or audience."
+                }
+                placeholder={
+                    magicTarget === "caption"
+                        ? "E.g. punchy and playful, highlight free shipping…"
+                        : "E.g. orthopedic sandals for women, wellness niche…"
+                }
+                task={magicTarget === "caption" ? "caption" : "hashtag"}
+                onClose={() => setMagicTarget(null)}
+                onGenerate={handleMagicGenerate}
+            />
+
+            <ContentInfoModal
+                visible={showInfoModal}
+                title={title}
+                idea={idea}
+                status={status}
+                typeLabel={CONTENT_TYPE_LABELS[contentType]}
+                contentType={contentType}
+                platforms={targetPlatforms}
+                onChangeTitle={setTitle}
+                onChangeIdea={setIdea}
+                onChangeStatus={setStatus}
+                onChangePlatforms={setTargetPlatforms}
+                onClose={() => setShowInfoModal(false)}
+                readOnly={locked}
+            />
+
+            {selectedBrand?.id && contentId ? (
+                <ShareModal
+                    visible={showShareModal}
+                    target={{
+                        type: "content",
+                        brandId: selectedBrand.id,
+                        resourceId: contentId,
+                    }}
+                    title={title || "Untitled content"}
+                    onClose={() => setShowShareModal(false)}
+                />
+            ) : null}
+
+            <NoSocialsModal
+                visible={showNoSocialsModal}
+                onClose={() => setShowNoSocialsModal(false)}
+                onConnect={() => {
+                    setShowNoSocialsModal(false);
+                    router.push("/connected-accounts" as any);
+                }}
+            />
+            <PublishModal
+                visible={showPublishModal}
+                onClose={() => setShowPublishModal(false)}
+                socialAccounts={publishableAccounts}
+                destinations={destinations}
+                onDestinationsChange={setDestinations}
+                formattedDate={formattedDate}
+                dateValue={date}
+                onDateChange={setDate}
+                timeOfPosting={timeOfPosting}
+                onTimeChange={setTimeOfPosting}
+                onPublish={handlePublish}
+                publishing={publishing}
+            />
+
+            <UnsavedChangesModal
+                visible={showLeaveConfirm}
+                saving={saveState === "saving"}
+                onSave={handleLeaveSave}
+                onDiscard={handleLeaveDiscard}
+                onCancel={() => setShowLeaveConfirm(false)}
+            />
+        </AppLayout>
+    );
+};
+
+function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
+    const maxWidth = xl ? 860 : undefined;
+    return useMemo(
+        () =>
+            StyleSheet.create({
+                flex1: {
+                    flex: 1,
+                },
+                scroll: {
+                    paddingTop: 16,
+                    paddingHorizontal: 16,
+                    paddingBottom: 40,
+                    ...(maxWidth ? { maxWidth, alignSelf: "center" as const, width: "100%" } : {}),
+                },
+                section: {
+                    marginBottom: 20,
+                },
+                // ── Split layout ──────────────────────────────────────────────
+                splitContainer: {
+                    flex: 1,
+                    flexDirection: "row",
+                },
+                rightPanel: {
+                    // The panel owns its own width (drag-to-resize / 44px rail);
+                    // this wrapper just hugs it without growing or shrinking.
+                    flexShrink: 0,
+                },
+                // ── Header icon button (comments toggle) ──────────────────────
+                iconBtn: {
+                    width: 34,
+                    height: 34,
+                    borderRadius: 8,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.tag,
+                },
+                iconBtnActive: {
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.3,
+                    elevation: 3,
+                },
+                iconBtnPressed: { opacity: 0.75 },
+                // ── Header custom main (title + status badge + type) ──────────
+                headerMain: {
+                    flex: 1,
+                    flexShrink: 1,
+                    minWidth: 0,
+                },
+                headerTitleRow: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                },
+                headerTitleText: {
+                    flexShrink: 1,
+                    fontSize: 22,
+                    fontWeight: "700",
+                    color: colors.text,
+                },
+                statusBadge: {
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    borderRadius: 8,
+                    flexShrink: 0,
+                },
+                statusBadgeText: {
+                    fontSize: 11,
+                    fontWeight: "700",
+                    letterSpacing: 0.3,
+                },
+                headerTypeText: {
+                    fontSize: 12,
+                    fontWeight: "600",
+                    color: colors.textSecondary,
+                    marginTop: 2,
+                    letterSpacing: 1,
+                },
+                headerMetaRow: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 6,
+                    marginTop: 2,
+                },
+                headerMetaDot: {
+                    fontSize: 12,
+                    fontWeight: "700",
+                    color: colors.textSecondary,
+                },
+                headerPlatformRow: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 8,
+                },
+                headerPlatformChip: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 5,
+                },
+                headerPlatformDot: {
+                    width: 7,
+                    height: 7,
+                    borderRadius: 4,
+                },
+                headerPlatformText: {
+                    fontSize: 12,
+                    fontWeight: "600",
+                    color: colors.textSecondary,
+                },
+                // Secondary header button (Publish) — distinct from primary Save
+                publishHeaderBtn: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                    borderRadius: 10,
+                    backgroundColor: colors.aliceBlue,
+                },
+                publishHeaderText: {
+                    fontSize: 13,
+                    fontWeight: "700",
+                    color: colors.primary,
+                },
+                // ── In-page content heading (title + type tag) ───────────────
+                contentHeading: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                    marginBottom: 8,
+                },
+                contentTitle: {
+                    flexShrink: 1,
+                    fontSize: 18,
+                    fontWeight: "700",
+                    color: colors.text,
+                },
+                ideaText: {
+                    fontSize: 14,
+                    lineHeight: 20,
+                    color: colors.textSecondary,
+                    marginBottom: 4,
+                },
+                sectionLabel: {
+                    fontSize: 11,
+                    fontWeight: "700",
+                    letterSpacing: 1.1,
+                    color: colors.textSecondary,
+                    marginBottom: 8,
+                },
+                card: {
+                    backgroundColor: colors.card,
+                    borderRadius: 14,
+                    padding: 16,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.07,
+                    elevation: 3,
+                },
+                cardTitle: {
+                    fontSize: 15,
+                    fontWeight: "700",
+                    color: colors.text,
+                    marginBottom: 4,
+                },
+                cardSub: {
+                    fontSize: 12,
+                    color: colors.textSecondary,
+                    lineHeight: 18,
+                    marginBottom: 12,
+                },
+                typeTag: {
+                    paddingHorizontal: 12,
+                    paddingVertical: 4,
+                    borderRadius: 8,
+                    backgroundColor: colors.tag,
+                },
+                typeTagText: {
+                    fontSize: 13,
+                    fontWeight: "600",
+                    color: colors.textSecondary,
+                },
+                pressed: {
+                    opacity: 0.72,
+                },
+                input: {
+                    backgroundColor: colors.tag,
+                    borderRadius: 10,
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    fontSize: 14,
+                    color: colors.text,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 3,
+                    shadowOpacity: 0.04,
+                    elevation: 1,
+                },
+                inputFlex: {
+                    flex: 1,
+                },
+                textAreaShort: {
+                    minHeight: 70,
+                    maxHeight: 140,
+                },
+                // Text posts are the whole content (no media), so give the body
+                // room to breathe — ~7-10 lines tall before it scrolls.
+                textAreaTall: {
+                    minHeight: 180,
+                    maxHeight: 320,
+                },
+                inputWithWand: {
+                    flexDirection: "row",
+                    gap: 8,
+                    alignItems: "flex-start",
+                },
+                aiHintWrap: {
+                    marginTop: 10,
+                },
+                wandBtn: {
+                    width: 42,
+                    height: 42,
+                    borderRadius: 10,
+                    backgroundColor: colors.aliceBlue,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 4,
+                    shadowOpacity: 0.06,
+                    elevation: 2,
+                },
+                collabBanner: {
+                    flexDirection: "row",
+                    backgroundColor: colors.card,
+                    borderRadius: 14,
+                    overflow: "hidden",
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 12,
+                    shadowOpacity: 0.1,
+                    elevation: 4,
+                },
+                collabAccent: {
+                    width: 4,
+                    backgroundColor: colors.primary,
+                },
+                collabBody: {
+                    flex: 1,
+                    padding: 16,
+                },
+                collabTitle: {
+                    fontSize: 15,
+                    fontWeight: "700",
+                    color: colors.text,
+                    marginBottom: 6,
+                },
+                collabSub: {
+                    fontSize: 13,
+                    color: colors.textSecondary,
+                    lineHeight: 19,
+                    marginBottom: 14,
+                },
+                collabBtn: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    alignSelf: "flex-start",
+                    gap: 8,
+                    paddingHorizontal: 16,
+                    paddingVertical: 10,
+                    borderRadius: 10,
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowRadius: 12,
+                    shadowOpacity: 0.35,
+                    elevation: 4,
+                },
+                collabBtnText: {
+                    fontSize: 13,
+                    fontWeight: "700",
+                    color: colors.onPrimary,
+                },
+                saveBtn: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                    borderRadius: 10,
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.3,
+                    elevation: 3,
+                },
+                saveBtnIcon: {
+                    width: 34,
+                    height: 34,
+                    borderRadius: 8,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.3,
+                    elevation: 3,
+                },
+                saveBtnSaved: {
+                    backgroundColor: colors.statusApprovedFg,
+                    shadowColor: colors.statusApprovedFg,
+                },
+                saveBtnText: {
+                    fontSize: 13,
+                    fontWeight: "600",
+                    color: colors.onPrimary,
+                },
+                btnPressed: {
+                    opacity: 0.72,
+                },
+                bottomPad: {
+                    height: 40,
+                },
+                // ── Lock banner (scheduled / posted content) ──────────────────
+                lockBanner: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 12,
+                    backgroundColor: colors.aliceBlue,
+                    borderRadius: 12,
+                    padding: 14,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.07,
+                    elevation: 3,
+                },
+                lockIconWrap: {
+                    width: 34,
+                    height: 34,
+                    borderRadius: 9,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.card,
+                },
+                lockBannerBody: {
+                    flex: 1,
+                    minWidth: 0,
+                    backgroundColor: "transparent",
+                },
+                lockBannerTitle: {
+                    fontSize: 14,
+                    fontWeight: "700",
+                    color: colors.text,
+                    marginBottom: 2,
+                },
+                lockBannerSub: {
+                    fontSize: 12,
+                    color: colors.textSecondary,
+                    lineHeight: 17,
+                },
+                unscheduleBtn: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    paddingHorizontal: 12,
+                    paddingVertical: 9,
+                    borderRadius: 10,
+                    backgroundColor: colors.card,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 4,
+                    shadowOpacity: 0.06,
+                    elevation: 2,
+                },
+                unscheduleBtnText: {
+                    fontSize: 13,
+                    fontWeight: "700",
+                    color: colors.primary,
+                },
+            }),
+        [colors, xl, maxWidth]
+    );
+}
+
+export default CreateContentScreen;
