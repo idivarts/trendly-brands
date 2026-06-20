@@ -1,5 +1,5 @@
 import { useColorScheme } from "@/components/theme/useColorScheme";
-import { Text, View } from "@/components/theme/Themed";
+import { Text } from "@/components/theme/Themed";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import { useAuthContext, useChatContext, useThemeOverride } from "@/contexts";
@@ -24,7 +24,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Theme, useTheme } from "@react-navigation/native";
 import Constants from "expo-constants";
 import { useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet } from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import PageHeader from "../ui/page-header";
 
 type ThemeMode = "light" | "dark";
