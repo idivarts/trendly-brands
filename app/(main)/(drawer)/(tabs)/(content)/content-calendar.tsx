@@ -3,6 +3,7 @@ import ContentDetailsModal from "@/components/content-calendar/ContentDetailsMod
 import CalendarCommentsPanel from "@/components/content-calendar/CalendarCommentsPanel";
 import EmptyCalendarView from "@/components/content-calendar/EmptyCalendarView";
 import MonthView from "@/components/content-calendar/MonthView";
+import MonthViewMobile from "@/components/content-calendar/MonthViewMobile";
 import WeekView from "@/components/content-calendar/WeekView";
 import { CalendarItem, CalendarView } from "@/components/content-calendar/types";
 import { ContentItem } from "@/components/contents/types";
@@ -71,9 +72,10 @@ const ContentCalendarScreen = () => {
     );
 
     const today = new Date();
-    // Weekly is the readable default on phones — month cells become unreadable
-    // squares below ~600px. Desktop keeps month overview.
-    const [calView, setCalView] = useState<CalendarView>(xl ? "month" : "week");
+    // Month is the default everywhere. On phones the month view is the dot-grid +
+    // tap-to-fill bottom list (MonthViewMobile) — readable at phone width, unlike
+    // the desktop chips-in-cells grid which only renders for xl.
+    const [calView, setCalView] = useState<CalendarView>("month");
     const [calYear, setCalYear] = useState(focusParsed?.getFullYear() ?? today.getFullYear());
     const [calMonth, setCalMonth] = useState(focusParsed?.getMonth() ?? today.getMonth());
 
@@ -338,6 +340,26 @@ const ContentCalendarScreen = () => {
                                 onFocusChat={handleFocusChat}
                                 onComment={handleComment}
                                 onOpenItem={handleOpenItem}
+                            />
+                        ) : !xl ? (
+                            // Phone month view: dot-grid overview + tap-a-day to fill
+                            // the bottom list. The desktop chips-in-cells grid below
+                            // is unreadable at phone width.
+                            <MonthViewMobile
+                                year={calYear}
+                                month={calMonth}
+                                items={items}
+                                view={calView}
+                                onViewChange={setCalView}
+                                onMonthChange={(y, m) => {
+                                    setCalYear(y);
+                                    setCalMonth(m);
+                                }}
+                                onAddOnDay={(dateStr) => handleOpenAddModal(dateStr)}
+                                onFocusChat={handleFocusChat}
+                                onComment={handleComment}
+                                onOpenItem={handleOpenItem}
+                                canAdd={canManageContent}
                             />
                         ) : (
                             <MonthView
