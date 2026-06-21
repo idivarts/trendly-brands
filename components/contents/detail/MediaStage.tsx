@@ -3,7 +3,7 @@ import AIGeneratingHint from "@/components/shared/AIGeneratingHint";
 import FloatingPromptInput from "@/components/shared/FloatingPromptInput";
 import { useAWSContext } from "@/shared-libs/contexts/aws-context.provider";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
-import { pickMedia } from "@/shared-libs/utils/media-picker";
+import { pickMedia, pickMediaMulti, PickedAsset } from "@/shared-libs/utils/media-picker";
 import Colors from "@/shared-uis/constants/Colors";
 import AssetPreviewModal from "@/shared-uis/components/carousel/asset-preview-modal";
 import {
@@ -96,9 +96,47 @@ const MediaStage: React.FC<MediaStageProps> = ({
         }
     }, [attachments.length, focusedSlideIndex]);
 
+    const uploadPicked = useCallback(
+        (p: PickedAsset) =>
+            uploadFileUri({
+                id: p.assetId ?? p.uri,
+                localUri: p.uri,
+                uri: p.uri,
+                type: p.type,
+            }),
+        [uploadFileUri]
+    );
+
     const handleUpload = useCallback(async () => {
         setError(null);
         try {
+            // Carousels (multi): pick several at once and upload them together,
+            // rather than forcing one-at-a-time selection.
+            if (spec.multi) {
+                const picked = await pickMediaMulti(spec.kind === "video" ? "video" : "image");
+                if (!picked.length) return;
+
+                // Enforce the per-type aspect ratio on each; upload the valid ones
+                // and report how many were skipped.
+                const valid = picked.filter((p) => !aspectError(contentType, p.width, p.height));
+                if (!valid.length) {
+                    setError(aspectError(contentType, picked[0].width, picked[0].height));
+                    return;
+                }
+
+                setUploading(true);
+                const uploaded = await Promise.all(valid.map(uploadPicked));
+                onAttachmentsChange([...attachments, ...uploaded]);
+
+                const skipped = picked.length - valid.length;
+                if (skipped > 0) {
+                    setError(
+                        `${skipped} ${skipped === 1 ? "image was" : "images were"} skipped — slides need ${spec.aspectLabel}.`
+                    );
+                }
+                return;
+            }
+
             const picked = await pickMedia(spec.kind === "video" ? "video" : "image");
             if (!picked) return;
 
@@ -110,19 +148,14 @@ const MediaStage: React.FC<MediaStageProps> = ({
             }
 
             setUploading(true);
-            const uploaded = await uploadFileUri({
-                id: picked.assetId ?? picked.uri,
-                localUri: picked.uri,
-                uri: picked.uri,
-                type: picked.type,
-            });
-            onAttachmentsChange(spec.multi ? [...attachments, uploaded] : [uploaded]);
+            const uploaded = await uploadPicked(picked);
+            onAttachmentsChange([uploaded]);
         } catch (e) {
             setError("Upload failed. Please try again.");
         } finally {
             setUploading(false);
         }
-    }, [attachments, contentType, spec.kind, spec.multi, uploadFileUri, onAttachmentsChange]);
+    }, [attachments, contentType, spec.kind, spec.multi, spec.aspectLabel, uploadPicked, onAttachmentsChange]);
 
     const removeAt = useCallback(
         (index: number) => {
@@ -329,7 +362,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
                             {uploading
                                 ? "Uploading…"
                                 : spec.multi
-                                    ? "Upload slide"
+                                    ? "Upload slides"
                                     : spec.kind === "video"
                                         ? "Upload video"
                                         : "Upload image"}
