@@ -1,6 +1,7 @@
 import Colors from "@/shared-uis/constants/Colors";
 import {
     faCircleInfo,
+    faClone,
     faEllipsisVertical,
     faShareNodes,
     faTrashCan,
@@ -16,6 +17,8 @@ interface ContentActionsMenuProps {
     onDetails: () => void;
     /** Opens the public share modal. Omit to hide the Share item. */
     onShare?: () => void;
+    /** Duplicates this content into a fresh draft copy. Omit to hide. */
+    onDuplicate?: () => void;
     /** Destructive — the caller must confirm before deleting. Omit to hide. */
     onDelete?: () => void;
 }
@@ -32,6 +35,7 @@ interface ContentActionsMenuProps {
 const ContentActionsMenu: React.FC<ContentActionsMenuProps> = ({
     onDetails,
     onShare,
+    onDuplicate,
     onDelete,
 }) => {
     const theme = useTheme();
@@ -81,6 +85,16 @@ const ContentActionsMenu: React.FC<ContentActionsMenuProps> = ({
                     titleStyle={styles.itemText}
                     leadingIcon={() => (
                         <FontAwesomeIcon icon={faShareNodes} size={15} color={colors.text} />
+                    )}
+                />
+            ) : null}
+            {onDuplicate ? (
+                <Menu.Item
+                    onPress={run(onDuplicate)}
+                    title="Duplicate content"
+                    titleStyle={styles.itemText}
+                    leadingIcon={() => (
+                        <FontAwesomeIcon icon={faClone} size={15} color={colors.text} />
                     )}
                 />
             ) : null}
