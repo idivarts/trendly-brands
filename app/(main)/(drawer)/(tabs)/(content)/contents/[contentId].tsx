@@ -317,6 +317,33 @@ const CreateContentScreen = () => {
         return true;
     }, [contentId, saveState, locked, updateContent, title, idea, status, caption, hashtags, timeOfPosting, script, imagePrompt, attachments, date, targetPlatforms]);
 
+    // ── Cmd/Ctrl+S keyboard shortcut to save (web) ───────────────────────────
+    // Intercept the browser's native "save page" so the shortcut saves the
+    // content instead, with a toast for feedback. No-op when the content is
+    // locked or there's nothing to save (but we still swallow the keypress so
+    // the browser save dialog never appears).
+    useEffect(() => {
+        if (Platform.OS !== "web") return;
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "s") return;
+            e.preventDefault();
+            if (locked || saveState === "saving") return;
+            if (!dirty) {
+                Toaster.success("All changes saved");
+                return;
+            }
+            handleSave().then((ok) => {
+                if (ok) Toaster.success("Content saved");
+                else Toaster.error("Couldn't save", "Please try again.");
+            });
+        };
+        // Capture phase: a focused TextInput (esp. the multiline <textarea>) can
+        // stop keydown from bubbling to window, which would swallow Cmd/Ctrl+S.
+        // Capturing on the way down fires before any input can intercept it.
+        window.addEventListener("keydown", onKeyDown, true);
+        return () => window.removeEventListener("keydown", onKeyDown, true);
+    }, [locked, dirty, saveState, handleSave]);
+
     // Publish now / schedule. Persists the latest edits + destinations to
     // Firestore so the backend reads fresh data, then calls the publish /
     // schedule endpoint (functions/trendly_v2 → internal/trendlyapis/publishing).
