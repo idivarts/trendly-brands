@@ -12,7 +12,7 @@ import {
     faChevronRight,
     faImage,
     faMagicWandSparkles,
-    faMagnifyingGlassPlus,
+    faPen,
     faPlay,
     faXmark,
 } from "@fortawesome/free-solid-svg-icons";
@@ -166,12 +166,22 @@ const MediaStage: React.FC<MediaStageProps> = ({
                         const isVideo = a.type === "video" || a.type === "reel";
                         const canFocus = spec.multi && !readOnly;
                         const isFocused = spec.multi && focusedSlideIndex === i;
+                        // Tapping the image itself opens the full-screen preview.
+                        const canPreview = !isVideo && !!a.imageUrl;
                         return (
                             <View key={`${a.imageUrl ?? a.playUrl ?? a.appleUrl ?? "a"}-${i}`} style={styles.tileWrap}>
                                 <Pressable
                                     style={[styles.tile, isFocused && styles.tileFocused]}
-                                    onPress={canFocus ? () => setFocusedSlideIndex((cur) => (cur === i ? null : i)) : undefined}
-                                    disabled={!canFocus}
+                                    onPress={
+                                        canPreview
+                                            ? () => {
+                                                  setPreviewImageUrl(a.imageUrl ?? null);
+                                                  setPreviewImage(true);
+                                              }
+                                            : undefined
+                                    }
+                                    disabled={!canPreview}
+                                    accessibilityLabel={canPreview ? "Preview image full screen" : undefined}
                                 >
                                     {isVideo ? (
                                         <View style={styles.videoTile}>
@@ -189,24 +199,36 @@ const MediaStage: React.FC<MediaStageProps> = ({
                                     {!readOnly ? (
                                         <Pressable
                                             style={({ pressed }) => [styles.removeBtn, pressed && styles.pressed]}
-                                            onPress={() => removeAt(i)}
+                                            onPress={(e) => {
+                                                e.stopPropagation();
+                                                removeAt(i);
+                                            }}
                                             accessibilityLabel="Remove media"
                                         >
                                             <FontAwesomeIcon icon={faXmark} size={11} color={colors.onPrimary} />
                                         </Pressable>
                                     ) : null}
 
-                                    {/* Expand to full-screen preview — images only */}
-                                    {!isVideo && a.imageUrl ? (
+                                    {/* Focus this slide for AI editing — carousel only. Sits where the
+                                        magnify button used to; tapping the image now opens the preview. */}
+                                    {canFocus && !isVideo ? (
                                         <Pressable
-                                            style={({ pressed }) => [styles.expandBtn, pressed && styles.pressed]}
-                                            onPress={() => {
-                                                setPreviewImageUrl(a.imageUrl ?? null);
-                                                setPreviewImage(true);
+                                            style={({ pressed }) => [
+                                                styles.focusBtn,
+                                                isFocused && styles.focusBtnActive,
+                                                pressed && styles.pressed,
+                                            ]}
+                                            onPress={(e) => {
+                                                e.stopPropagation();
+                                                setFocusedSlideIndex((cur) => (cur === i ? null : i));
                                             }}
-                                            accessibilityLabel="Preview image full screen"
+                                            accessibilityLabel={
+                                                isFocused
+                                                    ? "Stop editing this slide"
+                                                    : "Edit this slide with AI"
+                                            }
                                         >
-                                            <FontAwesomeIcon icon={faMagnifyingGlassPlus} size={11} color={colors.onPrimary} />
+                                            <FontAwesomeIcon icon={faPen} size={10} color={colors.onPrimary} />
                                         </Pressable>
                                     ) : null}
 
@@ -285,8 +307,8 @@ const MediaStage: React.FC<MediaStageProps> = ({
             {!readOnly && isEnhance && spec.multi ? (
                 <Text style={styles.focusHint}>
                     {focusedSlideIndex !== null
-                        ? `Editing slide ${focusedSlideIndex + 1}. Tap it again to deselect.`
-                        : "Tap a slide to enhance it — or just describe a new slide to add."}
+                        ? `Editing slide ${focusedSlideIndex + 1}. Tap its edit button again to deselect.`
+                        : "Tap a slide's edit button to enhance it — or just describe a new slide to add."}
                 </Text>
             ) : null}
 
@@ -510,7 +532,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             justifyContent: "center",
             backgroundColor: colors.backdropStrong,
         },
-        expandBtn: {
+        focusBtn: {
             position: "absolute",
             bottom: 5,
             right: 5,
@@ -520,6 +542,9 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             alignItems: "center",
             justifyContent: "center",
             backgroundColor: colors.backdropStrong,
+        },
+        focusBtnActive: {
+            backgroundColor: colors.primary,
         },
         orderBadge: {
             position: "absolute",
