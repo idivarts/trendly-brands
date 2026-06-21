@@ -107,7 +107,7 @@ const CreateContentScreen = () => {
     const styles = useStyles(colors, xl);
 
     const router = useRouter();
-    const { items, updateContent, deleteContent } = useContents();
+    const { items, addContent, updateContent, deleteContent } = useContents();
     const { socialAccounts } = useBrandSocialContext();
     const { selectedBrand, hasCapability } = useBrandContext();
     const { openModal } = useConfirmationModel();
@@ -317,6 +317,33 @@ const CreateContentScreen = () => {
         return true;
     }, [contentId, saveState, locked, updateContent, title, idea, status, caption, hashtags, timeOfPosting, script, imagePrompt, attachments, date, targetPlatforms]);
 
+    // ── Cmd/Ctrl+S keyboard shortcut to save (web) ───────────────────────────
+    // Intercept the browser's native "save page" so the shortcut saves the
+    // content instead, with a toast for feedback. No-op when the content is
+    // locked or there's nothing to save (but we still swallow the keypress so
+    // the browser save dialog never appears).
+    useEffect(() => {
+        if (Platform.OS !== "web") return;
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "s") return;
+            e.preventDefault();
+            if (locked || saveState === "saving") return;
+            if (!dirty) {
+                Toaster.success("All changes saved");
+                return;
+            }
+            handleSave().then((ok) => {
+                if (ok) Toaster.success("Content saved");
+                else Toaster.error("Couldn't save", "Please try again.");
+            });
+        };
+        // Capture phase: a focused TextInput (esp. the multiline <textarea>) can
+        // stop keydown from bubbling to window, which would swallow Cmd/Ctrl+S.
+        // Capturing on the way down fires before any input can intercept it.
+        window.addEventListener("keydown", onKeyDown, true);
+        return () => window.removeEventListener("keydown", onKeyDown, true);
+    }, [locked, dirty, saveState, handleSave]);
+
     // Publish now / schedule. Persists the latest edits + destinations to
     // Firestore so the backend reads fresh data, then calls the publish /
     // schedule endpoint (functions/trendly_v2 → internal/trendlyapis/publishing).
@@ -508,6 +535,51 @@ const CreateContentScreen = () => {
             },
         });
     }, [contentId, status, title, openModal, deleteContent, handleUnschedule, leaveAfterDelete]);
+
+    // Duplicate this content into a fresh draft copy. Captures the current
+    // (possibly unsaved) editor state so the copy mirrors what's on screen, and
+    // deliberately drops publishing state (destinations / schedule / status) so
+    // the duplicate starts as an editable draft. Navigates to the new copy.
+    const [duplicating, setDuplicating] = useState(false);
+    const handleDuplicate = useCallback(async () => {
+        if (!contentId || duplicating) return;
+        setDuplicating(true);
+        try {
+            // ISO "YYYY-MM-DD" from the local-midnight date the picker produces.
+            const isoDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+            const newId = await addContent(
+                {
+                    title: title ? `${title} (Copy)` : "Untitled content (Copy)",
+                    idea,
+                    date: isoDate,
+                    type: contentType,
+                },
+                {
+                    platforms: targetPlatforms,
+                    caption,
+                    hashtags,
+                    timeOfPosting,
+                    script,
+                    imagePrompt,
+                    attachments,
+                }
+            );
+            if (!newId) {
+                Toaster.error("Couldn't duplicate", "Please try again.");
+                return;
+            }
+            Toaster.success("Content duplicated", "Opened the new copy.");
+            router.push({
+                pathname: "/(main)/(drawer)/(tabs)/(content)/contents/[contentId]" as any,
+                params: { contentId: newId },
+            });
+        } catch (e) {
+            console.warn("Duplicate content error:", e);
+            Toaster.error("Couldn't duplicate", "Please try again.");
+        } finally {
+            setDuplicating(false);
+        }
+    }, [contentId, duplicating, addContent, date, title, idea, contentType, targetPlatforms, caption, hashtags, timeOfPosting, script, imagePrompt, attachments, router]);
 
     // ── Back navigation with an unsaved-changes guard ────────────────────────
     const doNavigateBack = useCallback(() => {
@@ -781,6 +853,7 @@ const CreateContentScreen = () => {
                         ? () => setShowShareModal(true)
                         : undefined
                 }
+                onDuplicate={hasCapability("manage_content") ? handleDuplicate : undefined}
                 onDelete={hasCapability("delete_content") ? handleDelete : undefined}
             />,
             // 🚀 Publish / schedule — hidden once locked (scheduled / posted)
@@ -824,7 +897,7 @@ const CreateContentScreen = () => {
                 </Pressable>
             ),
         ],
-        [styles, colors, handleSave, saveState, xl, dirty, locked, selectedBrand?.id, contentId, hasCapability, handleOpenPublish, handleDelete]
+        [styles, colors, handleSave, saveState, xl, dirty, locked, selectedBrand?.id, contentId, hasCapability, handleOpenPublish, handleDuplicate, handleDelete]
     );
 
     return (

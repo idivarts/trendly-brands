@@ -68,6 +68,18 @@ const ContentsScreen = () => {
 
     const activeItems = useMemo(() => items.filter((i) => !i.isArchived), [items]);
 
+    // Counts for the Board's trailing terminal-state pills. Scheduled/Posted are
+    // active (non-archived) by status; Archived is the isArchived flag regardless
+    // of status.
+    const terminalCounts = useMemo(
+        () => ({
+            scheduled: activeItems.filter((i) => i.status === "scheduled").length,
+            posted: activeItems.filter((i) => i.status === "posted").length,
+            archived: items.filter((i) => i.isArchived).length,
+        }),
+        [activeItems, items]
+    );
+
     const galleryItems = useMemo(() => {
         const filtered =
             stateFilter === "all"
@@ -166,6 +178,8 @@ const ContentsScreen = () => {
                             items={activeItems}
                             onChangeStatus={handleChangeStatus}
                             onPressItem={handleOpenContent}
+                            terminalCounts={terminalCounts}
+                            onOpenTerminal={(path) => router.push(path as any)}
                         />
                     )}
                 </View>

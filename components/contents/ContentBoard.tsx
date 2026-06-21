@@ -15,6 +15,7 @@ import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import ContentBoardCard from "./ContentBoardCard";
+import ContentBoardTerminalLinks, { TerminalCounts } from "./ContentBoardTerminalLinks";
 import {
     BOARD_CONTENT_STATUSES,
     CONTENT_STATUS_LABELS,
@@ -29,6 +30,10 @@ interface ContentBoardProps {
     /** Persist a status change after a cross-column drag. */
     onChangeStatus: (id: string, status: ContentStatus) => Promise<void> | void;
     onPressItem: (item: ContentItem) => void;
+    /** Live counts for the trailing terminal-state pills (Scheduled/Posted/Archived). */
+    terminalCounts: TerminalCounts;
+    /** Open a gallery-only library page (Scheduled/Posted/Archived). */
+    onOpenTerminal: (path: string) => void;
 }
 
 type BoardColumn = {
@@ -53,7 +58,13 @@ function buildColumns(items: ContentItem[]): BoardColumn[] {
  * Approved). Mirrors the Collaboration-CMS board. Desktop-only — the host page
  * does not render it on mobile.
  */
-const ContentBoard: React.FC<ContentBoardProps> = ({ items, onChangeStatus, onPressItem }) => {
+const ContentBoard: React.FC<ContentBoardProps> = ({
+    items,
+    onChangeStatus,
+    onPressItem,
+    terminalCounts,
+    onOpenTerminal,
+}) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useStyles(colors);
@@ -178,6 +189,11 @@ const ContentBoard: React.FC<ContentBoardProps> = ({ items, onChangeStatus, onPr
                                 onPressItem={onPressItem}
                             />
                         ))}
+
+                        <ContentBoardTerminalLinks
+                            counts={terminalCounts}
+                            onOpen={onOpenTerminal}
+                        />
                     </View>
                 </ScrollView>
             </DndContext>
