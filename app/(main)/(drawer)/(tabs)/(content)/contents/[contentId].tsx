@@ -107,7 +107,7 @@ const CreateContentScreen = () => {
     const styles = useStyles(colors, xl);
 
     const router = useRouter();
-    const { items, updateContent, deleteContent } = useContents();
+    const { items, addContent, updateContent, deleteContent } = useContents();
     const { socialAccounts } = useBrandSocialContext();
     const { selectedBrand, hasCapability } = useBrandContext();
     const { openModal } = useConfirmationModel();
@@ -536,6 +536,51 @@ const CreateContentScreen = () => {
         });
     }, [contentId, status, title, openModal, deleteContent, handleUnschedule, leaveAfterDelete]);
 
+    // Duplicate this content into a fresh draft copy. Captures the current
+    // (possibly unsaved) editor state so the copy mirrors what's on screen, and
+    // deliberately drops publishing state (destinations / schedule / status) so
+    // the duplicate starts as an editable draft. Navigates to the new copy.
+    const [duplicating, setDuplicating] = useState(false);
+    const handleDuplicate = useCallback(async () => {
+        if (!contentId || duplicating) return;
+        setDuplicating(true);
+        try {
+            // ISO "YYYY-MM-DD" from the local-midnight date the picker produces.
+            const isoDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+            const newId = await addContent(
+                {
+                    title: title ? `${title} (Copy)` : "Untitled content (Copy)",
+                    idea,
+                    date: isoDate,
+                    type: contentType,
+                },
+                {
+                    platforms: targetPlatforms,
+                    caption,
+                    hashtags,
+                    timeOfPosting,
+                    script,
+                    imagePrompt,
+                    attachments,
+                }
+            );
+            if (!newId) {
+                Toaster.error("Couldn't duplicate", "Please try again.");
+                return;
+            }
+            Toaster.success("Content duplicated", "Opened the new copy.");
+            router.push({
+                pathname: "/(main)/(drawer)/(tabs)/(content)/contents/[contentId]" as any,
+                params: { contentId: newId },
+            });
+        } catch (e) {
+            console.warn("Duplicate content error:", e);
+            Toaster.error("Couldn't duplicate", "Please try again.");
+        } finally {
+            setDuplicating(false);
+        }
+    }, [contentId, duplicating, addContent, date, title, idea, contentType, targetPlatforms, caption, hashtags, timeOfPosting, script, imagePrompt, attachments, router]);
+
     // ── Back navigation with an unsaved-changes guard ────────────────────────
     const doNavigateBack = useCallback(() => {
         if (router.canGoBack()) {
@@ -808,6 +853,7 @@ const CreateContentScreen = () => {
                         ? () => setShowShareModal(true)
                         : undefined
                 }
+                onDuplicate={hasCapability("manage_content") ? handleDuplicate : undefined}
                 onDelete={hasCapability("delete_content") ? handleDelete : undefined}
             />,
             // 🚀 Publish / schedule — hidden once locked (scheduled / posted)
@@ -851,7 +897,7 @@ const CreateContentScreen = () => {
                 </Pressable>
             ),
         ],
-        [styles, colors, handleSave, saveState, xl, dirty, locked, selectedBrand?.id, contentId, hasCapability, handleOpenPublish, handleDelete]
+        [styles, colors, handleSave, saveState, xl, dirty, locked, selectedBrand?.id, contentId, hasCapability, handleOpenPublish, handleDuplicate, handleDelete]
     );
 
     return (
