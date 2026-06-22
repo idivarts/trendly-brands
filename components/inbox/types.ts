@@ -23,6 +23,15 @@ export type InboxMode = "messages" | "media";
 /** Who authored a given message/reply. */
 export type MessageAuthor = "contact" | "business";
 
+/** Coarse kind of a message's media attachment. */
+export type AttachmentType =
+    | "image"
+    | "video"
+    | "audio"
+    | "file"
+    | "share"
+    | "story";
+
 export interface InboxParticipant {
     /** Platform-scoped user id (IGSID / PSID). */
     id: string;
@@ -38,8 +47,12 @@ export interface InboxMessage {
     text: string;
     /** epoch ms */
     sentAt: number;
-    /** Optional single media attachment (image url). */
+    /** Direct URL of a single media attachment (image/video/audio/file). */
     attachmentUrl?: string;
+    /** Coarse media kind — drives how the attachment is rendered. */
+    attachmentType?: AttachmentType;
+    /** Preview/thumbnail image for video attachments. */
+    attachmentThumbUrl?: string;
     /** Optimistic-send flag — true while a reply is in flight. */
     pending?: boolean;
 }

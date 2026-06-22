@@ -1,15 +1,21 @@
 import {
     faArrowLeft,
+    faBookOpen,
     faCircleInfo,
     faEye,
     faEyeSlash,
+    faFile,
+    faImage,
+    faLink,
+    faMicrophone,
+    faPlay,
     faTrash,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { Image } from "expo-image";
 import React, { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import { UpgradeInline } from "@/components/billing/EntitlementGate";
 import { Text } from "@/components/theme/Themed";
@@ -18,7 +24,7 @@ import { useEntitlements } from "@/hooks/use-entitlements";
 import Colors from "@/shared-uis/constants/Colors";
 import ChannelAvatar from "./ChannelAvatar";
 import MessageComposer from "./MessageComposer";
-import { InboxConversation, InboxMessage } from "./types";
+import { AttachmentType, InboxConversation, InboxMessage } from "./types";
 import {
     canReply,
     channelColor,
@@ -53,14 +59,92 @@ const ThreadView: React.FC<Props> = ({
     const { xl } = useBreakpoints();
     const styles = useStyles(colors);
     const [confirmingDelete, setConfirmingDelete] = useState(false);
+    // Track media that failed to load (e.g. expired Meta CDN links) so we can
+    // swap in a graceful placeholder instead of a blank/broken tile.
+    const [failedMedia, setFailedMedia] = useState<Record<string, boolean>>({});
+    const markFailed = (id: string) =>
+        setFailedMedia((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
 
     const { inboxReadOnly } = useEntitlements();
     const isComment = conversation.kind === "comment";
     const replyable = canReply(conversation);
     const windowLeft = replyWindowLeft(conversation);
 
+    const openAttachment = (url?: string) => {
+        if (url) Linking.openURL(url).catch(() => {});
+    };
+
+    const renderUnavailableMedia = (label: string) => (
+        <View style={styles.attachmentFallback}>
+            <FontAwesomeIcon icon={faImage} size={26} color={colors.textSecondary} />
+            <Text style={styles.attachmentFallbackText}>{label} unavailable</Text>
+        </View>
+    );
+
+    const renderAttachment = (m: InboxMessage) => {
+        if (!m.attachmentUrl && !m.attachmentType) return null;
+        const url = m.attachmentUrl;
+        const failed = !!failedMedia[m.id];
+
+        // Photo — render inline; fall back to a placeholder if the URL is gone or
+        // expired (Meta CDN links are time-limited).
+        if (m.attachmentType === "image") {
+            if (!url || failed) return renderUnavailableMedia("Photo");
+            return (
+                <Pressable onPress={() => openAttachment(url)}>
+                    <Image
+                        source={{ uri: url }}
+                        style={styles.attachmentMedia}
+                        contentFit="cover"
+                        onError={() => markFailed(m.id)}
+                    />
+                </Pressable>
+            );
+        }
+
+        // Video / reel — thumbnail (when available) with a play badge, else a card.
+        if (m.attachmentType === "video") {
+            const thumb = m.attachmentThumbUrl || url;
+            if (thumb && !failed) {
+                return (
+                    <Pressable onPress={() => openAttachment(url)} style={styles.attachmentVideoWrap}>
+                        <Image
+                            source={{ uri: thumb }}
+                            style={styles.attachmentMedia}
+                            contentFit="cover"
+                            onError={() => markFailed(m.id)}
+                        />
+                        <View style={styles.attachmentPlayBadge}>
+                            <FontAwesomeIcon icon={faPlay} size={16} color={colors.white} />
+                        </View>
+                    </Pressable>
+                );
+            }
+            if (failed) return renderUnavailableMedia("Video");
+        }
+
+        // Audio / file / shared post / story / unsupported — a tappable chip.
+        // Card sits on colors.background in both bubble variants so colors.text
+        // stays legible regardless of the bubble's own colour.
+        const meta = attachmentMeta(m.attachmentType);
+        return (
+            <Pressable
+                onPress={() => openAttachment(url)}
+                disabled={!url}
+                style={styles.attachmentCard}
+            >
+                <FontAwesomeIcon icon={meta.icon} size={15} color={colors.text} />
+                <Text style={styles.attachmentCardText} numberOfLines={1}>
+                    {url ? meta.label : `${meta.label} (unavailable)`}
+                </Text>
+            </Pressable>
+        );
+    };
+
     const renderBubble = (m: InboxMessage) => {
         const mine = m.author === "business";
+        const attachment = renderAttachment(m);
+        const hasText = !!m.text;
         return (
             <View
                 key={m.id}
@@ -75,14 +159,18 @@ const ThreadView: React.FC<Props> = ({
                         m.pending && styles.bubblePending,
                     ]}
                 >
-                    <Text
-                        style={[
-                            styles.bubbleText,
-                            { color: mine ? colors.onPrimary : colors.text },
-                        ]}
-                    >
-                        {m.text}
-                    </Text>
+                    {attachment}
+                    {hasText ? (
+                        <Text
+                            style={[
+                                styles.bubbleText,
+                                attachment ? styles.bubbleTextWithAttachment : null,
+                                { color: mine ? colors.onPrimary : colors.text },
+                            ]}
+                        >
+                            {m.text}
+                        </Text>
+                    ) : null}
                 </View>
                 <Text style={styles.bubbleTime}>
                     {m.pending ? "Sending…" : relativeTime(m.sentAt)}
@@ -253,6 +341,24 @@ const ThreadView: React.FC<Props> = ({
     );
 };
 
+/** Icon + label for non-inline attachment kinds (audio/file/share/story). */
+function attachmentMeta(type?: AttachmentType) {
+    switch (type) {
+        case "audio":
+            return { icon: faMicrophone, label: "Voice message" };
+        case "share":
+            return { icon: faLink, label: "Shared post" };
+        case "story":
+            return { icon: faBookOpen, label: "Story" };
+        case "video":
+            return { icon: faPlay, label: "Video" };
+        case "image":
+            return { icon: faFile, label: "Photo" };
+        default:
+            return { icon: faFile, label: "Attachment" };
+    }
+}
+
 function useStyles(colors: ReturnType<typeof Colors>) {
     return useMemo(
         () =>
@@ -411,6 +517,59 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 bubbleText: {
                     fontSize: 15,
                     lineHeight: 21,
+                },
+                bubbleTextWithAttachment: {
+                    marginTop: 8,
+                },
+                attachmentMedia: {
+                    width: 230,
+                    height: 230,
+                    borderRadius: 12,
+                    backgroundColor: colors.background,
+                },
+                attachmentVideoWrap: {
+                    position: "relative",
+                    alignItems: "center",
+                    justifyContent: "center",
+                },
+                attachmentFallback: {
+                    width: 230,
+                    height: 160,
+                    borderRadius: 12,
+                    backgroundColor: colors.background,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                },
+                attachmentFallbackText: {
+                    fontSize: 13,
+                    fontWeight: "600",
+                    color: colors.textSecondary,
+                },
+                attachmentPlayBadge: {
+                    position: "absolute",
+                    width: 48,
+                    height: 48,
+                    borderRadius: 24,
+                    backgroundColor: colors.backdropStrong,
+                    alignItems: "center",
+                    justifyContent: "center",
+                },
+                attachmentCard: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 9,
+                    paddingHorizontal: 12,
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    backgroundColor: colors.background,
+                    maxWidth: 230,
+                },
+                attachmentCardText: {
+                    fontSize: 14,
+                    fontWeight: "600",
+                    color: colors.text,
+                    flexShrink: 1,
                 },
                 bubbleTime: {
                     fontSize: 11,
