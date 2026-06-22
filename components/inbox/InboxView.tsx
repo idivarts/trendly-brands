@@ -1,8 +1,8 @@
-import { faComments } from "@fortawesome/free-solid-svg-icons";
+import { faArrowsRotate, faComments } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 
 import { Text } from "@/components/theme/Themed";
 import { useBreakpoints } from "@/hooks";
@@ -40,12 +40,25 @@ const InboxView: React.FC<InboxViewProps> = ({ mode }) => {
         setCommentHidden,
         deleteComment,
         markRead,
+        resyncInbox,
     } = useInbox();
 
     const [filter, setFilter] = useState<InboxFilter>("all");
     const [search, setSearch] = useState("");
     const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
     const [showDetails, setShowDetails] = useState(false);
+    const [resyncing, setResyncing] = useState(false);
+
+    const handleResync = async () => {
+        if (resyncing) return;
+        setResyncing(true);
+        setSelectedId(undefined);
+        try {
+            await resyncInbox();
+        } finally {
+            setResyncing(false);
+        }
+    };
 
     const filtered = useMemo(() => {
         const q = search.trim().toLowerCase();
@@ -177,6 +190,27 @@ const InboxView: React.FC<InboxViewProps> = ({ mode }) => {
     return (
         <View style={styles.body}>
             {mode === "media" ? <MediaView /> : messagesBody}
+            {__DEV__ ? (
+                <Pressable
+                    onPress={handleResync}
+                    disabled={resyncing}
+                    style={styles.devResyncButton}
+                    accessibilityLabel="Resync inbox (dev only)"
+                >
+                    {resyncing ? (
+                        <ActivityIndicator size="small" color={colors.white} />
+                    ) : (
+                        <FontAwesomeIcon
+                            icon={faArrowsRotate}
+                            size={16}
+                            color={colors.white}
+                        />
+                    )}
+                    <Text style={styles.devResyncLabel}>
+                        {resyncing ? "Resyncing…" : "DEV: Resync"}
+                    </Text>
+                </Pressable>
+            ) : null}
         </View>
     );
 };
@@ -237,6 +271,29 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 placeholder: {
                     fontSize: 15,
                     color: colors.textSecondary,
+                },
+                devResyncButton: {
+                    position: "absolute",
+                    bottom: 16,
+                    right: 16,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    paddingVertical: 10,
+                    paddingHorizontal: 14,
+                    borderRadius: 24,
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowRadius: 12,
+                    shadowOpacity: 0.35,
+                    elevation: 4,
+                    zIndex: 20,
+                },
+                devResyncLabel: {
+                    fontSize: 13,
+                    fontWeight: "600",
+                    color: colors.white,
                 },
             }),
         [colors]
