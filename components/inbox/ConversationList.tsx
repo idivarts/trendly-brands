@@ -6,10 +6,12 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
     FlatList,
+    Platform,
     Pressable,
+    RefreshControl,
     StyleSheet,
     TextInput,
     View,
@@ -19,8 +21,13 @@ import { Text } from "@/components/theme/Themed";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 import ChannelAvatar from "./ChannelAvatar";
+import ResyncButton from "./ResyncButton";
 import { InboxConversation, InboxFilter } from "./types";
 import { relativeTime } from "./utils";
+
+// Keep the pull-to-refresh spinner visible briefly so a quick (202) trigger still
+// reads as a deliberate refresh, even when nothing new comes back.
+const MIN_REFRESH_MS = 900;
 
 const FILTERS: { key: InboxFilter; label: string }[] = [
     { key: "all", label: "All" },
@@ -38,6 +45,8 @@ interface Props {
     onSearchChange: (s: string) => void;
     onSelect: (c: InboxConversation) => void;
     unreadTotal: number;
+    /** Look for new conversations/messages (pull-to-refresh + desktop button). */
+    onRefresh: () => Promise<void>;
 }
 
 const ConversationList: React.FC<Props> = ({
@@ -49,28 +58,46 @@ const ConversationList: React.FC<Props> = ({
     onSearchChange,
     onSelect,
     unreadTotal,
+    onRefresh,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
     const styles = useStyles(colors);
+    const [refreshing, setRefreshing] = useState(false);
+
+    const handleRefresh = async () => {
+        if (refreshing) return;
+        setRefreshing(true);
+        await Promise.all([
+            onRefresh().catch(() => {}),
+            new Promise((r) => setTimeout(r, MIN_REFRESH_MS)),
+        ]);
+        setRefreshing(false);
+    };
 
     return (
         <View style={styles.container}>
-            {/* Search */}
-            <View style={styles.searchBox}>
-                <FontAwesomeIcon
-                    icon={faMagnifyingGlass}
-                    size={14}
-                    color={colors.textSecondary}
-                />
-                <TextInput
-                    value={search}
-                    onChangeText={onSearchChange}
-                    placeholder="Search messages"
-                    placeholderTextColor={colors.textSecondary}
-                    style={styles.searchInput}
-                />
+            {/* Search (+ desktop refresh button — touch uses pull-to-refresh) */}
+            <View style={styles.searchRow}>
+                <View style={styles.searchBox}>
+                    <FontAwesomeIcon
+                        icon={faMagnifyingGlass}
+                        size={14}
+                        color={colors.textSecondary}
+                    />
+                    <TextInput
+                        value={search}
+                        onChangeText={onSearchChange}
+                        placeholder="Search messages"
+                        placeholderTextColor={colors.textSecondary}
+                        style={styles.searchInput}
+                    />
+                </View>
+                {/* Web (any width) gets a button; native uses pull-to-refresh. */}
+                {Platform.OS === "web" ? (
+                    <ResyncButton onPress={handleRefresh} busy={refreshing} label="Refresh inbox" />
+                ) : null}
             </View>
 
             {/* Filters */}
@@ -122,6 +149,14 @@ const ConversationList: React.FC<Props> = ({
                 keyExtractor={(c) => c.id}
                 contentContainerStyle={styles.listContent}
                 showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={handleRefresh}
+                        tintColor={colors.primary}
+                        colors={[colors.primary]}
+                    />
+                }
                 ListEmptyComponent={
                     <View style={styles.noResults}>
                         <Text style={styles.noResultsText}>
@@ -215,12 +250,18 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     flex: 1,
                     backgroundColor: colors.background,
                 },
-                searchBox: {
+                searchRow: {
                     flexDirection: "row",
                     alignItems: "center",
                     gap: 8,
                     marginHorizontal: 12,
                     marginTop: 12,
+                },
+                searchBox: {
+                    flex: 1,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
                     paddingHorizontal: 12,
                     height: 40,
                     borderRadius: 12,
