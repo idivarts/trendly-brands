@@ -249,6 +249,26 @@ export function useInboxApi(): UseInboxResult {
         [brandId]
     );
 
+    const resyncInbox = useCallback(async () => {
+        if (!brandId) return;
+        setLoading(true);
+        try {
+            const res = await HttpWrapper.fetch(
+                `/api/v2/brands/${brandId}/inbox/resync`,
+                { method: "POST" }
+            );
+            const data = await res.json();
+            backendSettledRef.current = true;
+            setConversations(data.conversations ?? []);
+        } catch (e) {
+            console.warn("inbox: resync failed", e);
+            // Fall back to a normal refresh so the UI isn't left stale.
+            await fetchInbox();
+        } finally {
+            setLoading(false);
+        }
+    }, [brandId, fetchInbox]);
+
     return {
         loading,
         connectedAccounts,
@@ -257,5 +277,6 @@ export function useInboxApi(): UseInboxResult {
         setCommentHidden,
         deleteComment,
         markRead,
+        resyncInbox,
     };
 }

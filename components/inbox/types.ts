@@ -126,6 +126,11 @@ export interface UseInboxResult {
     deleteComment: (conversationId: string) => Promise<void>;
     /** Mark a conversation as read. */
     markRead: (conversationId: string) => Promise<void>;
+    /**
+     * Dev/repair only: clear cached DM conversations and re-pull them fresh from
+     * Meta (rebuilds participant names/avatars, drops stale/duplicate docs).
+     */
+    resyncInbox: () => Promise<void>;
 }
 
 // ── Media tab ──────────────────────────────────────────────────────────────
