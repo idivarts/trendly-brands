@@ -21,9 +21,10 @@ import AppLayout from "@/layouts/app-layout";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
+import * as Clipboard from "expo-clipboard";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet } from "react-native";
+import { ActivityIndicator, Platform, ScrollView, StyleSheet } from "react-native";
 import { Divider, IconButton, Menu } from "react-native-paper";
 
 const ManageOrganizationScreen = () => {
@@ -138,6 +139,19 @@ const ManageOrganizationScreen = () => {
         }
         setSelectedBrand(full, true);
         // router.replace("/");
+    };
+
+    const copyBrandId = async (brandId: string) => {
+        try {
+            if (Platform.OS === "web" && navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(brandId);
+            } else {
+                await Clipboard.setStringAsync(brandId);
+            }
+            Toaster.success("Brand ID copied!");
+        } catch {
+            Toaster.error("Failed to copy Brand ID");
+        }
     };
 
     const doMoveBrand = async (destOrgId: string) => {
@@ -316,6 +330,10 @@ const ManageOrganizationScreen = () => {
                                                 onDelete={() => {
                                                     setMenuBrandId(null);
                                                     setBrandDeleteTarget({ id: b.id, name: b.name });
+                                                }}
+                                                onCopyId={() => {
+                                                    setMenuBrandId(null);
+                                                    copyBrandId(b.id);
                                                 }}
                                             />
                                         ))}
