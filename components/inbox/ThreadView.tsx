@@ -2,6 +2,7 @@ import {
     faArrowLeft,
     faBookOpen,
     faCircleInfo,
+    faEllipsisVertical,
     faEye,
     faEyeSlash,
     faFile,
@@ -16,6 +17,7 @@ import { useTheme } from "@react-navigation/native";
 import { Image } from "expo-image";
 import React, { useMemo, useState } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Menu } from "react-native-paper";
 
 import { UpgradeInline } from "@/components/billing/EntitlementGate";
 import { Text } from "@/components/theme/Themed";
@@ -24,6 +26,7 @@ import { useEntitlements } from "@/hooks/use-entitlements";
 import Colors from "@/shared-uis/constants/Colors";
 import ChannelAvatar from "./ChannelAvatar";
 import MessageComposer from "./MessageComposer";
+import ResyncInline from "./ResyncInline";
 import { AttachmentType, InboxConversation, InboxMessage } from "./types";
 import {
     canReply,
@@ -42,6 +45,9 @@ interface Props {
     onSendReply: (text: string) => Promise<void>;
     onSetHidden: (hidden: boolean) => Promise<void>;
     onDelete: () => Promise<void>;
+    onResyncThread: () => Promise<void>;
+    onResyncProfile: () => Promise<void>;
+    onResyncMessage: (messageId: string) => Promise<void>;
 }
 
 const ThreadView: React.FC<Props> = ({
@@ -53,12 +59,16 @@ const ThreadView: React.FC<Props> = ({
     onSendReply,
     onSetHidden,
     onDelete,
+    onResyncThread,
+    onResyncProfile,
+    onResyncMessage,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
     const styles = useStyles(colors);
     const [confirmingDelete, setConfirmingDelete] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
     // Track media that failed to load (e.g. expired Meta CDN links) so we can
     // swap in a graceful placeholder instead of a blank/broken tile.
     const [failedMedia, setFailedMedia] = useState<Record<string, boolean>>({});
@@ -72,6 +82,20 @@ const ThreadView: React.FC<Props> = ({
 
     const openAttachment = (url?: string) => {
         if (url) Linking.openURL(url).catch(() => {});
+    };
+
+    // Opens the relevant social app/site so the user can view a message we can't
+    // render inline (e.g. a reel/share with no usable payload). Prefer the
+    // contact's profile when we know their handle, else the channel's DM inbox.
+    const openInApp = () => {
+        const handle = conversation.participant.handle;
+        const url =
+            conversation.channel === "facebook"
+                ? "https://www.facebook.com/messages/"
+                : handle
+                ? `https://www.instagram.com/${handle}/`
+                : "https://www.instagram.com/direct/inbox/";
+        openAttachment(url);
     };
 
     const renderUnavailableMedia = (label: string) => (
@@ -145,6 +169,11 @@ const ThreadView: React.FC<Props> = ({
         const mine = m.author === "business";
         const attachment = renderAttachment(m);
         const hasText = !!m.text;
+        // Reels / shares / unsupported message types sometimes arrive from Meta
+        // with no text AND no usable attachment payload, which would render as a
+        // blank bubble (looks like a bug). Show a tappable "open the app" fallback.
+        const isEmpty = !hasText && !attachment;
+        const fgColor = mine ? colors.onPrimary : colors.text;
         return (
             <View
                 key={m.id}
@@ -165,11 +194,33 @@ const ThreadView: React.FC<Props> = ({
                             style={[
                                 styles.bubbleText,
                                 attachment ? styles.bubbleTextWithAttachment : null,
-                                { color: mine ? colors.onPrimary : colors.text },
+                                { color: fgColor },
                             ]}
                         >
                             {m.text}
                         </Text>
+                    ) : null}
+                    {isEmpty ? (
+                        <Pressable onPress={openInApp} style={styles.unavailableRow}>
+                            <FontAwesomeIcon icon={faCircleInfo} size={13} color={fgColor} />
+                            <Text style={[styles.unavailableText, { color: fgColor }]}>
+                                Message unavailable · Open {channelLabel(conversation.channel)} to view
+                            </Text>
+                        </Pressable>
+                    ) : null}
+                    {/* Error states (unavailable, or media whose CDN link expired)
+                        get an always-visible resync — that's exactly when it's wanted. */}
+                    {isEmpty || failedMedia[m.id] ? (
+                        <View style={styles.bubbleResyncRow}>
+                            <ResyncInline
+                                watch={conversation.updatedAt}
+                                action={() => onResyncMessage(m.id)}
+                                label="Resync message"
+                                size={13}
+                                color={fgColor}
+                            />
+                            <Text style={[styles.bubbleResyncHint, { color: fgColor }]}>Resync</Text>
+                        </View>
                     ) : null}
                 </View>
                 <Text style={styles.bubbleTime}>
@@ -213,6 +264,37 @@ const ThreadView: React.FC<Props> = ({
                     <Pressable onPress={onToggleDetails} style={styles.headerBtn}>
                         <FontAwesomeIcon icon={faCircleInfo} size={18} color={colors.text} />
                     </Pressable>
+                ) : null}
+                {!isComment ? (
+                    <Menu
+                        visible={menuOpen}
+                        onDismiss={() => setMenuOpen(false)}
+                        anchor={
+                            <Pressable
+                                onPress={() => setMenuOpen(true)}
+                                style={styles.headerBtn}
+                                accessibilityRole="button"
+                                accessibilityLabel="Resync options"
+                            >
+                                <FontAwesomeIcon icon={faEllipsisVertical} size={18} color={colors.textSecondary} />
+                            </Pressable>
+                        }
+                    >
+                        <Menu.Item
+                            onPress={() => {
+                                setMenuOpen(false);
+                                onResyncThread();
+                            }}
+                            title="Resync messages"
+                        />
+                        <Menu.Item
+                            onPress={() => {
+                                setMenuOpen(false);
+                                onResyncProfile();
+                            }}
+                            title="Resync profile"
+                        />
+                    </Menu>
                 ) : null}
             </View>
 
@@ -520,6 +602,27 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 },
                 bubbleTextWithAttachment: {
                     marginTop: 8,
+                },
+                unavailableRow: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 7,
+                },
+                unavailableText: {
+                    fontSize: 14,
+                    fontStyle: "italic",
+                    flexShrink: 1,
+                },
+                bubbleResyncRow: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 2,
+                    marginTop: 4,
+                    opacity: 0.9,
+                },
+                bubbleResyncHint: {
+                    fontSize: 12,
+                    fontWeight: "600",
                 },
                 attachmentMedia: {
                     width: 230,

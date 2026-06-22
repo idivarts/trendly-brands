@@ -40,7 +40,11 @@ const InboxView: React.FC<InboxViewProps> = ({ mode }) => {
         setCommentHidden,
         deleteComment,
         markRead,
+        refreshInbox,
         resyncInbox,
+        resyncProfile,
+        resyncThread,
+        resyncMessage,
     } = useInbox();
 
     const [filter, setFilter] = useState<InboxFilter>("all");
@@ -118,6 +122,7 @@ const InboxView: React.FC<InboxViewProps> = ({ mode }) => {
             onSearchChange={setSearch}
             onSelect={handleSelect}
             unreadTotal={unreadTotal}
+            onRefresh={refreshInbox}
         />
     );
 
@@ -135,6 +140,9 @@ const InboxView: React.FC<InboxViewProps> = ({ mode }) => {
                 await deleteComment(selected.id);
                 setSelectedId(undefined);
             }}
+            onResyncThread={() => resyncThread(selected.id)}
+            onResyncProfile={() => resyncProfile(selected.id)}
+            onResyncMessage={(msgId) => resyncMessage(selected.id, msgId)}
         />
     ) : null;
 
@@ -150,6 +158,7 @@ const InboxView: React.FC<InboxViewProps> = ({ mode }) => {
                             <ContactPanel
                                 conversation={selected}
                                 onClose={() => setShowDetails(false)}
+                                onResyncProfile={() => resyncProfile(selected.id)}
                             />
                         </View>
                     ) : null}
@@ -180,7 +189,10 @@ const InboxView: React.FC<InboxViewProps> = ({ mode }) => {
                 </View>
                 {selected ? (
                     <View style={[styles.contactPane, { width: CONTACT_WIDTH }]}>
-                        <ContactPanel conversation={selected} />
+                        <ContactPanel
+                            conversation={selected}
+                            onResyncProfile={() => resyncProfile(selected.id)}
+                        />
                     </View>
                 ) : null}
             </View>

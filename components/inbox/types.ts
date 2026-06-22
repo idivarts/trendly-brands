@@ -86,6 +86,8 @@ export interface InboxConversation {
     /** epoch ms of the most recent activity — list sort key. */
     lastActivityAt: number;
     unread: boolean;
+    /** epoch ms — bumps on any (re)sync; drives the resync spinner clear. */
+    updatedAt?: number;
 
     /**
      * DM-only: epoch ms when the 24h reply window closes. When `Date.now()`
@@ -139,11 +141,19 @@ export interface UseInboxResult {
     deleteComment: (conversationId: string) => Promise<void>;
     /** Mark a conversation as read. */
     markRead: (conversationId: string) => Promise<void>;
+    /** Look for new conversations/messages (pull-to-refresh / refresh button). Additive. */
+    refreshInbox: () => Promise<void>;
     /**
      * Dev/repair only: clear cached DM conversations and re-pull them fresh from
      * Meta (rebuilds participant names/avatars, drops stale/duplicate docs).
      */
     resyncInbox: () => Promise<void>;
+    /** Re-fetch one conversation contact's name/avatar (e.g. expired avatar). */
+    resyncProfile: (conversationId: string) => Promise<void>;
+    /** Re-pull a whole DM thread's messages. */
+    resyncThread: (conversationId: string) => Promise<void>;
+    /** Re-fetch one message (e.g. an expired attachment URL). */
+    resyncMessage: (conversationId: string, messageId: string) => Promise<void>;
 }
 
 // ── Media tab ──────────────────────────────────────────────────────────────
@@ -165,6 +175,9 @@ export interface InboxMedia {
     /** epoch ms */
     timestamp: number;
     commentsCount: number;
+    likeCount?: number;
+    /** epoch ms — bumps when the item is (re)synced; drives the resync spinner. */
+    updatedAt?: number;
 }
 
 /** A top-level comment on a piece of media. */
@@ -197,4 +210,6 @@ export interface UseInboxMediaResult {
     deleteComment: (media: InboxMedia, commentId: string) => Promise<void>;
     /** Re-fetch the media list. */
     refresh: () => void;
+    /** Re-fetch one media item (image + comment/like counts). */
+    resyncMedia: (media: InboxMedia) => Promise<void>;
 }

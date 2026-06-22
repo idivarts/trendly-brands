@@ -1,19 +1,25 @@
 /**
  * Live backend implementation of the Inbox data contract.
  *
- * Talks to the brand-scoped inbox API (functions/trendly_v2 → /api/v2):
- *   GET    /brands/:brandId/inbox
+ * Reads are realtime: the conversation list and connected accounts are streamed
+ * straight from Firestore (`brands/{brandId}/inbox` + `socialAccounts`) via
+ * onSnapshot. The slow Meta sync runs in a background SQS worker that upserts
+ * each conversation as it goes, so they appear live as they load — no waiting on
+ * one big API round-trip.
+ *
+ * Writes still go through the brand-scoped inbox API (functions/trendly_v2):
+ *   POST   /brands/:brandId/inbox/sync             (queue background sync)
+ *   POST   /brands/:brandId/inbox/resync           (queue background resync)
  *   POST   /brands/:brandId/inbox/conversations/:id/reply
  *   POST   /brands/:brandId/inbox/conversations/:id/hide
  *   DELETE /brands/:brandId/inbox/conversations/:id
  *   POST   /brands/:brandId/inbox/conversations/:id/read
  *
- * The backend returns objects already shaped to this module's types, so the
- * JSON is consumed directly. Mutations are optimistic, then reconciled by a
- * background refetch.
+ * Mutations are optimistic; the Firestore listener reconciles them once the
+ * backend write lands.
  */
-import { collection, getDocs } from "firebase/firestore";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { collection, onSnapshot } from "firebase/firestore";
+import { useCallback, useEffect, useState } from "react";
 
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
@@ -65,31 +71,21 @@ export function useInboxApi(): UseInboxResult {
     const [connectedAccounts, setConnectedAccounts] = useState<ConnectedInboxAccount[]>([]);
     const [conversations, setConversations] = useState<InboxConversation[]>([]);
 
-    // True once the backend GET has applied authoritative state for the current
-    // brand. Guards the instant Firestore paint from clobbering fresher data if
-    // the (parallel) backend call wins the race.
-    const backendSettledRef = useRef(false);
-
-    const fetchInbox = useCallback(async () => {
-        if (!brandId) {
-            setConnectedAccounts([]);
-            setConversations([]);
-            setLoading(false);
-            return;
-        }
-        try {
-            const res = await HttpWrapper.fetch(`/api/v2/brands/${brandId}/inbox`);
-            const data = await res.json();
-            backendSettledRef.current = true;
-            setConnectedAccounts(data.connectedAccounts ?? []);
-            setConversations(data.conversations ?? []);
-        } catch (e) {
-            // Leave whatever we have; surface nothing destructive to the UI.
-            console.warn("inbox: failed to load", e);
-        } finally {
-            setLoading(false);
-        }
-    }, [brandId]);
+    // Fire-and-forget trigger for the background sync worker. The results stream
+    // back in through the Firestore listener below, so we don't read the response.
+    const triggerSync = useCallback(
+        async (path: "sync" | "resync") => {
+            if (!brandId) return;
+            try {
+                await HttpWrapper.fetch(`/api/v2/brands/${brandId}/inbox/${path}`, {
+                    method: "POST",
+                });
+            } catch (e) {
+                console.warn(`inbox: trigger ${path} failed`, e);
+            }
+        },
+        [brandId]
+    );
 
     useEffect(() => {
         if (!brandId) {
@@ -99,43 +95,61 @@ export function useInboxApi(): UseInboxResult {
             return;
         }
 
-        backendSettledRef.current = false;
         setLoading(true);
-        let cancelled = false;
+        let coldTriggered = false;
+        // Hold the spinner until BOTH listeners have reported once, so the UI
+        // never flashes "no socials" while the accounts snapshot is still in
+        // flight after the inbox one lands.
+        let inboxReady = false;
+        let accountsReady = false;
+        const settleIfReady = () => {
+            if (inboxReady && accountsReady) setLoading(false);
+        };
 
-        // Instant paint: the backend already persists the inbox to Firestore
-        // (brands/{brandId}/inbox + socialAccounts), so read it directly instead
-        // of waiting on the Lambda round-trip + Meta sync. Only flips the spinner
-        // off when there is meaningful cached content (≥1 connected account) — a
-        // cold cache falls through to the backend response, so no regression.
-        (async () => {
-            try {
-                const [convSnap, accSnap] = await Promise.all([
-                    getDocs(collection(FirestoreDB, "brands", brandId, "inbox")),
-                    getDocs(collection(FirestoreDB, "brands", brandId, "socialAccounts")),
-                ]);
-                if (cancelled || backendSettledRef.current) return;
-                const accounts = mapConnectedAccounts(accSnap.docs.map((d) => d.data()));
-                if (accounts.length === 0) return;
-                setConnectedAccounts(accounts);
-                setConversations(
-                    convSnap.docs.map((d) => d.data() as InboxConversation)
-                );
-                setLoading(false);
-            } catch (e) {
-                // Best-effort cache read; the backend GET will still populate.
-                console.warn("inbox: firestore cache read failed", e);
+        // Realtime conversation list. The background worker upserts each
+        // conversation as it processes them, so they appear here incrementally.
+        const unsubInbox = onSnapshot(
+            collection(FirestoreDB, "brands", brandId, "inbox"),
+            (snap) => {
+                setConversations(snap.docs.map((d) => d.data() as InboxConversation));
+                if (!inboxReady) {
+                    inboxReady = true;
+                    settleIfReady();
+                    // Cold cache → kick a background sync; rows stream in via this
+                    // same listener as the worker writes them.
+                    if (snap.empty && !coldTriggered) {
+                        coldTriggered = true;
+                        triggerSync("sync");
+                    }
+                }
+            },
+            (e) => {
+                console.warn("inbox: conversations snapshot failed", e);
+                inboxReady = true;
+                settleIfReady();
             }
-        })();
+        );
 
-        // Authoritative refresh in the background (also triggers the server-side
-        // Meta sync on a cold cache). Reconciles whatever the cache painted.
-        fetchInbox();
+        // Realtime connected accounts (mirrors the backend's ListAccounts mapping).
+        const unsubAccounts = onSnapshot(
+            collection(FirestoreDB, "brands", brandId, "socialAccounts"),
+            (snap) => {
+                setConnectedAccounts(mapConnectedAccounts(snap.docs.map((d) => d.data())));
+                accountsReady = true;
+                settleIfReady();
+            },
+            (e) => {
+                console.warn("inbox: accounts snapshot failed", e);
+                accountsReady = true;
+                settleIfReady();
+            }
+        );
 
         return () => {
-            cancelled = true;
+            unsubInbox();
+            unsubAccounts();
         };
-    }, [brandId, fetchInbox]);
+    }, [brandId, triggerSync]);
 
     const sendReply = useCallback(
         async (conversationId: string, text: string) => {
@@ -180,11 +194,11 @@ export function useInboxApi(): UseInboxResult {
                 );
             } catch (e) {
                 console.warn("inbox: reply failed", e);
-            } finally {
-                fetchInbox();
             }
+            // No manual refetch — the Firestore listener reconciles once the
+            // backend write lands.
         },
-        [brandId, fetchInbox]
+        [brandId]
     );
 
     const setCommentHidden = useCallback(
@@ -208,10 +222,9 @@ export function useInboxApi(): UseInboxResult {
                 );
             } catch (e) {
                 console.warn("inbox: hide failed", e);
-                fetchInbox();
             }
         },
-        [brandId, fetchInbox]
+        [brandId]
     );
 
     const deleteComment = useCallback(
@@ -225,10 +238,9 @@ export function useInboxApi(): UseInboxResult {
                 );
             } catch (e) {
                 console.warn("inbox: delete failed", e);
-                fetchInbox();
             }
         },
-        [brandId, fetchInbox]
+        [brandId]
     );
 
     const markRead = useCallback(
@@ -249,25 +261,52 @@ export function useInboxApi(): UseInboxResult {
         [brandId]
     );
 
+    // Look for new conversations / messages without clearing anything (pull-to-
+    // refresh + the desktop refresh button). Additive; updates arrive via the
+    // Firestore listener.
+    const refreshInbox = useCallback(async () => {
+        await triggerSync("sync");
+    }, [triggerSync]);
+
+    // Queue a background resync (clear DM cache + re-pull from Meta). The cleared
+    // and rebuilt rows arrive live through the Firestore listener.
     const resyncInbox = useCallback(async () => {
-        if (!brandId) return;
-        setLoading(true);
-        try {
-            const res = await HttpWrapper.fetch(
-                `/api/v2/brands/${brandId}/inbox/resync`,
-                { method: "POST" }
-            );
-            const data = await res.json();
-            backendSettledRef.current = true;
-            setConversations(data.conversations ?? []);
-        } catch (e) {
-            console.warn("inbox: resync failed", e);
-            // Fall back to a normal refresh so the UI isn't left stale.
-            await fetchInbox();
-        } finally {
-            setLoading(false);
-        }
-    }, [brandId, fetchInbox]);
+        await triggerSync("resync");
+    }, [triggerSync]);
+
+    // Unit-level resyncs. Each POSTs and returns; the Firestore listener surfaces
+    // the refreshed item (the caller spins until the item's updatedAt advances).
+    const postConv = useCallback(
+        async (convId: string, path: string) => {
+            if (!brandId) return;
+            try {
+                await HttpWrapper.fetch(
+                    `/api/v2/brands/${brandId}/inbox/conversations/${convId}/${path}`,
+                    { method: "POST" }
+                );
+            } catch (e) {
+                console.warn(`inbox: ${path} failed`, e);
+            }
+        },
+        [brandId]
+    );
+
+    const resyncProfile = useCallback((convId: string) => postConv(convId, "resync-profile"), [postConv]);
+    const resyncThread = useCallback((convId: string) => postConv(convId, "resync"), [postConv]);
+    const resyncMessage = useCallback(
+        async (convId: string, msgId: string) => {
+            if (!brandId) return;
+            try {
+                await HttpWrapper.fetch(
+                    `/api/v2/brands/${brandId}/inbox/conversations/${convId}/messages/${msgId}/resync`,
+                    { method: "POST" }
+                );
+            } catch (e) {
+                console.warn("inbox: message resync failed", e);
+            }
+        },
+        [brandId]
+    );
 
     return {
         loading,
@@ -277,6 +316,10 @@ export function useInboxApi(): UseInboxResult {
         setCommentHidden,
         deleteComment,
         markRead,
+        refreshInbox,
         resyncInbox,
+        resyncProfile,
+        resyncThread,
+        resyncMessage,
     };
 }

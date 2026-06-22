@@ -12,6 +12,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Text } from "@/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
 import ChannelAvatar from "./ChannelAvatar";
+import ResyncInline from "./ResyncInline";
 import { InboxConversation } from "./types";
 import { channelLabel, formatFollowers } from "./utils";
 
@@ -19,9 +20,11 @@ interface Props {
     conversation: InboxConversation;
     /** Mobile sheet shows a close button. */
     onClose?: () => void;
+    /** Re-fetch this contact's name/avatar from Meta. */
+    onResyncProfile?: () => Promise<void>;
 }
 
-const ContactPanel: React.FC<Props> = ({ conversation, onClose }) => {
+const ContactPanel: React.FC<Props> = ({ conversation, onClose, onResyncProfile }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useStyles(colors);
@@ -34,11 +37,20 @@ const ContactPanel: React.FC<Props> = ({ conversation, onClose }) => {
         <View style={styles.container}>
             <View style={styles.headerRow}>
                 <Text style={styles.headerTitle}>Contact details</Text>
-                {onClose ? (
-                    <Pressable onPress={onClose} style={styles.closeBtn}>
-                        <FontAwesomeIcon icon={faXmark} size={18} color={colors.text} />
-                    </Pressable>
-                ) : null}
+                <View style={styles.headerActions}>
+                    {onResyncProfile ? (
+                        <ResyncInline
+                            watch={conversation.updatedAt}
+                            action={onResyncProfile}
+                            label="Resync profile"
+                        />
+                    ) : null}
+                    {onClose ? (
+                        <Pressable onPress={onClose} style={styles.closeBtn}>
+                            <FontAwesomeIcon icon={faXmark} size={18} color={colors.text} />
+                        </Pressable>
+                    ) : null}
+                </View>
             </View>
 
             <View style={styles.profile}>
@@ -113,6 +125,11 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     fontSize: 15,
                     fontWeight: "700",
                     color: colors.text,
+                },
+                headerActions: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 2,
                 },
                 closeBtn: {
                     padding: 4,

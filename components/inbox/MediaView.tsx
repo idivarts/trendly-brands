@@ -9,7 +9,9 @@ import { Image } from "expo-image";
 import React, { useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
+    Platform,
     Pressable,
+    RefreshControl,
     ScrollView,
     StyleSheet,
     View,
@@ -20,11 +22,14 @@ import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 
 import MediaCommentsThread from "./MediaCommentsThread";
+import ResyncButton from "./ResyncButton";
+import ResyncInline from "./ResyncInline";
 import { useInboxMedia } from "./data/use-inbox-media";
 import { InboxMedia } from "./types";
 import { channelColor, channelIcon, channelLabel } from "./utils";
 
 const COMMENTS_WIDTH = 420;
+const MIN_REFRESH_MS = 900;
 
 const MediaView: React.FC = () => {
     const theme = useTheme();
@@ -32,9 +37,29 @@ const MediaView: React.FC = () => {
     const { xl } = useBreakpoints();
     const styles = useStyles(colors);
 
-    const { loading, media } = useInboxMedia();
+    const { loading, media, resyncMedia, refresh } = useInboxMedia();
 
     const [selected, setSelected] = useState<InboxMedia | undefined>(undefined);
+    const [hoveredId, setHoveredId] = useState<string | undefined>(undefined);
+    const [commentsReload, setCommentsReload] = useState(0);
+    const [refreshing, setRefreshing] = useState(false);
+
+    // Look for new/updated media (pull-to-refresh on touch, button on desktop).
+    const handleRefresh = async () => {
+        if (refreshing) return;
+        setRefreshing(true);
+        await Promise.all([
+            Promise.resolve(refresh()),
+            new Promise((r) => setTimeout(r, MIN_REFRESH_MS)),
+        ]);
+        setRefreshing(false);
+    };
+
+    // Resync a post: refresh its stored counts/image AND re-pull its comment list.
+    const resyncPost = (m: InboxMedia) => {
+        setCommentsReload((n) => n + 1);
+        return resyncMedia(m);
+    };
 
     // Keep a post selected by default on desktop.
     useEffect(() => {
@@ -64,8 +89,26 @@ const MediaView: React.FC = () => {
     }
 
     const grid = (
-        <ScrollView contentContainerStyle={styles.gridContent} showsVerticalScrollIndicator={false}>
-            <View style={styles.grid}>
+        <View style={styles.gridWrap}>
+            {/* Web (any width) gets a button; native uses pull-to-refresh below. */}
+            {Platform.OS === "web" ? (
+                <View style={styles.gridToolbar}>
+                    <ResyncButton onPress={handleRefresh} busy={refreshing} label="Refresh media" />
+                </View>
+            ) : null}
+            <ScrollView
+                contentContainerStyle={styles.gridContent}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={handleRefresh}
+                        tintColor={colors.primary}
+                        colors={[colors.primary]}
+                    />
+                }
+            >
+                <View style={styles.grid}>
                 {media.map((m) => {
                     const active = selected?.id === m.id;
                     return (
@@ -73,6 +116,8 @@ const MediaView: React.FC = () => {
                             key={`${m.channel}_${m.id}`}
                             style={styles.tile}
                             onPress={() => openMedia(m)}
+                            onHoverIn={() => setHoveredId(m.id)}
+                            onHoverOut={() => setHoveredId((h) => (h === m.id ? undefined : h))}
                         >
                             <Image
                                 source={{ uri: m.thumbnailUrl }}
@@ -96,12 +141,24 @@ const MediaView: React.FC = () => {
                                 <FontAwesomeIcon icon={faComment} size={11} color={colors.white} />
                                 <Text style={styles.tileCountText}>{m.commentsCount}</Text>
                             </View>
+                            {hoveredId === m.id ? (
+                                <View style={styles.tileResync}>
+                                    <ResyncInline
+                                        watch={m.updatedAt}
+                                        action={() => resyncMedia(m)}
+                                        label="Resync media"
+                                        color={colors.white}
+                                        size={14}
+                                    />
+                                </View>
+                            ) : null}
                             {active && xl ? <View style={styles.tileActive} /> : null}
                         </Pressable>
                     );
                 })}
-            </View>
-        </ScrollView>
+                </View>
+            </ScrollView>
+        </View>
     );
 
     const commentsPanel = selected ? (
@@ -125,9 +182,14 @@ const MediaView: React.FC = () => {
                         {channelLabel(selected.channel)} · {selected.commentsCount} comments
                     </Text>
                 </View>
+                <ResyncInline
+                    watch={selected.updatedAt}
+                    action={() => resyncPost(selected)}
+                    label="Resync post & comments"
+                />
             </View>
 
-            <MediaCommentsThread media={selected} />
+            <MediaCommentsThread media={selected} reloadKey={commentsReload} />
         </View>
     ) : null;
 
@@ -158,6 +220,13 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 container: { flex: 1, backgroundColor: colors.background },
                 row: { flex: 1, flexDirection: "row", backgroundColor: colors.background },
                 gridPane: { flex: 1, backgroundColor: colors.background },
+                gridWrap: { flex: 1 },
+                gridToolbar: {
+                    flexDirection: "row",
+                    justifyContent: "flex-end",
+                    paddingHorizontal: 12,
+                    paddingTop: 8,
+                },
                 commentsPaneWrap: {
                     backgroundColor: colors.background,
                     // Shadow leftward to separate from the grid (no border).
@@ -217,6 +286,13 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     backgroundColor: "rgba(0,0,0,0.55)",
                 },
                 tileCountText: { color: colors.white, fontSize: 11, fontWeight: "600" },
+                tileResync: {
+                    position: "absolute",
+                    top: 4,
+                    right: 4,
+                    borderRadius: 16,
+                    backgroundColor: "rgba(0,0,0,0.55)",
+                },
                 tileActive: {
                     ...StyleSheet.absoluteFillObject,
                     borderRadius: 10,
