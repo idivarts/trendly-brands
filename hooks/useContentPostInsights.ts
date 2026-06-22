@@ -22,7 +22,14 @@ export function useContentPostInsights(
     const [error, setError] = useState<string | null>(null);
 
     const load = useCallback(async () => {
-        if (!brandId || !mediaId || !socialId) return;
+        if (!brandId) return;
+        // Without the serving account we can't resolve a token → no analytics.
+        // Surface it instead of silently showing the generic "couldn't load".
+        if (!mediaId || !socialId) {
+            setData(null);
+            setError("Analytics unavailable — this post isn't linked to a connected account.");
+            return;
+        }
         setLoading(true);
         setError(null);
         try {
@@ -32,7 +39,16 @@ export function useContentPostInsights(
             );
             setData((await res.json()) as IPostAnalytics);
         } catch (e) {
-            setError((await HttpWrapper.extractErrorMessage(e)) ?? "Failed to load post analytics");
+            // Always surface a real reason — extractErrorMessage can itself throw
+            // on some error shapes, which previously left both data + error null
+            // and showed the unhelpful generic "couldn't load" fallback.
+            let msg: string | null | undefined;
+            try {
+                msg = await HttpWrapper.extractErrorMessage(e);
+            } catch {
+                /* ignore */
+            }
+            setError(msg || "Failed to load post analytics");
         } finally {
             setLoading(false);
         }

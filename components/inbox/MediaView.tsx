@@ -2,6 +2,8 @@ import {
     faChevronLeft,
     faComment,
     faImages,
+    faUpRightAndDownLeftFromCenter,
+    faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -14,9 +16,12 @@ import {
     RefreshControl,
     ScrollView,
     StyleSheet,
+    useWindowDimensions,
     View,
 } from "react-native";
+import { Modal, Portal } from "react-native-paper";
 
+import { PostAnalyticsPanel } from "@/components/contents/PostPerformance";
 import { Text } from "@/components/theme/Themed";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
@@ -35,7 +40,13 @@ const MediaView: React.FC = () => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
+    const { width: winW, height: winH } = useWindowDimensions();
     const styles = useStyles(colors);
+    // Definite, screen-derived size so the card never overflows the viewport
+    // (percentage maxWidth isn't reliably clamped inside paper's Modal on native)
+    // and the comments area can flex + scroll inside rather than spilling out.
+    const modalWidth = Math.min(760, winW - 32);
+    const modalHeight = Math.min(760, Math.round(winH * 0.86));
 
     const { loading, media, resyncMedia, refresh } = useInboxMedia();
 
@@ -43,6 +54,7 @@ const MediaView: React.FC = () => {
     const [hoveredId, setHoveredId] = useState<string | undefined>(undefined);
     const [commentsReload, setCommentsReload] = useState(0);
     const [refreshing, setRefreshing] = useState(false);
+    const [analyticsOpen, setAnalyticsOpen] = useState(false);
 
     // Look for new/updated media (pull-to-refresh on touch, button on desktop).
     const handleRefresh = async () => {
@@ -187,9 +199,48 @@ const MediaView: React.FC = () => {
                     action={() => resyncPost(selected)}
                     label="Resync post & comments"
                 />
+                <Pressable
+                    onPress={() => setAnalyticsOpen(true)}
+                    style={styles.expandBtn}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Expand post performance"
+                >
+                    <FontAwesomeIcon
+                        icon={faUpRightAndDownLeftFromCenter}
+                        size={14}
+                        color={colors.textSecondary}
+                    />
+                </Pressable>
             </View>
 
             <MediaCommentsThread media={selected} reloadKey={commentsReload} />
+
+            {/* Expanded post performance — reuses the SAME PostAnalyticsPanel as
+                the Content details screen (analytics + comments), in a modal. */}
+            <Portal>
+                <Modal
+                    visible={analyticsOpen}
+                    onDismiss={() => setAnalyticsOpen(false)}
+                    style={styles.modalRoot}
+                >
+                    <View style={[styles.modalCard, { width: modalWidth, height: modalHeight }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Post performance</Text>
+                            <Pressable
+                                onPress={() => setAnalyticsOpen(false)}
+                                style={styles.modalClose}
+                                hitSlop={8}
+                                accessibilityRole="button"
+                                accessibilityLabel="Close"
+                            >
+                                <FontAwesomeIcon icon={faXmark} size={18} color={colors.text} />
+                            </Pressable>
+                        </View>
+                        <PostAnalyticsPanel media={selected} embedHeight={0} fillHeight />
+                    </View>
+                </Modal>
+            </Portal>
         </View>
     ) : null;
 
@@ -317,6 +368,29 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     zIndex: 2,
                 },
                 backBtn: { padding: 4 },
+                expandBtn: {
+                    width: 30,
+                    height: 30,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 8,
+                },
+                modalRoot: { justifyContent: "center", alignItems: "center", padding: 16 },
+                modalCard: {
+                    // width + height are set inline from window dimensions.
+                    backgroundColor: colors.background,
+                    borderRadius: 16,
+                    padding: 16,
+                    gap: 12,
+                    overflow: "hidden", // clip the comments thread to the card
+                },
+                modalHeader: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                },
+                modalTitle: { fontSize: 16, fontWeight: "700", color: colors.text },
+                modalClose: { padding: 4 },
                 postThumb: { width: 48, height: 48, borderRadius: 8, backgroundColor: colors.tag },
                 postMeta: { flex: 1, gap: 2 },
                 postCaption: { fontSize: 14, fontWeight: "600", color: colors.text },

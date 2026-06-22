@@ -179,6 +179,8 @@ const ConversationList: React.FC<Props> = ({
                                 avatarUrl={item.participant.avatarUrl}
                                 channel={item.channel}
                                 size={46}
+                                name={item.participant.name}
+                                handle={item.participant.handle}
                             />
                             <View style={styles.rowBody}>
                                 <View style={styles.rowTop}>

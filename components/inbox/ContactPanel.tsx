@@ -58,6 +58,8 @@ const ContactPanel: React.FC<Props> = ({ conversation, onClose, onResyncProfile 
                     avatarUrl={conversation.participant.avatarUrl}
                     channel={conversation.channel}
                     size={72}
+                    name={conversation.participant.name}
+                    handle={conversation.participant.handle}
                 />
                 <Text style={styles.name}>{conversation.participant.name}</Text>
                 {conversation.participant.handle ? (

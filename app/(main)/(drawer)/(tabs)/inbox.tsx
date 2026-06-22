@@ -14,7 +14,7 @@ const InboxScreen = () => {
         <AppLayout withWebPadding={false} safeAreaEdges={["left", "right"]}>
             <PageHeader
                 title="Inbox"
-                subtitle={selectedBrand?.name}
+                subtitle={"All connnected socials for " + selectedBrand?.name}
                 showBackButton={false}
                 mobileActions="all"
                 actionButtons={[

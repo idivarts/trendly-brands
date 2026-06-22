@@ -243,6 +243,8 @@ const ThreadView: React.FC<Props> = ({
                     avatarUrl={conversation.participant.avatarUrl}
                     channel={conversation.channel}
                     size={40}
+                    name={conversation.participant.name}
+                    handle={conversation.participant.handle}
                 />
                 <View style={styles.headerText}>
                     <Text numberOfLines={1} style={styles.headerName}>
