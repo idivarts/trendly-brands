@@ -18,6 +18,7 @@ interface BrandCardProps {
     onMove: () => void;
     canMove: boolean;
     onDelete: () => void;
+    onCopyId: () => void;
 }
 
 /**
@@ -38,6 +39,7 @@ const BrandCard: React.FC<BrandCardProps> = ({
     onMove,
     canMove,
     onDelete,
+    onCopyId,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -69,6 +71,8 @@ const BrandCard: React.FC<BrandCardProps> = ({
                         />
                     }
                 >
+                    <Menu.Item title="Copy brand ID" onPress={onCopyId} />
+                    <Divider />
                     <Menu.Item title="Move to another organization" disabled={!canMove} onPress={onMove} />
                     <Divider />
                     <Menu.Item title="Delete" titleStyle={{ color: colors.red }} onPress={onDelete} />

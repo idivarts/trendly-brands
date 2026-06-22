@@ -2,6 +2,8 @@ import {
     faChevronLeft,
     faComment,
     faImages,
+    faUpRightAndDownLeftFromCenter,
+    faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -9,32 +11,67 @@ import { Image } from "expo-image";
 import React, { useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
+    Platform,
     Pressable,
+    RefreshControl,
     ScrollView,
     StyleSheet,
+    useWindowDimensions,
     View,
 } from "react-native";
+import { Modal, Portal } from "react-native-paper";
 
+import { PostAnalyticsPanel } from "@/components/contents/PostPerformance";
 import { Text } from "@/components/theme/Themed";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 
 import MediaCommentsThread from "./MediaCommentsThread";
+import ResyncButton from "./ResyncButton";
+import ResyncInline from "./ResyncInline";
 import { useInboxMedia } from "./data/use-inbox-media";
 import { InboxMedia } from "./types";
 import { channelColor, channelIcon, channelLabel } from "./utils";
 
 const COMMENTS_WIDTH = 420;
+const MIN_REFRESH_MS = 900;
 
 const MediaView: React.FC = () => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
+    const { width: winW, height: winH } = useWindowDimensions();
     const styles = useStyles(colors);
+    // Definite, screen-derived size so the card never overflows the viewport
+    // (percentage maxWidth isn't reliably clamped inside paper's Modal on native)
+    // and the comments area can flex + scroll inside rather than spilling out.
+    const modalWidth = Math.min(760, winW - 32);
+    const modalHeight = Math.min(760, Math.round(winH * 0.86));
 
-    const { loading, media } = useInboxMedia();
+    const { loading, media, resyncMedia, refresh } = useInboxMedia();
 
     const [selected, setSelected] = useState<InboxMedia | undefined>(undefined);
+    const [hoveredId, setHoveredId] = useState<string | undefined>(undefined);
+    const [commentsReload, setCommentsReload] = useState(0);
+    const [refreshing, setRefreshing] = useState(false);
+    const [analyticsOpen, setAnalyticsOpen] = useState(false);
+
+    // Look for new/updated media (pull-to-refresh on touch, button on desktop).
+    const handleRefresh = async () => {
+        if (refreshing) return;
+        setRefreshing(true);
+        await Promise.all([
+            Promise.resolve(refresh()),
+            new Promise((r) => setTimeout(r, MIN_REFRESH_MS)),
+        ]);
+        setRefreshing(false);
+    };
+
+    // Resync a post: refresh its stored counts/image AND re-pull its comment list.
+    const resyncPost = (m: InboxMedia) => {
+        setCommentsReload((n) => n + 1);
+        return resyncMedia(m);
+    };
 
     // Keep a post selected by default on desktop.
     useEffect(() => {
@@ -64,8 +101,26 @@ const MediaView: React.FC = () => {
     }
 
     const grid = (
-        <ScrollView contentContainerStyle={styles.gridContent} showsVerticalScrollIndicator={false}>
-            <View style={styles.grid}>
+        <View style={styles.gridWrap}>
+            {/* Web (any width) gets a button; native uses pull-to-refresh below. */}
+            {Platform.OS === "web" ? (
+                <View style={styles.gridToolbar}>
+                    <ResyncButton onPress={handleRefresh} busy={refreshing} label="Refresh media" />
+                </View>
+            ) : null}
+            <ScrollView
+                contentContainerStyle={styles.gridContent}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={handleRefresh}
+                        tintColor={colors.primary}
+                        colors={[colors.primary]}
+                    />
+                }
+            >
+                <View style={styles.grid}>
                 {media.map((m) => {
                     const active = selected?.id === m.id;
                     return (
@@ -73,6 +128,8 @@ const MediaView: React.FC = () => {
                             key={`${m.channel}_${m.id}`}
                             style={styles.tile}
                             onPress={() => openMedia(m)}
+                            onHoverIn={() => setHoveredId(m.id)}
+                            onHoverOut={() => setHoveredId((h) => (h === m.id ? undefined : h))}
                         >
                             <Image
                                 source={{ uri: m.thumbnailUrl }}
@@ -96,12 +153,24 @@ const MediaView: React.FC = () => {
                                 <FontAwesomeIcon icon={faComment} size={11} color={colors.white} />
                                 <Text style={styles.tileCountText}>{m.commentsCount}</Text>
                             </View>
+                            {hoveredId === m.id ? (
+                                <View style={styles.tileResync}>
+                                    <ResyncInline
+                                        watch={m.updatedAt}
+                                        action={() => resyncMedia(m)}
+                                        label="Resync media"
+                                        color={colors.white}
+                                        size={14}
+                                    />
+                                </View>
+                            ) : null}
                             {active && xl ? <View style={styles.tileActive} /> : null}
                         </Pressable>
                     );
                 })}
-            </View>
-        </ScrollView>
+                </View>
+            </ScrollView>
+        </View>
     );
 
     const commentsPanel = selected ? (
@@ -125,9 +194,53 @@ const MediaView: React.FC = () => {
                         {channelLabel(selected.channel)} · {selected.commentsCount} comments
                     </Text>
                 </View>
+                <ResyncInline
+                    watch={selected.updatedAt}
+                    action={() => resyncPost(selected)}
+                    label="Resync post & comments"
+                />
+                <Pressable
+                    onPress={() => setAnalyticsOpen(true)}
+                    style={styles.expandBtn}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                    accessibilityLabel="Expand post performance"
+                >
+                    <FontAwesomeIcon
+                        icon={faUpRightAndDownLeftFromCenter}
+                        size={14}
+                        color={colors.textSecondary}
+                    />
+                </Pressable>
             </View>
 
-            <MediaCommentsThread media={selected} />
+            <MediaCommentsThread media={selected} reloadKey={commentsReload} />
+
+            {/* Expanded post performance — reuses the SAME PostAnalyticsPanel as
+                the Content details screen (analytics + comments), in a modal. */}
+            <Portal>
+                <Modal
+                    visible={analyticsOpen}
+                    onDismiss={() => setAnalyticsOpen(false)}
+                    style={styles.modalRoot}
+                >
+                    <View style={[styles.modalCard, { width: modalWidth, height: modalHeight }]}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Post performance</Text>
+                            <Pressable
+                                onPress={() => setAnalyticsOpen(false)}
+                                style={styles.modalClose}
+                                hitSlop={8}
+                                accessibilityRole="button"
+                                accessibilityLabel="Close"
+                            >
+                                <FontAwesomeIcon icon={faXmark} size={18} color={colors.text} />
+                            </Pressable>
+                        </View>
+                        <PostAnalyticsPanel media={selected} embedHeight={0} fillHeight />
+                    </View>
+                </Modal>
+            </Portal>
         </View>
     ) : null;
 
@@ -158,6 +271,13 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 container: { flex: 1, backgroundColor: colors.background },
                 row: { flex: 1, flexDirection: "row", backgroundColor: colors.background },
                 gridPane: { flex: 1, backgroundColor: colors.background },
+                gridWrap: { flex: 1 },
+                gridToolbar: {
+                    flexDirection: "row",
+                    justifyContent: "flex-end",
+                    paddingHorizontal: 12,
+                    paddingTop: 8,
+                },
                 commentsPaneWrap: {
                     backgroundColor: colors.background,
                     // Shadow leftward to separate from the grid (no border).
@@ -217,6 +337,13 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     backgroundColor: "rgba(0,0,0,0.55)",
                 },
                 tileCountText: { color: colors.white, fontSize: 11, fontWeight: "600" },
+                tileResync: {
+                    position: "absolute",
+                    top: 4,
+                    right: 4,
+                    borderRadius: 16,
+                    backgroundColor: "rgba(0,0,0,0.55)",
+                },
                 tileActive: {
                     ...StyleSheet.absoluteFillObject,
                     borderRadius: 10,
@@ -241,6 +368,29 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     zIndex: 2,
                 },
                 backBtn: { padding: 4 },
+                expandBtn: {
+                    width: 30,
+                    height: 30,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 8,
+                },
+                modalRoot: { justifyContent: "center", alignItems: "center", padding: 16 },
+                modalCard: {
+                    // width + height are set inline from window dimensions.
+                    backgroundColor: colors.background,
+                    borderRadius: 16,
+                    padding: 16,
+                    gap: 12,
+                    overflow: "hidden", // clip the comments thread to the card
+                },
+                modalHeader: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                },
+                modalTitle: { fontSize: 16, fontWeight: "700", color: colors.text },
+                modalClose: { padding: 4 },
                 postThumb: { width: 48, height: 48, borderRadius: 8, backgroundColor: colors.tag },
                 postMeta: { flex: 1, gap: 2 },
                 postCaption: { fontSize: 14, fontWeight: "600", color: colors.text },

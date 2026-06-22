@@ -1,5 +1,6 @@
 import { LockedOverlay } from "@/components/billing/EntitlementGate";
 import { BarList, formatCompact, MiniLineChart } from "@/components/analytics/charts";
+import ResyncInline from "@/components/inbox/ResyncInline";
 import { useEntitlements } from "@/hooks/use-entitlements";
 import PageHeader from "@/components/ui/page-header";
 import { useBrandAnalytics } from "@/hooks/useBrandAnalytics";
@@ -45,7 +46,7 @@ const AnalyticsScreen = () => {
     const { analyticsLocked } = useEntitlements();
     const [range, setRange] = useState<AnalyticsRange>("28d");
     const [selectedId, setSelectedId] = useState<string>("all");
-    const { data, loading, error, reload } = useBrandAnalytics(range);
+    const { data, loading, error, reload, resyncAccount } = useBrandAnalytics(range);
 
     const platformMeta = (platform: string): { label: string; color: string } => {
         switch (platform) {
@@ -111,6 +112,11 @@ const AnalyticsScreen = () => {
                         {a.stale && <Text style={styles.staleTag}>cached</Text>}
                     </View>
                 </View>
+                <ResyncInline
+                    watch={data?.generatedAt}
+                    action={() => resyncAccount(a.socialId)}
+                    label="Resync insights"
+                />
             </View>
         );
     };

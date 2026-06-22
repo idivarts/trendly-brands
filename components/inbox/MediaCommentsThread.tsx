@@ -30,9 +30,11 @@ interface Props {
     media: InboxMedia;
     /** Optional fixed height for the scrollable list (e.g. when embedded). */
     listMaxHeight?: number;
+    /** Bump to force a re-fetch of the comment list (e.g. a "resync comments" tap). */
+    reloadKey?: number;
 }
 
-const MediaCommentsThread: React.FC<Props> = ({ media, listMaxHeight }) => {
+const MediaCommentsThread: React.FC<Props> = ({ media, listMaxHeight, reloadKey }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useStyles(colors);
@@ -63,7 +65,7 @@ const MediaCommentsThread: React.FC<Props> = ({ media, listMaxHeight }) => {
         return () => {
             cancelled = true;
         };
-    }, [brandId, media]);
+    }, [brandId, media, reloadKey]);
 
     const handleReply = useCallback(
         async (text: string) => {

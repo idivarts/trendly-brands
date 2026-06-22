@@ -121,16 +121,24 @@ const PostPerformance: React.FC<Props> = ({ content }) => {
                 ) : null}
             </View>
 
-            <PlatformPanel media={active.media} embedHeight={xl ? 460 : 380} />
+            <PostAnalyticsPanel media={active.media} embedHeight={xl ? 460 : 380} />
         </View>
     );
 };
 
-/** Analytics + comments for one published platform. */
-const PlatformPanel: React.FC<{ media: InboxMedia; embedHeight: number }> = ({
-    media,
-    embedHeight,
-}) => {
+/**
+ * Analytics (basic post insights) + comments for one published media. The common
+ * module reused by the Content details page and the Inbox Media "expand" modal —
+ * pass any InboxMedia (mediaId + socialId + channel) and it renders the full
+ * post-performance view.
+ */
+export const PostAnalyticsPanel: React.FC<{
+    media: InboxMedia;
+    embedHeight: number;
+    /** When true, the comments area flexes to fill the parent (for a bounded
+     * modal) instead of reserving a fixed `embedHeight` block. */
+    fillHeight?: boolean;
+}> = ({ media, embedHeight, fillHeight }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useStyles(colors);
@@ -143,7 +151,7 @@ const PlatformPanel: React.FC<{ media: InboxMedia; embedHeight: number }> = ({
     };
 
     return (
-        <View>
+        <View style={fillHeight ? styles.panelFill : undefined}>
             {/* Post preview header */}
             <View style={styles.previewRow}>
                 {media.thumbnailUrl ? (
@@ -212,7 +220,12 @@ const PlatformPanel: React.FC<{ media: InboxMedia; embedHeight: number }> = ({
 
             {/* Comments + replies (shared thread) */}
             <Text style={styles.subheading}>Comments</Text>
-            <View style={[styles.commentsWrap, { height: embedHeight }]}>
+            <View
+                style={[
+                    styles.commentsWrap,
+                    fillHeight ? styles.commentsFill : { height: embedHeight },
+                ]}
+            >
                 <MediaCommentsThread media={media} />
             </View>
         </View>
@@ -301,6 +314,9 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     overflow: "hidden",
                     backgroundColor: colors.background,
                 },
+                // Fill mode (bounded modal): panel + comments flex to fit.
+                panelFill: { flex: 1, minHeight: 0 },
+                commentsFill: { flex: 1, minHeight: 0 },
             }),
         [colors]
     );

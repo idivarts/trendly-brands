@@ -5,7 +5,6 @@ import React, { useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { Text } from "@/components/theme/Themed";
-import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 
 import { InboxMode } from "./types";
@@ -27,7 +26,7 @@ const TABS: { key: InboxMode; label: string; icon: typeof faComments }[] = [
 const InboxModeToggle: React.FC<Props> = ({ mode, onChange }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const { xl } = useBreakpoints();
+    // const { xl } = useBreakpoints();
     const styles = useStyles(colors);
 
     return (
@@ -39,7 +38,7 @@ const InboxModeToggle: React.FC<Props> = ({ mode, onChange }) => {
                         key={t.key}
                         onPress={() => onChange(t.key)}
                         style={[
-                            xl ? styles.tab : styles.tabCompact,
+                            styles.tab,
                             active && styles.tabActive,
                         ]}
                         accessibilityRole="button"
@@ -51,11 +50,9 @@ const InboxModeToggle: React.FC<Props> = ({ mode, onChange }) => {
                             size={15}
                             color={active ? colors.onPrimary : colors.textSecondary}
                         />
-                        {xl ? (
-                            <Text style={[styles.label, active && styles.labelActive]}>
-                                {t.label}
-                            </Text>
-                        ) : null}
+                        <Text style={[styles.label, active && styles.labelActive]}>
+                            {t.label}
+                        </Text>
                     </Pressable>
                 );
             })}
