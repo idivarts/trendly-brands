@@ -12,6 +12,7 @@ import Tag from "@/components/ui/tag";
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import {
+    OrganizationBrandSummary,
     OrganizationDetail,
     OrganizationMemberRow,
     useOrganizationContext,
@@ -94,6 +95,24 @@ const ManageOrganizationScreen = () => {
 
     const atCap = !!detail && detail.brandCount >= detail.maxBrands;
     const moveTargets = organizations.filter((o) => o.id !== orgId);
+
+    // Brands rendered on this org page. The org doc's denormalized `brandIds`
+    // array can lag a brand's own `organizationId` (e.g. right after a brand is
+    // created under or moved into this org), which left some brands visible in
+    // the brand switcher but missing here. Union the server detail list with any
+    // brand the client already knows belongs to this org so the two stay in sync.
+    const orgBrands = useMemo<OrganizationBrandSummary[]>(() => {
+        const byId = new Map<string, OrganizationBrandSummary>();
+        (detail?.brands ?? []).forEach((b) => byId.set(b.id, b));
+        brands
+            .filter((b) => b.organizationId === orgId)
+            .forEach((b) => {
+                if (!byId.has(b.id)) {
+                    byId.set(b.id, { id: b.id, name: b.name, image: b.image });
+                }
+            });
+        return Array.from(byId.values());
+    }, [detail?.brands, brands, orgId]);
 
     // Only an org owner/admin may remove members. Derive the viewer's role from
     // the loaded member list.
@@ -305,13 +324,13 @@ const ManageOrganizationScreen = () => {
                                     </Button>
                                 </View>
 
-                                {detail.brands.length === 0 ? (
+                                {orgBrands.length === 0 ? (
                                     <Text style={styles.empty}>
                                         No brands in this organization yet.
                                     </Text>
                                 ) : (
                                     <View style={styles.brandGrid} lightColor="transparent" darkColor="transparent">
-                                        {detail.brands.map((b) => (
+                                        {orgBrands.map((b) => (
                                             <BrandCard
                                                 key={b.id}
                                                 name={b.name}
