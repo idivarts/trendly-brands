@@ -579,8 +579,11 @@ export const BrandContextProvider: React.FC<
         if (!manager) return null;
         // Capture the brand's country silently (no UI). Source of truth for
         // India-only gating. Don't overwrite an explicitly provided value.
+        // creationTime is stamped here as a safety net so every create flow
+        // (incl. ones that don't set it themselves) sends a value; the backend
+        // also stamps it if absent. An explicit value on `brand` wins.
         return callBrandCreateAPI({
-            brand: { country: detectCountryCode(), ...brand },
+            brand: { country: detectCountryCode(), creationTime: Date.now(), ...brand },
         });
     };
 
