@@ -233,6 +233,8 @@ export const BrandContextProvider: React.FC<
                 if (!Array.isArray(cachedPayload?.brands)) return;
 
                 const cachedBrands = cachedPayload.brands;
+                if (cachedBrands.length === 0) return;
+
                 setBrands(cachedBrands);
 
                 const desiredSelectedBrand = cachedPayload.selectedBrandId
@@ -272,7 +274,11 @@ export const BrandContextProvider: React.FC<
         Console.log("Brand ID from member Query:", manager.id);
 
         const unsubscribe = onSnapshot(membersQuery, async (membersSnapshot) => {
-            if (!hasHydratedFromCache) {
+            // Only show the blocking loader when there is nothing to display
+            // yet. Once cache hydration (or a prior emission) has populated
+            // brands, refresh silently in the background instead of flashing
+            // the full-screen loader for the 3-5s the getDocs fan-out takes.
+            if (!hasHydratedFromCache && brandsRef.current.length === 0) {
                 setLoading(true);
             }
             try {
@@ -419,20 +425,26 @@ export const BrandContextProvider: React.FC<
 
     useEffect(() => {
         if (!manager?.id) return;
+        // Never clobber a good cache with an empty list. On every fresh mount
+        // `brands` starts as [] before hydration/snapshot fills it; persisting
+        // that empty array races the cache READ in the hydrate effect above and
+        // can wipe the previously cached brands — which is exactly what made the
+        // app intermittently miss the cache and sit on the loading screen while
+        // the snapshot fan-out refetched everything.
+        if (brands.length === 0) return;
         const cacheKey = getManagerBrandsCacheKey(manager.id);
 
         const persistBrandsCache = async () => {
             try {
-                for (let i = 0; i < brands.length; i++) {
-                    if (brands[i].id === selectedBrand?.id) {
-                        brands[i] = selectedBrand;
-                        break;
-                    }
-                }
+                // Merge the freshest selectedBrand snapshot into the list to be
+                // persisted, without mutating the React state array in place.
+                const brandsToPersist = brands.map((b) =>
+                    selectedBrand && b.id === selectedBrand.id ? selectedBrand : b
+                );
                 await PersistentStorage.set(
                     cacheKey,
                     JSON.stringify({
-                        brands,
+                        brands: brandsToPersist,
                         selectedBrandId: selectedBrand?.id,
                     } as BrandsCachePayload)
                 );
@@ -615,19 +627,21 @@ export const BrandContextProvider: React.FC<
         await updateDoc(brandRef, brand);
     };
 
-    // Resume onboarding: if the active brand is still a draft, keep the user in
-    // the AI onboarding chat until it's finalized.
+    // Send the manager to onboarding ONLY when they belong to no brand at all.
+    // Membership is the sole trigger — onboarding status is irrelevant: a user
+    // with any brand (even a not-yet-finalized draft) is never bounced here.
     useEffect(() => {
-        if (selectedBrand?.onboardingComplete !== false) return;
-        // If the user already has a finalized brand, never bounce them to
-        // onboarding — selection prefers the finalized brand, so this draft is
-        // transient (e.g. a stray/abandoned draft) and must not hijack routing.
-        if (brands.some((b) => b.onboardingComplete !== false)) return;
-        // Don't redirect while already anywhere in the onboarding flow (chat or
-        // the fallback form), only when a draft is open from elsewhere.
+        // Wait until the brand list has finished loading, so we never redirect
+        // on a transient/partial list (before the snapshot resolves or while the
+        // cache is still hydrating).
+        if (loading) return;
+        // `brands` is the raw list including drafts → length 0 means the user is
+        // genuinely part of no brand.
+        if (brands.length > 0) return;
+        // Don't redirect if we're already in the onboarding flow.
         if (pathName?.includes("onboarding")) return;
         router.resetAndNavigate("/onboarding");
-    }, [selectedBrand?.id, selectedBrand?.onboardingComplete, pathName, brands]);
+    }, [loading, brands, pathName]);
 
     // Draft brands (mid-onboarding) are hidden from brand lists/switchers. The
     // active draft can still be the selectedBrand during onboarding.
