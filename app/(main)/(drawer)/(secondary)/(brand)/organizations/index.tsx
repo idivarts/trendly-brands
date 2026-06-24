@@ -8,11 +8,13 @@ import PageHeader from "@/components/ui/page-header";
 import { useOrganizationContext } from "@/contexts/organization-context.provider";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
+import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import Colors from "@/shared-uis/constants/Colors";
+import { CONTACT_URL } from "@/constants/App";
 import { useTheme } from "@react-navigation/native";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet } from "react-native";
+import { ActivityIndicator, Linking, ScrollView, StyleSheet } from "react-native";
 
 const OrganizationsScreen = () => {
     const theme = useTheme();
@@ -22,8 +24,36 @@ const OrganizationsScreen = () => {
     const router = useRouter();
 
     const { organizations, loading, refresh, createOrganization } = useOrganizationContext();
+    const { openModal } = useConfirmationModel();
     const [createOpen, setCreateOpen] = useState(false);
     const [creating, setCreating] = useState(false);
+
+    // Creating additional organizations is an Agency-only capability. A manager
+    // may create one only when they already belong to an org on the Agency plan;
+    // everyone else is routed to sales instead of the create form.
+    const canCreateOrg = useMemo(
+        () =>
+            organizations.some(
+                (org) => org.planKey === "agency" || org.billing?.planKey === "agency"
+            ),
+        [organizations]
+    );
+
+    const onNewOrgPress = () => {
+        if (canCreateOrg) {
+            setCreateOpen(true);
+            return;
+        }
+        // Non-Agency managers can't self-serve additional orgs — route them to sales.
+        openModal({
+            title: "Talk to sales to add an organization",
+            description:
+                "Creating additional organizations is available on the Agency plan. Reach out to our team and we’ll get you set up.",
+            confirmText: "Contact sales",
+            confirmAction: () => Linking.openURL(CONTACT_URL),
+            cancelText: "Not now",
+        });
+    };
 
     useFocusEffect(
         useCallback(() => {
@@ -57,7 +87,7 @@ const OrganizationsScreen = () => {
                         mode="contained"
                         compact
                         icon="plus"
-                        onPress={() => setCreateOpen(true)}
+                        onPress={onNewOrgPress}
                     >
                         {xl ? "New organization" : "New"}
                     </Button>,
