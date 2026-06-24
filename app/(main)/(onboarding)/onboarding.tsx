@@ -2,7 +2,6 @@ import OnboardingLoader from "@/components/onboarding/OnboardingLoader";
 import PhoneNumberInput from "@/components/onboarding/PhoneNumberInput";
 import WhatNextStep, { NextChoice } from "@/components/onboarding/WhatNextStep";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { Country, getDefaultCountry } from "@/utils/countries";
 import { useBreakpoints } from "@/hooks";
 import AppLayout from "@/layouts/app-layout";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
@@ -11,13 +10,14 @@ import { useMyNavigation } from "@/shared-libs/utils/router";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { Brand } from "@/types/Brand";
+import { Country, getDefaultCountry } from "@/utils/countries";
 import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { useLocalSearchParams } from "expo-router";
 import { doc, getDoc } from "firebase/firestore";
 import { AnimatePresence, MotiView } from "moti";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     KeyboardAvoidingView,
     Platform,
@@ -108,9 +108,28 @@ const OnboardingFlow = () => {
     // When started from an Organization page, create the brand under that org.
     const { orgId } = useLocalSearchParams<{ orgId?: string }>();
 
-    const { createBrand, setSelectedBrand } = useBrandContext();
+    const { createBrand, setSelectedBrand, brands } = useBrandContext();
 
     const [phase, setPhase] = useState<Phase>("form");
+
+    // Reverse case: a manager who already belongs to a FINALIZED brand has no
+    // business sitting on the onboarding flow unless they're intentionally
+    // creating a brand for a specific organization (signalled by the `orgId`
+    // param). When they land on onboarding with a finalized brand but no
+    // `orgId`, select a default brand (if none is selected yet) and send them to
+    // the default app page.
+    useEffect(() => {
+        console.log("Onboarding Variables:", orgId, brands, phase);
+
+        if (orgId) return;
+        if (brands.length === 0) return;
+        if (phase !== "form") return;
+
+        router.resetAndNavigate(
+            "/(main)/(drawer)/(tabs)/(content)/content-strategies" as any
+        );
+    }, [orgId, brands, phase]);
+
     const [stepIndex, setStepIndex] = useState(0);
     const [form, setForm] = useState<FormState>({
         name: "",

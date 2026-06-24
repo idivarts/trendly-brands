@@ -1,0 +1,24 @@
+diff --git a/node_modules/expo-notifications/android/src/main/AndroidManifest.xml b/node_modules/expo-notifications/android/src/main/AndroidManifest.xml
+index 777403d..70fe1e4 100644
+--- a/node_modules/expo-notifications/android/src/main/AndroidManifest.xml
++++ b/node_modules/expo-notifications/android/src/main/AndroidManifest.xml
+@@ -1,5 +1,4 @@
+ <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+-  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+   <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+ 
+   <application>
+@@ -17,13 +16,6 @@
+       android:exported="false">
+       <intent-filter android:priority="-1">
+         <action android:name="expo.modules.notifications.NOTIFICATION_EVENT" />
+-
+-        <action android:name="android.intent.action.BOOT_COMPLETED" />
+-        <action android:name="android.intent.action.REBOOT" />
+-        <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+-        <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+-
+-        <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+       </intent-filter>
+     </receiver>
+ 

@@ -1,6 +1,7 @@
+// @ts-nocheck
 import { useTheme, type Theme } from "@react-navigation/native";
 import { useLocalSearchParams } from "expo-router";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Platform, StyleSheet, View } from "react-native";
 import { Portal } from "react-native-paper";
 

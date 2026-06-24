@@ -2,7 +2,7 @@
     "expo": {
         "name": "Trendly - AI Social Planner",
         "slug": "trendly-brands",
-        "version": "3.0.0",
+        "version": "3.0.1",
         "orientation": "portrait",
         "icon": "./assets/images/branding/app-icon.png",
         "scheme": "trendly-brands",
