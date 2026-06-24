@@ -17,6 +17,7 @@
   "exclude": [
     "./shared-libs/node_modules/*",
     "./shared-uis/node_modules/*",
-    "./shared-constants/node_modules/*"
+    "./shared-constants/node_modules/*",
+    "./_deprecated/**/*"
   ]
 }
