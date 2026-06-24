@@ -143,6 +143,10 @@ export const BrandContextProvider: React.FC<
     const [selectedBrand, setSelectedBrand] = useState<Brand | undefined>();
     const [currentMember, setCurrentMember] = useState<CurrentMember | undefined>(undefined);
     const [teamPrivileges, setTeamPrivileges] = useState<TeamPrivileges | undefined>(undefined);
+    // The teamId the currently-loaded `teamPrivileges` belong to. Used to tell
+    // "privileges loaded for this team" apart from "still loading", so gating
+    // stays permissive during the load instead of hiding everything.
+    const [privilegesTeamId, setPrivilegesTeamId] = useState<string | undefined>(undefined);
     const { manager } = useAuthContext();
     const router = useMyNavigation();
     const pathName = usePathname();
@@ -208,12 +212,16 @@ export const BrandContextProvider: React.FC<
         const teamId = currentMember?.teamId;
         if (!brandId || !teamId) {
             setTeamPrivileges(undefined);
+            setPrivilegesTeamId(undefined);
             return;
         }
         const teamRef = doc(FirestoreDB, "brands", brandId, "teams", teamId);
         const unsubscribe = onSnapshot(teamRef, (snapshot) => {
             const data = snapshot.exists() ? snapshot.data() : undefined;
             setTeamPrivileges((data?.privileges as TeamPrivileges) ?? undefined);
+            // Mark which team these privileges belong to, so gating knows the
+            // resolution is for the CURRENT team (and not stale/loading).
+            setPrivilegesTeamId(teamId);
         });
         return () => unsubscribe();
     }, [selectedBrand?.id, currentMember?.teamId]);
@@ -535,7 +543,14 @@ export const BrandContextProvider: React.FC<
     // Permissive while unknown/loading and for legacy (pre-migration) members
     // with no team — backend + Firestore rules enforce. Mirrors the server-side
     // transition shim.
-    const isPermissiveMember = !currentMember || !currentMember.teamId;
+    const isPermissiveMember =
+        !currentMember ||
+        !currentMember.teamId ||
+        // The member has a team, but its privileges haven't loaded yet (the team
+        // snapshot resolves after the member snapshot). Stay permissive until the
+        // loaded privileges match the current team — otherwise every gated UI
+        // element (e.g. sidebar nav items) briefly disappears then reappears.
+        privilegesTeamId !== currentMember.teamId;
 
     const hasPrivilege = useCallback(
         (feature: FeatureKey, priv: string) => {
