@@ -1,3 +1,4 @@
+// @ts-nocheck
 import AIChatPanel from "@/components/shared/AIChatPanel";
 import { ONBOARDING_COMPLETE_LANDING_PAGE } from "@/constants/App";
 import { useBrandContext } from "@/contexts/brand-context.provider";
@@ -9,7 +10,7 @@ import Colors from "@/shared-uis/constants/Colors";
 import { Brand } from "@/types/Brand";
 import { useTheme, type Theme } from "@react-navigation/native";
 import { useLocalSearchParams } from "expo-router";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
 // The essential fields onboarding must collect, used to drive the progress bar.
