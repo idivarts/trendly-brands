@@ -37,6 +37,7 @@ import {
 } from "react-native-enriched";
 import AIQuickEditModal from "@/components/ai/AIQuickEdit/AIQuickEditModal";
 import { useBreakpoints } from "@/hooks";
+import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import ImageInsertModal from "./ImageInsertModal";
 import LinkInsertModal from "./LinkInsertModal";
 
@@ -373,10 +374,12 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                             : "View only"}
                     </Text>
                     {!lock?.finalized && !lock?.lockedByName && lock?.onRequestEdit && (
-                        <Pressable style={styles.editAction} onPress={lock.onRequestEdit}>
-                            <FontAwesomeIcon icon={faPen} size={12} color={colors.onPrimary} />
-                            <Text style={styles.editActionText}>Edit</Text>
-                        </Pressable>
+                        <CoachmarkAnchor id="gt-strategy-edit" shape="pill">
+                            <Pressable style={styles.editAction} onPress={lock.onRequestEdit}>
+                                <FontAwesomeIcon icon={faPen} size={12} color={colors.onPrimary} />
+                                <Text style={styles.editActionText}>Edit</Text>
+                            </Pressable>
+                        </CoachmarkAnchor>
                     )}
                 </View>
             )}

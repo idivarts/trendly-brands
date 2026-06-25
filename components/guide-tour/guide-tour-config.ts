@@ -95,6 +95,14 @@ const STRATEGY_WEB_STEPS = [
 const STRATEGY_MOBILE_STEPS = [
     STRATEGY_EDITOR_STEP,
     {
+        id: "gt-strategy-edit",
+        title: "Edit the plan",
+        description:
+            "Tap Edit to start making changes — the plan is view-only until you do.",
+        placement: "bottom" as const,
+        shape: "pill" as const,
+    },
+    {
         id: "gt-strategy-push-to-calendar",
         title: "Push to Calendar",
         description:
