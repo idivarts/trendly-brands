@@ -33,11 +33,13 @@ import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
-import { faCommentDots, faRobot } from "@fortawesome/free-solid-svg-icons";
+import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
+import { faCalendarDays, faCommentDots, faRobot } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Easing, Platform, StyleSheet } from "react-native";
+import { Animated, Easing, Platform, Pressable, StyleSheet, Text } from "react-native";
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 // .replace(/<[^>]*>/g, "").trim()
@@ -636,11 +638,11 @@ const ContentStrategyDetail = () => {
     });
 
     return (
-        // On mobile this screen sits inside the bottom Tabs navigator — the tab
-        // bar already owns the home-indicator inset, so adding our own "bottom"
-        // edge here just paints a dead band between the chat composer and the tab
-        // bar. Drop it on !xl; keep it on desktop where there's no bottom tab bar.
-        <AppLayout safeAreaEdges={xl ? ["top", "right", "bottom", "left"] : ["top", "right", "left"]}>
+        // The bottom tab bar is hidden on this screen (see (tabs)/_layout.tsx),
+        // so this screen now owns the home-indicator inset on every breakpoint —
+        // the chat composer and the floating "Push to Calendar" CTA both sit
+        // above it. Inset all four edges.
+        <AppLayout safeAreaEdges={["top", "right", "bottom", "left"]}>
             <View
                 style={styles.splitContainer}
                 onLayout={(e) => setSplitWidth(e.nativeEvent.layout.width)}
@@ -687,6 +689,10 @@ const ContentStrategyDetail = () => {
                                     strategyId={strategyId ?? undefined}
                                     collaborative
                                     lock={editorLock}
+                                    // On mobile the floating "Push to Calendar"
+                                    // CTA overlays the bottom — pad the scroll
+                                    // content so the last lines aren't hidden.
+                                    contentBottomInset={!xl && !isFinalized ? 88 : 0}
 
                                     toolbar={activeStrategy ? {
                                         strategy: activeStrategy,
@@ -799,6 +805,10 @@ const ContentStrategyDetail = () => {
                             }
                             readOnly={isFinalized}
                             isCompact={false}
+                            // Mobile collecting state is otherwise a navigational
+                            // dead-end (no tab bar, no toolbar) — surface a back
+                            // button in the chat header. Only while collecting.
+                            onBack={isCollecting ? handleBack : undefined}
                             // AppLayout (this screen) already insets top+bottom,
                             // so the panel must not add the safe area again.
                             parentHandlesSafeArea
@@ -844,18 +854,47 @@ const ContentStrategyDetail = () => {
 
             {/* Mobile: open Comments / AI Chat from a bottom-right speed-dial FAB.
                 Only in the strategy-ready state — while collecting the chat already
-                fills the screen. bottomOffset clears the 70px bottom tab bar. */}
+                fills the screen. The tab bar is hidden on this screen, so the FAB
+                floats above the bottom inset; when the "Push to Calendar" CTA is
+                present (not finalized) it lifts further to clear that bar. */}
             {!xl && !isCollecting && !isLoading && (
                 <RightPanelFab
                     mode={rightPanelMode}
                     onModeChange={setRightPanelMode}
-                    bottomOffset={70}
+                    bottomOffset={isFinalized ? 16 : 78}
                     anchorId="gt-strategy-fab"
                     actions={[
                         { mode: "comments", icon: faCommentDots, label: "Comments" },
                         { mode: "chat", icon: faRobot, label: "AI Chat" },
                     ]}
                 />
+            )}
+
+            {/* Mobile: floating "Push to Calendar" CTA pinned to the bottom. The
+                detail screen has no bottom tab bar on !xl, so we surface this as
+                the prioritized primary action (on desktop it lives in the
+                toolbar). Hidden once finalized — the strategy is already pushed. */}
+            {!xl && isReady && !isFinalized && (
+                <View style={styles.pushBar} pointerEvents="box-none">
+                    <CoachmarkAnchor id="gt-strategy-push-to-calendar" shape="rect">
+                        <Pressable
+                            style={({ pressed }) => [
+                                styles.pushButton,
+                                pressed && styles.pushButtonPressed,
+                            ]}
+                            onPress={() => setShowPushToCalendar(true)}
+                            accessibilityLabel="Push to Calendar"
+                            accessibilityRole="button"
+                        >
+                            <FontAwesomeIcon
+                                icon={faCalendarDays}
+                                size={16}
+                                color={colors.onPrimary}
+                            />
+                            <Text style={styles.pushButtonText}>Push to Calendar</Text>
+                        </Pressable>
+                    </CoachmarkAnchor>
+                </View>
             )}
 
             <StrategiesDrawer
@@ -952,6 +991,43 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 fullScreenChat: {
                     flex: 1,
                     backgroundColor: colors.background,
+                },
+                // Floating bottom CTA bar (mobile only). Centered so it reads as a
+                // prioritized floating action while covering minimal editor content.
+                pushBar: {
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    bottom: 16,
+                    alignItems: "center",
+                    // Transparent so only the button floats over the editor — the
+                    // themed View would otherwise paint an opaque background bar.
+                    backgroundColor: "transparent",
+                    zIndex: 80,
+                    elevation: 80,
+                },
+                pushButton: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                    paddingVertical: 14,
+                    paddingHorizontal: 28,
+                    borderRadius: 30,
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowRadius: 12,
+                    shadowOpacity: 0.35,
+                    elevation: 4,
+                },
+                pushButtonPressed: {
+                    opacity: 0.9,
+                    transform: [{ scale: 0.98 }],
+                },
+                pushButtonText: {
+                    color: colors.onPrimary,
+                    fontSize: 15,
+                    fontWeight: "700",
                 },
             }),
         [colors]

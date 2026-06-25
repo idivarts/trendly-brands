@@ -74,11 +74,15 @@ const TabLayout = () => {
                 }}
             />
 
-            {/* Hidden: content-strategies detail route */}
+            {/* Hidden: content-strategies detail route. On mobile this is a
+                focused, full-screen editing surface — hide the bottom tab bar
+                entirely so the floating "Push to Calendar" CTA owns the bottom.
+                (On xl the tab bar is already hidden via screenOptions.) */}
             <Tabs.Screen
                 name="(content)/content-strategies/[strategyId]"
                 options={{
                     tabBarItemStyle: { display: "none" },
+                    tabBarStyle: { display: "none" },
                     headerShown: false,
                 }}
                 getId={({ params }) => params?.strategyId as string}

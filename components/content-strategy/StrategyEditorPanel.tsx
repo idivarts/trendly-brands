@@ -54,6 +54,8 @@ interface EditorProps {
          *  points at duplicate rather than "someone is editing". */
         finalized?: boolean;
     };
+    /** Extra bottom scroll padding so content clears the mobile floating CTA. */
+    contentBottomInset?: number;
 }
 
 export interface ToolbarProps {
@@ -570,12 +572,9 @@ const StrategyToolbar: React.FC<ToolbarProps & { colors: ReturnType<typeof Color
             icon: faCopy,
             onPress: onDuplicate,
         },
-        // On web, Push to Calendar is a first-class labelled button in the
-        // toolbar (see below); on mobile it stays in the overflow menu. A
-        // finalized strategy is already pushed, so the action is removed.
-        ...(!xl && !isFinalized
-            ? [{ label: "Push to Calendar", icon: faCalendarDays, onPress: onPushToCalendar }]
-            : []),
+        // Push to Calendar is a first-class control on both breakpoints — a
+        // labelled toolbar button on web, and a floating bottom CTA on mobile
+        // (rendered by the detail screen) — so it's intentionally absent here.
     ];
 
     // Status transitions available to this viewer in the current state. The

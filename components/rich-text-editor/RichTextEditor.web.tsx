@@ -1,4 +1,8 @@
 import AIQuickEditModal from "@/components/ai/AIQuickEdit/AIQuickEditModal";
+import { useAuthContext } from "@/contexts/auth-context.provider";
+import { useBrandContext } from "@/contexts/brand-context.provider";
+import { EDIT_LOCK_TTL_MS } from "@/hooks/use-strategies";
+import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Colors from "@/shared-uis/constants/Colors";
 import { ensureEnrichedHtml, ensureHtml } from "@/utils/rich-text";
 import {
@@ -18,7 +22,6 @@ import {
     faUnderline,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { useTheme } from "@react-navigation/native";
 import { CodeHighlightNode, CodeNode } from "@lexical/code";
 import { $generateHtmlFromNodes, $generateNodesFromDOM } from "@lexical/html";
 import { $createLinkNode, $isLinkNode, LinkNode, TOGGLE_LINK_COMMAND } from "@lexical/link";
@@ -51,6 +54,8 @@ import {
 } from "@lexical/rich-text";
 import { $setBlocksType } from "@lexical/selection";
 import { $findMatchingParent } from "@lexical/utils";
+import { useTheme } from "@react-navigation/native";
+import { doc as fsDoc, increment, runTransaction } from "firebase/firestore";
 import {
     $createParagraphNode,
     $createRangeSelection,
@@ -68,13 +73,8 @@ import {
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import ImageInsertModal from "./ImageInsertModal";
-import { useAuthContext } from "@/contexts/auth-context.provider";
-import { useBrandContext } from "@/contexts/brand-context.provider";
-import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
-import { doc as fsDoc, increment, runTransaction } from "firebase/firestore";
-import { EDIT_LOCK_TTL_MS } from "@/hooks/use-strategies";
-import { $createImageNode, ImageNode } from "./lexical/ImageNode";
 import { createFirestoreProviderFactory, FirestoreYjsProvider } from "./lexical/FirestoreYjsProvider";
+import { $createImageNode, ImageNode } from "./lexical/ImageNode";
 import { $serializeToEnrichedInner, $setEditorContentFromHtml } from "./lexical/serialize";
 import LinkInsertModal from "./LinkInsertModal";
 
@@ -101,6 +101,11 @@ export interface StrategyEditorPanelProps {
      * lock, so we show a banner and suspend editing until it's released.
      */
     lock?: EditLockUI;
+    /**
+     * Extra bottom padding for the scroll content, so the last lines clear a
+     * caller-owned floating element (e.g. the mobile "Push to Calendar" CTA).
+     */
+    contentBottomInset?: number;
 }
 
 export interface EditLockUI {
@@ -262,6 +267,7 @@ const EditorBody: React.FC<StrategyEditorPanelProps> = ({
     module: aiModule = "content",
     collaborative,
     lock,
+    contentBottomInset = 0,
 }) => {
     const [editor] = useLexicalComposerContext();
     const theme = useTheme();
@@ -794,100 +800,100 @@ const EditorBody: React.FC<StrategyEditorPanelProps> = ({
                         {lock?.finalized
                             ? "Finalized — pushed to the calendar. Duplicate it to keep editing."
                             : lock?.lockedByName
-                            ? `${lock.lockedByName} is editing on a device · changes appear when they finish`
-                            : "Read-only"}
+                                ? `${lock.lockedByName} is editing on a device · changes appear when they finish`
+                                : "Read-only"}
                     </Text>
                 </View>
             )}
 
             {/* ── Toolbar ──────────────────────────────────────────────────── */}
             {!readOnly && (
-            <View style={styles.toolbar}>
-                <View style={styles.toolbarLeft}>
-                    <select value={dropdownValue} onChange={(e) => handleTextSize(e.target.value)} style={selectStyle}>
-                        <option value="normal">Normal</option>
-                        <option value="h1">H1</option>
-                        <option value="h2">H2</option>
-                        <option value="h3">H3</option>
-                    </select>
+                <View style={styles.toolbar}>
+                    <View style={styles.toolbarLeft}>
+                        <select value={dropdownValue} onChange={(e) => handleTextSize(e.target.value)} style={selectStyle}>
+                            <option value="normal">Normal</option>
+                            <option value="h1">H1</option>
+                            <option value="h2">H2</option>
+                            <option value="h3">H3</option>
+                        </select>
 
-                    {inlineButtons.map((btn) => (
+                        {inlineButtons.map((btn) => (
+                            <Pressable
+                                key={btn.label}
+                                style={[styles.toolbarBtn, btn.active && styles.toolbarBtnActive]}
+                                onPress={() => handleInlineFormat(btn.format)}
+                                accessibilityLabel={btn.label}
+                            >
+                                <FontAwesomeIcon
+                                    icon={btn.icon}
+                                    size={13}
+                                    color={btn.active ? (colors.onPrimary as string) : (colors.textSecondary as string)}
+                                />
+                            </Pressable>
+                        ))}
+
+                        <View style={styles.toolbarDivider} />
+
                         <Pressable
-                            key={btn.label}
-                            style={[styles.toolbarBtn, btn.active && styles.toolbarBtnActive]}
-                            onPress={() => handleInlineFormat(btn.format)}
-                            accessibilityLabel={btn.label}
+                            style={[styles.toolbarBtn, listType === "bullet" && styles.toolbarBtnActive]}
+                            onPress={() => handleList("bullet")}
+                            accessibilityLabel="Bullet list"
                         >
                             <FontAwesomeIcon
-                                icon={btn.icon}
+                                icon={faListUl}
                                 size={13}
-                                color={btn.active ? (colors.onPrimary as string) : (colors.textSecondary as string)}
+                                color={listType === "bullet" ? (colors.onPrimary as string) : (colors.textSecondary as string)}
                             />
                         </Pressable>
-                    ))}
+                        <Pressable
+                            style={[styles.toolbarBtn, listType === "number" && styles.toolbarBtnActive]}
+                            onPress={() => handleList("number")}
+                            accessibilityLabel="Ordered list"
+                        >
+                            <FontAwesomeIcon
+                                icon={faListOl}
+                                size={13}
+                                color={listType === "number" ? (colors.onPrimary as string) : (colors.textSecondary as string)}
+                            />
+                        </Pressable>
 
-                    <View style={styles.toolbarDivider} />
+                        <View style={styles.toolbarDivider} />
 
-                    <Pressable
-                        style={[styles.toolbarBtn, listType === "bullet" && styles.toolbarBtnActive]}
-                        onPress={() => handleList("bullet")}
-                        accessibilityLabel="Bullet list"
-                    >
-                        <FontAwesomeIcon
-                            icon={faListUl}
-                            size={13}
-                            color={listType === "bullet" ? (colors.onPrimary as string) : (colors.textSecondary as string)}
-                        />
-                    </Pressable>
-                    <Pressable
-                        style={[styles.toolbarBtn, listType === "number" && styles.toolbarBtnActive]}
-                        onPress={() => handleList("number")}
-                        accessibilityLabel="Ordered list"
-                    >
-                        <FontAwesomeIcon
-                            icon={faListOl}
-                            size={13}
-                            color={listType === "number" ? (colors.onPrimary as string) : (colors.textSecondary as string)}
-                        />
-                    </Pressable>
+                        <Pressable
+                            style={[styles.toolbarBtn, blockquoteActive && styles.toolbarBtnActive]}
+                            onPress={handleBlockquote}
+                            accessibilityLabel="Blockquote"
+                        >
+                            <FontAwesomeIcon
+                                icon={faQuoteLeft}
+                                size={13}
+                                color={blockquoteActive ? (colors.onPrimary as string) : (colors.textSecondary as string)}
+                            />
+                        </Pressable>
 
-                    <View style={styles.toolbarDivider} />
+                        <Pressable style={styles.toolbarBtn} onPress={handleClearFormat} accessibilityLabel="Clear formatting">
+                            <FontAwesomeIcon icon={faEraser} size={13} color={colors.textSecondary as string} />
+                        </Pressable>
 
-                    <Pressable
-                        style={[styles.toolbarBtn, blockquoteActive && styles.toolbarBtnActive]}
-                        onPress={handleBlockquote}
-                        accessibilityLabel="Blockquote"
-                    >
-                        <FontAwesomeIcon
-                            icon={faQuoteLeft}
-                            size={13}
-                            color={blockquoteActive ? (colors.onPrimary as string) : (colors.textSecondary as string)}
-                        />
-                    </Pressable>
+                        <View style={styles.toolbarDivider} />
 
-                    <Pressable style={styles.toolbarBtn} onPress={handleClearFormat} accessibilityLabel="Clear formatting">
-                        <FontAwesomeIcon icon={faEraser} size={13} color={colors.textSecondary as string} />
-                    </Pressable>
+                        <Pressable
+                            style={[styles.toolbarBtn, linkActive && styles.toolbarBtnActive]}
+                            onPress={openLinkModal}
+                            accessibilityLabel="Insert link"
+                        >
+                            <FontAwesomeIcon
+                                icon={faLink}
+                                size={13}
+                                color={linkActive ? (colors.onPrimary as string) : (colors.textSecondary as string)}
+                            />
+                        </Pressable>
 
-                    <View style={styles.toolbarDivider} />
-
-                    <Pressable
-                        style={[styles.toolbarBtn, linkActive && styles.toolbarBtnActive]}
-                        onPress={openLinkModal}
-                        accessibilityLabel="Insert link"
-                    >
-                        <FontAwesomeIcon
-                            icon={faLink}
-                            size={13}
-                            color={linkActive ? (colors.onPrimary as string) : (colors.textSecondary as string)}
-                        />
-                    </Pressable>
-
-                    <Pressable style={styles.toolbarBtn} onPress={openImageModal} accessibilityLabel="Insert image">
-                        <FontAwesomeIcon icon={faImage} size={13} color={colors.textSecondary as string} />
-                    </Pressable>
+                        <Pressable style={styles.toolbarBtn} onPress={openImageModal} accessibilityLabel="Insert image">
+                            <FontAwesomeIcon icon={faImage} size={13} color={colors.textSecondary as string} />
+                        </Pressable>
+                    </View>
                 </View>
-            </View>
             )}
 
             {/* ── Editor surface ───────────────────────────────────────────── */}
@@ -904,7 +910,16 @@ const EditorBody: React.FC<StrategyEditorPanelProps> = ({
                 } as React.CSSProperties}
             >
                 <RichTextPlugin
-                    contentEditable={<ContentEditable className="tl-content" />}
+                    contentEditable={
+                        <ContentEditable
+                            className="tl-content"
+                            style={
+                                contentBottomInset > 0
+                                    ? ({ paddingBottom: 20 + contentBottomInset } as React.CSSProperties)
+                                    : undefined
+                            }
+                        />
+                    }
                     placeholder={<div className="tl-placeholder">Write your content strategy...</div>}
                     ErrorBoundary={LexicalErrorBoundary}
                 />

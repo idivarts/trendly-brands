@@ -108,7 +108,7 @@ const OnboardingFlow = () => {
     // When started from an Organization page, create the brand under that org.
     const { orgId } = useLocalSearchParams<{ orgId?: string }>();
 
-    const { createBrand, setSelectedBrand, brands } = useBrandContext();
+    const { createBrand, setSelectedBrand, brands, refreshBrands } = useBrandContext();
 
     const [phase, setPhase] = useState<Phase>("form");
 
@@ -140,6 +140,10 @@ const OnboardingFlow = () => {
     });
     const [brandId, setBrandId] = useState<string | undefined>();
     const [busy, setBusy] = useState(false);
+    // Holds the in-flight "provision the brand" work so the branch step can kick
+    // it off in the background and the chosen action can await the same promise
+    // (see prepareBrand / handleChoice).
+    const prepareRef = useRef<Promise<string | null> | null>(null);
     // Country for the phone field — auto-detected from the device locale/timezone
     // so the dial code is pre-filled. `form.phone` holds only the national digits.
     const [phoneCountry, setPhoneCountry] = useState<Country>(() => getDefaultCountry());
@@ -251,6 +255,43 @@ const OnboardingFlow = () => {
         return newId;
     };
 
+    // Kicks off (and de-dupes) the full "make the brand ready" work: create +
+    // finalize the brand, seed selectedBrand, then force-refresh the context
+    // brand list so the freshly-created brand is guaranteed present before we
+    // navigate (the realtime listener is too slow/unreliable to rely on here).
+    // Started in the background the moment the user reaches the branch step, so
+    // the actual choice resolves instantly — or just awaits this same promise if
+    // it's still in flight. The promise is cached so concurrent callers share
+    // one run; on failure it's dropped so a retry can re-run.
+    const prepareBrand = (): Promise<string | null> => {
+        if (prepareRef.current) return prepareRef.current;
+        const run = (async (): Promise<string | null> => {
+            const id = await ensureBrand();
+            if (!id) return null;
+            await refreshBrands();
+            return id;
+        })();
+        prepareRef.current = run;
+        run
+            .then((id) => {
+                if (!id) prepareRef.current = null;
+            })
+            .catch(() => {
+                prepareRef.current = null;
+            });
+        return run;
+    };
+
+    // As soon as the user lands on the branch step, start provisioning the brand
+    // in the background. If they pick a destination before it finishes,
+    // handleChoice awaits this same promise; if it's already done, the choice
+    // proceeds immediately.
+    useEffect(() => {
+        if (phase !== "branch") return;
+        void prepareBrand();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [phase]);
+
     // ── Step 7: route into the chosen destination (seeded + sidebar set) ─────
     const handleChoice = async (choice: NextChoice) => {
         if (busy) return;
@@ -260,7 +301,10 @@ const OnboardingFlow = () => {
         setPhase("loading");
 
         try {
-            const id = await ensureBrand();
+            // Awaits the background prep started when we entered the branch step
+            // (or starts + awaits it if the user was somehow faster). Resolves
+            // only once the brand exists AND is present in the live brand list.
+            const id = await prepareBrand();
             if (!id) {
                 Toaster.error("Couldn't finish setting up your brand");
                 setBusy(false);
