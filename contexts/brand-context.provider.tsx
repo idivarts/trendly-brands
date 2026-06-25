@@ -70,6 +70,12 @@ interface BrandContextProps {
     selectedBrand: Brand | undefined;
     setSelectedBrand: (brand: Brand | undefined, triggerToast?: boolean) => void;
     updateBrand: (id: string, brand: Partial<IBrands>) => Promise<void>;
+    /**
+     * Force-refresh the brand list on demand (refetches membership + brand
+     * docs), bypassing the realtime listener's latency. Resolves once the list
+     * has been refetched and applied. Useful right after creating a brand.
+     */
+    refreshBrands: () => Promise<void>;
     loading: boolean;
     isProfileLocked: (influencerId: string) => boolean;
     /** The current manager's membership record for the selected brand. */
@@ -114,6 +120,7 @@ const BrandContext = createContext<BrandContextProps>({
     selectedBrand: undefined,
     setSelectedBrand: () => { },
     updateBrand: () => Promise.resolve(),
+    refreshBrands: () => Promise.resolve(),
     loading: true,
     isProfileLocked: (influencerId: string) => true,
     currentMember: undefined,
@@ -152,6 +159,10 @@ export const BrandContextProvider: React.FC<
     const pathName = usePathname();
     const brandsRef = useRef<Brand[]>([]);
     const selectedBrandRef = useRef<Brand | undefined>(undefined);
+    // Tracks whether the persistent cache has already populated `brands`, so the
+    // loader gate in loadBrandsForManager doesn't flash the blocking spinner
+    // when we already have something to show.
+    const hasHydratedFromCacheRef = useRef(false);
 
     useEffect(() => {
         brandsRef.current = brands;
@@ -226,71 +237,29 @@ export const BrandContextProvider: React.FC<
         return () => unsubscribe();
     }, [selectedBrand?.id, currentMember?.teamId]);
 
-    useEffect(() => {
-        if (!manager?.id) return;
-        const cacheKey = getManagerBrandsCacheKey(manager.id);
-        let hasHydratedFromCache = false;
-        let isMounted = true;
-
-        const hydrateFromCache = async () => {
-            try {
-                const cachedRaw = await PersistentStorage.get(cacheKey);
-                if (!cachedRaw) return;
-
-                const cachedPayload = JSON.parse(cachedRaw) as BrandsCachePayload;
-                if (!Array.isArray(cachedPayload?.brands)) return;
-
-                const cachedBrands = cachedPayload.brands;
-                if (cachedBrands.length === 0) return;
-
-                setBrands(cachedBrands);
-
-                const desiredSelectedBrand = cachedPayload.selectedBrandId
-                    ? cachedBrands.find((brand) => brand.id === cachedPayload.selectedBrandId)
-                    : undefined;
-
-                if (desiredSelectedBrand) {
-                    await setSelectedBrandHandler(desiredSelectedBrand, false);
-                } else if (cachedBrands.length > 0) {
-                    const persistedSelectedBrandId =
-                        (await PersistentStorage.get("selectedBrandId")) || undefined;
-                    const fallbackBrand = persistedSelectedBrandId
-                        ? cachedBrands.find((brand) => brand.id === persistedSelectedBrandId)
-                        : cachedBrands[0];
-                    await setSelectedBrandHandler(fallbackBrand || cachedBrands[0], false);
-                } else {
-                    await setSelectedBrandHandler(undefined, false);
-                }
-
-                hasHydratedFromCache = true;
-                if (isMounted) {
-                    setLoading(false);
-                }
-            } catch (e) {
-                Console.log("Failed to parse brands cache", e);
-            }
-        };
-
-        void hydrateFromCache();
-
-        const membersCollection = collectionGroup(FirestoreDB, "members");
-        const membersQuery = query(
-            membersCollection,
-            where("managerId", "==", manager.id),
-            // where("status", "==", 1)
-        );
-        Console.log("Brand ID from member Query:", manager.id);
-
-        const unsubscribe = onSnapshot(membersQuery, async (membersSnapshot) => {
+    // Core "load the manager's brands" routine, extracted out of the snapshot
+    // callback so it can ALSO be invoked on demand (see refreshBrands) to force
+    // a refresh — e.g. right after creating a brand during onboarding, when we
+    // can't wait for the realtime listener to catch up. Fetches the membership
+    // docs itself (rather than relying on a passed snapshot) so it's fully
+    // self-contained and callable from anywhere.
+    const loadBrandsForManager = useCallback(
+        async (managerId: string): Promise<void> => {
             // Only show the blocking loader when there is nothing to display
             // yet. Once cache hydration (or a prior emission) has populated
             // brands, refresh silently in the background instead of flashing
             // the full-screen loader for the 3-5s the getDocs fan-out takes.
-            if (!hasHydratedFromCache && brandsRef.current.length === 0) {
+            if (!hasHydratedFromCacheRef.current && brandsRef.current.length === 0) {
                 setLoading(true);
             }
             try {
-                Console.log("Brand ID from member Inside:", manager.id);
+                const membersSnapshot = await getDocs(
+                    query(
+                        collectionGroup(FirestoreDB, "members"),
+                        where("managerId", "==", managerId)
+                    )
+                );
+
                 if (membersSnapshot.empty) {
                     Console.log("No members found for this manager");
                     setBrands([]);
@@ -306,7 +275,6 @@ export const BrandContextProvider: React.FC<
                     }
 
                     const brandId = doc.ref.parent.parent?.id; // Get the brand ID from the member's document reference
-                    Console.log("Brand ID from member:", brandId);
                     if (brandId) {
                         brandIds.add(brandId);
                     }
@@ -321,7 +289,7 @@ export const BrandContextProvider: React.FC<
                     const orgMembersSnap = await getDocs(
                         query(
                             collectionGroup(FirestoreDB, "orgMembers"),
-                            where("managerId", "==", manager.id)
+                            where("managerId", "==", managerId)
                         )
                     );
                     const orgIds = Array.from(
@@ -411,25 +379,102 @@ export const BrandContextProvider: React.FC<
             } finally {
                 setLoading(false);
             }
-        }, (error) => {
-            // Without this handler a transient listener error (seen when the
-            // brands subscription re-attaches during client-side navigation,
-            // e.g. opening a brand from the Organizations page) left `loading`
-            // stuck true forever — BrandProtectedScreen then showed an infinite
-            // spinner until a full refresh re-attached the listener. Mirror the
-            // error-resilient pattern used by the organization + contents
-            // subscriptions: log and release the loading gate.
-            Console.log("Brands member subscription error", error);
-            if (isMounted) {
-                setLoading(false);
+        },
+        // setSelectedBrandHandler / the setState setters are stable; the routine
+        // reads everything else through refs, so it never needs to be re-created.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        []
+    );
+
+    // Public, on-demand force-refresh of the brand list. Resolves once the list
+    // has been refetched and `setBrands` has been called, so callers can await
+    // it and trust the context reflects the latest brands (used by onboarding to
+    // guarantee a freshly-created brand is in the list before navigating).
+    const refreshBrands = useCallback(async (): Promise<void> => {
+        if (!manager?.id) return;
+        await loadBrandsForManager(manager.id);
+    }, [manager?.id, loadBrandsForManager]);
+
+    useEffect(() => {
+        if (!manager?.id) return;
+        const cacheKey = getManagerBrandsCacheKey(manager.id);
+        let isMounted = true;
+
+        const hydrateFromCache = async () => {
+            try {
+                const cachedRaw = await PersistentStorage.get(cacheKey);
+                if (!cachedRaw) return;
+
+                const cachedPayload = JSON.parse(cachedRaw) as BrandsCachePayload;
+                if (!Array.isArray(cachedPayload?.brands)) return;
+
+                const cachedBrands = cachedPayload.brands;
+                if (cachedBrands.length === 0) return;
+
+                setBrands(cachedBrands);
+
+                const desiredSelectedBrand = cachedPayload.selectedBrandId
+                    ? cachedBrands.find((brand) => brand.id === cachedPayload.selectedBrandId)
+                    : undefined;
+
+                if (desiredSelectedBrand) {
+                    await setSelectedBrandHandler(desiredSelectedBrand, false);
+                } else if (cachedBrands.length > 0) {
+                    const persistedSelectedBrandId =
+                        (await PersistentStorage.get("selectedBrandId")) || undefined;
+                    const fallbackBrand = persistedSelectedBrandId
+                        ? cachedBrands.find((brand) => brand.id === persistedSelectedBrandId)
+                        : cachedBrands[0];
+                    await setSelectedBrandHandler(fallbackBrand || cachedBrands[0], false);
+                } else {
+                    await setSelectedBrandHandler(undefined, false);
+                }
+
+                hasHydratedFromCacheRef.current = true;
+                if (isMounted) {
+                    setLoading(false);
+                }
+            } catch (e) {
+                Console.log("Failed to parse brands cache", e);
             }
-        });
+        };
+
+        void hydrateFromCache();
+
+        const membersQuery = query(
+            collectionGroup(FirestoreDB, "members"),
+            where("managerId", "==", manager.id),
+            // where("status", "==", 1)
+        );
+        Console.log("Brand ID from member Query:", manager.id);
+
+        // The snapshot is just the trigger now — the actual load lives in the
+        // reusable loadBrandsForManager routine.
+        const unsubscribe = onSnapshot(
+            membersQuery,
+            () => {
+                void loadBrandsForManager(manager.id);
+            },
+            (error) => {
+                // Without this handler a transient listener error (seen when the
+                // brands subscription re-attaches during client-side navigation,
+                // e.g. opening a brand from the Organizations page) left `loading`
+                // stuck true forever — BrandProtectedScreen then showed an infinite
+                // spinner until a full refresh re-attached the listener. Mirror the
+                // error-resilient pattern used by the organization + contents
+                // subscriptions: log and release the loading gate.
+                Console.log("Brands member subscription error", error);
+                if (isMounted) {
+                    setLoading(false);
+                }
+            }
+        );
 
         return () => {
             isMounted = false;
             unsubscribe();
         };
-    }, [manager?.id]);
+    }, [manager?.id, loadBrandsForManager]);
 
     useEffect(() => {
         if (!manager?.id) return;
@@ -682,6 +727,7 @@ export const BrandContextProvider: React.FC<
             selectedBrand,
             setSelectedBrand: setSelectedBrandHandler,
             updateBrand,
+            refreshBrands,
             loading,
             isProfileLocked,
             currentMember,
@@ -698,6 +744,7 @@ export const BrandContextProvider: React.FC<
             finalizeBrand,
             selectedBrand,
             updateBrand,
+            refreshBrands,
             loading,
             isProfileLocked,
             setSelectedBrandHandler,
