@@ -94,6 +94,11 @@ export interface StrategyEditorPanelProps {
      * "Edit" / "Done" bar: the device must hold the lock to type.
      */
     lock?: EditLockUI;
+    /**
+     * Extra bottom padding for the scroll content, so the last lines clear a
+     * caller-owned floating element (e.g. the mobile "Push to Calendar" CTA).
+     */
+    contentBottomInset?: number;
 }
 
 const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
@@ -104,6 +109,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
     strategyId,
     module: aiModule = "content",
     lock,
+    contentBottomInset = 0,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -385,6 +391,9 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                     style={styles.editorScroll}
                     contentContainerStyle={[
                         styles.editorScrollContent,
+                        // Reserve room so the last line clears a caller-owned
+                        // floating element (e.g. the mobile Push to Calendar CTA).
+                        contentBottomInset > 0 && { paddingBottom: contentBottomInset },
                         // Reserve room so the last line clears the keyboard-docked
                         // formatting bar instead of hiding behind it.
                         keyboard.visible && { paddingBottom: ACCESSORY_HEIGHT },

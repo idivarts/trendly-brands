@@ -95,10 +95,19 @@ const STRATEGY_WEB_STEPS = [
 const STRATEGY_MOBILE_STEPS = [
     STRATEGY_EDITOR_STEP,
     {
+        id: "gt-strategy-push-to-calendar",
+        title: "Push to Calendar",
+        description:
+            "Happy with this plan? Tap here to push it straight to your content calendar.",
+        // The CTA floats at the bottom of the screen — point the card upward.
+        placement: "top" as const,
+        shape: "rect" as const,
+    },
+    {
         id: "gt-strategy-overflow",
         title: "More actions",
         description:
-            "Tap here to push this plan to your calendar or share it with your team.",
+            "Share this plan with your team, start a new one, or duplicate it from here.",
         placement: "bottom" as const,
         shape: "rect" as const,
     },

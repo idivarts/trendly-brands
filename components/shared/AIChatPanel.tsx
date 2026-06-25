@@ -178,6 +178,13 @@ interface AIChatPanelProps {
     onCollapse?: () => void;
 
     /**
+     * When provided, a leading back button is rendered at the start of the
+     * header (before the title). Used by the mobile strategy "collecting" state,
+     * where the full-screen chat is otherwise a navigational dead-end.
+     */
+    onBack?: () => void;
+
+    /**
      * Fired when the backend signals onboarding is complete. Used by the
      * onboarding screen to finalize the brand and navigate onward.
      */
@@ -246,6 +253,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     placeholder = "Ask the AI Expert...",
     welcomeText,
     onCollapse,
+    onBack,
     onOnboardingComplete,
     hideHeader = false,
     messageAlign = "bottom",
@@ -838,6 +846,17 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                 {/* ── Header — capped at 3 elements (per design critique) ───── */}
                 {!hideHeader && (
                     <View style={styles.panelHeader}>
+                        {onBack && (
+                            <Pressable
+                                onPress={onBack}
+                                style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+                                accessibilityRole="button"
+                                accessibilityLabel="Go back"
+                                hitSlop={6}
+                            >
+                                <FontAwesomeIcon icon={faChevronLeft} size={14} color={colors.text} />
+                            </Pressable>
+                        )}
                         {onCollapse && (
                             <Pressable
                                 onPress={onCollapse}
