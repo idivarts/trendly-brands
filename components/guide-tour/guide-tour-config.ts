@@ -1,4 +1,19 @@
 import { createTour } from "@edwardloopez/react-native-coachmark";
+import { Platform } from "react-native";
+
+// The single-writer "tap Edit to unlock" gate only exists on native — on web the
+// strategy is the collaborative surface and is directly editable (no Edit
+// button, so no `gt-strategy-edit` anchor). The coachmark lib doesn't skip a
+// step whose anchor is missing (it stalls), so this step must be excluded from
+// the tour entirely on web rather than just left unanchored.
+const STRATEGY_EDIT_STEP = {
+    id: "gt-strategy-edit",
+    title: "Edit the plan",
+    description:
+        "Tap Edit to start making changes — the plan is view-only until you do.",
+    placement: "bottom" as const,
+    shape: "pill" as const,
+};
 
 const WEB_STEPS = [
     {
@@ -94,14 +109,8 @@ const STRATEGY_WEB_STEPS = [
 
 const STRATEGY_MOBILE_STEPS = [
     STRATEGY_EDITOR_STEP,
-    {
-        id: "gt-strategy-edit",
-        title: "Edit the plan",
-        description:
-            "Tap Edit to start making changes — the plan is view-only until you do.",
-        placement: "bottom" as const,
-        shape: "pill" as const,
-    },
+    // Native-only: web has no Edit button (see STRATEGY_EDIT_STEP note above).
+    ...(Platform.OS === "web" ? [] : [STRATEGY_EDIT_STEP]),
     {
         id: "gt-strategy-push-to-calendar",
         title: "Push to Calendar",
