@@ -170,6 +170,7 @@ export function useInboxApi(): UseInboxResult {
                             messages: [...(c.messages ?? []), reply],
                             preview: text,
                             lastActivityAt: reply.sentAt,
+                            lastSeenAt: reply.sentAt,
                             unread: false,
                         };
                     }
@@ -179,6 +180,7 @@ export function useInboxApi(): UseInboxResult {
                             ? { ...c.comment, replies: [...c.comment.replies, reply] }
                             : c.comment,
                         lastActivityAt: reply.sentAt,
+                        lastSeenAt: reply.sentAt,
                         unread: false,
                     };
                 })
@@ -247,7 +249,11 @@ export function useInboxApi(): UseInboxResult {
         async (conversationId: string) => {
             if (!brandId) return;
             setConversations((prev) =>
-                prev.map((c) => (c.id === conversationId ? { ...c, unread: false } : c))
+                prev.map((c) =>
+                    c.id === conversationId
+                        ? { ...c, unread: false, lastSeenAt: c.lastActivityAt }
+                        : c
+                )
             );
             try {
                 await HttpWrapper.fetch(

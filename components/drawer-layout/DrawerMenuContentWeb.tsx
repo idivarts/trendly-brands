@@ -3,6 +3,7 @@ import { Text, View } from "@/components/theme/Themed";
 import { canAccessNav } from "@/constants/Access";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useInboxUnread } from "@/contexts/inbox-unread-context.provider";
 import { useOrganizationContext } from "@/contexts/organization-context.provider";
 import { useBreakpoints } from "@/hooks";
 import ImageComponent from "@/shared-uis/components/image-component";
@@ -263,8 +264,17 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
         (items: Tab[]) => items.filter((t) => canAccessNav(t.href as string, hasFeature, hasPrivilege)),
         [hasFeature, hasPrivilege]
     );
+    const { unreadConversations } = useInboxUnread();
     const contentItems = useMemo(() => navFilter(CONTENT_MENU_ITEMS(theme)), [theme, navFilter]);
-    const manageItems = useMemo(() => navFilter(MANAGE_MENU_ITEMS(theme)), [theme, navFilter]);
+    const manageItems = useMemo(
+        () =>
+            navFilter(MANAGE_MENU_ITEMS(theme)).map((t) =>
+                t.href === "/inbox"
+                    ? { ...t, showUnreadCount: true, unreadCount: unreadConversations }
+                    : t
+            ),
+        [theme, navFilter, unreadConversations]
+    );
     const growthItems = useMemo(() => navFilter(GROWTH_MENU_ITEMS(theme)), [theme, navFilter]);
     const brandDetailsItems = useMemo(() => navFilter(BRAND_DETAILS_MENU_ITEMS(theme)), [theme, navFilter]);
 

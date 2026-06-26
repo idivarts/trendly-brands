@@ -21,6 +21,12 @@ export type Tab = {
     icon: (props: IconPropFn) => JSX.Element;
     label: string;
     showUnreadCount?: boolean;
+    /**
+     * Explicit badge count. When provided it overrides the chat unread count —
+     * e.g. the Inbox item passes its own conversation count. Omit to fall back
+     * to the chat context (the Messages item).
+     */
+    unreadCount?: number;
     pro?: boolean;
     /**
      * When set, the item is disabled (navigation blocked) and shows this reason
@@ -39,7 +45,9 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
     const router = useRouter();
     const pathname = usePathname();
     const theme = useTheme();
-    const { unreadCount } = useChatContext();
+    const { unreadCount: chatUnreadCount } = useChatContext();
+    // An explicit per-tab count (e.g. Inbox) overrides the chat unread count.
+    const unreadCount = tab.unreadCount ?? chatUnreadCount;
     const drawerColors = useDrawerColors();
     const [hovered, setHovered] = useState(false);
     const { isCollapsed } = useSidebarCollapsed();

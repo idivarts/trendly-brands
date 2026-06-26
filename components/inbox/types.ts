@@ -86,6 +86,13 @@ export interface InboxConversation {
     /** epoch ms of the most recent activity — list sort key. */
     lastActivityAt: number;
     unread: boolean;
+    /**
+     * epoch ms of the last time the brand viewed this conversation. The
+     * per-conversation new-message count is the inbound items with sentAt >
+     * lastSeenAt. Baselined to lastActivityAt on first sync (history starts
+     * read) and bumped on read/reply. Absent/0 ⇒ never seen.
+     */
+    lastSeenAt?: number;
     /** epoch ms — bumps on any (re)sync; drives the resync spinner clear. */
     updatedAt?: number;
 
@@ -120,6 +127,29 @@ export interface ConnectedInboxAccount {
     name: string;
     handle: string;
     avatarUrl?: string;
+}
+
+/**
+ * Number of NEW inbound items in a conversation — the bubble count. Counts
+ * contact-authored DM messages / comment replies (and the original comment for
+ * comment threads) with sentAt > lastSeenAt. Business-authored items never count.
+ * 0 ⇒ nothing new (no bubble).
+ */
+export function conversationUnreadCount(c: InboxConversation): number {
+    const seen = c.lastSeenAt ?? 0;
+    if (c.kind === "dm") {
+        return (c.messages ?? []).filter(
+            (m) => m.author === "contact" && m.sentAt > seen
+        ).length;
+    }
+    let n = 0;
+    if (c.comment) {
+        if (c.comment.authoredAt > seen) n += 1;
+        n += c.comment.replies.filter(
+            (r) => r.author === "contact" && r.sentAt > seen
+        ).length;
+    }
+    return n;
 }
 
 /**

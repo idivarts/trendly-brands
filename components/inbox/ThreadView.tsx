@@ -15,7 +15,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { Image } from "expo-image";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Menu } from "react-native-paper";
 
@@ -79,6 +79,25 @@ const ThreadView: React.FC<Props> = ({
     const isComment = conversation.kind === "comment";
     const replyable = canReply(conversation);
     const windowLeft = replyWindowLeft(conversation);
+
+    // Anchor the thread to the bottom (latest message) like a chat panel: land at
+    // the bottom on open and follow new messages, but don't yank to the bottom on
+    // async content resizes (e.g. images loading) while the user reads history.
+    const scrollRef = useRef<ScrollView>(null);
+    const itemCount = isComment
+        ? 1 + (conversation.comment?.replies.length ?? 0)
+        : conversation.messages?.length ?? 0;
+    const lastConvId = useRef<string | undefined>(undefined);
+    const lastItemCount = useRef(0);
+    const handleBodyContentSizeChange = () => {
+        const convChanged = lastConvId.current !== conversation.id;
+        const grew = itemCount > lastItemCount.current;
+        if (convChanged || grew) {
+            scrollRef.current?.scrollToEnd({ animated: !convChanged });
+        }
+        lastConvId.current = conversation.id;
+        lastItemCount.current = itemCount;
+    };
 
     const openAttachment = (url?: string) => {
         if (url) Linking.openURL(url).catch(() => {});
@@ -302,9 +321,11 @@ const ThreadView: React.FC<Props> = ({
 
             {/* Body */}
             <ScrollView
+                ref={scrollRef}
                 style={styles.body}
                 contentContainerStyle={styles.bodyContent}
                 showsVerticalScrollIndicator={false}
+                onContentSizeChange={handleBodyContentSizeChange}
             >
                 {isComment && conversation.post ? (
                     <View style={styles.postCard}>
