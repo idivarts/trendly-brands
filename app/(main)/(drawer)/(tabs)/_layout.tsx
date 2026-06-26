@@ -3,6 +3,7 @@ import React from "react";
 
 import ProfileIcon from "@/components/explore-influencers/profile-icon";
 import { useClientOnlyValue } from "@/components/useClientOnlyValue";
+import { useInboxUnread } from "@/contexts/inbox-unread-context.provider";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 import {
@@ -17,6 +18,7 @@ import { useTheme } from "@react-navigation/native";
 const TabLayout = () => {
     const { xl } = useBreakpoints();
     const theme = useTheme();
+    const { unreadConversations } = useInboxUnread();
 
     const menuTabButton = () => <ProfileIcon />;
 
@@ -74,11 +76,15 @@ const TabLayout = () => {
                 }}
             />
 
-            {/* Hidden: content-strategies detail route */}
+            {/* Hidden: content-strategies detail route. On mobile this is a
+                focused, full-screen editing surface — hide the bottom tab bar
+                entirely so the floating "Push to Calendar" CTA owns the bottom.
+                (On xl the tab bar is already hidden via screenOptions.) */}
             <Tabs.Screen
                 name="(content)/content-strategies/[strategyId]"
                 options={{
                     tabBarItemStyle: { display: "none" },
+                    tabBarStyle: { display: "none" },
                     headerShown: false,
                 }}
                 getId={({ params }) => params?.strategyId as string}
@@ -122,6 +128,11 @@ const TabLayout = () => {
                 options={{
                     title: "Inbox",
                     headerShown: false,
+                    tabBarBadge: unreadConversations > 0 ? unreadConversations : undefined,
+                    tabBarBadgeStyle: {
+                        backgroundColor: Colors(theme).red,
+                        color: Colors(theme).white,
+                    },
                     tabBarIcon: ({ color, focused }) => (
                         <FontAwesomeIcon
                             color={color}

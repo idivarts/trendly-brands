@@ -37,6 +37,7 @@ import {
 } from "react-native-enriched";
 import AIQuickEditModal from "@/components/ai/AIQuickEdit/AIQuickEditModal";
 import { useBreakpoints } from "@/hooks";
+import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import ImageInsertModal from "./ImageInsertModal";
 import LinkInsertModal from "./LinkInsertModal";
 
@@ -94,6 +95,11 @@ export interface StrategyEditorPanelProps {
      * "Edit" / "Done" bar: the device must hold the lock to type.
      */
     lock?: EditLockUI;
+    /**
+     * Extra bottom padding for the scroll content, so the last lines clear a
+     * caller-owned floating element (e.g. the mobile "Push to Calendar" CTA).
+     */
+    contentBottomInset?: number;
 }
 
 const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
@@ -104,6 +110,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
     strategyId,
     module: aiModule = "content",
     lock,
+    contentBottomInset = 0,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -367,10 +374,12 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                             : "View only"}
                     </Text>
                     {!lock?.finalized && !lock?.lockedByName && lock?.onRequestEdit && (
-                        <Pressable style={styles.editAction} onPress={lock.onRequestEdit}>
-                            <FontAwesomeIcon icon={faPen} size={12} color={colors.onPrimary} />
-                            <Text style={styles.editActionText}>Edit</Text>
-                        </Pressable>
+                        <CoachmarkAnchor id="gt-strategy-edit" shape="pill">
+                            <Pressable style={styles.editAction} onPress={lock.onRequestEdit}>
+                                <FontAwesomeIcon icon={faPen} size={12} color={colors.onPrimary} />
+                                <Text style={styles.editActionText}>Edit</Text>
+                            </Pressable>
+                        </CoachmarkAnchor>
                     )}
                 </View>
             )}
@@ -385,6 +394,9 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                     style={styles.editorScroll}
                     contentContainerStyle={[
                         styles.editorScrollContent,
+                        // Reserve room so the last line clears a caller-owned
+                        // floating element (e.g. the mobile Push to Calendar CTA).
+                        contentBottomInset > 0 && { paddingBottom: contentBottomInset },
                         // Reserve room so the last line clears the keyboard-docked
                         // formatting bar instead of hiding behind it.
                         keyboard.visible && { paddingBottom: ACCESSORY_HEIGHT },

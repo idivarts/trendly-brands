@@ -19,14 +19,22 @@ import {
     faShieldHalved,
     faSignOut,
     faTrashCan,
+    faWandMagicSparkles,
 } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Theme, useTheme } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Linking, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import PageHeader from "../ui/page-header";
+
+// All coach-mark "seen" state — both the app's per-feature flags
+// (`guide-tour-{feature}-{managerId}-{web|mobile}`) and the coachmark library's
+// own `showOnce` flags (stored as `guide-tour-{managerId}-coachmark:{tourKey}`
+// via the storage adapter) — share this single prefix.
+const COACHMARK_KEY_PREFIX = "guide-tour-";
 
 type ThemeMode = "light" | "dark";
 
@@ -102,6 +110,27 @@ const Settings = () => {
             confirmAction: handleDeleteAccount,
             confirmText: "Delete",
         });
+    };
+
+    // Dev-only: wipe every persisted coach-mark flag so the walkthroughs replay.
+    // Reopen the target screen afterwards (each tour's in-memory "started" guard
+    // resets on remount, so the cleared flag lets it fire again).
+    const resetCoachmarks = async () => {
+        try {
+            if (Platform.OS === "web") {
+                Object.keys(localStorage)
+                    .filter((k) => k.startsWith(COACHMARK_KEY_PREFIX))
+                    .forEach((k) => localStorage.removeItem(k));
+            } else {
+                const keys = (await AsyncStorage.getAllKeys()).filter((k) =>
+                    k.startsWith(COACHMARK_KEY_PREFIX)
+                );
+                if (keys.length) await AsyncStorage.multiRemove(keys);
+            }
+            Toaster.success("Coachmarks reset", "Reopen a screen to replay its walkthrough.");
+        } catch {
+            Toaster.error("Couldn't reset coachmarks", "Please try again.");
+        }
     };
 
     const appVersion = Constants.expoConfig?.version ?? "";
@@ -182,6 +211,23 @@ const Settings = () => {
                                 rightText={appVersion}
                             />
                         </View>
+
+                        {/* ── Developer tools (dev builds only) ───────────────── */}
+                        {__DEV__ && (
+                            <>
+                                <Text style={styles.sectionLabel}>DEVELOPER</Text>
+                                <View style={styles.card}>
+                                    <Row
+                                        colors={colors}
+                                        styles={styles}
+                                        icon={faWandMagicSparkles}
+                                        title="Reset coachmarks"
+                                        subtitle="Clear all walkthrough flags so they replay"
+                                        onPress={resetCoachmarks}
+                                    />
+                                </View>
+                            </>
+                        )}
 
                         {/* ── Account actions ─────────────────────────────────── */}
                         <View style={[styles.card, styles.dangerCard]}>

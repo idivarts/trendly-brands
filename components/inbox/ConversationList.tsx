@@ -22,7 +22,7 @@ import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 import ChannelAvatar from "./ChannelAvatar";
 import ResyncButton from "./ResyncButton";
-import { InboxConversation, InboxFilter } from "./types";
+import { conversationUnreadCount, InboxConversation, InboxFilter } from "./types";
 import { relativeTime } from "./utils";
 
 // Keep the pull-to-refresh spinner visible briefly so a quick (202) trigger still
@@ -167,6 +167,7 @@ const ConversationList: React.FC<Props> = ({
                 renderItem={({ item }) => {
                     const active = item.id === selectedId && xl;
                     const isComment = item.kind === "comment";
+                    const newCount = conversationUnreadCount(item);
                     return (
                         <Pressable
                             onPress={() => onSelect(item)}
@@ -222,10 +223,10 @@ const ConversationList: React.FC<Props> = ({
                                             {
                                                 color: active
                                                     ? colors.onPrimary
-                                                    : item.unread
+                                                    : newCount > 0
                                                     ? colors.text
                                                     : colors.textSecondary,
-                                                fontWeight: item.unread ? "600" : "400",
+                                                fontWeight: newCount > 0 ? "600" : "400",
                                             },
                                         ]}
                                     >
@@ -233,8 +234,12 @@ const ConversationList: React.FC<Props> = ({
                                     </Text>
                                 </View>
                             </View>
-                            {item.unread && !active ? (
-                                <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />
+                            {newCount > 0 && !active ? (
+                                <View style={[styles.countBadge, { backgroundColor: colors.primary }]}>
+                                    <Text style={[styles.countBadgeText, { color: colors.onPrimary }]}>
+                                        {newCount > 99 ? "99+" : newCount}
+                                    </Text>
+                                </View>
                             ) : null}
                         </Pressable>
                     );
@@ -354,11 +359,18 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     fontSize: 13,
                     flexShrink: 1,
                 },
-                unreadDot: {
-                    width: 9,
-                    height: 9,
-                    borderRadius: 5,
+                countBadge: {
+                    minWidth: 18,
+                    height: 18,
+                    borderRadius: 9,
+                    paddingHorizontal: 5,
+                    alignItems: "center",
+                    justifyContent: "center",
                     flexShrink: 0,
+                },
+                countBadgeText: {
+                    fontSize: 11,
+                    fontWeight: "700",
                 },
                 noResults: {
                     paddingTop: 48,

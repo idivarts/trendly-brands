@@ -91,6 +91,8 @@ const SignUpScreen = () => {
                     textContentType="emailAddress"
                     placeholder="you@company.com"
                     locked={emailLocked}
+                    onSubmitEditing={handleSignUp}
+                    returnKeyType="next"
                 />
                 <AuthTextField
                     label="Name"
@@ -98,6 +100,8 @@ const SignUpScreen = () => {
                     onChangeText={setName}
                     autoComplete="name"
                     textContentType="name"
+                    onSubmitEditing={handleSignUp}
+                    returnKeyType="next"
                 />
                 <AuthTextField
                     label="Password"
@@ -106,6 +110,8 @@ const SignUpScreen = () => {
                     secureTextEntry
                     autoComplete="new-password"
                     textContentType="newPassword"
+                    onSubmitEditing={handleSignUp}
+                    returnKeyType="next"
                 />
                 <AuthTextField
                     label="Confirm Password"
@@ -114,6 +120,8 @@ const SignUpScreen = () => {
                     secureTextEntry
                     autoComplete="new-password"
                     textContentType="newPassword"
+                    onSubmitEditing={handleSignUp}
+                    returnKeyType="go"
                 />
                 <Button
                     mode="contained"

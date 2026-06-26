@@ -76,6 +76,8 @@ const ForgotPasswordScreen = () => {
                     onChangeText={setEmail}
                     autoCapitalize="none"
                     placeholder="Enter your email ID"
+                    onSubmitEditing={handleResetPassword}
+                    returnKeyType="go"
                 />
                 <Button
                     mode="contained"
