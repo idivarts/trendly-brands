@@ -15,7 +15,7 @@ import EmptyNoSocials from "./EmptyNoSocials";
 import MediaView from "./MediaView";
 import ThreadView from "./ThreadView";
 import { useInbox } from "./data/use-inbox";
-import { InboxConversation, InboxFilter, InboxMode } from "./types";
+import { conversationUnreadCount, InboxConversation, InboxFilter, InboxMode } from "./types";
 import { matchesFilter, sortByRecency } from "./utils";
 
 interface InboxViewProps {
@@ -78,7 +78,7 @@ const InboxView: React.FC<InboxViewProps> = ({ mode }) => {
     }, [conversations, filter, search]);
 
     const unreadTotal = useMemo(
-        () => conversations.filter((c) => c.unread).length,
+        () => conversations.filter((c) => conversationUnreadCount(c) > 0).length,
         [conversations]
     );
 
@@ -97,7 +97,7 @@ const InboxView: React.FC<InboxViewProps> = ({ mode }) => {
     const handleSelect = (c: InboxConversation) => {
         setSelectedId(c.id);
         setShowDetails(false);
-        if (c.unread) markRead(c.id);
+        if (conversationUnreadCount(c) > 0) markRead(c.id);
     };
 
     if (loading) {

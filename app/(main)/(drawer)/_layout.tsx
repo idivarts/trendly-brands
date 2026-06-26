@@ -4,6 +4,7 @@ import {
     SidebarCollapsedProvider,
     useSidebarCollapsed,
 } from "@/components/drawer-layout/sidebar-collapsed-context";
+import { InboxUnreadProvider } from "@/contexts/inbox-unread-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { BrandProtectedScreen } from "@/layouts/protected";
 import CustomDrawerWrapper from "@/shared-uis/components/CustomDrawer";
@@ -43,7 +44,9 @@ const DrawerLayoutInner = () => {
 
 const DrawerLayout = () => (
     <SidebarCollapsedProvider>
-        <DrawerLayoutInner />
+        <InboxUnreadProvider>
+            <DrawerLayoutInner />
+        </InboxUnreadProvider>
     </SidebarCollapsedProvider>
 );
 

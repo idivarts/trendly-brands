@@ -2,7 +2,7 @@ import { faFacebookF, faInstagram } from "@fortawesome/free-brands-svg-icons";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
 import Colors from "@/shared-uis/constants/Colors";
-import { InboxChannel, InboxConversation, InboxFilter } from "./types";
+import { conversationUnreadCount, InboxChannel, InboxConversation, InboxFilter } from "./types";
 
 type ColorSet = ReturnType<typeof Colors>;
 
@@ -63,7 +63,7 @@ export const matchesFilter = (
 ): boolean => {
     switch (filter) {
         case "unread":
-            return c.unread;
+            return conversationUnreadCount(c) > 0;
         case "dm":
             return c.kind === "dm";
         case "comment":

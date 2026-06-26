@@ -50,6 +50,8 @@ const LoginScreen = () => {
                     textContentType="emailAddress"
                     placeholder="you@company.com"
                     locked={emailLocked}
+                    onSubmitEditing={handleSignIn}
+                    returnKeyType="next"
                 />
                 <AuthTextField
                     label="Password"
@@ -58,6 +60,8 @@ const LoginScreen = () => {
                     secureTextEntry
                     autoComplete="current-password"
                     textContentType="password"
+                    onSubmitEditing={handleSignIn}
+                    returnKeyType="go"
                 />
                 <Button
                     mode="contained"
