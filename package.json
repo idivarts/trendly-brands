@@ -50,6 +50,7 @@
         "@lexical/yjs": "^0.45.0",
         "@likashefqet/react-native-image-zoom": "^4.3.0",
         "@lottiefiles/dotlottie-react": "^0.13.5",
+        "@microsoft/react-native-clarity": "^4.6.3",
         "@ptomasroos/react-native-multi-slider": "^2.2.2",
         "@react-native-async-storage/async-storage": "2.2.0",
         "@react-native-community/datetimepicker": "8.4.4",
