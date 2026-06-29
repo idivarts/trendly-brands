@@ -44,6 +44,23 @@ export interface SocialDestination {
 
 export type ScheduleMode = "now" | "scheduled";
 
+/**
+ * Per-platform publishing extras that don't fit the shared caption/attachment
+ * model. Mirrors the backend `ContentPlatformOptions` (content.go). Only the
+ * fields for a content's targeted platforms are read at publish time.
+ */
+export interface PlatformOptions {
+    /** YouTube — a video needs a title + visibility distinct from the caption. */
+    youtubeTitle?: string;
+    youtubePrivacy?: "public" | "private" | "unlisted";
+    youtubeMadeForKids?: boolean;
+    /** Reddit — a submission needs a target subreddit + title (+ optional flair). */
+    redditSubreddit?: string;
+    redditTitle?: string;
+    redditFlairId?: string;
+    redditNsfw?: boolean;
+}
+
 export interface ContentItem extends CalendarItem {
     status: ContentStatus;
     /** Platforms this content is planned for (publishing intent). Mirrors `IContent.platforms`. */
@@ -59,6 +76,8 @@ export interface ContentItem extends CalendarItem {
     imageGeneration?: IImageGeneration;
     /** Target connected accounts for publish / schedule (Phase 4). */
     destinations?: SocialDestination[];
+    /** Per-platform publishing extras (YouTube title/visibility, Reddit subreddit). */
+    platformOptions?: PlatformOptions;
     /** Publish immediately or at `scheduledAt`. */
     scheduleMode?: ScheduleMode;
     /** Epoch ms when a scheduled post should go live. */

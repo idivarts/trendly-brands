@@ -54,7 +54,9 @@ const AnalyticsScreen = () => {
             case "facebook": return { label: "Facebook", color: colors.socialFacebook };
             case "youtube": return { label: "YouTube", color: colors.socialYoutube };
             case "linkedin": return { label: "LinkedIn", color: colors.socialLinkedin };
+            case "linkedin_page": return { label: "LinkedIn Page", color: colors.socialLinkedin };
             case "twitter": return { label: "X", color: colors.socialTwitter };
+            case "reddit": return { label: "Reddit", color: colors.socialReddit };
             default: return { label: platform, color: colors.primary };
         }
     };

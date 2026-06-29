@@ -8,8 +8,16 @@
  * See components/inbox/README.md for the backend contract.
  */
 
-/** Channels supported by the Inbox v1 (Meta only). */
-export type InboxChannel = "instagram" | "facebook";
+/**
+ * Channels that can appear in the Inbox.
+ *  - DM (Messages tab):   instagram, facebook, twitter, reddit (LinkedIn has NO
+ *    messaging API, so it never produces DM threads).
+ *  - Comments (Media tab): instagram, facebook, linkedin_page (Company Page —
+ *    NOT personal linkedin), twitter, reddit.
+ * The UI is channel-agnostic; which channels actually appear is driven by the
+ * conversations/media the backend returns per connected account.
+ */
+export type InboxChannel = "instagram" | "facebook" | "linkedin_page" | "twitter" | "reddit";
 
 /** A conversation is either a private DM thread or a public comment thread. */
 export type ConversationKind = "dm" | "comment";

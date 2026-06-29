@@ -61,6 +61,7 @@ function toContentItem(id: string, data: IContent): ContentItem {
         attachments: data.attachments,
         imageGeneration: data.imageGeneration,
         destinations: data.destinations as SocialDestination[] | undefined,
+        platformOptions: data.platformOptions as ContentItem["platformOptions"],
         scheduleMode: data.scheduleMode,
         scheduledAt: data.scheduledAt,
         publishedIds: data.publishedIds,
@@ -115,6 +116,7 @@ function toIContent(
     if (extra.imagePrompt !== undefined) doc.imagePrompt = extra.imagePrompt;
     if (extra.attachments !== undefined) doc.attachments = extra.attachments;
     if (extra.destinations !== undefined) doc.destinations = extra.destinations;
+    if (extra.platformOptions !== undefined) doc.platformOptions = extra.platformOptions;
     if (extra.scheduleMode !== undefined) doc.scheduleMode = extra.scheduleMode;
     if (extra.scheduledAt !== undefined) doc.scheduledAt = extra.scheduledAt;
 

@@ -15,6 +15,7 @@ import PostPerformance from "@/components/contents/PostPerformance";
 import {
     CONTENT_STATUS_LABELS,
     ContentStatus,
+    PlatformOptions,
     ScheduleMode,
     SocialDestination,
     contentStatusColors,
@@ -138,6 +139,7 @@ const CreateContentScreen = () => {
     const [imagePrompt, setImagePrompt] = useState(seedItem?.imagePrompt ?? "");
     const [attachments, setAttachments] = useState<Attachment[]>(seedItem?.attachments ?? []);
     const [destinations, setDestinations] = useState<SocialDestination[]>(seedItem?.destinations ?? []);
+    const [platformOptions, setPlatformOptions] = useState<PlatformOptions>(seedItem?.platformOptions ?? {});
     const [scheduleMode, setScheduleMode] = useState<ScheduleMode>(seedItem?.scheduleMode ?? "scheduled");
     const [publishing, setPublishing] = useState(false);
     const [unscheduling, setUnscheduling] = useState(false);
@@ -171,6 +173,7 @@ const CreateContentScreen = () => {
         setImagePrompt(seedItem.imagePrompt ?? "");
         setAttachments(seedItem.attachments ?? []);
         setDestinations(seedItem.destinations ?? []);
+        setPlatformOptions(seedItem.platformOptions ?? {});
         setScheduleMode(seedItem.scheduleMode ?? "scheduled");
         setTimeOfPosting(seedItem.timeOfPosting ?? "");
         setTargetPlatforms(seedItem.platforms ?? []);
@@ -199,7 +202,7 @@ const CreateContentScreen = () => {
             return;
         }
         setDirty(true);
-    }, [title, idea, caption, hashtags, script, imagePrompt, status, timeOfPosting, attachments, destinations, scheduleMode, date, targetPlatforms]);
+    }, [title, idea, caption, hashtags, script, imagePrompt, status, timeOfPosting, attachments, destinations, platformOptions, scheduleMode, date, targetPlatforms]);
 
     // ── Right side panel (comments + AI chat) ────────────────────────────────
     const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("none");
@@ -302,6 +305,7 @@ const CreateContentScreen = () => {
                 script,
                 imagePrompt,
                 attachments,
+                platformOptions,
                 platforms: targetPlatforms,
                 postingTimeStamp: date ? localDateToUtcMidnight(date) : undefined,
             });
@@ -315,7 +319,7 @@ const CreateContentScreen = () => {
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = setTimeout(() => setSaveState("idle"), 2000);
         return true;
-    }, [contentId, saveState, locked, updateContent, title, idea, status, caption, hashtags, timeOfPosting, script, imagePrompt, attachments, date, targetPlatforms]);
+    }, [contentId, saveState, locked, updateContent, title, idea, status, caption, hashtags, timeOfPosting, script, imagePrompt, attachments, platformOptions, date, targetPlatforms]);
 
     // ── Cmd/Ctrl+S keyboard shortcut to save (web) ───────────────────────────
     // Intercept the browser's native "save page" so the shortcut saves the
@@ -381,6 +385,7 @@ const CreateContentScreen = () => {
                 attachments,
                 timeOfPosting,
                 destinations,
+                platformOptions,
                 scheduleMode: mode,
                 scheduledAt,
                 postingTimeStamp: localDateToUtcMidnight(date),
@@ -420,7 +425,7 @@ const CreateContentScreen = () => {
         } finally {
             setPublishing(false);
         }
-    }, [contentId, publishing, locked, destinations, scheduleMode, date, timeOfPosting, updateContent, selectedBrand?.id, title, idea, caption, hashtags, script, imagePrompt, attachments]);
+    }, [contentId, publishing, locked, destinations, platformOptions, scheduleMode, date, timeOfPosting, updateContent, selectedBrand?.id, title, idea, caption, hashtags, script, imagePrompt, attachments]);
 
     // Guard the publish entry point: if the brand has no connected social
     // accounts, surface a blocking modal that routes to Connected Accounts
@@ -1414,6 +1419,8 @@ const CreateContentScreen = () => {
                 socialAccounts={publishableAccounts}
                 destinations={destinations}
                 onDestinationsChange={setDestinations}
+                platformOptions={platformOptions}
+                onPlatformOptionsChange={setPlatformOptions}
                 formattedDate={formattedDate}
                 dateValue={date}
                 onDateChange={setDate}

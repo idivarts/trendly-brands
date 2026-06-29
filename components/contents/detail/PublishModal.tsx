@@ -1,6 +1,6 @@
 import { UpgradeInline } from "@/components/billing/EntitlementGate";
 import { ISocialAccount } from "@/contexts/brand-social-context.provider";
-import { ScheduleMode, SocialDestination } from "@/components/contents/types";
+import { PlatformOptions, ScheduleMode, SocialDestination } from "@/components/contents/types";
 import { useEntitlements } from "@/hooks/use-entitlements";
 import Colors from "@/shared-uis/constants/Colors";
 import { useBreakpoints } from "@/hooks";
@@ -21,6 +21,8 @@ export interface PublishModalProps {
     socialAccounts: ISocialAccount[];
     destinations: SocialDestination[];
     onDestinationsChange: (next: SocialDestination[]) => void;
+    platformOptions: PlatformOptions;
+    onPlatformOptionsChange: (next: PlatformOptions) => void;
     formattedDate: string;
     dateValue: Date;
     onDateChange: (next: Date) => void;

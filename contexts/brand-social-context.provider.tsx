@@ -14,7 +14,13 @@ import { useBrandContext } from "./brand-context.provider";
 // ─── ISocialAccount mirrors the backend SocialAccount struct (social_v2.go) ──
 export interface ISocialAccount {
     id: string;
-    platform: "instagram" | "facebook" | "youtube" | "linkedin" | "twitter";
+    platform: "instagram" | "facebook" | "youtube" | "linkedin" | "linkedin_page" | "twitter" | "reddit";
+    /** "organization" for a LinkedIn Company Page; absent/"member" for personal accounts. */
+    accountType?: string;
+    /** Platform's own account id (e.g. a LinkedIn org id) when distinct from `id`. */
+    platformAccountId?: string;
+    /** Human-readable handle/slug (e.g. a LinkedIn Page vanity name). */
+    vanityName?: string;
     userId: string;
     username: string;
     displayName: string;
