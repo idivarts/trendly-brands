@@ -10,6 +10,9 @@ import PreviewPanel from "@/components/contents/detail/PreviewPanel";
 import PublishModal from "@/components/contents/detail/PublishModal";
 import ScriptEditor from "@/components/contents/detail/ScriptEditor";
 import UnsavedChangesModal from "@/components/contents/detail/UnsavedChangesModal";
+import VariationEditor from "@/components/contents/detail/VariationEditor";
+import VariationModal from "@/components/contents/detail/VariationModal";
+import VariationTabs, { VariationTab } from "@/components/contents/detail/VariationTabs";
 import { MOCK_CONTENT_ITEMS } from "@/components/contents/mock-data";
 import PostPerformance from "@/components/contents/PostPerformance";
 import {
@@ -36,10 +39,12 @@ import { useBreakpoints } from "@/hooks";
 import { LiveContent } from "@/hooks/use-ai-chat";
 import { CaptionVariant, HashtagGroup, useAIGenerate } from "@/hooks/use-ai-generate";
 import { useContents } from "@/hooks/use-contents";
+import { useContentVariations } from "@/hooks/use-content-variations";
 import AppLayout from "@/layouts/app-layout";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { isFormatPlatformCompatible } from "@/shared-libs/firestore/trendly-pro/constants/content-format";
-import { ALL_PLATFORMS } from "@/shared-libs/firestore/trendly-pro/constants/platform";
+import { ALL_PLATFORMS, Platform as ContentPlatform } from "@/shared-libs/firestore/trendly-pro/constants/platform";
+import { VariationOverridableField } from "@/shared-libs/firestore/trendly-pro/models/variations";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import ReadMore from "@/shared-uis/components/ReadMore";
@@ -109,6 +114,15 @@ const CreateContentScreen = () => {
 
     const router = useRouter();
     const { items, addContent, updateContent, deleteContent } = useContents();
+    const {
+        variations,
+        byPlatform: variationByPlatform,
+        createVariations,
+        setOverride,
+        resetField,
+        setPlatformOptions: setVariationPlatformOptions,
+        deleteVariation,
+    } = useContentVariations(contentId ?? null);
     const { socialAccounts } = useBrandSocialContext();
     const { selectedBrand, hasCapability } = useBrandContext();
     const { openModal } = useConfirmationModel();
@@ -149,6 +163,9 @@ const CreateContentScreen = () => {
     // from the Content details modal; hydrated from the live item below.
     const [targetPlatforms, setTargetPlatforms] = useState(seedItem?.platforms ?? []);
     const [showInfoModal, setShowInfoModal] = useState(false);
+    // Active editor tab: "generic" (the shared base) or a platform variation.
+    const [activeTab, setActiveTab] = useState<VariationTab>("generic");
+    const [showVariationModal, setShowVariationModal] = useState(false);
     const [showPublishModal, setShowPublishModal] = useState(false);
     const [showNoSocialsModal, setShowNoSocialsModal] = useState(false);
     const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -263,6 +280,76 @@ const CreateContentScreen = () => {
             return next.length === prev.length ? prev : next;
         });
     }, [allowedPlatforms]);
+
+    // ── Per-platform variations ──────────────────────────────────────────────
+    // Existing variation platforms, in canonical order for stable tabs.
+    const variationPlatforms = useMemo(() => {
+        const present = new Set(variations.map((v) => v.platform));
+        return ALL_PLATFORMS.filter((p) => present.has(p));
+    }, [variations]);
+
+    // Platforms the user may still add a variation for: the content's targeted
+    // platforms that don't already have one.
+    const availableForVariation = useMemo(
+        () => targetPlatforms.filter((p) => !variationByPlatform[p]),
+        [targetPlatforms, variationByPlatform]
+    );
+
+    // If the active variation tab's doc disappears (deleted, or its platform was
+    // removed), fall back to Generic so the editor never points at nothing.
+    useEffect(() => {
+        if (activeTab !== "generic" && !variationByPlatform[activeTab]) {
+            setActiveTab("generic");
+        }
+    }, [activeTab, variationByPlatform]);
+
+    const handleCreateVariations = useCallback(
+        (platforms: ContentPlatform[]) => {
+            createVariations(platforms, { platformOptions });
+            if (platforms[0]) setActiveTab(platforms[0]);
+        },
+        [createVariations, platformOptions]
+    );
+
+    const handleSetOverride = useCallback(
+        (field: VariationOverridableField, value: string) => {
+            if (activeTab === "generic") return;
+            setOverride(activeTab, field, value);
+        },
+        [activeTab, setOverride]
+    );
+
+    const handleResetField = useCallback(
+        (field: VariationOverridableField) => {
+            if (activeTab === "generic") return;
+            resetField(activeTab, field);
+        },
+        [activeTab, resetField]
+    );
+
+    const handleSetVariationOptions = useCallback(
+        (patch: Partial<PlatformOptions>) => {
+            if (activeTab === "generic") return;
+            setVariationPlatformOptions(activeTab, patch);
+        },
+        [activeTab, setVariationPlatformOptions]
+    );
+
+    const handleDeleteActiveVariation = useCallback(() => {
+        if (activeTab === "generic") return;
+        const platform = activeTab;
+        const label = SOCIAL_PLATFORM_MAP[platform]?.label ?? platform;
+        openModal({
+            title: `Delete ${label} variation?`,
+            description: `The ${label} version of this content will be removed. ${label} will publish the Generic content instead. This cannot be undone.`,
+            confirmText: "Delete variation",
+            cancelText: "Cancel",
+            confirmAction: async () => {
+                await deleteVariation(platform);
+                setActiveTab("generic");
+            },
+        });
+    }, [activeTab, deleteVariation, openModal]);
 
     const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -984,6 +1071,25 @@ const CreateContentScreen = () => {
                         showsVerticalScrollIndicator={false}
                         keyboardShouldPersistTaps="handled"
                     >
+                        {/* ── Platform variation tabs (Generic + per-platform + ＋) ── */}
+                        {targetPlatforms.length > 0 || variationPlatforms.length > 0 ? (
+                            <View style={styles.section}>
+                                <VariationTabs
+                                    active={activeTab}
+                                    variationPlatforms={variationPlatforms}
+                                    onSelect={setActiveTab}
+                                    onAddPress={() => setShowVariationModal(true)}
+                                    canAdd={!locked && availableForVariation.length > 0}
+                                />
+                                {variationPlatforms.length === 0 && !locked ? (
+                                    <Text style={styles.variationHint}>
+                                        Tailor the caption & options for a specific platform — add a
+                                        tab. The Generic version is the shared default.
+                                    </Text>
+                                ) : null}
+                            </View>
+                        ) : null}
+
                         {/* ── Lock banner: scheduled / posted content is read-only ── */}
                         {locked ? (
                             <View style={styles.section}>
@@ -1026,6 +1132,23 @@ const CreateContentScreen = () => {
                             </View>
                         ) : null}
 
+                        {/* ── Generic tab body, OR a platform variation editor ── */}
+                        {activeTab !== "generic" ? (
+                            <View style={styles.section}>
+                                <VariationEditor
+                                    platform={activeTab}
+                                    variation={variationByPlatform[activeTab]}
+                                    genericCaption={caption}
+                                    genericHashtags={hashtags}
+                                    onSetOverride={handleSetOverride}
+                                    onResetField={handleResetField}
+                                    onSetPlatformOptions={handleSetVariationOptions}
+                                    onDelete={handleDeleteActiveVariation}
+                                    disabled={locked}
+                                />
+                            </View>
+                        ) : (
+                          <>
                         {/* ── Posting summary (only once configured) ──────────── */}
                         {destinations.length > 0 ? (
                             <View style={styles.section}>
@@ -1253,6 +1376,8 @@ const CreateContentScreen = () => {
                                 </View>
                             </View>
                         )}
+                          </>
+                        )}
 
                         <View style={styles.bottomPad} />
                     </ScrollView>
@@ -1428,6 +1553,14 @@ const CreateContentScreen = () => {
                 onTimeChange={setTimeOfPosting}
                 onPublish={handlePublish}
                 publishing={publishing}
+                variationPlatforms={variationPlatforms}
+            />
+
+            <VariationModal
+                visible={showVariationModal}
+                available={availableForVariation}
+                onClose={() => setShowVariationModal(false)}
+                onCreate={handleCreateVariations}
             />
 
             <UnsavedChangesModal
@@ -1457,6 +1590,13 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                 },
                 section: {
                     marginBottom: 20,
+                },
+                variationHint: {
+                    fontSize: 11,
+                    color: colors.textSecondary,
+                    lineHeight: 16,
+                    marginTop: 10,
+                    paddingHorizontal: 2,
                 },
                 // ── Split layout ──────────────────────────────────────────────
                 splitContainer: {

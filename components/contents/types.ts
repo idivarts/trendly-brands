@@ -1,7 +1,8 @@
 import { CalendarItem } from "@/components/content-calendar/types";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { Platform } from "@/shared-libs/firestore/trendly-pro/constants/platform";
-import { IImageGeneration } from "@/shared-libs/firestore/trendly-pro/models/contents";
+import { IImageGeneration, IPlatformOptions } from "@/shared-libs/firestore/trendly-pro/models/contents";
+import { IContentVariation } from "@/shared-libs/firestore/trendly-pro/models/variations";
 import Colors from "@/shared-uis/constants/Colors";
 
 /**
@@ -46,20 +47,17 @@ export type ScheduleMode = "now" | "scheduled";
 
 /**
  * Per-platform publishing extras that don't fit the shared caption/attachment
- * model. Mirrors the backend `ContentPlatformOptions` (content.go). Only the
- * fields for a content's targeted platforms are read at publish time.
+ * model. The full, namespaced shape lives in the shared Firestore model
+ * ({@link IPlatformOptions}); this is just the UI-facing alias so existing
+ * imports from `@/components/contents/types` keep working.
  */
-export interface PlatformOptions {
-    /** YouTube — a video needs a title + visibility distinct from the caption. */
-    youtubeTitle?: string;
-    youtubePrivacy?: "public" | "private" | "unlisted";
-    youtubeMadeForKids?: boolean;
-    /** Reddit — a submission needs a target subreddit + title (+ optional flair). */
-    redditSubreddit?: string;
-    redditTitle?: string;
-    redditFlairId?: string;
-    redditNsfw?: boolean;
-}
+export type PlatformOptions = IPlatformOptions;
+
+/**
+ * A per-platform content variation (UI alias of the Firestore model). The
+ * platform field doubles as the Firestore document ID.
+ */
+export type ContentVariation = IContentVariation;
 
 export interface ContentItem extends CalendarItem {
     status: ContentStatus;
