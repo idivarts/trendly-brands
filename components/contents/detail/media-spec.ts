@@ -33,8 +33,11 @@ export interface MediaSpec {
 const PORTRAIT_9_16 = { min: 0.5, max: 0.65 };
 // 4:5 (0.8) → 1:1 (1.0); allow 0.78–1.02.
 const SQUARE_TO_45 = { min: 0.78, max: 1.02 };
-// Landscape 16:9 ≈ 1.777; allow 1.6–1.95.
-const LANDSCAPE_16_9 = { min: 1.6, max: 1.95 };
+// General landscape video. Rather than locking to a sharp 16:9, accept any of
+// the standard landscape formats platforms like YouTube support: from 4:3
+// (1.333) through 16:9 (1.777) up to ultrawide/cinematic 21:9 (≈2.39). A small
+// tolerance is baked into the bounds so near-perfect crops aren't rejected.
+const LANDSCAPE_VIDEO = { min: 1.3, max: 2.4 };
 
 export const MEDIA_SPEC: Record<ContentType, MediaSpec> = {
     reel: {
@@ -48,11 +51,13 @@ export const MEDIA_SPEC: Record<ContentType, MediaSpec> = {
     },
     video: {
         // Landscape / long-form video (YouTube, Facebook, LinkedIn, X, IG feed).
+        // Accepts any standard landscape format (4:3 → 16:9 → 21:9), not just a
+        // sharp 16:9. 16:9 stays the canonical/recommended ratio.
         kind: "video",
         multi: false,
-        aspectLabel: "16:9",
+        aspectLabel: "landscape (16:9 recommended)",
         aspectRatios: ["16:9"],
-        aspectRange: LANDSCAPE_16_9,
+        aspectRange: LANDSCAPE_VIDEO,
         canGenerate: false, // produced externally and uploaded
         hasScript: true,
     },
@@ -111,7 +116,10 @@ function ratioLabel(width: number, height: number): string {
         ["4:5", 0.8],
         ["1:1", 1.0],
         ["4:3", 1.333],
+        ["3:2", 1.5],
         ["16:9", 1.777],
+        ["2:1", 2.0],
+        ["21:9", 2.389],
     ];
     let best = known[0];
     for (const k of known) {
