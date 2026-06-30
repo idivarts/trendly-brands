@@ -21,6 +21,7 @@
 import { collection, onSnapshot } from "firebase/firestore";
 import { useCallback, useEffect, useState } from "react";
 
+import { REDDIT_ENABLED } from "@/constants/features";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
@@ -34,15 +35,22 @@ import {
 /**
  * Maps raw `brands/{brandId}/socialAccounts` Firestore documents to the inbox's
  * `ConnectedInboxAccount` shape. Mirrors the backend's `ListAccounts`
- * (internal/trendlyapis/inbox/service.go): only Meta channels participate, and a
- * Facebook Page with a linked IG Business Account also surfaces an Instagram
- * entry so the UI shows IG as connected.
+ * (internal/trendlyapis/inbox/service.go): every inbox-capable channel
+ * participates (IG/FB for DMs+comments, Twitter/Reddit for DMs+comments,
+ * LinkedIn for comments only), and a Facebook Page with a linked IG Business
+ * Account also surfaces an Instagram entry so the UI shows IG as connected.
  */
+const INBOX_CHANNELS = new Set(
+    ["instagram", "facebook", "linkedin_page", "twitter", "reddit"].filter(
+        (c) => c !== "reddit" || REDDIT_ENABLED
+    )
+);
+
 function mapConnectedAccounts(docs: any[]): ConnectedInboxAccount[] {
     const out: ConnectedInboxAccount[] = [];
     for (const s of docs) {
         const channel = s?.platform;
-        if (channel !== "instagram" && channel !== "facebook") continue;
+        if (!INBOX_CHANNELS.has(channel)) continue;
         out.push({
             id: s.id,
             channel,

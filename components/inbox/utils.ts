@@ -1,4 +1,4 @@
-import { faFacebookF, faInstagram } from "@fortawesome/free-brands-svg-icons";
+import { faFacebookF, faInstagram, faLinkedin, faReddit, faXTwitter } from "@fortawesome/free-brands-svg-icons";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
 import Colors from "@/shared-uis/constants/Colors";
@@ -6,14 +6,36 @@ import { conversationUnreadCount, InboxChannel, InboxConversation, InboxFilter }
 
 type ColorSet = ReturnType<typeof Colors>;
 
-export const channelLabel = (channel: InboxChannel): string =>
-    channel === "instagram" ? "Instagram" : "Facebook";
+export const channelLabel = (channel: InboxChannel): string => {
+    switch (channel) {
+        case "instagram": return "Instagram";
+        case "facebook": return "Facebook";
+        case "linkedin_page": return "LinkedIn Page";
+        case "twitter": return "X";
+        case "reddit": return "Reddit";
+        default: return channel;
+    }
+};
 
-export const channelIcon = (channel: InboxChannel): IconDefinition =>
-    channel === "instagram" ? faInstagram : faFacebookF;
+export const channelIcon = (channel: InboxChannel): IconDefinition => {
+    switch (channel) {
+        case "instagram": return faInstagram;
+        case "linkedin_page": return faLinkedin;
+        case "twitter": return faXTwitter;
+        case "reddit": return faReddit;
+        default: return faFacebookF;
+    }
+};
 
-export const channelColor = (channel: InboxChannel, colors: ColorSet): string =>
-    channel === "instagram" ? colors.socialInstagram : colors.socialFacebook;
+export const channelColor = (channel: InboxChannel, colors: ColorSet): string => {
+    switch (channel) {
+        case "instagram": return colors.socialInstagram;
+        case "linkedin_page": return colors.socialLinkedin;
+        case "twitter": return colors.socialTwitter;
+        case "reddit": return colors.socialReddit;
+        default: return colors.socialFacebook;
+    }
+};
 
 /** True when a DM's 24h reply window is still open (comments are always open). */
 export const canReply = (c: InboxConversation, now: number = Date.now()): boolean => {

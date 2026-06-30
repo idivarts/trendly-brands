@@ -1,6 +1,7 @@
 import DateField from "@/components/modals/DateField";
 import { ISocialAccount, socialAccountLabel } from "@/contexts/brand-social-context.provider";
-import { POPULAR_POSTING_TIMES, ScheduleMode, SocialDestination } from "@/components/contents/types";
+import { PlatformOptions, POPULAR_POSTING_TIMES, ScheduleMode, SocialDestination } from "@/components/contents/types";
+import { REDDIT_ENABLED } from "@/constants/features";
 import Colors from "@/shared-uis/constants/Colors";
 import {
     faBolt,
@@ -28,6 +29,9 @@ interface ScheduleBarProps {
     socialAccounts: ISocialAccount[];
     destinations: SocialDestination[];
     onDestinationsChange: (next: SocialDestination[]) => void;
+    /** Per-platform publishing extras (YouTube title/visibility, Reddit subreddit). */
+    platformOptions: PlatformOptions;
+    onPlatformOptionsChange: (next: PlatformOptions) => void;
     formattedDate: string;
     /** The currently-selected posting date (drives the inline picker). */
     dateValue: Date;
@@ -41,8 +45,20 @@ interface ScheduleBarProps {
     embedded?: boolean;
 }
 
-// Only these platforms are publishable from Trendly today.
-const PUBLISHABLE = new Set(["instagram", "facebook", "linkedin"]);
+// Platforms Trendly can publish to. Each has a backend publish path
+// (internal/trendlyapis/publishing/publish.go). Reddit is gated by REDDIT_ENABLED.
+const PUBLISHABLE = new Set(
+    ["instagram", "facebook", "linkedin", "linkedin_page", "twitter", "youtube", "reddit"].filter(
+        (p) => p !== "reddit" || REDDIT_ENABLED
+    )
+);
+
+// Reddit YouTube visibility options.
+const YT_VISIBILITY: { label: string; value: "public" | "unlisted" | "private" }[] = [
+    { label: "Public", value: "public" },
+    { label: "Unlisted", value: "unlisted" },
+    { label: "Private", value: "private" },
+];
 
 // Brand colour for a platform's dot indicator.
 const platformDotColor = (platform: string, colors: ReturnType<typeof Colors>) => {
@@ -50,7 +66,14 @@ const platformDotColor = (platform: string, colors: ReturnType<typeof Colors>) =
         case "instagram":
             return colors.socialInstagram;
         case "linkedin":
+        case "linkedin_page":
             return colors.socialLinkedin;
+        case "twitter":
+            return colors.socialTwitter;
+        case "youtube":
+            return colors.socialYoutube;
+        case "reddit":
+            return colors.socialReddit;
         default:
             return colors.socialFacebook;
     }
@@ -60,6 +83,8 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
     socialAccounts,
     destinations,
     onDestinationsChange,
+    platformOptions,
+    onPlatformOptionsChange,
     formattedDate,
     dateValue,
     onDateChange,
@@ -77,6 +102,15 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
         () => socialAccounts.filter((a) => PUBLISHABLE.has(a.platform)),
         [socialAccounts]
     );
+
+    // Which platforms are currently selected as destinations — drives the
+    // per-platform option fields (YouTube title/visibility, Reddit subreddit).
+    const selectedPlatforms = useMemo(
+        () => new Set(destinations.map((d) => d.platform)),
+        [destinations]
+    );
+    const setOpt = (patch: Partial<PlatformOptions>) =>
+        onPlatformOptionsChange({ ...platformOptions, ...patch });
 
     const isSelected = (id: string) => destinations.some((d) => d.socialAccountId === id);
     const toggle = (a: ISocialAccount) => {
@@ -159,7 +193,8 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
 
             {accounts.length === 0 ? (
                 <Text style={styles.emptyAccounts}>
-                    No connected accounts yet. Connect Instagram, Facebook or LinkedIn to publish.
+                    No connected accounts yet. Connect a social account (Instagram, Facebook,
+                    LinkedIn, X, YouTube or Reddit) to publish.
                 </Text>
             ) : (
                 <>
@@ -171,6 +206,86 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
                     ) : null}
                 </>
             )}
+
+            {/* ── Per-platform options ─────────────────────────────────── */}
+            {selectedPlatforms.has("youtube") ? (
+                <View style={styles.optionBlock}>
+                    <Text style={styles.optionTitle}>YouTube</Text>
+                    <TextInput
+                        style={styles.optionInput}
+                        placeholder="Video title"
+                        placeholderTextColor={colors.textSecondary}
+                        value={platformOptions.youtubeTitle ?? ""}
+                        onChangeText={(t) => setOpt({ youtubeTitle: t })}
+                        maxLength={100}
+                    />
+                    <View style={styles.visRow}>
+                        {YT_VISIBILITY.map((v) => {
+                            const on = (platformOptions.youtubePrivacy ?? "public") === v.value;
+                            return (
+                                <Pressable
+                                    key={v.value}
+                                    onPress={() => setOpt({ youtubePrivacy: v.value })}
+                                    style={({ pressed }) => [
+                                        styles.timeChip,
+                                        on && styles.timeChipOn,
+                                        pressed && styles.pressed,
+                                    ]}
+                                >
+                                    <Text style={[styles.timeChipText, on && styles.timeChipTextOn]}>
+                                        {v.label}
+                                    </Text>
+                                </Pressable>
+                            );
+                        })}
+                    </View>
+                    <Text style={styles.optionHint}>
+                        A video attachment is required. Vertical clips post as Shorts.
+                    </Text>
+                </View>
+            ) : null}
+
+            {selectedPlatforms.has("reddit") ? (
+                <View style={styles.optionBlock}>
+                    <Text style={styles.optionTitle}>Reddit</Text>
+                    <TextInput
+                        style={styles.optionInput}
+                        placeholder="Subreddit (e.g. startups)"
+                        placeholderTextColor={colors.textSecondary}
+                        value={platformOptions.redditSubreddit ?? ""}
+                        onChangeText={(t) =>
+                            setOpt({ redditSubreddit: t.replace(/^\/?r\//i, "").trim() })
+                        }
+                        autoCapitalize="none"
+                    />
+                    <TextInput
+                        style={styles.optionInput}
+                        placeholder="Post title"
+                        placeholderTextColor={colors.textSecondary}
+                        value={platformOptions.redditTitle ?? ""}
+                        onChangeText={(t) => setOpt({ redditTitle: t })}
+                        maxLength={300}
+                    />
+                    <TextInput
+                        style={styles.optionInput}
+                        placeholder="Flair ID (optional)"
+                        placeholderTextColor={colors.textSecondary}
+                        value={platformOptions.redditFlairId ?? ""}
+                        onChangeText={(t) => setOpt({ redditFlairId: t })}
+                        autoCapitalize="none"
+                    />
+                    <Text style={styles.optionHint}>
+                        Subreddit & title are required. Many subreddits enforce posting rules or
+                        required flair.
+                    </Text>
+                </View>
+            ) : null}
+
+            {selectedPlatforms.has("twitter") ? (
+                <Text style={styles.optionHint}>
+                    X posts are limited to 280 characters — longer captions will be rejected.
+                </Text>
+            ) : null}
 
             {/* ── When ─────────────────────────────────────────────────── */}
             <View style={styles.softDivider} />
@@ -414,6 +529,41 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             fontSize: 11,
             color: colors.textSecondary,
             marginTop: 8,
+        },
+        optionBlock: {
+            marginTop: 14,
+            padding: 12,
+            borderRadius: 12,
+            backgroundColor: colors.aliceBlue,
+            gap: 8,
+        },
+        optionTitle: {
+            fontSize: 12,
+            fontWeight: "700",
+            color: colors.textSecondary,
+        },
+        optionInput: {
+            backgroundColor: colors.card,
+            borderRadius: 10,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            fontSize: 14,
+            color: colors.text,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowRadius: 3,
+            shadowOpacity: 0.04,
+            elevation: 1,
+        },
+        visRow: {
+            flexDirection: "row",
+            flexWrap: "wrap",
+            gap: 8,
+        },
+        optionHint: {
+            fontSize: 11,
+            color: colors.textSecondary,
+            lineHeight: 16,
         },
         dateStatement: {
             flexDirection: "row",

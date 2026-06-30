@@ -321,22 +321,25 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                     </Pressable>
                 )}
 
-                {/* Link to the full Organizations hub */}
-                <Pressable onPress={() => setOrgDropdownOpen(false)}>
-                    <DrawerMenuItem
-                        tab={{
-                            href: "/organizations",
-                            icon: ({ focused }) => (
-                                <DrawerIcon
-                                    href="/organizations"
-                                    icon={faLayerGroup}
-                                    focused={focused}
-                                />
-                            ),
-                            label: "All Organizations",
-                        }}
-                    />
-                </Pressable>
+                {/* Link to the full Organizations hub — only when the user
+                    actually belongs to more than one organization. */}
+                {organizations.length > 1 && (
+                    <Pressable onPress={() => setOrgDropdownOpen(false)}>
+                        <DrawerMenuItem
+                            tab={{
+                                href: "/organizations",
+                                icon: ({ focused }) => (
+                                    <DrawerIcon
+                                        href="/organizations"
+                                        icon={faLayerGroup}
+                                        focused={focused}
+                                    />
+                                ),
+                                label: "All Organizations",
+                            }}
+                        />
+                    </Pressable>
+                )}
 
                 {/* Current organization — tap to open its detail page */}
                 {currentOrg ? (
