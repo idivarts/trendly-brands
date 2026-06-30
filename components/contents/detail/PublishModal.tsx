@@ -34,12 +34,15 @@ export interface PublishModalProps {
     publishing: boolean;
     /** Platforms that have a per-platform variation (publish from it, not Generic). */
     variationPlatforms?: Platform[];
+    /** Platforms whose option fields are edited elsewhere — hidden in ScheduleBar. */
+    hideOptionPlatforms?: string[];
 }
 
 const PublishModal: React.FC<PublishModalProps> = ({
     visible,
     onClose,
     variationPlatforms = [],
+    hideOptionPlatforms = [],
     ...scheduleProps
 }) => {
     const theme = useTheme();
@@ -109,7 +112,7 @@ const PublishModal: React.FC<PublishModalProps> = ({
                                 </Text>
                             </View>
                         ) : null}
-                        <ScheduleBar embedded {...scheduleProps} variationPlatforms={variationPlatforms} />
+                        <ScheduleBar embedded {...scheduleProps} hideOptionPlatforms={hideOptionPlatforms} />
                     </ScrollView>
                 </View>
             </View>

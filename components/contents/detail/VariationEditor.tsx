@@ -11,8 +11,7 @@
  * Media stays shared from the Generic tab in this first pass (surfaced via a
  * note), so this editor only owns caption / hashtags / platform options.
  */
-import ThreadEditor from "@/components/contents/detail/platform-fields/ThreadEditor";
-import PlatformOptionField from "@/components/contents/detail/platform-fields/PlatformOptionField";
+import PlatformOptionsSection from "@/components/contents/detail/platform-fields/PlatformOptionsSection";
 import { ContentVariation } from "@/hooks/use-content-variations";
 import { Platform, PlatformEnum } from "@/shared-libs/firestore/trendly-pro/constants/platform";
 import { variationSpecForPlatform } from "@/shared-libs/firestore/trendly-pro/constants/platform-fields";
@@ -178,28 +177,13 @@ const VariationEditor: React.FC<Props> = ({
             {/* Platform-specific options */}
             {spec && spec.fields.length > 0 ? (
                 <View style={styles.section}>
-                    <Text style={styles.sectionLabel}>{(meta?.label ?? platform).toUpperCase()} OPTIONS</Text>
-                    <View style={styles.optionsCard}>
-                        {spec.fields.map((field) =>
-                            field.type === "thread" ? (
-                                <ThreadEditor
-                                    key={field.key}
-                                    thread={(options.twitterThread as string[]) ?? []}
-                                    sourceCaption={captionValue}
-                                    disabled={disabled}
-                                    onChange={(thread) => onSetPlatformOptions({ twitterThread: thread })}
-                                />
-                            ) : (
-                                <PlatformOptionField
-                                    key={field.key}
-                                    field={field}
-                                    options={options}
-                                    disabled={disabled}
-                                    onChange={onSetPlatformOptions}
-                                />
-                            )
-                        )}
-                    </View>
+                    <PlatformOptionsSection
+                        platform={platform}
+                        options={options}
+                        onChange={onSetPlatformOptions}
+                        sourceCaption={captionValue}
+                        disabled={disabled}
+                    />
                 </View>
             ) : null}
 

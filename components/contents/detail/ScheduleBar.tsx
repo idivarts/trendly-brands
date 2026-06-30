@@ -44,11 +44,11 @@ interface ScheduleBarProps {
     /** When true, renders without its own card chrome (sits inside a parent card). */
     embedded?: boolean;
     /**
-     * Platforms that have their own variation. Their per-platform option fields
-     * are hidden here — the variation tab owns them and publish reads them from
-     * the variation, not these generic options.
+     * Platforms whose per-platform option fields are edited elsewhere (a variation
+     * tab, or the single-platform inline section). They're hidden here so options
+     * aren't shown/edited in two places.
      */
-    variationPlatforms?: string[];
+    hideOptionPlatforms?: string[];
 }
 
 // Platforms Trendly can publish to. Each has a backend publish path
@@ -99,15 +99,15 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
     onPublish,
     publishing,
     embedded = false,
-    variationPlatforms = [],
+    hideOptionPlatforms = [],
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useStyles(colors);
 
-    // Platforms whose options come from their variation tab — hide the generic
-    // option fields for them here.
-    const variationSet = useMemo(() => new Set(variationPlatforms), [variationPlatforms]);
+    // Platforms whose options are edited elsewhere (variation tab / inline) — hide
+    // the generic option fields for them here.
+    const hiddenSet = useMemo(() => new Set(hideOptionPlatforms), [hideOptionPlatforms]);
 
     const accounts = useMemo(
         () => socialAccounts.filter((a) => PUBLISHABLE.has(a.platform)),
@@ -219,7 +219,7 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
             )}
 
             {/* ── Per-platform options (hidden when the platform has a variation) ── */}
-            {selectedPlatforms.has("youtube") && !variationSet.has("youtube") ? (
+            {selectedPlatforms.has("youtube") && !hiddenSet.has("youtube") ? (
                 <View style={styles.optionBlock}>
                     <Text style={styles.optionTitle}>YouTube</Text>
                     <TextInput
@@ -256,7 +256,7 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
                 </View>
             ) : null}
 
-            {selectedPlatforms.has("reddit") && !variationSet.has("reddit") ? (
+            {selectedPlatforms.has("reddit") && !hiddenSet.has("reddit") ? (
                 <View style={styles.optionBlock}>
                     <Text style={styles.optionTitle}>Reddit</Text>
                     <TextInput
@@ -292,7 +292,7 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
                 </View>
             ) : null}
 
-            {selectedPlatforms.has("twitter") && !variationSet.has("twitter") ? (
+            {selectedPlatforms.has("twitter") && !hiddenSet.has("twitter") ? (
                 <Text style={styles.optionHint}>
                     X posts are limited to 280 characters — longer captions will be rejected.
                 </Text>

@@ -10,6 +10,7 @@ import PreviewPanel from "@/components/contents/detail/PreviewPanel";
 import PublishModal from "@/components/contents/detail/PublishModal";
 import ScriptEditor from "@/components/contents/detail/ScriptEditor";
 import UnsavedChangesModal from "@/components/contents/detail/UnsavedChangesModal";
+import PlatformOptionsSection from "@/components/contents/detail/platform-fields/PlatformOptionsSection";
 import VariationEditor from "@/components/contents/detail/VariationEditor";
 import VariationModal from "@/components/contents/detail/VariationModal";
 import VariationTabs, { VariationTab } from "@/components/contents/detail/VariationTabs";
@@ -282,11 +283,29 @@ const CreateContentScreen = () => {
     }, [allowedPlatforms]);
 
     // ── Per-platform variations ──────────────────────────────────────────────
+    // A content targeting exactly ONE platform has no use for the Generic/variation
+    // tab model — that single platform's options render inline on the main editor.
+    const soloPlatform = targetPlatforms.length === 1 ? targetPlatforms[0] : null;
+
     // Existing variation platforms, in canonical order for stable tabs.
     const variationPlatforms = useMemo(() => {
         const present = new Set(variations.map((v) => v.platform));
         return ALL_PLATFORMS.filter((p) => present.has(p));
     }, [variations]);
+
+    // Single-platform content never uses tabs — keep the editor on the (inline)
+    // Generic body if a stale variation tab was selected.
+    useEffect(() => {
+        if (soloPlatform && activeTab !== "generic") setActiveTab("generic");
+    }, [soloPlatform, activeTab]);
+
+    // Platforms whose per-platform options are edited OUTSIDE the publish modal —
+    // a variation tab, or the solo platform's inline section — so ScheduleBar
+    // hides its generic option fields for them.
+    const optionsHandledElsewhere = useMemo(
+        () => [...variationPlatforms, ...(soloPlatform ? [soloPlatform] : [])],
+        [variationPlatforms, soloPlatform]
+    );
 
     // Platforms the user may still add a variation for: the content's targeted
     // platforms that don't already have one.
@@ -1071,8 +1090,10 @@ const CreateContentScreen = () => {
                         showsVerticalScrollIndicator={false}
                         keyboardShouldPersistTaps="handled"
                     >
-                        {/* ── Platform variation tabs (Generic + per-platform + ＋) ── */}
-                        {targetPlatforms.length > 0 || variationPlatforms.length > 0 ? (
+                        {/* ── Platform variation tabs (Generic + per-platform + ＋) ──
+                            Hidden when the content targets a single platform — that
+                            platform's fields render inline on the main editor. */}
+                        {!soloPlatform && (targetPlatforms.length > 1 || variationPlatforms.length > 0) ? (
                             <View style={styles.section}>
                                 <VariationTabs
                                     active={activeTab}
@@ -1343,6 +1364,21 @@ const CreateContentScreen = () => {
                             ) : null}
                         </View>
 
+                        {/* ── Single-platform options (inline, no tabs) ────────── */}
+                        {soloPlatform ? (
+                            <View style={styles.section}>
+                                <PlatformOptionsSection
+                                    platform={soloPlatform}
+                                    options={platformOptions}
+                                    onChange={(patch) =>
+                                        setPlatformOptions((prev) => ({ ...prev, ...patch }))
+                                    }
+                                    sourceCaption={caption}
+                                    disabled={locked}
+                                />
+                            </View>
+                        ) : null}
+
                         {/* ── Reel Collab CTA ───────────────────────────────────── */}
                         {isReel && (
                             <View style={styles.section}>
@@ -1554,6 +1590,7 @@ const CreateContentScreen = () => {
                 onPublish={handlePublish}
                 publishing={publishing}
                 variationPlatforms={variationPlatforms}
+                hideOptionPlatforms={optionsHandledElsewhere}
             />
 
             <VariationModal
