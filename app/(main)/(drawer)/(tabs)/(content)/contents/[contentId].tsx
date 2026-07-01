@@ -1452,6 +1452,8 @@ const CreateContentScreen = () => {
                                     attachments={attachments}
                                     caption={caption}
                                     hashtags={hashtags}
+                                    platformOptions={platformOptions}
+                                    variationByPlatform={variationByPlatform}
                                 />
                             }
                         />
@@ -1494,6 +1496,8 @@ const CreateContentScreen = () => {
                             attachments={attachments}
                             caption={caption}
                             hashtags={hashtags}
+                            platformOptions={platformOptions}
+                            variationByPlatform={variationByPlatform}
                             onCollapse={() => setRightPanelMode("none")}
                         />
                     }
