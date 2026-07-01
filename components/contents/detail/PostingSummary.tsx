@@ -4,6 +4,7 @@ import {
     ScheduleMode,
     SocialDestination,
 } from "@/components/contents/types";
+import { REDDIT_ENABLED } from "@/constants/features";
 import Colors from "@/shared-uis/constants/Colors";
 import {
     faBolt,
@@ -21,7 +22,14 @@ import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 // once the user has configured where/when to post. Tapping Edit reopens the
 // publish modal. Keeps the heavy controls off the page.
 
-const PUBLISHABLE = new Set(["instagram", "facebook", "linkedin"]);
+// Platforms Trendly can publish to. Kept in sync with ScheduleBar's set so the
+// recap chips match the destinations the user actually selected. Reddit is gated
+// by REDDIT_ENABLED.
+const PUBLISHABLE = new Set(
+    ["instagram", "facebook", "linkedin", "linkedin_page", "twitter", "youtube", "reddit"].filter(
+        (p) => p !== "reddit" || REDDIT_ENABLED
+    )
+);
 
 // Brand colour for a platform's dot indicator.
 const platformDotColor = (platform: string, colors: ReturnType<typeof Colors>) => {
@@ -29,7 +37,14 @@ const platformDotColor = (platform: string, colors: ReturnType<typeof Colors>) =
         case "instagram":
             return colors.socialInstagram;
         case "linkedin":
+        case "linkedin_page":
             return colors.socialLinkedin;
+        case "twitter":
+            return colors.socialTwitter;
+        case "youtube":
+            return colors.socialYoutube;
+        case "reddit":
+            return colors.socialReddit;
         default:
             return colors.socialFacebook;
     }

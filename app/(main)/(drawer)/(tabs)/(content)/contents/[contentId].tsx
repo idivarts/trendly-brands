@@ -44,7 +44,8 @@ import { useContentVariations } from "@/hooks/use-content-variations";
 import AppLayout from "@/layouts/app-layout";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { isFormatPlatformCompatible } from "@/shared-libs/firestore/trendly-pro/constants/content-format";
-import { ALL_PLATFORMS, Platform as ContentPlatform } from "@/shared-libs/firestore/trendly-pro/constants/platform";
+import { ALL_PLATFORMS, Platform as ContentPlatform, PlatformEnum } from "@/shared-libs/firestore/trendly-pro/constants/platform";
+import { variationSpecForPlatform } from "@/shared-libs/firestore/trendly-pro/constants/platform-fields";
 import { VariationOverridableField } from "@/shared-libs/firestore/trendly-pro/models/variations";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
@@ -286,6 +287,20 @@ const CreateContentScreen = () => {
     // A content targeting exactly ONE platform has no use for the Generic/variation
     // tab model — that single platform's options render inline on the main editor.
     const soloPlatform = targetPlatforms.length === 1 ? targetPlatforms[0] : null;
+
+    // When the content targets exactly one platform, the generic editor IS that
+    // platform's editor — so apply its caption limits / hashtag rules inline
+    // (mirrors what the per-platform variation tab enforces). No solo platform →
+    // permissive generic defaults so a multi-platform caption isn't clipped here.
+    const soloSpec = useMemo(
+        () => (soloPlatform ? variationSpecForPlatform(soloPlatform) : undefined),
+        [soloPlatform]
+    );
+    const captionMaxLen = soloSpec?.captionMaxLen ?? 2200;
+    // Reddit has no hashtags — hide the field entirely when it's the solo target.
+    const showHashtags = soloPlatform !== PlatformEnum.Reddit;
+    // Live hashtag count (recommended-max is a soft cap surfaced as a hint).
+    const hashtagCount = useMemo(() => (hashtags.match(/#/g) ?? []).length, [hashtags]);
 
     // Existing variation platforms, in canonical order for stable tabs.
     const variationPlatforms = useMemo(() => {
@@ -1282,7 +1297,7 @@ const CreateContentScreen = () => {
                                         value={caption}
                                         onChangeText={setCaption}
                                         multiline
-                                        maxLength={2200}
+                                        maxLength={captionMaxLen}
                                         textAlignVertical="top"
                                         editable={!locked}
                                     />
@@ -1308,6 +1323,22 @@ const CreateContentScreen = () => {
                                     ) : null}
                                 </View>
                             </View>
+                            {/* Solo-platform: surface that platform's caption rule + a live counter. */}
+                            {soloPlatform ? (
+                                <View style={styles.fieldMetaRow}>
+                                    <Text style={styles.fieldMetaNote} numberOfLines={2}>
+                                        {soloSpec?.captionNote ?? ""}
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.charCounter,
+                                            caption.length >= captionMaxLen && styles.charCounterMax,
+                                        ]}
+                                    >
+                                        {caption.length}/{captionMaxLen}
+                                    </Text>
+                                </View>
+                            ) : null}
                             {captionGenerating ? (
                                 <View style={styles.aiHintWrap}>
                                     <AIGeneratingHint
@@ -1319,6 +1350,7 @@ const CreateContentScreen = () => {
                         </View>
 
                         {/* ── Hashtags ──────────────────────────────────────────── */}
+                        {showHashtags ? (
                         <View style={styles.section}>
                             <Text style={styles.sectionLabel}>HASHTAGS</Text>
                             <View style={styles.card}>
@@ -1354,6 +1386,22 @@ const CreateContentScreen = () => {
                                     ) : null}
                                 </View>
                             </View>
+                            {/* Solo-platform: surface the recommended hashtag cap + live count. */}
+                            {soloPlatform && soloSpec?.hashtagMax ? (
+                                <View style={styles.fieldMetaRow}>
+                                    <Text style={styles.fieldMetaNote} numberOfLines={1}>
+                                        Recommended: up to {soloSpec.hashtagMax} hashtags
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.charCounter,
+                                            hashtagCount > soloSpec.hashtagMax && styles.charCounterMax,
+                                        ]}
+                                    >
+                                        {hashtagCount}/{soloSpec.hashtagMax}
+                                    </Text>
+                                </View>
+                            ) : null}
                             {hashtagGenerating ? (
                                 <View style={styles.aiHintWrap}>
                                     <AIGeneratingHint
@@ -1363,6 +1411,7 @@ const CreateContentScreen = () => {
                                 </View>
                             ) : null}
                         </View>
+                        ) : null}
 
                         {/* ── Single-platform options (inline, no tabs) ────────── */}
                         {soloPlatform ? (
@@ -1775,6 +1824,28 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     letterSpacing: 1.1,
                     color: colors.textSecondary,
                     marginBottom: 8,
+                },
+                fieldMetaRow: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    marginTop: 6,
+                    paddingHorizontal: 2,
+                },
+                fieldMetaNote: {
+                    flex: 1,
+                    fontSize: 11,
+                    lineHeight: 15,
+                    color: colors.textSecondary,
+                },
+                charCounter: {
+                    fontSize: 11,
+                    fontWeight: "600",
+                    color: colors.textSecondary,
+                },
+                charCounterMax: {
+                    color: colors.red,
                 },
                 card: {
                     backgroundColor: colors.card,
