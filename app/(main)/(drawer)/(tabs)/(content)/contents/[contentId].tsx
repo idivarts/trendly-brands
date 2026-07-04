@@ -8,6 +8,7 @@ import NoSocialsModal from "@/components/contents/detail/NoSocialsModal";
 import PostingSummary from "@/components/contents/detail/PostingSummary";
 import PreviewPanel from "@/components/contents/detail/PreviewPanel";
 import PublishModal from "@/components/contents/detail/PublishModal";
+import PublishStatusPanel from "@/components/contents/detail/PublishStatusPanel";
 import ScriptEditor from "@/components/contents/detail/ScriptEditor";
 import UnsavedChangesModal from "@/components/contents/detail/UnsavedChangesModal";
 import PlatformOptionsSection from "@/components/contents/detail/platform-fields/PlatformOptionsSection";
@@ -20,9 +21,11 @@ import {
     CONTENT_STATUS_LABELS,
     ContentStatus,
     PlatformOptions,
+    PUBLISH_PIPELINE_STATUSES,
     ScheduleMode,
     SocialDestination,
     contentStatusColors,
+    isLockedStatus,
 } from "@/components/contents/types";
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import AIGeneratingHint from "@/components/shared/AIGeneratingHint";
@@ -204,14 +207,32 @@ const CreateContentScreen = () => {
         setDirty(false);
     }, [seedItem]);
 
+    // Publish-pipeline statuses are backend-driven and arrive out-of-band — the
+    // publish worker updates the doc over SQS, so the transitions
+    // publishing → posted / partially_failed / failed land after the one-shot
+    // hydration above has already fired. Mirror just those transitions into local
+    // state so the badge, the per-social panel, and the lock state track the live
+    // document without clobbering in-progress manual edits.
+    useEffect(() => {
+        const live = seedItem?.status as ContentStatus | undefined;
+        if (!live || live === status) return;
+        if (PUBLISH_PIPELINE_STATUSES.includes(live)) {
+            setStatus(live);
+            skipDirtyRef.current = true;
+            setDirty(false);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [seedItem?.status]);
+
     // ── Unsaved-changes (dirty) tracking ─────────────────────────────────────
     const [dirty, setDirty] = useState(false);
     const skipDirtyRef = useRef(true);
     useEffect(() => {
-        // Scheduled / posted content is locked and cannot be edited, so it can
-        // never legitimately be dirty — never flag it (no Unsaved-Changes prompt
-        // on back). Also clear any stale dirty flag the moment it locks.
-        if (status === "scheduled" || status === "posted") {
+        // Locked content (scheduled / publishing / posted / partially-published)
+        // cannot be edited, so it can never legitimately be dirty — never flag it
+        // (no Unsaved-Changes prompt on back). Also clear any stale dirty flag the
+        // moment it locks.
+        if (isLockedStatus(status)) {
             skipDirtyRef.current = false;
             setDirty(false);
             return;
@@ -404,10 +425,11 @@ const CreateContentScreen = () => {
         generateImage,
     } = useAIGenerate();
 
-    // Scheduled / posted content is locked: every edit + Save is disabled.
-    // A "scheduled" post can be unlocked by unscheduling it (reverts to
-    // "approved"); a "posted" one is locked permanently.
-    const locked = status === "scheduled" || status === "posted";
+    // Locked content: every edit + Save is disabled. A "scheduled" post can be
+    // unlocked by unscheduling it (reverts to "approved"); "publishing" /
+    // "posted" / "partially_failed" are backend-driven and stay locked. "failed"
+    // (nothing went live) is intentionally NOT locked — the user fixes + retries.
+    const locked = isLockedStatus(status);
 
     // Returns true when the content was persisted, false otherwise (no-op or
     // failure) — the unsaved-changes leave flow relies on this to decide whether
@@ -525,7 +547,10 @@ const CreateContentScreen = () => {
                     { method: "POST" }
                 );
                 if (!res.ok) throw new Error(`Publish failed (${res.status})`);
-                setStatus("posted");
+                // Publishing runs async on the backend (queued). Flip to
+                // "publishing" — the per-social panel + final status arrive live
+                // via the Firestore listener (see the pipeline-status effect).
+                setStatus("publishing");
             } else {
                 const res = await HttpWrapper.fetch(
                     `/api/v2/brands/${brandId}/contents/${contentId}/schedule`,
@@ -584,6 +609,33 @@ const CreateContentScreen = () => {
             setUnscheduling(false);
         }
     }, [contentId, unscheduling, selectedBrand?.id]);
+
+    // Retry only the socials that failed on the last publish run. Fire-and-forget:
+    // the backend re-queues those destinations and the panel updates live from the
+    // Firestore listener (status flips back to "publishing" for those rows).
+    const [retrying, setRetrying] = useState(false);
+    const handleRetryPublish = useCallback(async () => {
+        if (!contentId || retrying) return;
+        const brandId = selectedBrand?.id;
+        if (!brandId) return;
+        setRetrying(true);
+        try {
+            const res = await HttpWrapper.fetch(
+                `/api/v2/brands/${brandId}/contents/${contentId}/publish/retry`,
+                { method: "POST" }
+            );
+            if (!res.ok) throw new Error(`Retry failed (${res.status})`);
+        } catch (e) {
+            Toaster.error("Couldn't retry", "Please try again.");
+            console.warn("Retry publish error:", e);
+        } finally {
+            setRetrying(false);
+        }
+    }, [contentId, retrying, selectedBrand?.id]);
+
+    const handleReconnectAccounts = useCallback(() => {
+        router.push("/connected-accounts" as any);
+    }, [router]);
 
     const handleCreateCollab = useCallback(() => {
         router.push("/hire-us");
@@ -1135,12 +1187,22 @@ const CreateContentScreen = () => {
                                     </View>
                                     <View style={styles.lockBannerBody}>
                                         <Text style={styles.lockBannerTitle}>
-                                            {status === "posted" ? "Posted — locked" : "Scheduled — locked"}
+                                            {status === "publishing"
+                                                ? "Publishing…"
+                                                : status === "partially_failed"
+                                                    ? "Partially published"
+                                                    : status === "posted"
+                                                        ? "Published — locked"
+                                                        : "Scheduled — locked"}
                                         </Text>
                                         <Text style={styles.lockBannerSub}>
-                                            {status === "posted"
-                                                ? "This content has been posted and can no longer be edited."
-                                                : "Editing is paused while this post is scheduled. Unschedule it to make changes."}
+                                            {status === "publishing"
+                                                ? "Publishing to your connected socials — watch the progress above."
+                                                : status === "partially_failed"
+                                                    ? "This went live on some socials. Review the failures and retry above."
+                                                    : status === "posted"
+                                                        ? "This content has been published and can no longer be edited."
+                                                        : "Editing is paused while this post is scheduled. Unschedule it to make changes."}
                                         </Text>
                                     </View>
                                     {status === "scheduled" ? (
@@ -1185,6 +1247,20 @@ const CreateContentScreen = () => {
                             </View>
                         ) : (
                           <>
+                        {/* ── Per-social publish status (live while publishing + after) ── */}
+                        {seedItem?.publishResults && seedItem.publishResults.length > 0 ? (
+                            <View style={styles.section}>
+                                <PublishStatusPanel
+                                    results={seedItem.publishResults}
+                                    socialAccounts={socialAccounts}
+                                    overallStatus={status}
+                                    onRetry={handleRetryPublish}
+                                    retrying={retrying}
+                                    onReconnect={handleReconnectAccounts}
+                                />
+                            </View>
+                        ) : null}
+
                         {/* ── Posting summary (only once configured) ──────────── */}
                         {destinations.length > 0 ? (
                             <View style={styles.section}>
@@ -1195,16 +1271,18 @@ const CreateContentScreen = () => {
                                     formattedDate={formattedDate}
                                     timeOfPosting={timeOfPosting}
                                     onEdit={() => setShowPublishModal(true)}
-                                    locked={status === "posted"}
+                                    locked={status === "posted" || status === "partially_failed" || status === "publishing"}
                                     postedAt={
-                                        status === "posted" ? seedItem?.scheduledAt : undefined
+                                        status === "posted" || status === "partially_failed"
+                                            ? seedItem?.scheduledAt
+                                            : undefined
                                     }
                                 />
                             </View>
                         ) : null}
 
                         {/* ── Post performance (live analytics + comments) ────── */}
-                        {status === "posted" && seedItem ? (
+                        {(status === "posted" || status === "partially_failed") && seedItem ? (
                             <View style={styles.section}>
                                 <PostPerformance content={seedItem} />
                             </View>
