@@ -56,7 +56,7 @@ const PublicShareChrome: React.FC<PublicShareChromeProps> = ({ tier, viewerName,
         <View style={styles.bar}>
             <View style={styles.brand}>
                 <Image
-                    source={require("@/assets/images/logo.png")}
+                    source={require("@/assets/images/branding/trendly-logo.png")}
                     style={styles.logo}
                     resizeMode="contain"
                 />
