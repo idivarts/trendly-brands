@@ -26,12 +26,13 @@ import {
     faArrowRotateLeft,
     faCircleInfo,
     faLink,
+    faMagicWandSparkles,
     faTrashCan,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 interface Props {
     platform: Platform;
@@ -42,6 +43,14 @@ interface Props {
     onResetField: (field: VariationOverridableField) => void;
     onSetPlatformOptions: (patch: Partial<IPlatformOptions>) => void;
     onDelete: () => void;
+    /** Open the AI prompt modal to generate/enhance this platform's caption. */
+    onGenerateCaption?: () => void;
+    /** Open the AI prompt modal to generate/enhance this platform's hashtags. */
+    onGenerateHashtags?: () => void;
+    /** True while an AI caption generation for THIS variation is in flight. */
+    captionGenerating?: boolean;
+    /** True while an AI hashtag generation for THIS variation is in flight. */
+    hashtagGenerating?: boolean;
     disabled?: boolean;
 }
 
@@ -54,6 +63,10 @@ const VariationEditor: React.FC<Props> = ({
     onResetField,
     onSetPlatformOptions,
     onDelete,
+    onGenerateCaption,
+    onGenerateHashtags,
+    captionGenerating,
+    hashtagGenerating,
     disabled,
 }) => {
     const theme = useTheme();
@@ -76,7 +89,12 @@ const VariationEditor: React.FC<Props> = ({
         value: string,
         overridden: boolean,
         placeholder: string,
-        opts: { multiline?: boolean; maxLen?: number } = {}
+        opts: {
+            multiline?: boolean;
+            maxLen?: number;
+            onGenerate?: () => void;
+            generating?: boolean;
+        } = {}
     ) => (
         <View style={styles.section}>
             <View style={styles.fieldHead}>
@@ -117,8 +135,28 @@ const VariationEditor: React.FC<Props> = ({
                     textAlignVertical={opts.multiline ? "top" : "center"}
                     maxLength={opts.maxLen}
                 />
+                {!disabled && opts.onGenerate ? (
+                    <Pressable
+                        style={({ pressed }) => [styles.wandBtn, pressed && styles.pressed]}
+                        onPress={opts.onGenerate}
+                        disabled={opts.generating}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Generate ${label} for ${meta?.label ?? platform} with AI`}
+                    >
+                        {opts.generating ? (
+                            <ActivityIndicator size="small" color={colors.primary} />
+                        ) : (
+                            <FontAwesomeIcon icon={faMagicWandSparkles} size={16} color={colors.primary} />
+                        )}
+                    </Pressable>
+                ) : null}
             </View>
-            {!overridden ? (
+            {opts.generating ? (
+                <Text style={styles.generatingHint}>
+                    Writing the {meta?.label ?? platform} {label.toLowerCase()}… it'll drop in here
+                    automatically.
+                </Text>
+            ) : !overridden ? (
                 <Text style={styles.inheritHint}>
                     Editing this overrides it for {meta?.label ?? platform} only. Generic changes still
                     flow in until you do.
@@ -160,7 +198,12 @@ const VariationEditor: React.FC<Props> = ({
                 captionValue,
                 captionOverridden,
                 `Write the ${meta?.label ?? platform} version…`,
-                { multiline: true, maxLen: spec?.captionMaxLen }
+                {
+                    multiline: true,
+                    maxLen: spec?.captionMaxLen,
+                    onGenerate: onGenerateCaption,
+                    generating: captionGenerating,
+                }
             )}
 
             {showHashtags
@@ -170,7 +213,11 @@ const VariationEditor: React.FC<Props> = ({
                       hashtagsValue,
                       hashtagsOverridden,
                       "#YourBrand #Product #Niche",
-                      { maxLen: 500 }
+                      {
+                          maxLen: 500,
+                          onGenerate: onGenerateHashtags,
+                          generating: hashtagGenerating,
+                      }
                   )
                 : null}
 
@@ -339,6 +386,23 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             color: colors.textSecondary,
             marginTop: 6,
             lineHeight: 15,
+        },
+        generatingHint: {
+            fontSize: 11,
+            color: colors.primary,
+            marginTop: 6,
+            lineHeight: 15,
+            fontWeight: "600",
+        },
+        wandBtn: {
+            width: 36,
+            height: 36,
+            borderRadius: 9,
+            alignItems: "center",
+            justifyContent: "center",
+            alignSelf: "flex-start",
+            margin: 4,
+            backgroundColor: colors.tag,
         },
         optionsCard: {
             backgroundColor: colors.aliceBlue,

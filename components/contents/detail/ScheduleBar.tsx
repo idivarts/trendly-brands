@@ -13,7 +13,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Image,
@@ -143,6 +143,22 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
         !!timeOfPosting && !POPULAR_POSTING_TIMES.some((t) => t.value === timeOfPosting);
     const [showCustom, setShowCustom] = useState(isCustomTime);
     const [confirmNow, setConfirmNow] = useState(false);
+
+    // Close the "Publish now?" confirmation once the publish it triggered
+    // finishes. Without this, `confirmNow` stays true and the confirm modal
+    // lingers on screen (and re-opens next time) even after the parent closes the
+    // publish/schedule modal — so a completed publish-now would leave both dialogs
+    // stuck. Tracks the true→false edge of `publishing` so it only fires for a
+    // publish this modal actually started.
+    const wasPublishing = useRef(false);
+    useEffect(() => {
+        if (publishing) {
+            wasPublishing.current = true;
+        } else if (wasPublishing.current) {
+            wasPublishing.current = false;
+            setConfirmNow(false);
+        }
+    }, [publishing]);
 
     const count = destinations.length;
     const canPublish = count > 0 && !publishing;

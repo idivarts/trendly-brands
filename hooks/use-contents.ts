@@ -66,6 +66,7 @@ function toContentItem(id: string, data: IContent): ContentItem {
         scheduledAt: data.scheduledAt,
         publishedIds: data.publishedIds,
         postedUrl: data.postedUrl,
+        publishResults: data.publishResults,
         isArchived: data.isArchived ?? false,
         commentCount: data.commentCount ?? 0,
         createdAt: epochToIsoDate(data.createdAt),

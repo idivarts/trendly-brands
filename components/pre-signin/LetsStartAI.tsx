@@ -124,7 +124,7 @@ const LetsStartAI: React.FC = () => {
                 <View style={[styles.nav, !isWide && styles.navNarrow]}>
                     <Pressable onPress={() => Linking.openURL("https://www.trendly.now")} accessibilityLabel="Trendly home">
                         <Image
-                            source={require("@/assets/images/rectangluar blue logo transparent.png")}
+                            source={require("@/assets/images/branding/trendly-primary-horizontal-navy.png")}
                             style={styles.logo}
                             resizeMode="contain"
                         />

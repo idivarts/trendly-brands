@@ -14,6 +14,7 @@ concurrency:
 jobs:
   android-release:
     runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/master' && 'prod' || 'dev' }}
     strategy:
       matrix:
         node-version: [20.x]

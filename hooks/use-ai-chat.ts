@@ -30,6 +30,21 @@ export interface LiveContentAttachment {
     appleUrl?: string;
 }
 
+/**
+ * A per-platform variation summarised for the AI: the values that will actually
+ * publish to that platform (generic fields already resolved through any
+ * override), plus which fields the user explicitly overrode so the AI can tell a
+ * tailored value apart from an inherited one. Mirrors the backend
+ * variationBrief.
+ */
+export interface LiveContentVariation {
+    platform: string;
+    caption?: string;
+    hashtags?: string;
+    overriddenFields?: string[];
+    platformOptions?: Record<string, any>;
+}
+
 export interface LiveContent {
     title?: string;
     platform?: string;
@@ -40,6 +55,8 @@ export interface LiveContent {
     hashtags?: string;
     script?: string;
     attachments?: LiveContentAttachment[];
+    /** Every per-platform variation on this piece, so the AI sees the full set. */
+    variations?: LiveContentVariation[];
 }
 
 /** How many messages to load in the first page, and per "load older" step. */
