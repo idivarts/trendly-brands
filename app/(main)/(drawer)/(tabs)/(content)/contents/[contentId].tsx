@@ -40,7 +40,7 @@ import { SOCIAL_PLATFORM_MAP } from "@/constants/Socials";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBrandSocialContext } from "@/contexts/brand-social-context.provider";
 import { useBreakpoints } from "@/hooks";
-import { LiveContent } from "@/hooks/use-ai-chat";
+import { LiveContent, LiveContentVariation } from "@/hooks/use-ai-chat";
 import { CaptionVariant, HashtagGroup, useAIGenerate } from "@/hooks/use-ai-generate";
 import { useContents } from "@/hooks/use-contents";
 import { useContentVariations } from "@/hooks/use-content-variations";
@@ -49,7 +49,7 @@ import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attach
 import { isFormatPlatformCompatible } from "@/shared-libs/firestore/trendly-pro/constants/content-format";
 import { ALL_PLATFORMS, Platform as ContentPlatform, PlatformEnum } from "@/shared-libs/firestore/trendly-pro/constants/platform";
 import { variationSpecForPlatform } from "@/shared-libs/firestore/trendly-pro/constants/platform-fields";
-import { VariationOverridableField } from "@/shared-libs/firestore/trendly-pro/models/variations";
+import { effectiveContentForPlatform, VariationOverridableField } from "@/shared-libs/firestore/trendly-pro/models/variations";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import ReadMore from "@/shared-uis/components/ReadMore";
@@ -122,11 +122,13 @@ const CreateContentScreen = () => {
     const {
         variations,
         byPlatform: variationByPlatform,
+        variationsDirty,
         createVariations,
         setOverride,
         resetField,
         setPlatformOptions: setVariationPlatformOptions,
         deleteVariation,
+        saveVariations,
     } = useContentVariations(contentId ?? null);
     const { socialAccounts } = useBrandSocialContext();
     const { selectedBrand, hasCapability } = useBrandContext();
@@ -263,12 +265,19 @@ const CreateContentScreen = () => {
     );
 
     // `magicTarget` drives ONLY the prompt modal (which field's prompt is open).
-    // The in-flight state is tracked per-field below so the modal can close the
-    // instant the prompt is submitted while generation continues in the
-    // background — caption and hashtags can even generate concurrently.
+    // `magicPlatform` remembers which editor the modal was opened from — "generic"
+    // or a specific platform variation — so the result is applied to the right
+    // place even if the user switches tabs while it generates.
+    // The in-flight state is tracked per-field below (keyed by the target editor)
+    // so the modal can close the instant the prompt is submitted while generation
+    // continues in the background — caption and hashtags can even generate
+    // concurrently, and only the originating tab shows the spinner.
     const [magicTarget, setMagicTarget] = useState<"caption" | "hashtags" | null>(null);
-    const [captionGenerating, setCaptionGenerating] = useState(false);
-    const [hashtagGenerating, setHashtagGenerating] = useState(false);
+    const [magicPlatform, setMagicPlatform] = useState<VariationTab>("generic");
+    // Which editor a caption/hashtag generation is running for ("generic" | a
+    // platform), or null when idle. Drives the per-tab spinner + result routing.
+    const [captionGenTarget, setCaptionGenTarget] = useState<VariationTab | null>(null);
+    const [hashtagGenTarget, setHashtagGenTarget] = useState<VariationTab | null>(null);
     const [isGeneratingScript, setIsGeneratingScript] = useState(false);
     const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
@@ -431,9 +440,15 @@ const CreateContentScreen = () => {
     // (nothing went live) is intentionally NOT locked — the user fixes + retries.
     const locked = isLockedStatus(status);
 
+    // Unsaved changes across BOTH the generic editor and any per-platform
+    // variation the user has edited but not yet saved. Drives the Save button,
+    // the Cmd/Ctrl+S shortcut, and the leave-confirmation guard.
+    const anyDirty = dirty || variationsDirty;
+
     // Returns true when the content was persisted, false otherwise (no-op or
     // failure) — the unsaved-changes leave flow relies on this to decide whether
-    // it's safe to navigate away.
+    // it's safe to navigate away. Persists the generic content and flushes every
+    // pending variation edit together, so one Save covers the whole piece.
     const handleSave = useCallback(async (): Promise<boolean> => {
         if (!contentId || saveState === "saving" || locked) return false;
         setSaveState("saving");
@@ -452,6 +467,8 @@ const CreateContentScreen = () => {
                 platforms: targetPlatforms,
                 postingTimeStamp: date ? localDateToUtcMidnight(date) : undefined,
             });
+            // Flush all pending per-platform variation edits in the same save.
+            await saveVariations();
         } catch (e) {
             console.warn("Save error:", e);
             setSaveState("idle");
@@ -462,7 +479,7 @@ const CreateContentScreen = () => {
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = setTimeout(() => setSaveState("idle"), 2000);
         return true;
-    }, [contentId, saveState, locked, updateContent, title, idea, status, caption, hashtags, timeOfPosting, script, imagePrompt, attachments, platformOptions, date, targetPlatforms]);
+    }, [contentId, saveState, locked, updateContent, saveVariations, title, idea, status, caption, hashtags, timeOfPosting, script, imagePrompt, attachments, platformOptions, date, targetPlatforms]);
 
     // ── Cmd/Ctrl+S keyboard shortcut to save (web) ───────────────────────────
     // Intercept the browser's native "save page" so the shortcut saves the
@@ -475,7 +492,7 @@ const CreateContentScreen = () => {
             if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "s") return;
             e.preventDefault();
             if (locked || saveState === "saving") return;
-            if (!dirty) {
+            if (!anyDirty) {
                 Toaster.success("All changes saved");
                 return;
             }
@@ -489,7 +506,7 @@ const CreateContentScreen = () => {
         // Capturing on the way down fires before any input can intercept it.
         window.addEventListener("keydown", onKeyDown, true);
         return () => window.removeEventListener("keydown", onKeyDown, true);
-    }, [locked, dirty, saveState, handleSave]);
+    }, [locked, anyDirty, saveState, handleSave]);
 
     // Publish now / schedule. Persists the latest edits + destinations to
     // Firestore so the backend reads fresh data, then calls the publish /
@@ -533,6 +550,9 @@ const CreateContentScreen = () => {
                 scheduledAt,
                 postingTimeStamp: localDateToUtcMidnight(date),
             });
+            // Flush pending per-platform variation edits too, so the backend
+            // publishes the latest tailored content for each platform.
+            await saveVariations();
 
             // 2. Trigger publish-now or schedule on the backend.
             // Publishing locally flips `status`, a watched dependency of the
@@ -571,7 +591,7 @@ const CreateContentScreen = () => {
         } finally {
             setPublishing(false);
         }
-    }, [contentId, publishing, locked, destinations, platformOptions, scheduleMode, date, timeOfPosting, updateContent, selectedBrand?.id, title, idea, caption, hashtags, script, imagePrompt, attachments]);
+    }, [contentId, publishing, locked, destinations, platformOptions, scheduleMode, date, timeOfPosting, updateContent, saveVariations, selectedBrand?.id, title, idea, caption, hashtags, script, imagePrompt, attachments]);
 
     // Guard the publish entry point: if the brand has no connected social
     // accounts, surface a blocking modal that routes to Connected Accounts
@@ -771,12 +791,12 @@ const CreateContentScreen = () => {
     // Header back press: prompt to save/discard when there are unsaved edits,
     // otherwise leave straight away.
     const handleBackPress = useCallback(() => {
-        if (dirty) {
+        if (anyDirty) {
             setShowLeaveConfirm(true);
         } else {
             doNavigateBack();
         }
-    }, [dirty, doNavigateBack]);
+    }, [anyDirty, doNavigateBack]);
 
     const handleLeaveSave = useCallback(async () => {
         const ok = await handleSave();
@@ -797,30 +817,70 @@ const CreateContentScreen = () => {
     const captionSnapRef = useRef<CaptionVariant[] | null>(null);
     const hashtagSnapRef = useRef<HashtagGroup[] | null>(null);
 
+    // Summarise every per-platform variation for the AI: the values that will
+    // actually publish to each platform (generic resolved through any override),
+    // plus which fields were explicitly overridden. Shared by the chat panel and
+    // the caption/hashtag enhance requests so the AI always sees the full set.
+    const buildAIVariations = useCallback((): LiveContentVariation[] => {
+        const generic = { caption, hashtags, attachments, platformOptions };
+        return variations.map((v) => {
+            const eff = effectiveContentForPlatform(generic, v);
+            return {
+                platform: SOCIAL_PLATFORM_MAP[v.platform]?.label ?? v.platform,
+                caption: eff.caption,
+                hashtags: eff.hashtags,
+                overriddenFields: v.overriddenFields ?? [],
+                platformOptions: v.platformOptions,
+            };
+        });
+    }, [variations, caption, hashtags, attachments, platformOptions]);
+
     const handleMagicGenerate = useCallback(
         (prompt: string, model?: string) => {
             const target = magicTarget;
             if (!target) return;
-            // Use the content's primary targeted platform as prompt context.
+            // The editor the modal was opened from: "generic" or a platform tab.
+            const forPlatform = magicPlatform;
+            const isVariation = forPlatform !== "generic";
+            const variation = isVariation ? variationByPlatform[forPlatform] : undefined;
+
+            // Prompt-context platform: the variation's own platform, else the
+            // content's primary targeted platform.
             const primaryPlatform = targetPlatforms[0];
-            const platform = primaryPlatform
-                ? SOCIAL_PLATFORM_MAP[primaryPlatform]?.label ?? "Instagram"
-                : "Instagram";
-            // Pass the current (possibly unsaved) editor state so the AI writes
-            // with the context of what's on screen right now, not the last save.
+            const platform = isVariation
+                ? SOCIAL_PLATFORM_MAP[forPlatform]?.label ?? forPlatform
+                : primaryPlatform
+                    ? SOCIAL_PLATFORM_MAP[primaryPlatform]?.label ?? "Instagram"
+                    : "Instagram";
+
+            // Resolve the caption/hashtags the AI should refine: the variation's
+            // effective (overridden-or-inherited) values on a variation tab, else
+            // the generic values. Pass the current (possibly unsaved) editor state
+            // so the AI writes with what's on screen right now, not the last save.
+            const generic = { caption, hashtags, attachments, platformOptions };
+            const eff = isVariation ? effectiveContentForPlatform(generic, variation) : generic;
             const liveContent = {
                 title,
                 description: idea,
-                caption,
-                hashtags,
+                caption: eff.caption,
+                hashtags: eff.hashtags,
                 script,
             };
-            // Flip the per-field flag and fire the request. The modal closes
+            const aiVariations = buildAIVariations();
+            // Full variation context + the exact platform/field being generated,
+            // so the AI tailors the result and stays aware of the sibling variants.
+            const varCtx = {
+                variations: aiVariations,
+                targetPlatform: isVariation ? platform : undefined,
+                targetField: target,
+            };
+
+            // Flip the per-target flag and fire the request. The modal closes
             // itself (onClose) — the user is free to keep editing while the
             // inline hint shows progress and the result lands automatically.
             if (target === "caption") {
                 captionSnapRef.current = aiCaptions;
-                setCaptionGenerating(true);
+                setCaptionGenTarget(forPlatform);
                 generateCaption({
                     topic: prompt,
                     platform,
@@ -828,10 +888,11 @@ const CreateContentScreen = () => {
                     contextId: contentId,
                     model,
                     ...liveContent,
+                    ...varCtx,
                 });
             } else {
                 hashtagSnapRef.current = aiHashtags;
-                setHashtagGenerating(true);
+                setHashtagGenTarget(forPlatform);
                 generateHashtags({
                     topic: prompt,
                     platform,
@@ -839,10 +900,11 @@ const CreateContentScreen = () => {
                     contextId: contentId,
                     model,
                     ...liveContent,
+                    ...varCtx,
                 });
             }
         },
-        [magicTarget, contentType, contentId, title, idea, caption, hashtags, script, aiCaptions, aiHashtags, generateCaption, generateHashtags, targetPlatforms]
+        [magicTarget, magicPlatform, variationByPlatform, contentType, contentId, title, idea, caption, hashtags, script, attachments, platformOptions, aiCaptions, aiHashtags, generateCaption, generateHashtags, targetPlatforms, buildAIVariations]
     );
 
     const handleScriptAiEnhance = useCallback((model?: string) => {
@@ -884,8 +946,11 @@ const CreateContentScreen = () => {
                 playUrl: a.playUrl,
                 appleUrl: a.appleUrl,
             })),
+            // Every per-platform variation, so the chat AI reasons about the whole
+            // piece (generic + each tailored variant), not just the generic body.
+            variations: buildAIVariations(),
         }),
-        [title, idea, contentType, targetPlatforms, caption, hashtags, script, attachments]
+        [title, idea, contentType, targetPlatforms, caption, hashtags, script, attachments, buildAIVariations]
     );
 
     const handleImageGenerate = useCallback((promptArg?: string, focusedSlideIndex?: number, model?: string) => {
@@ -915,28 +980,33 @@ const CreateContentScreen = () => {
     useEffect(() => {
         const settled = prevCaptionLoadingRef.current && !captionLoading;
         prevCaptionLoadingRef.current = captionLoading;
-        if (!settled || !captionGenerating) return;
+        if (!settled || captionGenTarget === null) return;
         if (aiCaptions.length > 0 && aiCaptions !== captionSnapRef.current) {
-            setCaption(aiCaptions[0].text);
+            const text = aiCaptions[0].text;
+            // Route to the editor that requested it: generic field, or the
+            // variation's caption override (which also flags it overridden).
+            if (captionGenTarget === "generic") setCaption(text);
+            else setOverride(captionGenTarget, "caption", text);
         }
-        setCaptionGenerating(false);
-    }, [captionLoading, captionGenerating, aiCaptions]);
+        setCaptionGenTarget(null);
+    }, [captionLoading, captionGenTarget, aiCaptions, setOverride]);
 
     // Hashtags: flatten all tier groups into a single space-separated #tag string.
     const prevHashtagLoadingRef = useRef(false);
     useEffect(() => {
         const settled = prevHashtagLoadingRef.current && !hashtagLoading;
         prevHashtagLoadingRef.current = hashtagLoading;
-        if (!settled || !hashtagGenerating) return;
+        if (!settled || hashtagGenTarget === null) return;
         if (aiHashtags.length > 0 && aiHashtags !== hashtagSnapRef.current) {
             const joined = aiHashtags
                 .flatMap((g) => g.tags)
                 .map((t) => `#${t}`)
                 .join(" ");
-            setHashtags(joined);
+            if (hashtagGenTarget === "generic") setHashtags(joined);
+            else setOverride(hashtagGenTarget, "hashtags", joined);
         }
-        setHashtagGenerating(false);
-    }, [hashtagLoading, hashtagGenerating, aiHashtags]);
+        setHashtagGenTarget(null);
+    }, [hashtagLoading, hashtagGenTarget, aiHashtags, setOverride]);
 
     // Script: stream into the script field. Append on first run; replace the
     // streamed block on subsequent token updates so the user sees it grow live.
@@ -1056,26 +1126,26 @@ const CreateContentScreen = () => {
                     key="save"
                     style={({ pressed }) => [
                         xl ? styles.saveBtn : styles.saveBtnIcon,
-                        !dirty && styles.saveBtnSaved,
+                        !anyDirty && styles.saveBtnSaved,
                         pressed && styles.btnPressed,
                     ]}
                     onPress={handleSave}
-                    disabled={saveState === "saving" || !dirty}
+                    disabled={saveState === "saving" || !anyDirty}
                     accessibilityRole="button"
-                    accessibilityLabel={dirty ? "Save (unsaved changes)" : "Saved"}
+                    accessibilityLabel={anyDirty ? "Save (unsaved changes)" : "Saved"}
                 >
                     {saveState === "saving" ? (
                         xl ? <Text style={styles.saveBtnText}>Saving…</Text> : <ActivityIndicator size="small" color={colors.onPrimary} />
                     ) : (
                         <>
                             <FontAwesomeIcon icon={faCheck} size={13} color={colors.onPrimary} />
-                            {xl && <Text style={styles.saveBtnText}>{dirty ? "Save" : "Saved"}</Text>}
+                            {xl && <Text style={styles.saveBtnText}>{anyDirty ? "Save" : "Saved"}</Text>}
                         </>
                     )}
                 </Pressable>
             ),
         ],
-        [styles, colors, handleSave, saveState, xl, dirty, locked, selectedBrand?.id, contentId, hasCapability, handleOpenPublish, handleDuplicate, handleDelete]
+        [styles, colors, handleSave, saveState, xl, anyDirty, locked, selectedBrand?.id, contentId, hasCapability, handleOpenPublish, handleDuplicate, handleDelete]
     );
 
     return (
@@ -1242,6 +1312,10 @@ const CreateContentScreen = () => {
                                     onResetField={handleResetField}
                                     onSetPlatformOptions={handleSetVariationOptions}
                                     onDelete={handleDeleteActiveVariation}
+                                    onGenerateCaption={() => { setMagicPlatform(activeTab); setMagicTarget("caption"); }}
+                                    onGenerateHashtags={() => { setMagicPlatform(activeTab); setMagicTarget("hashtags"); }}
+                                    captionGenerating={captionGenTarget === activeTab}
+                                    hashtagGenerating={hashtagGenTarget === activeTab}
                                     disabled={locked}
                                 />
                             </View>
@@ -1385,10 +1459,10 @@ const CreateContentScreen = () => {
                                                 styles.wandBtn,
                                                 pressed && styles.btnPressed,
                                             ]}
-                                            onPress={() => setMagicTarget("caption")}
-                                            disabled={captionGenerating}
+                                            onPress={() => { setMagicPlatform("generic"); setMagicTarget("caption"); }}
+                                            disabled={captionGenTarget === "generic"}
                                         >
-                                            {captionGenerating ? (
+                                            {captionGenTarget === "generic" ? (
                                                 <ActivityIndicator size="small" color={colors.primary} />
                                             ) : (
                                                 <FontAwesomeIcon
@@ -1417,7 +1491,7 @@ const CreateContentScreen = () => {
                                     </Text>
                                 </View>
                             ) : null}
-                            {captionGenerating ? (
+                            {captionGenTarget === "generic" ? (
                                 <View style={styles.aiHintWrap}>
                                     <AIGeneratingHint
                                         title={contentType === "text" ? "Writing your post…" : "Writing your caption…"}
@@ -1448,10 +1522,10 @@ const CreateContentScreen = () => {
                                                 styles.wandBtn,
                                                 pressed && styles.btnPressed,
                                             ]}
-                                            onPress={() => setMagicTarget("hashtags")}
-                                            disabled={hashtagGenerating}
+                                            onPress={() => { setMagicPlatform("generic"); setMagicTarget("hashtags"); }}
+                                            disabled={hashtagGenTarget === "generic"}
                                         >
-                                            {hashtagGenerating ? (
+                                            {hashtagGenTarget === "generic" ? (
                                                 <ActivityIndicator size="small" color={colors.primary} />
                                             ) : (
                                                 <FontAwesomeIcon
@@ -1480,7 +1554,7 @@ const CreateContentScreen = () => {
                                     </Text>
                                 </View>
                             ) : null}
-                            {hashtagGenerating ? (
+                            {hashtagGenTarget === "generic" ? (
                                 <View style={styles.aiHintWrap}>
                                     <AIGeneratingHint
                                         title="Finding the best hashtags…"
