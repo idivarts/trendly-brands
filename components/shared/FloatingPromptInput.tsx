@@ -13,6 +13,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useState } from "react";
 import {
     Modal,
+    Platform,
     Pressable,
     StyleSheet,
     Text,
@@ -155,6 +156,18 @@ const FloatingPromptInput: React.FC<FloatingPromptInputProps> = ({
                                 textAlignVertical="top"
                                 autoFocus
                                 onSubmitEditing={submit}
+                                onKeyPress={(e: any) => {
+                                    // Web: Enter submits, Shift+Enter inserts a
+                                    // newline. Native multiline is left untouched.
+                                    if (
+                                        Platform.OS === "web" &&
+                                        e?.nativeEvent?.key === "Enter" &&
+                                        !e?.nativeEvent?.shiftKey
+                                    ) {
+                                        e.preventDefault?.();
+                                        submit();
+                                    }
+                                }}
                             />
                             <Pressable
                                 onPress={submit}
