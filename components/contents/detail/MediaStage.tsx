@@ -22,6 +22,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Image,
+    Platform,
     Pressable,
     StyleSheet,
     Text,
@@ -81,9 +82,11 @@ const MediaStage: React.FC<MediaStageProps> = ({
     const [showPrompt, setShowPrompt] = useState(false);
     // Carousel: which slide an enhance prompt acts on. Tap a slide to focus it.
     const [focusedSlideIndex, setFocusedSlideIndex] = useState<number | null>(null);
-    // Full-screen image preview (tap the expand icon on a slide).
+    // Full-screen preview (tap a slide). Holds either an image or a video URL —
+    // the modal shows a video player when previewVideoUrl is set, else the image.
     const [previewImage, setPreviewImage] = useState(false);
     const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+    const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
 
     // Once an image exists (AI-generated OR uploaded), generation becomes an
     // image-to-image "Enhance" on the current image(s). Video types never enhance.
@@ -199,8 +202,14 @@ const MediaStage: React.FC<MediaStageProps> = ({
                         const isVideo = a.type === "video" || a.type === "reel";
                         const canFocus = spec.multi && !readOnly;
                         const isFocused = spec.multi && focusedSlideIndex === i;
-                        // Tapping the image itself opens the full-screen preview.
-                        const canPreview = !isVideo && !!a.imageUrl;
+                        // iOS plays the HLS/apple URL best; everything else uses playUrl.
+                        const videoUrl = isVideo
+                            ? Platform.OS === "ios"
+                                ? a.appleUrl ?? a.playUrl ?? null
+                                : a.playUrl ?? a.appleUrl ?? null
+                            : null;
+                        // Tapping the tile opens the full-screen preview (image or video).
+                        const canPreview = isVideo ? !!videoUrl : !!a.imageUrl;
                         return (
                             <View key={`${a.imageUrl ?? a.playUrl ?? a.appleUrl ?? "a"}-${i}`} style={styles.tileWrap}>
                                 <Pressable
@@ -208,13 +217,25 @@ const MediaStage: React.FC<MediaStageProps> = ({
                                     onPress={
                                         canPreview
                                             ? () => {
-                                                  setPreviewImageUrl(a.imageUrl ?? null);
+                                                  if (isVideo) {
+                                                      setPreviewVideoUrl(videoUrl);
+                                                      setPreviewImageUrl(null);
+                                                  } else {
+                                                      setPreviewImageUrl(a.imageUrl ?? null);
+                                                      setPreviewVideoUrl(null);
+                                                  }
                                                   setPreviewImage(true);
                                               }
                                             : undefined
                                     }
                                     disabled={!canPreview}
-                                    accessibilityLabel={canPreview ? "Preview image full screen" : undefined}
+                                    accessibilityLabel={
+                                        canPreview
+                                            ? isVideo
+                                                ? "Preview video full screen"
+                                                : "Preview image full screen"
+                                            : undefined
+                                    }
                                 >
                                     {isVideo ? (
                                         <View style={styles.videoTile}>
@@ -439,6 +460,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
                 <AssetPreviewModal
                     previewImage={previewImage}
                     previewImageUrl={previewImageUrl}
+                    previewVideoUrl={previewVideoUrl}
                     setPreviewImage={setPreviewImage}
                     theme={theme}
                 />
