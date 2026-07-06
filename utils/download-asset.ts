@@ -61,7 +61,7 @@ export async function downloadAsset(
                 const chunks: Uint8Array[] = [];
                 let received = 0;
                 onProgress?.(0);
-                for (;;) {
+                for (; ;) {
                     const { done, value } = await reader.read();
                     if (done) break;
                     if (value) {
@@ -86,8 +86,6 @@ export async function downloadAsset(
             a.click();
             a.remove();
             URL.revokeObjectURL(objectUrl);
-            // TEMP-EXPERIMENT: toast disabled to isolate a RNW warning
-            // Toaster.success("Download started");
         } catch {
             // CORS / network — open in a new tab so the viewer can save manually.
             try {

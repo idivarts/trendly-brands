@@ -2,11 +2,38 @@ import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attach
 import AssetPreviewModal from "@/shared-uis/components/carousel/asset-preview-modal";
 import Colors from "@/shared-uis/constants/Colors";
 import { downloadAsset } from "@/utils/download-asset";
-import { faDownload, faImage, faPlay } from "@fortawesome/free-solid-svg-icons";
+import { faCircleNotch, faDownload, faImage, faPlay } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useCallback, useState } from "react";
-import { ActivityIndicator, Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Animated, Easing, Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+
+/**
+ * Small continuously-rotating circular loader. We roll our own instead of using
+ * `ActivityIndicator`, which emits a spurious "text node child of View" warning
+ * under react-native-web in this SDK.
+ */
+const Spinner: React.FC<{ color: string }> = ({ color }) => {
+    const spin = useRef(new Animated.Value(0)).current;
+    useEffect(() => {
+        const anim = Animated.loop(
+            Animated.timing(spin, {
+                toValue: 1,
+                duration: 800,
+                easing: Easing.linear,
+                useNativeDriver: Platform.OS !== "web",
+            })
+        );
+        anim.start();
+        return () => anim.stop();
+    }, [spin]);
+    const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
+    return (
+        <Animated.View style={{ transform: [{ rotate }] }}>
+            <FontAwesomeIcon icon={faCircleNotch} size={12} color={color} />
+        </Animated.View>
+    );
+};
 
 interface Props {
     attachments?: Attachment[];
@@ -126,7 +153,7 @@ const PublicMediaGallery: React.FC<Props> = ({ attachments }) => {
                                 accessibilityLabel={isVideo ? "Download video" : "Download image"}
                             >
                                 {downloading?.index === i ? (
-                                    <FontAwesomeIcon icon={faDownload} size={11} color={colors.primary} />
+                                    <Spinner color={colors.primary} />
                                 ) : (
                                     <FontAwesomeIcon icon={faDownload} size={11} color={colors.primary} />
                                 )}
