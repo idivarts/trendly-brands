@@ -126,7 +126,7 @@ const PublicMediaGallery: React.FC<Props> = ({ attachments }) => {
                                 accessibilityLabel={isVideo ? "Download video" : "Download image"}
                             >
                                 {downloading?.index === i ? (
-                                    <ActivityIndicator size="small" color={colors.primary} />
+                                    <FontAwesomeIcon icon={faDownload} size={11} color={colors.primary} />
                                 ) : (
                                     <FontAwesomeIcon icon={faDownload} size={11} color={colors.primary} />
                                 )}
