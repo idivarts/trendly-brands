@@ -114,36 +114,31 @@ const PublicMediaGallery: React.FC<Props> = ({ attachments }) => {
                             ) : null}
                         </Pressable>
 
-                        {downloadUrl ? (() => {
-                            const isDownloading = downloading?.index === i;
-                            const pct = isDownloading ? downloading?.pct ?? null : null;
-                            return (
-                                <Pressable
-                                    style={({ pressed }) => [
-                                        styles.downloadBtn,
-                                        pressed && styles.pressed,
-                                        isDownloading && styles.downloadBtnActive,
-                                    ]}
-                                    onPress={() => handleDownload(i, downloadUrl)}
-                                    disabled={isDownloading}
-                                    accessibilityLabel={isVideo ? "Download video" : "Download image"}
-                                >
-                                    {isDownloading ? (
-                                        <>
-                                            <ActivityIndicator size="small" color={colors.primary} />
-                                            <Text style={styles.downloadText}>
-                                                {pct != null ? `${Math.round(pct * 100)}%` : "Downloading…"}
-                                            </Text>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <FontAwesomeIcon icon={faDownload} size={11} color={colors.primary} />
-                                            <Text style={styles.downloadText}>Download</Text>
-                                        </>
-                                    )}
-                                </Pressable>
-                            );
-                        })() : null}
+                        {downloadUrl ? (
+                            <Pressable
+                                style={({ pressed }) => [
+                                    styles.downloadBtn,
+                                    pressed && styles.pressed,
+                                    downloading?.index === i && styles.downloadBtnActive,
+                                ]}
+                                onPress={() => handleDownload(i, downloadUrl)}
+                                disabled={downloading?.index === i}
+                                accessibilityLabel={isVideo ? "Download video" : "Download image"}
+                            >
+                                {downloading?.index === i ? (
+                                    <ActivityIndicator size="small" color={colors.primary} />
+                                ) : (
+                                    <FontAwesomeIcon icon={faDownload} size={11} color={colors.primary} />
+                                )}
+                                <Text style={styles.downloadText}>
+                                    {downloading?.index === i
+                                        ? downloading?.pct != null
+                                            ? `${Math.round(downloading.pct * 100)}%`
+                                            : "Downloading…"
+                                        : "Download"}
+                                </Text>
+                            </Pressable>
+                        ) : null}
                     </View>
                 );
             })}
