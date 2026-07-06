@@ -86,7 +86,8 @@ export async function downloadAsset(
             a.click();
             a.remove();
             URL.revokeObjectURL(objectUrl);
-            Toaster.success("Download started");
+            // TEMP-EXPERIMENT: toast disabled to isolate a RNW warning
+            // Toaster.success("Download started");
         } catch {
             // CORS / network — open in a new tab so the viewer can save manually.
             try {
