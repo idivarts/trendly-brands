@@ -289,11 +289,38 @@ export const BRIDGE_SCRIPT = `
   window.addEventListener('message', function(e){          // web iframe entry
     if (typeof e.data === 'string') handle(e.data);
   });
-  // Nearest selectable ancestor ([data-el]) of a node, or null.
-  function nearestEl(node){
+  // Layout scaffolding we never want to select (the slide/carousel wrappers).
+  function isScaffold(el){
+    return el.hasAttribute && (el.hasAttribute('data-root') || el.hasAttribute('data-carousel') || el.hasAttribute('data-slide'));
+  }
+  // The element a click/hover targets. Prefers the nearest AI-tagged [data-el]
+  // block (its intended editable unit); otherwise falls back to the EXACT element
+  // pointed at — so every content element is selectable, not just tagged ones.
+  function pickEl(node){
     var el = node;
-    while (el && el !== document.body && !(el.getAttribute && el.getAttribute('data-el'))) el = el.parentElement;
-    return (el && el.getAttribute && el.getAttribute('data-el')) ? el : null;
+    if (el && el.nodeType === 3) el = el.parentElement;
+    var t = el;
+    while (t && t !== document.body && !(t.getAttribute && t.getAttribute('data-el'))) t = t.parentElement;
+    if (t && t.getAttribute && t.getAttribute('data-el')) return t;
+    if (!el || el === document.body || el === document.documentElement) return null;
+    if (isScaffold(el)) return null;
+    return el;
+  }
+  // Give an untagged element a stable id the first time it's selected, so text
+  // edits + AI directives can reference it (and it persists into saved HTML).
+  var autoSeq = 0;
+  function ensureId(el){
+    var id = el.getAttribute('data-el');
+    if (id) return id;
+    id = 'el-' + (++autoSeq);
+    el.setAttribute('data-el', id);
+    return id;
+  }
+  // Directly editable = a leaf whose own text IS its content (no child elements).
+  // Containers (which aggregate children's text) are NOT text-editable — editing
+  // them would flatten their structure — so they only get the Ask-AI action.
+  function isEditable(el){
+    return el.children.length === 0 && (el.textContent || '').trim() !== '';
   }
   var selectedEl = null, hoverEl = null;
   function setHover(el){
@@ -309,14 +336,15 @@ export const BRIDGE_SCRIPT = `
   }
   // Hover affordance (web/desktop — pointer devices only). The hovered element
   // is exactly the one a click would select, so they read as the same target.
-  document.addEventListener('mouseover', function(e){ setHover(nearestEl(e.target)); }, true);
+  document.addEventListener('mouseover', function(e){ setHover(pickEl(e.target)); }, true);
   document.addEventListener('mouseleave', function(){ setHover(null); }, true);
   document.addEventListener('click', function(e){
-    var el = nearestEl(e.target);
+    var el = pickEl(e.target);
     if (el){
       setSelected(el);
+      var id = ensureId(el);
       var r = el.getBoundingClientRect();
-      send({type:'tap', id: el.getAttribute('data-el'), text: el.textContent, rect:{x:r.left,y:r.top,w:r.width,h:r.height}});
+      send({type:'tap', id: id, text: el.textContent, editable: isEditable(el), rect:{x:r.left,y:r.top,w:r.width,h:r.height}});
     } else if (selectedEl){
       // Clicked empty canvas — deselect.
       setSelected(null);
@@ -357,12 +385,12 @@ export function injectChrome(html: string, scale: number, slideW: number, slideH
         `html{width:${dw}px;height:${dh}px;overflow:hidden;margin:0;}` +
         `body{width:${slideW}px;height:${slideH}px;overflow:hidden;margin:0;transform:scale(${scale});transform-origin:top left;}` +
         `[data-carousel]{display:flex;will-change:transform;}` +
-        // Editor selection affordances: pointer cursor on selectable elements, a
-        // dashed outline on hover, and a persistent solid outline on the selected
-        // element. Stripped from the html2canvas clone so they never bake in.
-        `[data-el]{cursor:pointer;}` +
-        `[data-el].__el-hover{outline:2px dashed #3b82f6 !important;outline-offset:2px;}` +
-        `[data-el].__el-selected{outline:2px solid #2563eb !important;outline-offset:2px;box-shadow:0 0 0 4px rgba(37,99,235,0.18) !important;}` +
+        // Editor selection affordances: a dashed outline + pointer cursor on the
+        // hovered element, and a persistent solid outline on the selected one.
+        // Class-based (not [data-el]) so ANY element shows them. Stripped from the
+        // html2canvas clone so they never bake into the export.
+        `.__el-hover{outline:2px dashed #3b82f6 !important;outline-offset:2px;cursor:pointer;}` +
+        `.__el-selected{outline:2px solid #2563eb !important;outline-offset:2px;box-shadow:0 0 0 4px rgba(37,99,235,0.18) !important;}` +
         `</style>`;
     const i = html.toLowerCase().indexOf("</head>");
     if (i === -1) return style + html;
@@ -376,7 +404,7 @@ export function buildFrameHtml(html: string, scale: number, slideW: number, slid
 
 export type FrameOutMsg =
     | { type: "ready" }
-    | { type: "tap"; id: string; text: string; rect: { x: number; y: number; w: number; h: number } }
+    | { type: "tap"; id: string; text: string; editable: boolean; rect: { x: number; y: number; w: number; h: number } }
     | { type: "deselect" }
     | { type: "html"; html: string }
     | { type: "render"; dataUrl: string }

@@ -67,7 +67,7 @@ interface DesignStageProps {
 }
 
 type Rect = { x: number; y: number; w: number; h: number };
-type Selected = { id: string; text: string; rect: Rect } | null;
+type Selected = { id: string; text: string; editable: boolean; rect: Rect } | null;
 
 const fmtTime = (ms: number) => `${(Math.max(ms, 0) / 1000).toFixed(1)}s`;
 
@@ -191,7 +191,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                 .catch(() => setVideoNote("Couldn't save the video. Try again."))
                 .finally(() => setCapturing(false));
         } else if (msg.type === "tap") {
-            setSelected({ id: msg.id, text: msg.text, rect: msg.rect });
+            setSelected({ id: msg.id, text: msg.text, editable: msg.editable, rect: msg.rect });
         } else if (msg.type === "deselect") {
             setSelected(null);
         } else if (msg.type === "html") {
@@ -311,7 +311,12 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     const askAI = async () => {
         if (!modalText.trim() || !selected) return;
         await addComment(modalText, { mediaAnchor: { elementId: selected.id, label: "element" }, isDirective: true });
-        props.onSendToChat(`On the element "${selected.id}": ${modalText}`);
+        // Reference the element by its visible text when it has any (a locatable
+        // anchor for the AI), else fall back to its id.
+        const label = selected.text?.trim()
+            ? `the element that reads "${selected.text.trim().slice(0, 80)}"`
+            : `the selected element (${selected.id})`;
+        props.onSendToChat(`On ${label}: ${modalText}`);
         close();
     };
 
@@ -441,15 +446,17 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                                                 }
                                             }}
                                         >
-                                            <Pressable
-                                                style={({ pressed }) => [styles.tbBtn, pressed && styles.pressed]}
-                                                onPress={openEdit}
-                                                accessibilityRole="button"
-                                                accessibilityLabel="Edit text"
-                                            >
-                                                <FontAwesomeIcon icon={faPen} size={12} color={colors.text} />
-                                                <Text style={styles.tbBtnText}>Edit</Text>
-                                            </Pressable>
+                                            {selected.editable ? (
+                                                <Pressable
+                                                    style={({ pressed }) => [styles.tbBtn, pressed && styles.pressed]}
+                                                    onPress={openEdit}
+                                                    accessibilityRole="button"
+                                                    accessibilityLabel="Edit text"
+                                                >
+                                                    <FontAwesomeIcon icon={faPen} size={12} color={colors.text} />
+                                                    <Text style={styles.tbBtnText}>Edit</Text>
+                                                </Pressable>
+                                            ) : null}
                                             <Pressable
                                                 style={({ pressed }) => [styles.tbBtn, pressed && styles.pressed]}
                                                 onPress={openComment}
