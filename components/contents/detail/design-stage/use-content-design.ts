@@ -117,9 +117,11 @@ export function useContentDesign(
                 width: rev.width,
                 height: rev.height,
                 slideCount: rev.slideCount,
-                renderUrl: rev.renderUrl,
                 updatedAt: Date.now(),
             };
+            // Firestore rejects `undefined`; only set renderUrl when the revision
+            // actually has a baked cover (a fresh/reverted revision has none yet).
+            if (rev.renderUrl !== undefined) ref.renderUrl = rev.renderUrl;
             await updateDoc(cd, { designRef: ref, source: "ai", updatedAt: Date.now() });
         };
 

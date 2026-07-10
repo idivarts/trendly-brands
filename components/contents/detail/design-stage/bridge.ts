@@ -172,6 +172,9 @@ export const BRIDGE_SCRIPT = `
       doc.documentElement.style.height = 'auto';
       var c = doc.querySelector('[data-carousel]');
       if (c) c.style.transform = 'none';
+      // Never bake the editor's hover/selection outline into the export.
+      var marked = doc.querySelectorAll('.__el-hover, .__el-selected');
+      for (var i=0;i<marked.length;i++){ marked[i].classList.remove('__el-hover'); marked[i].classList.remove('__el-selected'); }
     } catch(e){}
   }
   function captureSlides(){
@@ -261,11 +264,21 @@ export const BRIDGE_SCRIPT = `
     if (msg.type === 'play'){ play(); return; }
     if (msg.type === 'pause'){ pause(); return; }
     if (msg.type === 'seek'){ seek(msg.ms||0); return; }
+    if (msg.type === 'deselect'){ setSelected(null); return; }
     if (msg.type === 'captureVideo'){ captureVideo(msg.fps||24, msg.audio); return; }
     if (msg.type === 'setText'){
       var el = document.querySelector('[data-el="'+msg.id+'"]');
       if (el){ el.textContent = msg.text; }
-      send({type:'html', html: '<!doctype html>'+document.documentElement.outerHTML});
+      // Strip the transient editor selection/hover classes so they never get
+      // persisted into the saved HTML revision (they'd otherwise render as a
+      // permanent outline on reload).
+      var savedSel = selectedEl, savedHover = hoverEl;
+      if (selectedEl) selectedEl.classList.remove('__el-selected');
+      if (hoverEl) hoverEl.classList.remove('__el-hover');
+      var outHtml = '<!doctype html>'+document.documentElement.outerHTML;
+      if (savedSel) savedSel.classList.add('__el-selected');
+      if (savedHover) savedHover.classList.add('__el-hover');
+      send({type:'html', html: outHtml});
     } else if (msg.type === 'showSlide'){
       showSlide(msg.index, msg.slideWidth);
     } else if (msg.type === 'captureSlides' || msg.type === 'capture'){
@@ -276,14 +289,46 @@ export const BRIDGE_SCRIPT = `
   window.addEventListener('message', function(e){          // web iframe entry
     if (typeof e.data === 'string') handle(e.data);
   });
-  document.addEventListener('click', function(e){
-    var el = e.target;
+  // Nearest selectable ancestor ([data-el]) of a node, or null.
+  function nearestEl(node){
+    var el = node;
     while (el && el !== document.body && !(el.getAttribute && el.getAttribute('data-el'))) el = el.parentElement;
-    if (el && el.getAttribute && el.getAttribute('data-el')){
+    return (el && el.getAttribute && el.getAttribute('data-el')) ? el : null;
+  }
+  var selectedEl = null, hoverEl = null;
+  function setHover(el){
+    if (el === hoverEl) return;
+    if (hoverEl) hoverEl.classList.remove('__el-hover');
+    hoverEl = el;
+    if (hoverEl) hoverEl.classList.add('__el-hover');
+  }
+  function setSelected(el){
+    if (selectedEl && selectedEl !== el) selectedEl.classList.remove('__el-selected');
+    selectedEl = el;
+    if (selectedEl) selectedEl.classList.add('__el-selected');
+  }
+  // Hover affordance (web/desktop — pointer devices only). The hovered element
+  // is exactly the one a click would select, so they read as the same target.
+  document.addEventListener('mouseover', function(e){ setHover(nearestEl(e.target)); }, true);
+  document.addEventListener('mouseleave', function(){ setHover(null); }, true);
+  document.addEventListener('click', function(e){
+    var el = nearestEl(e.target);
+    if (el){
+      setSelected(el);
       var r = el.getBoundingClientRect();
       send({type:'tap', id: el.getAttribute('data-el'), text: el.textContent, rect:{x:r.left,y:r.top,w:r.width,h:r.height}});
+    } else if (selectedEl){
+      // Clicked empty canvas — deselect.
+      setSelected(null);
+      send({type:'deselect'});
     }
   }, true);
+  document.addEventListener('keydown', function(e){
+    if ((e.key === 'Escape' || e.keyCode === 27) && selectedEl){
+      setSelected(null);
+      send({type:'deselect'});
+    }
+  });
   send({type:'ready'});
 })();
 `;
@@ -312,6 +357,12 @@ export function injectChrome(html: string, scale: number, slideW: number, slideH
         `html{width:${dw}px;height:${dh}px;overflow:hidden;margin:0;}` +
         `body{width:${slideW}px;height:${slideH}px;overflow:hidden;margin:0;transform:scale(${scale});transform-origin:top left;}` +
         `[data-carousel]{display:flex;will-change:transform;}` +
+        // Editor selection affordances: pointer cursor on selectable elements, a
+        // dashed outline on hover, and a persistent solid outline on the selected
+        // element. Stripped from the html2canvas clone so they never bake in.
+        `[data-el]{cursor:pointer;}` +
+        `[data-el].__el-hover{outline:2px dashed #3b82f6 !important;outline-offset:2px;}` +
+        `[data-el].__el-selected{outline:2px solid #2563eb !important;outline-offset:2px;box-shadow:0 0 0 4px rgba(37,99,235,0.18) !important;}` +
         `</style>`;
     const i = html.toLowerCase().indexOf("</head>");
     if (i === -1) return style + html;
@@ -326,6 +377,7 @@ export function buildFrameHtml(html: string, scale: number, slideW: number, slid
 export type FrameOutMsg =
     | { type: "ready" }
     | { type: "tap"; id: string; text: string; rect: { x: number; y: number; w: number; h: number } }
+    | { type: "deselect" }
     | { type: "html"; html: string }
     | { type: "render"; dataUrl: string }
     | { type: "renderSlides"; dataUrls: string[] }
@@ -345,6 +397,8 @@ export interface CaptureAudio {
 
 export interface DesignFrameHandle {
     setText: (id: string, text: string) => void;
+    /** Clear the frame's persistent selection outline. */
+    deselect: () => void;
     /** Page the carousel to slide `index` (slideWidth = per-slide px width). */
     showSlide: (index: number, slideWidth: number) => void;
     /** Capture each of `count` slides to a PNG (renderSlides message). */

@@ -22,6 +22,7 @@ const DesignFrameNative = forwardRef<DesignFrameHandle, DesignFrameProps>(
 
         useImperativeHandle(ref, () => ({
             setText: (id, text) => send({ type: "setText", id, text }),
+            deselect: () => send({ type: "deselect" }),
             showSlide: (index, slideWidth) => send({ type: "showSlide", index, slideWidth }),
             captureAll: (count) => send({ type: "captureSlides", count }),
             play: () => send({ type: "play" }),

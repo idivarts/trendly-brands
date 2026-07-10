@@ -19,13 +19,18 @@ import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Colors from "@/shared-uis/constants/Colors";
 import {
     faChevronUp,
+    faClockRotateLeft,
+    faComment,
+    faEllipsisVertical,
     faMusic,
+    faPen,
+    faPenRuler,
     faWandMagicSparkles,
     faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Modal,
@@ -37,6 +42,7 @@ import {
     TextInput,
     View,
 } from "react-native";
+import { Menu } from "react-native-paper";
 import { DesignFrameHandle, FrameOutMsg } from "./bridge";
 import DesignFrame from "./DesignFrame";
 import SoundtrackPanel from "./SoundtrackPanel";
@@ -60,9 +66,15 @@ interface DesignStageProps {
     readOnly?: boolean;
 }
 
-type Selected = { id: string; text: string } | null;
+type Rect = { x: number; y: number; w: number; h: number };
+type Selected = { id: string; text: string; rect: Rect } | null;
 
 const fmtTime = (ms: number) => `${(Math.max(ms, 0) / 1000).toFixed(1)}s`;
+
+// Gap between the selected element and its floating toolbar, and the min inset
+// the toolbar keeps from the frame edges.
+const TB_GAP = 8;
+const TB_EDGE = 4;
 
 const DesignStage: React.FC<DesignStageProps> = (props) => {
     const { contentId, brandId, designRef, isVideo, readOnly, onClose, onOpenChat } = props;
@@ -90,6 +102,14 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     const [videoNote, setVideoNote] = useState<string | null>(null);
     // Soundtrack starts collapsed — the user opens it on demand.
     const [musicOpen, setMusicOpen] = useState(false);
+    // Header overflow (⋮) menu — currently just the Canva hand-off.
+    const [menuOpen, setMenuOpen] = useState(false);
+    // Revert is a strong action — confirm before rewinding to the last version.
+    const [confirmRevert, setConfirmRevert] = useState(false);
+    // Measured size of the floating selection toolbar (for edge-clamped anchoring).
+    const [tbSize, setTbSize] = useState({ w: 172, h: 40 });
+    // Measured available canvas area — the design is scaled to fit inside it.
+    const [canvasSize, setCanvasSize] = useState({ w: 0, h: 0 });
 
     const html = revision?.html ?? "";
     const w = revision?.width ?? designRef?.width ?? 1080;
@@ -98,8 +118,45 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     const isVideoDesign = docType === "video";
     const slideCount = Math.max(revision?.slideCount ?? designRef?.slideCount ?? 1, 1);
     const hasDesign = !!html;
-    const displayWidth = Math.min(width - 32, 340);
+    // Fit the design into the measured canvas area, preserving aspect ratio AND
+    // reserving room for the on-canvas controls (video scrubber / slide nav) so a
+    // tall reel is never clipped. Falls back to a sensible width before measured.
+    const CANVAS_PAD = 32;
+    const CONTROLS_H = isVideoDesign ? 64 : slideCount > 1 ? 52 : 8;
+    const availW = Math.max(0, canvasSize.w - CANVAS_PAD);
+    const availH = Math.max(0, canvasSize.h - CANVAS_PAD - CONTROLS_H);
+    const fitByHeight = availH > 0 && h > 0 ? (availH * w) / h : Infinity;
+    const MAX_CANVAS_W = 680;
+    let displayWidth = Math.min(availW || width - 32, fitByHeight, MAX_CANVAS_W);
+    if (!(displayWidth > 0)) displayWidth = Math.min(width - 32, 340);
+    const displayHeight = w > 0 ? (displayWidth * h) / w : displayWidth;
     const progress = durMs > 0 ? Math.min(curMs / durMs, 1) : 0;
+
+    // Clear the selection everywhere (RN state + the frame's outline).
+    const clearSelection = () => {
+        setSelected(null);
+        frameRef.current?.deselect();
+    };
+
+    // Any new design revision (AI edit, text edit, revert) reloads the frame, so
+    // the previous selection + its cached rect are stale — drop them.
+    useEffect(() => {
+        setSelected(null);
+    }, [revision?.id]);
+
+    // Anchor the floating toolbar to the selected element: centred over it,
+    // above by default and flipped below when the element hugs the top; both
+    // axes clamped inside the frame so it never escapes the canvas.
+    const toolbarPos = useMemo(() => {
+        if (!selected) return { left: 0, top: 0 };
+        const r = selected.rect;
+        let left = r.x + r.w / 2 - tbSize.w / 2;
+        left = Math.max(TB_EDGE, Math.min(left, displayWidth - tbSize.w - TB_EDGE));
+        const above = r.y - tbSize.h - TB_GAP;
+        let top = above >= TB_EDGE ? above : r.y + r.h + TB_GAP;
+        top = Math.max(TB_EDGE, Math.min(top, displayHeight - tbSize.h - TB_EDGE));
+        return { left, top };
+    }, [selected, tbSize.w, tbSize.h, displayWidth, displayHeight]);
 
     // Short summary of what audio is attached — shown on the collapsed trigger.
     const audioSummary = useMemo(() => {
@@ -112,6 +169,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     const goToSlide = (i: number) => {
         const clamped = Math.max(0, Math.min(i, slideCount - 1));
         setSlide(clamped);
+        clearSelection();
         frameRef.current?.showSlide(clamped, w);
     };
 
@@ -133,7 +191,9 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                 .catch(() => setVideoNote("Couldn't save the video. Try again."))
                 .finally(() => setCapturing(false));
         } else if (msg.type === "tap") {
-            setSelected({ id: msg.id, text: msg.text });
+            setSelected({ id: msg.id, text: msg.text, rect: msg.rect });
+        } else if (msg.type === "deselect") {
+            setSelected(null);
         } else if (msg.type === "html") {
             addRevision(msg.html, w, h, slideCount, docType, "text", revision?.id);
         } else if (msg.type === "renderSlides") {
@@ -181,6 +241,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
         } else {
             const from = progress >= 1 ? 0 : curMs;
             if (progress >= 1) frameRef.current?.seek(0);
+            clearSelection();
             frameRef.current?.play();
             void player.playFrom(from);
             setPlaying(true);
@@ -285,8 +346,14 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                 <Text style={styles.title}>Design Studio</Text>
                 <View style={styles.headerActions}>
                     {hasDesign && history.length > 1 && !readOnly ? (
-                        <Pressable onPress={() => revertTo(history[1].id)} style={styles.secondaryBtn}>
-                            <Text style={styles.secondaryBtnText}>Revert</Text>
+                        <Pressable
+                            onPress={() => setConfirmRevert(true)}
+                            style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
+                            accessibilityRole="button"
+                            accessibilityLabel="Revert to the previous version"
+                            hitSlop={8}
+                        >
+                            <FontAwesomeIcon icon={faClockRotateLeft} size={15} color={colors.text} />
                         </Pressable>
                     ) : null}
                     {hasDesign && !readOnly ? (
@@ -302,25 +369,110 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                             )}
                         </Pressable>
                     ) : null}
+                    {hasDesign && !readOnly ? (
+                        <Menu
+                            visible={menuOpen}
+                            onDismiss={() => setMenuOpen(false)}
+                            anchor={
+                                <Pressable
+                                    onPress={() => setMenuOpen(true)}
+                                    style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="More design actions"
+                                    hitSlop={8}
+                                >
+                                    <FontAwesomeIcon icon={faEllipsisVertical} size={16} color={colors.textSecondary} />
+                                </Pressable>
+                            }
+                            contentStyle={styles.menuContent}
+                        >
+                            <Menu.Item
+                                onPress={() => {
+                                    setMenuOpen(false);
+                                    designInCanva();
+                                }}
+                                title="Deep-edit in Canva"
+                                titleStyle={styles.menuItemText}
+                                leadingIcon={() => (
+                                    <FontAwesomeIcon icon={faPenRuler} size={15} color={colors.text} />
+                                )}
+                            />
+                        </Menu>
+                    ) : null}
                 </View>
             </View>
 
             {/* Body — canvas when there's a design, else a clean empty state. */}
-            <View style={styles.body}>
+            <View
+                style={styles.body}
+                onLayout={(e) => {
+                    const { width: bw, height: bh } = e.nativeEvent.layout;
+                    if (Math.abs(bw - canvasSize.w) > 1 || Math.abs(bh - canvasSize.h) > 1) {
+                        setCanvasSize({ w: bw, h: bh });
+                    }
+                }}
+            >
                 {hasDesign ? (
                     <ScrollView
                         contentContainerStyle={styles.canvasScroll}
                         showsVerticalScrollIndicator={false}
                     >
                         <View style={styles.canvasWrap}>
-                            <DesignFrame
-                                ref={frameRef}
-                                html={html}
-                                width={w}
-                                height={h}
-                                displayWidth={displayWidth}
-                                onMessage={onMessage}
-                            />
+                            <View style={[styles.frameWrap, { width: displayWidth, height: displayHeight }]}>
+                                <DesignFrame
+                                    ref={frameRef}
+                                    html={html}
+                                    width={w}
+                                    height={h}
+                                    displayWidth={displayWidth}
+                                    onMessage={onMessage}
+                                />
+                                {/* Floating contextual toolbar anchored to the selected
+                                    element (like Figma/Canva). box-none lets taps fall
+                                    through to the canvas everywhere except the toolbar. */}
+                                {selected && !readOnly ? (
+                                    <View style={styles.selectionOverlay} pointerEvents="box-none">
+                                        <View
+                                            style={[styles.floatToolbar, { left: toolbarPos.left, top: toolbarPos.top }]}
+                                            onLayout={(e) => {
+                                                const { width: tw, height: th } = e.nativeEvent.layout;
+                                                if (Math.abs(tw - tbSize.w) > 1 || Math.abs(th - tbSize.h) > 1) {
+                                                    setTbSize({ w: tw, h: th });
+                                                }
+                                            }}
+                                        >
+                                            <Pressable
+                                                style={({ pressed }) => [styles.tbBtn, pressed && styles.pressed]}
+                                                onPress={openEdit}
+                                                accessibilityRole="button"
+                                                accessibilityLabel="Edit text"
+                                            >
+                                                <FontAwesomeIcon icon={faPen} size={12} color={colors.text} />
+                                                <Text style={styles.tbBtnText}>Edit</Text>
+                                            </Pressable>
+                                            <Pressable
+                                                style={({ pressed }) => [styles.tbBtn, pressed && styles.pressed]}
+                                                onPress={openComment}
+                                                accessibilityRole="button"
+                                                accessibilityLabel="Comment or ask AI"
+                                            >
+                                                <FontAwesomeIcon icon={faComment} size={12} color={colors.text} />
+                                                <Text style={styles.tbBtnText}>Ask AI</Text>
+                                            </Pressable>
+                                            <View style={styles.tbDivider} />
+                                            <Pressable
+                                                style={({ pressed }) => [styles.tbClose, pressed && styles.pressed]}
+                                                onPress={clearSelection}
+                                                accessibilityRole="button"
+                                                accessibilityLabel="Deselect"
+                                                hitSlop={6}
+                                            >
+                                                <FontAwesomeIcon icon={faXmark} size={13} color={colors.textSecondary} />
+                                            </Pressable>
+                                        </View>
+                                    </View>
+                                ) : null}
+                            </View>
                             {isVideoDesign ? (
                                 <View style={[styles.videoBar, { width: displayWidth }]}>
                                     <Pressable style={styles.playBtn} onPress={togglePlay}>
@@ -355,29 +507,6 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                                 </View>
                             ) : null}
                             {videoNote ? <Text style={styles.videoNote}>{videoNote}</Text> : null}
-
-                            {selected && !readOnly ? (
-                                <View style={styles.actionBar}>
-                                    <Text style={styles.actionLabel}>Selected: {selected.id}</Text>
-                                    <View style={styles.actionBtns}>
-                                        <Pressable style={styles.action} onPress={openEdit}>
-                                            <Text style={styles.actionText}>Edit text</Text>
-                                        </Pressable>
-                                        <Pressable style={styles.action} onPress={openComment}>
-                                            <Text style={styles.actionText}>Comment / Ask AI</Text>
-                                        </Pressable>
-                                    </View>
-                                    <Text style={styles.hint}>
-                                        Tap text to edit. Pin a comment on anything and the AI applies it.
-                                    </Text>
-                                </View>
-                            ) : null}
-
-                            {!readOnly ? (
-                                <Pressable style={styles.canvaBtn} onPress={designInCanva}>
-                                    <Text style={styles.canvaBtnText}>Deep-edit in Canva</Text>
-                                </Pressable>
-                            ) : null}
                         </View>
                     </ScrollView>
                 ) : (
@@ -446,9 +575,20 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
             <Modal visible={modalOpen !== null} transparent animationType="fade" onRequestClose={close}>
                 <Pressable style={styles.backdrop} onPress={close}>
                     <Pressable style={styles.sheet} onPress={() => {}}>
-                        <Text style={styles.sheetTitle}>
-                            {modalOpen === "edit" ? "Edit text" : "Comment"}
-                        </Text>
+                        <View style={styles.sheetHeader}>
+                            <Text style={styles.sheetTitle}>
+                                {modalOpen === "edit" ? "Edit text" : "Comment"}
+                            </Text>
+                            <Pressable
+                                style={({ pressed }) => [styles.sheetClose, pressed && styles.pressed]}
+                                onPress={close}
+                                accessibilityRole="button"
+                                accessibilityLabel="Close"
+                                hitSlop={8}
+                            >
+                                <FontAwesomeIcon icon={faXmark} size={15} color={colors.textSecondary} />
+                            </Pressable>
+                        </View>
                         <TextInput
                             style={styles.sheetInput}
                             value={modalText}
@@ -477,6 +617,34 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                                     </Pressable>
                                 </>
                             )}
+                        </View>
+                    </Pressable>
+                </Pressable>
+            </Modal>
+
+            {/* Revert confirmation — rewinding to the previous version is a strong,
+                easy-to-mistap action, so gate it behind an explicit confirm. */}
+            <Modal visible={confirmRevert} transparent animationType="fade" onRequestClose={() => setConfirmRevert(false)}>
+                <Pressable style={styles.backdrop} onPress={() => setConfirmRevert(false)}>
+                    <Pressable style={styles.sheet} onPress={() => {}}>
+                        <Text style={styles.sheetTitle}>Revert to previous version?</Text>
+                        <Text style={styles.confirmBody}>
+                            This rewinds the design to the last version. Your current version stays in
+                            history, so you can move forward again.
+                        </Text>
+                        <View style={styles.sheetBtns}>
+                            <Pressable style={styles.modalSecondaryBtn} onPress={() => setConfirmRevert(false)}>
+                                <Text style={styles.modalSecondaryBtnText}>Cancel</Text>
+                            </Pressable>
+                            <Pressable
+                                style={styles.primaryBtn}
+                                onPress={() => {
+                                    setConfirmRevert(false);
+                                    if (history.length > 1) revertTo(history[1].id);
+                                }}
+                            >
+                                <Text style={styles.primaryBtnText}>Revert</Text>
+                            </Pressable>
                         </View>
                     </Pressable>
                 </Pressable>
@@ -521,8 +689,16 @@ const useStyles = (colors: any) =>
                 },
                 title: { flex: 1, fontSize: 16, fontWeight: "700", color: colors.text },
                 headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
-                secondaryBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: colors.tag },
-                secondaryBtnText: { fontSize: 13, color: colors.text },
+                iconBtn: {
+                    width: 34,
+                    height: 34,
+                    borderRadius: 8,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.tag,
+                },
+                menuContent: { backgroundColor: colors.modalBackground, borderRadius: 12 },
+                menuItemText: { fontSize: 14, fontWeight: "500", color: colors.text },
                 renderBtn: {
                     paddingHorizontal: 16,
                     paddingVertical: 9,
@@ -540,8 +716,44 @@ const useStyles = (colors: any) =>
                 renderBtnText: { fontSize: 13, fontWeight: "700", color: colors.onPrimary },
 
                 body: { flex: 1 },
-                canvasScroll: { alignItems: "center", padding: 16, gap: 12 },
+                canvasScroll: { flexGrow: 1, alignItems: "center", justifyContent: "center", padding: 16, gap: 12 },
                 canvasWrap: { alignItems: "center", gap: 12 },
+                frameWrap: { borderRadius: 12, overflow: "visible" },
+
+                // Selection overlay + floating contextual toolbar
+                selectionOverlay: { ...StyleSheet.absoluteFillObject },
+                floatToolbar: {
+                    position: "absolute",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 2,
+                    paddingHorizontal: 5,
+                    paddingVertical: 4,
+                    borderRadius: 11,
+                    backgroundColor: colors.card,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowRadius: 16,
+                    shadowOpacity: 0.2,
+                    elevation: 10,
+                },
+                tbBtn: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    paddingHorizontal: 10,
+                    paddingVertical: 7,
+                    borderRadius: 8,
+                },
+                tbBtnText: { fontSize: 13, fontWeight: "600", color: colors.text },
+                tbDivider: { width: 1, height: 20, backgroundColor: colors.tag, marginHorizontal: 2 },
+                tbClose: {
+                    width: 30,
+                    height: 30,
+                    borderRadius: 8,
+                    alignItems: "center",
+                    justifyContent: "center",
+                },
 
                 slideNav: { flexDirection: "row", alignItems: "center", gap: 12 },
                 slideArrow: {
@@ -575,33 +787,6 @@ const useStyles = (colors: any) =>
                 trackFill: { height: 6, borderRadius: 3, backgroundColor: colors.primary },
                 time: { fontSize: 12, color: colors.textSecondary, minWidth: 64, textAlign: "right" },
                 videoNote: { fontSize: 12, color: colors.textSecondary },
-
-                actionBar: {
-                    alignSelf: "stretch",
-                    borderRadius: 12,
-                    backgroundColor: colors.card,
-                    padding: 12,
-                    gap: 8,
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowRadius: 8,
-                    shadowOpacity: 0.07,
-                    elevation: 3,
-                },
-                actionLabel: { fontSize: 13, color: colors.textSecondary },
-                actionBtns: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
-                action: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: colors.tag },
-                actionText: { fontSize: 14, color: colors.text },
-                hint: { fontSize: 12, color: colors.textSecondary },
-
-                canvaBtn: {
-                    alignSelf: "center",
-                    paddingHorizontal: 14,
-                    paddingVertical: 10,
-                    borderRadius: 10,
-                    backgroundColor: colors.tag,
-                },
-                canvaBtnText: { color: colors.text, fontSize: 14 },
 
                 // Empty state
                 empty: {
@@ -689,7 +874,17 @@ const useStyles = (colors: any) =>
                     padding: 24,
                 },
                 sheet: { width: "100%", maxWidth: 420, borderRadius: 16, backgroundColor: colors.card, padding: 16, gap: 12 },
+                sheetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+                sheetClose: {
+                    width: 30,
+                    height: 30,
+                    borderRadius: 8,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.tag,
+                },
                 sheetTitle: { fontSize: 16, fontWeight: "600", color: colors.text },
+                confirmBody: { fontSize: 13, lineHeight: 19, color: colors.textSecondary },
                 sheetInput: {
                     minHeight: 44,
                     borderRadius: 10,

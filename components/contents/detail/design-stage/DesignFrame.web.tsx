@@ -20,6 +20,7 @@ const DesignFrameWeb = forwardRef<DesignFrameHandle, DesignFrameProps>(
 
         useImperativeHandle(ref, () => ({
             setText: (id, text) => post({ type: "setText", id, text }),
+            deselect: () => post({ type: "deselect" }),
             showSlide: (index, slideWidth) => post({ type: "showSlide", index, slideWidth }),
             captureAll: (count) => post({ type: "captureSlides", count }),
             play: () => post({ type: "play" }),
