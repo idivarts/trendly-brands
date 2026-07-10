@@ -2,6 +2,7 @@ import { CalendarItem } from "@/components/content-calendar/types";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { Platform } from "@/shared-libs/firestore/trendly-pro/constants/platform";
 import { IContentPublishResult, IImageGeneration, IPlatformOptions } from "@/shared-libs/firestore/trendly-pro/models/contents";
+import { IContentAudio, IContentDesignRef } from "@/shared-libs/firestore/trendly-pro/models/design";
 import { IContentVariation } from "@/shared-libs/firestore/trendly-pro/models/variations";
 import Colors from "@/shared-uis/constants/Colors";
 
@@ -99,6 +100,10 @@ export interface ContentItem extends CalendarItem {
     attachments?: Attachment[];
     /** Live state of a backend-driven AI image-generation job, if any. */
     imageGeneration?: IImageGeneration;
+    /** AI Studio: how the media was produced + the current design pointer + audio. */
+    source?: "ai" | "upload" | "canva";
+    designRef?: IContentDesignRef;
+    audio?: IContentAudio;
     /** Target connected accounts for publish / schedule (Phase 4). */
     destinations?: SocialDestination[];
     /** Per-platform publishing extras (YouTube title/visibility, Reddit subreddit). */

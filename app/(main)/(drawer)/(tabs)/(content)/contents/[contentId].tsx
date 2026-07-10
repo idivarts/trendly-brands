@@ -3,7 +3,7 @@ import ContentCommentsPanel from "@/components/contents/ContentCommentsPanel";
 import ContentActionsMenu from "@/components/contents/detail/ContentActionsMenu";
 import ContentInfoModal from "@/components/contents/detail/ContentInfoModal";
 import { MEDIA_SPEC } from "@/components/contents/detail/media-spec";
-import MediaStage from "@/components/contents/detail/MediaStage";
+import DesignStage from "@/components/contents/detail/design-stage/DesignStage";
 import NoSocialsModal from "@/components/contents/detail/NoSocialsModal";
 import PostingSummary from "@/components/contents/detail/PostingSummary";
 import PreviewPanel from "@/components/contents/detail/PreviewPanel";
@@ -1389,8 +1389,16 @@ const CreateContentScreen = () => {
                             ) : null}
 
                             {mediaSpec.kind !== "none" && (
-                                <MediaStage
+                                <DesignStage
+                                    contentId={contentId}
+                                    brandId={selectedBrand?.id ?? ""}
                                     contentType={contentType}
+                                    isVideo={mediaSpec.kind === "video"}
+                                    designRef={seedItem?.designRef}
+                                    voiceoverSource={script || caption}
+                                    audio={seedItem?.audio}
+                                    onAudioChange={(audio) => updateContent(contentId, { audio })}
+                                    onSendToChat={handleSendToChat}
                                     attachments={attachments}
                                     onAttachmentsChange={setAttachments}
                                     imagePrompt={imagePrompt}
