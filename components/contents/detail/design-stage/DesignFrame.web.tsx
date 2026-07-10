@@ -22,10 +22,19 @@ const DesignFrameWeb = forwardRef<DesignFrameHandle, DesignFrameProps>(
             setText: (id, text) => post({ type: "setText", id, text }),
             showSlide: (index, slideWidth) => post({ type: "showSlide", index, slideWidth }),
             captureAll: (count) => post({ type: "captureSlides", count }),
+            play: () => post({ type: "play" }),
+            pause: () => post({ type: "pause" }),
+            seek: (ms) => post({ type: "seek", ms }),
+            captureVideo: (fps, durationMs) => post({ type: "captureVideo", fps, durationMs }),
         }));
 
         useEffect(() => {
             const handler = (e: MessageEvent) => {
+                // The MP4 result comes back as a structured-clone Blob, not JSON.
+                if (e.data && typeof e.data === "object" && (e.data as any).__frameBlob) {
+                    onMessage({ type: (e.data as any).type, blob: (e.data as any).blob } as FrameOutMsg);
+                    return;
+                }
                 if (typeof e.data !== "string") return;
                 try {
                     onMessage(JSON.parse(e.data) as FrameOutMsg);

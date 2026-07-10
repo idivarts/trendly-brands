@@ -13,6 +13,7 @@
 
 export const HTML2CANVAS_URL =
     "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+export const MP4_MUXER_URL = "https://cdn.jsdelivr.net/npm/mp4-muxer@5.0.3/build/mp4-muxer.min.js";
 
 // The bridge runs inside the frame. It works in both environments: native uses
 // window.ReactNativeWebView.postMessage + a global __cmd(payload); web uses
@@ -30,13 +31,69 @@ export const BRIDGE_SCRIPT = `
     } catch(e){}
   }
   function target(){ return document.querySelector('[data-root]') || document.body; }
-  function loadH2C(cb){
-    if (window.html2canvas) return cb();
+  function loadScript(url, globalName, cb){
+    if (globalName && window[globalName]) return cb();
     var s = document.createElement('script');
-    s.src = ${JSON.stringify(HTML2CANVAS_URL)};
+    s.src = url;
     s.onload = cb;
-    s.onerror = function(){ send({type:'error',message:'html2canvas failed to load'}); };
+    s.onerror = function(){ send({type:'error',message:'failed to load '+url}); };
     document.head.appendChild(s);
+  }
+  function loadH2C(cb){ loadScript(${JSON.stringify(HTML2CANVAS_URL)}, 'html2canvas', cb); }
+  function sendBlob(type, blob){
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ __frameBlob: true, type: type, blob: blob }, '*');
+    }
+  }
+  // Web-only: render the animated design to a single MP4 via html2canvas frames
+  // + WebCodecs VideoEncoder + mp4-muxer.
+  function captureVideo(fps){
+    if (!window.VideoEncoder || !window.VideoFrame){ send({type:'error',message:'WebCodecs not supported in this browser'}); return; }
+    if (!vInited) vInit();
+    var H0 = vScenes[0] ? vScenes[0].offsetHeight : 0;
+    var W = vSlideW - (vSlideW % 2), H = H0 - (H0 % 2);
+    var totalMs = vTotal;
+    if (W <= 0 || H <= 0){ send({type:'error',message:'could not measure the video frame'}); return; }
+    loadH2C(function(){
+      loadScript(${JSON.stringify(MP4_MUXER_URL)}, 'Mp4Muxer', function(){
+        try {
+          if (!window.Mp4Muxer || !window.Mp4Muxer.Muxer){ send({type:'error',message:'mp4-muxer failed to load'}); return; }
+          var muxer = new window.Mp4Muxer.Muxer({
+            target: new window.Mp4Muxer.ArrayBufferTarget(),
+            video: { codec: 'avc', width: W, height: H },
+            fastStart: 'in-memory'
+          });
+          var encoder = new VideoEncoder({
+            output: function(chunk, meta){ muxer.addVideoChunk(chunk, meta); },
+            error: function(e){ send({type:'error',message:'encoder: '+String(e)}); }
+          });
+          encoder.configure({ codec: 'avc1.42001f', width: W, height: H, bitrate: 5000000, framerate: fps });
+          var frames = Math.max(1, Math.round(totalMs/1000*fps));
+          function nextFrame(i){
+            if (i >= frames){
+              encoder.flush().then(function(){
+                encoder.close();
+                muxer.finalize();
+                sendBlob('renderVideo', new Blob([muxer.target.buffer], {type:'video/mp4'}));
+              }).catch(function(e){ send({type:'error',message:'flush: '+String(e)}); });
+              return;
+            }
+            var t = i * (1000/fps);
+            var idx = vSceneAt(t); vTranslate(idx); vSetTime(idx, t - vOffsets[idx]);
+            var stage = vScenes[idx] || document.body;
+            window.html2canvas(stage, {backgroundColor:'#ffffff', useCORS:true, scale:1, width:W, height:H, onclone:cleanClone}).then(function(canvas){
+              var frame = new VideoFrame(canvas, { timestamp: Math.round(t*1000), duration: Math.round(1000000/fps) });
+              encoder.encode(frame, { keyFrame: (i % fps === 0) });
+              frame.close();
+              i++;
+              if (i % 5 === 0) send({type:'renderProgress', frame:i, total:frames});
+              setTimeout(function(){ nextFrame(i); }, 0);
+            }).catch(function(e){ send({type:'error',message:String(e)}); });
+          }
+          nextFrame(0);
+        } catch(e){ send({type:'error',message:String(e)}); }
+      });
+    });
   }
   function showSlide(i, slideWidth){
     var c = document.querySelector('[data-carousel]');
@@ -82,8 +139,68 @@ export const BRIDGE_SCRIPT = `
       });
     });
   }
+  // ── Video: multi-scene sequencer ─────────────────────────────────────────
+  // A video is N [data-slide] SCENES inside [data-carousel], each with a
+  // data-duration (ms). Only ONE scene is visible at a time (the viewport is
+  // clipped to one scene); it plays its own CSS animations, then the player
+  // pages to the next. Total length = sum of scene durations.
+  var vScenes = [], vOffsets = [], vTotal = 0, vRaf = null, vStartWall = 0, vBaseMs = 0, vActive = -1, vSlideW = 0, vInited = false;
+  function perfNow(){ return (window.performance && performance.now) ? performance.now() : Date.now(); }
+  function vInit(){
+    vScenes = Array.prototype.slice.call(document.querySelectorAll('[data-slide]'));
+    vOffsets = []; vTotal = 0;
+    vSlideW = vScenes[0] ? vScenes[0].offsetWidth : 0;
+    for (var i=0;i<vScenes.length;i++){
+      vOffsets.push(vTotal);
+      var d = parseInt(vScenes[i].getAttribute('data-duration')||'', 10);
+      if (!(d>0)) d = 3000;
+      vTotal += d;
+    }
+    if (vTotal <= 0) vTotal = 3000;
+    vInited = true;
+  }
+  function vSceneAt(ms){ var idx=0; for (var i=0;i<vScenes.length;i++){ if (ms >= vOffsets[i]) idx=i; else break; } return idx; }
+  function vTranslate(i){ var c=document.querySelector('[data-carousel]'); if(c){ c.style.transition='none'; c.style.transform='translateX('+(-i*vSlideW)+'px)'; } }
+  function vSceneAnims(i){ return (vScenes[i] && vScenes[i].getAnimations) ? vScenes[i].getAnimations({subtree:true}) : []; }
+  function vPlayFrom(i, localMs){ vSceneAnims(i).forEach(function(a){ try{ a.currentTime = localMs; a.play(); }catch(e){} }); }
+  function vSetTime(i, localMs){ vSceneAnims(i).forEach(function(a){ try{ a.pause(); a.currentTime = localMs; }catch(e){} }); }
+  function vPauseAnims(i){ vSceneAnims(i).forEach(function(a){ try{ a.pause(); }catch(e){} }); }
+  function vReport(ms){ send({type:'time', ms: Math.round(ms), duration: Math.round(vTotal)}); }
+  function vStop(){ if(vRaf){ cancelAnimationFrame(vRaf); vRaf=null; } }
+  function play(){
+    if (!vInited) vInit();
+    vStop();
+    vStartWall = perfNow();
+    var e0 = vSceneAt(vBaseMs); vActive = e0; vTranslate(e0); vPlayFrom(e0, vBaseMs - vOffsets[e0]);
+    function tick(){
+      var elapsed = vBaseMs + (perfNow() - vStartWall);
+      if (elapsed >= vTotal){ vBaseMs = 0; vStop(); vReport(vTotal); send({type:'ended'}); return; }
+      var idx = vSceneAt(elapsed);
+      if (idx !== vActive){ vActive = idx; vTranslate(idx); vPlayFrom(idx, elapsed - vOffsets[idx]); }
+      vReport(elapsed);
+      vRaf = requestAnimationFrame(tick);
+    }
+    vRaf = requestAnimationFrame(tick);
+  }
+  function pause(){
+    var elapsed = vBaseMs + (vStartWall ? (perfNow() - vStartWall) : 0);
+    vBaseMs = Math.min(elapsed, vTotal); vStartWall = 0; vStop();
+    if (vActive >= 0) vPauseAnims(vActive);
+  }
+  function seek(ms){
+    if (!vInited) vInit();
+    vStop(); vStartWall = 0;
+    ms = Math.max(0, Math.min(ms, vTotal)); vBaseMs = ms;
+    var idx = vSceneAt(ms); vActive = idx; vTranslate(idx); vSetTime(idx, ms - vOffsets[idx]);
+    vReport(ms);
+  }
+
   function handle(payload){
     var msg; try { msg = JSON.parse(payload); } catch(e){ return; }
+    if (msg.type === 'play'){ play(); return; }
+    if (msg.type === 'pause'){ pause(); return; }
+    if (msg.type === 'seek'){ seek(msg.ms||0); return; }
+    if (msg.type === 'captureVideo'){ captureVideo(msg.fps||24); return; }
     if (msg.type === 'setText'){
       var el = document.querySelector('[data-el="'+msg.id+'"]');
       if (el){ el.textContent = msg.text; }
@@ -151,6 +268,10 @@ export type FrameOutMsg =
     | { type: "html"; html: string }
     | { type: "render"; dataUrl: string }
     | { type: "renderSlides"; dataUrls: string[] }
+    | { type: "time"; ms: number; duration: number }
+    | { type: "ended" }
+    | { type: "renderProgress"; frame: number; total: number }
+    | { type: "renderVideo"; blob: Blob }
     | { type: "error"; message: string };
 
 export interface DesignFrameHandle {
@@ -159,6 +280,12 @@ export interface DesignFrameHandle {
     showSlide: (index: number, slideWidth: number) => void;
     /** Capture each of `count` slides to a PNG (renderSlides message). */
     captureAll: (count: number) => void;
+    // Video playback (animated designs).
+    play: () => void;
+    pause: () => void;
+    seek: (ms: number) => void;
+    /** Web only: encode the animated design to a single MP4 (renderVideo message). */
+    captureVideo: (fps: number, durationMs: number) => void;
 }
 
 export interface DesignFrameProps {

@@ -15,7 +15,7 @@ import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import MediaStage from "../MediaStage";
 import AudioPanel from "../media-stage/AudioPanel";
 import { DesignFrameHandle, FrameOutMsg } from "./bridge";
@@ -46,6 +46,8 @@ interface DesignStageProps {
 
 type Selected = { id: string; text: string } | null;
 
+const fmtTime = (ms: number) => `${(Math.max(ms, 0) / 1000).toFixed(1)}s`;
+
 const DesignStage: React.FC<DesignStageProps> = (props) => {
     const { contentId, brandId, designRef, isVideo, readOnly } = props;
     const theme = useTheme();
@@ -53,7 +55,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     const { width } = useBreakpoints();
     const styles = useStyles(colors);
 
-    const { revision, history, addRevision, setRenders, revertTo } = useContentDesign(contentId, designRef);
+    const { revision, history, addRevision, setRenders, setVideoRender, revertTo } = useContentDesign(contentId, designRef);
     const { addComment } = useContentComments(contentId);
 
     const frameRef = useRef<DesignFrameHandle>(null);
@@ -62,14 +64,21 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     const [modalText, setModalText] = useState("");
     const [capturing, setCapturing] = useState(false);
     const [slide, setSlide] = useState(0);
+    const [playing, setPlaying] = useState(false);
+    const [curMs, setCurMs] = useState(0);
+    const [durMs, setDurMs] = useState(0);
+    const [trackW, setTrackW] = useState(1);
+    const [videoNote, setVideoNote] = useState<string | null>(null);
 
     const html = revision?.html ?? "";
     const w = revision?.width ?? designRef?.width ?? 1080;
     const h = revision?.height ?? designRef?.height ?? 1350;
     const docType = revision?.docType ?? designRef?.docType ?? "image";
+    const isVideoDesign = docType === "video";
     const slideCount = Math.max(revision?.slideCount ?? designRef?.slideCount ?? 1, 1);
     const hasDesign = !!html;
     const displayWidth = Math.min(width - 32, 340);
+    const progress = durMs > 0 ? Math.min(curMs / durMs, 1) : 0;
 
     const goToSlide = (i: number) => {
         const clamped = Math.max(0, Math.min(i, slideCount - 1));
@@ -78,7 +87,23 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     };
 
     const onMessage = (msg: FrameOutMsg) => {
-        if (msg.type === "tap") {
+        if (msg.type === "ready") {
+            // Video: pause at frame 0 so the user controls playback via the scrubber.
+            if (isVideoDesign) frameRef.current?.seek(0);
+        } else if (msg.type === "time") {
+            setCurMs(msg.ms);
+            setDurMs(msg.duration);
+        } else if (msg.type === "ended") {
+            setPlaying(false);
+        } else if (msg.type === "renderProgress") {
+            setVideoNote(`Rendering video… ${msg.frame}/${msg.total}`);
+        } else if (msg.type === "renderVideo") {
+            uploadVideo(msg.blob)
+                .then((url) => revision && setVideoRender(revision.id, url))
+                .then(() => setVideoNote("Video saved."))
+                .catch(() => setVideoNote("Couldn't save the video. Try again."))
+                .finally(() => setCapturing(false));
+        } else if (msg.type === "tap") {
             setSelected({ id: msg.id, text: msg.text });
         } else if (msg.type === "html") {
             // A deterministic text edit returned the new full HTML → new revision.
@@ -97,6 +122,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                 .finally(() => setCapturing(false));
         } else if (msg.type === "error") {
             setCapturing(false);
+            if (isVideoDesign) setVideoNote("Video render failed — this browser may not support WebCodecs.");
         }
     };
 
@@ -112,8 +138,52 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
         return attachmentUrl as string;
     };
 
+    const uploadVideo = async (blob: Blob): Promise<string> => {
+        const rand = Math.random().toString(36).slice(2, 8);
+        const filename = `design_${Date.now()}_${rand}.mp4`;
+        const res = await HttpWrapper.fetch(`/s3/v1/attachments?filename=${encodeURIComponent(filename)}`, {
+            method: "POST",
+        });
+        const { uploadUrl, attachmentUrl } = await res.json();
+        await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": "video/mp4" }, body: blob });
+        return attachmentUrl as string;
+    };
+
+    const togglePlay = () => {
+        if (playing) {
+            frameRef.current?.pause();
+            setPlaying(false);
+        } else {
+            if (progress >= 1) frameRef.current?.seek(0);
+            frameRef.current?.play();
+            setPlaying(true);
+        }
+    };
+
+    // Tap-to-seek on the scrubber track (track is `displayWidth` wide).
+    const seekToFraction = (frac: number) => {
+        if (durMs <= 0) return;
+        const clamped = Math.max(0, Math.min(frac, 1));
+        setPlaying(false);
+        frameRef.current?.seek(Math.round(clamped * durMs));
+    };
+
     const saveRender = () => {
         if (!hasDesign) return;
+        if (isVideoDesign) {
+            if (Platform.OS !== "web") {
+                setVideoNote("Video render is available on web for now.");
+                return;
+            }
+            // Client-side MP4 encode (WebCodecs). Pause playback first so the
+            // capture loop controls the animation timeline.
+            frameRef.current?.pause();
+            setPlaying(false);
+            setCapturing(true);
+            setVideoNote("Rendering video…");
+            frameRef.current?.captureVideo(24, durMs || designRef?.durationMs || 6000);
+            return;
+        }
         setCapturing(true);
         frameRef.current?.captureAll(slideCount);
     };
@@ -194,7 +264,23 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                             displayWidth={displayWidth}
                             onMessage={onMessage}
                         />
-                        {slideCount > 1 ? (
+                        {isVideoDesign ? (
+                            <View style={[styles.videoBar, { width: displayWidth }]}>
+                                <Pressable style={styles.playBtn} onPress={togglePlay}>
+                                    <Text style={styles.playIcon}>{playing ? "❚❚" : "▶"}</Text>
+                                </Pressable>
+                                <Pressable
+                                    style={styles.track}
+                                    onLayout={(e) => setTrackW(e.nativeEvent.layout.width)}
+                                    onPress={(e) => seekToFraction(e.nativeEvent.locationX / Math.max(trackW, 1))}
+                                >
+                                    <View style={[styles.trackFill, { width: `${progress * 100}%` }]} />
+                                </Pressable>
+                                <Text style={styles.time}>
+                                    {fmtTime(curMs)} / {fmtTime(durMs)}
+                                </Text>
+                            </View>
+                        ) : slideCount > 1 ? (
                             <View style={styles.slideNav}>
                                 <Pressable style={styles.slideArrow} onPress={() => goToSlide(slide - 1)}>
                                     <Text style={styles.slideArrowText}>‹</Text>
@@ -211,6 +297,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                                 </Pressable>
                             </View>
                         ) : null}
+                        {videoNote ? <Text style={styles.videoNote}>{videoNote}</Text> : null}
                     </View>
 
                     {selected && !readOnly ? (
@@ -338,6 +425,25 @@ const useStyles = (colors: any) =>
                 dots: { flexDirection: "row", alignItems: "center", gap: 6 },
                 dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.tag },
                 dotActive: { backgroundColor: colors.primary, width: 20 },
+                videoBar: { flexDirection: "row", alignItems: "center", gap: 10 },
+                playBtn: {
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowRadius: 12,
+                    shadowOpacity: 0.35,
+                    elevation: 4,
+                },
+                playIcon: { color: "#fff", fontSize: 13 },
+                track: { flex: 1, height: 6, borderRadius: 3, backgroundColor: colors.tag, overflow: "hidden" },
+                trackFill: { height: 6, borderRadius: 3, backgroundColor: colors.primary },
+                time: { fontSize: 12, color: colors.textSecondary, minWidth: 64, textAlign: "right" },
+                videoNote: { fontSize: 12, color: colors.textSecondary },
                 actionBar: {
                     borderRadius: 12,
                     backgroundColor: colors.card,

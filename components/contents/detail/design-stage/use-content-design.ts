@@ -46,6 +46,8 @@ interface UseContentDesignReturn {
     /** Store the frontend-captured slide renders as the content's attachments
      *  (one per slide, ordered) + cache the cover on the revision + designRef. */
     setRenders: (revisionId: string, renderUrls: string[]) => Promise<void>;
+    /** Store the client-encoded MP4 as the content's single video attachment. */
+    setVideoRender: (revisionId: string, videoUrl: string) => Promise<void>;
     revertTo: (revisionId: string) => Promise<void>;
 }
 
@@ -165,6 +167,22 @@ export function useContentDesign(
             }
         };
 
+        const setVideoRender: UseContentDesignReturn["setVideoRender"] = async (rid, videoUrl) => {
+            if (!brandId || !contentId) return;
+            await updateDoc(
+                doc(FirestoreDB, "brands", brandId, "contents", contentId, "designs", rid),
+                { renderUrl: videoUrl }
+            );
+            const cd = contentDoc();
+            if (cd) {
+                await updateDoc(cd, {
+                    "designRef.renderUrl": videoUrl,
+                    attachments: [{ type: "video", playUrl: videoUrl }],
+                    updatedAt: Date.now(),
+                });
+            }
+        };
+
         const revertTo: UseContentDesignReturn["revertTo"] = async (rid) => {
             // Re-point the content at an earlier revision (new current).
             const target = history.find((h) => h.id === rid);
@@ -172,7 +190,7 @@ export function useContentDesign(
             await addRevision(target.html, target.width, target.height, target.slideCount, target.docType, "revert", rid);
         };
 
-        return { addRevision, setRenders, revertTo };
+        return { addRevision, setRenders, setVideoRender, revertTo };
     }, [brandId, contentId, history]);
 
     return { revision, history, loading, ...writers };

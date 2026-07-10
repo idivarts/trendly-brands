@@ -24,6 +24,12 @@ const DesignFrameNative = forwardRef<DesignFrameHandle, DesignFrameProps>(
             setText: (id, text) => send({ type: "setText", id, text }),
             showSlide: (index, slideWidth) => send({ type: "showSlide", index, slideWidth }),
             captureAll: (count) => send({ type: "captureSlides", count }),
+            play: () => send({ type: "play" }),
+            pause: () => send({ type: "pause" }),
+            seek: (ms) => send({ type: "seek", ms }),
+            // WebCodecs isn't available in the native WebView — the bridge will
+            // report an error, which DesignStage surfaces.
+            captureVideo: (fps, durationMs) => send({ type: "captureVideo", fps, durationMs }),
         }));
 
         return (
