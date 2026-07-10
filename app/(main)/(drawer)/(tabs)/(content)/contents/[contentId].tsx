@@ -271,6 +271,22 @@ const CreateContentScreen = () => {
         setRightPanelMode("chat");
     }, []);
 
+    // Auto-send channel for the AI chat (used by "Ask AI to apply" in the Design
+    // Stage): queues a message that AIChatPanel sends once the thread is ready.
+    const [pendingChatMessage, setPendingChatMessage] = useState<string | undefined>(undefined);
+
+    // "Ask AI to apply" on a selected design element: attach the element as a
+    // reference chip and auto-send the instruction as the actual message.
+    const handleAskAI = useCallback((instruction: string, reference: string) => {
+        const label = reference.length > 80 ? reference.slice(0, 80) + "…" : reference;
+        setChatFocusItems((prev) => [
+            ...prev,
+            { id: `focus-${Date.now()}`, label, contextText: reference },
+        ]);
+        setPendingChatMessage(instruction);
+        setRightPanelMode("chat");
+    }, []);
+
     // ── Media ↔ Design stage ────────────────────────────────────────────────
     // The centre column shows the MediaStage (home) by default; the DesignStage
     // takes it over when the user opens it or the AI generates a new design.
@@ -1278,6 +1294,7 @@ const CreateContentScreen = () => {
                                 audio={seedItem?.audio}
                                 onAudioChange={(audio) => updateContent(contentId, { audio })}
                                 onSendToChat={handleSendToChat}
+                                onAskAI={handleAskAI}
                                 onClose={() => setStage("media")}
                                 onOpenChat={() => setRightPanelMode("chat")}
                                 readOnly={locked}
@@ -1702,6 +1719,8 @@ const CreateContentScreen = () => {
                                         setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
                                     }
                                     getLiveContent={getLiveChatContent}
+                                    initialMessage={pendingChatMessage}
+                                    onInitialMessageSent={() => setPendingChatMessage(undefined)}
                                     isCompact
                                 />
                             }
@@ -1741,6 +1760,8 @@ const CreateContentScreen = () => {
                                 setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
                             }
                             getLiveContent={getLiveChatContent}
+                            initialMessage={pendingChatMessage}
+                            onInitialMessageSent={() => setPendingChatMessage(undefined)}
                             isCompact
                             onCollapse={() => setRightPanelMode("none")}
                             // Tab bar owns the bottom inset (don't double it), but this

@@ -59,6 +59,8 @@ interface DesignStageProps {
     audio?: IContentAudio;
     onAudioChange: (audio: IContentAudio) => void;
     onSendToChat: (text: string) => void;
+    /** Auto-send an AI directive: (instruction message, element reference). */
+    onAskAI: (instruction: string, reference: string) => void;
     /** Close the Design Stage and return to the MediaStage view. */
     onClose: () => void;
     /** Open the AI chat (used by the empty state on mobile, where it's an overlay). */
@@ -310,13 +312,15 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     };
     const askAI = async () => {
         if (!modalText.trim() || !selected) return;
-        await addComment(modalText, { mediaAnchor: { elementId: selected.id, label: "element" }, isDirective: true });
+        const instruction = modalText.trim();
+        await addComment(instruction, { mediaAnchor: { elementId: selected.id, label: "element" }, isDirective: true });
         // Reference the element by its visible text when it has any (a locatable
-        // anchor for the AI), else fall back to its id.
-        const label = selected.text?.trim()
-            ? `the element that reads "${selected.text.trim().slice(0, 80)}"`
-            : `the selected element (${selected.id})`;
-        props.onSendToChat(`On ${label}: ${modalText}`);
+        // anchor for the AI), else fall back to its id. Auto-sends the instruction
+        // as the message with this reference attached.
+        const reference = selected.text?.trim()
+            ? `Applies to the design element that reads: "${selected.text.trim().slice(0, 120)}"`
+            : `Applies to the selected design element (id: ${selected.id})`;
+        props.onAskAI(instruction, reference);
         close();
     };
 

@@ -415,14 +415,27 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     // conversation has finished initializing, so it lands cleanly in the thread.
     const sentInitialRef = useRef<string | null>(null);
     useEffect(() => {
-        if (!initialMessage) return;
+        // Reset the guard when the queued message is cleared, so the SAME message
+        // text can be auto-sent again later (e.g. the same AI directive applied to
+        // a different element).
+        if (!initialMessage) {
+            sentInitialRef.current = null;
+            return;
+        }
         if (readOnly) return; // locked strategy — never start a new turn
         if (tokensExhausted) return; // out of AI tokens — block shows instead
         if (notReady) return;
         if (sentInitialRef.current === initialMessage) return;
         sentInitialRef.current = initialMessage;
         setStartingConversation(true);
-        sendMessage(initialMessage, undefined, selectedModel, undefined, getLiveContent?.());
+        // Attach any reference chips (focus items) to the auto-sent message, just
+        // like a manual send does, then clear them.
+        const focusedText =
+            focusItems.length > 0
+                ? focusItems.map((f) => f.contextText ?? f.label).join("\n")
+                : undefined;
+        sendMessage(initialMessage, focusedText, selectedModel, undefined, getLiveContent?.());
+        focusItems.forEach((f) => onRemoveFocusItem?.(f.id));
         onInitialMessageSent?.();
     }, [initialMessage, notReady, sendMessage, selectedModel, onInitialMessageSent]);
 
