@@ -27,6 +27,7 @@ import {
     contentStatusColors,
     isLockedStatus,
 } from "@/components/contents/types";
+import { useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapsed-context";
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import AIGeneratingHint from "@/components/shared/AIGeneratingHint";
 import { PanelComment } from "@/components/shared/CommentsPanel";
@@ -107,6 +108,14 @@ const CreateContentScreen = () => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
+    // Auto-collapse the web drawer rail on open so the content editor gets the
+    // full width. Applied once on mount (xl only); the user can re-expand manually after.
+    const { setCollapsed: setSidebarCollapsed } = useSidebarCollapsed();
+    useEffect(() => {
+        if (xl) setSidebarCollapsed(true);
+        // Run strictly once on mount; never fight a later manual toggle.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     const { contentId, title: paramTitle, idea: paramIdea, type: paramType, date: paramDate } =
         useLocalSearchParams<{
             contentId: string;
@@ -247,7 +256,8 @@ const CreateContentScreen = () => {
     }, [title, idea, caption, hashtags, script, imagePrompt, status, timeOfPosting, attachments, destinations, platformOptions, scheduleMode, date, targetPlatforms]);
 
     // ── Right side panel (comments + AI chat) ────────────────────────────────
-    const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("none");
+    // On web (xl) the AI chat panel opens by default; on mobile it stays collapsed.
+    const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>(xl ? "chat" : "none");
     const [chatFocusItems, setChatFocusItems] = useState<FocusItem[]>([]);
     // Measured width of the split row — feeds the RightSidePanel resize bounds.
     const [splitWidth, setSplitWidth] = useState(0);
