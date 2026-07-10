@@ -4,6 +4,7 @@ import ContentActionsMenu from "@/components/contents/detail/ContentActionsMenu"
 import ContentInfoModal from "@/components/contents/detail/ContentInfoModal";
 import { MEDIA_SPEC } from "@/components/contents/detail/media-spec";
 import MediaStage from "@/components/contents/detail/MediaStage";
+import DesignStage from "@/components/contents/detail/design-stage/DesignStage";
 import NoSocialsModal from "@/components/contents/detail/NoSocialsModal";
 import PostingSummary from "@/components/contents/detail/PostingSummary";
 import PreviewPanel from "@/components/contents/detail/PreviewPanel";
@@ -27,6 +28,7 @@ import {
     contentStatusColors,
     isLockedStatus,
 } from "@/components/contents/types";
+import { useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapsed-context";
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import AIGeneratingHint from "@/components/shared/AIGeneratingHint";
 import { PanelComment } from "@/components/shared/CommentsPanel";
@@ -44,6 +46,7 @@ import { LiveContent, LiveContentVariation } from "@/hooks/use-ai-chat";
 import { CaptionVariant, HashtagGroup, useAIGenerate } from "@/hooks/use-ai-generate";
 import { useContents } from "@/hooks/use-contents";
 import { useContentVariations } from "@/hooks/use-content-variations";
+import { useStrategies } from "@/hooks/use-strategies";
 import AppLayout from "@/layouts/app-layout";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { isFormatPlatformCompatible } from "@/shared-libs/firestore/trendly-pro/constants/content-format";
@@ -107,6 +110,14 @@ const CreateContentScreen = () => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
+    // Auto-collapse the web drawer rail on open so the content editor gets the
+    // full width. Applied once on mount (xl only); the user can re-expand manually after.
+    const { setCollapsed: setSidebarCollapsed } = useSidebarCollapsed();
+    useEffect(() => {
+        if (xl) setSidebarCollapsed(true);
+        // Run strictly once on mount; never fight a later manual toggle.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     const { contentId, title: paramTitle, idea: paramIdea, type: paramType, date: paramDate } =
         useLocalSearchParams<{
             contentId: string;
@@ -130,6 +141,7 @@ const CreateContentScreen = () => {
         deleteVariation,
         saveVariations,
     } = useContentVariations(contentId ?? null);
+    const { strategies } = useStrategies();
     const { socialAccounts } = useBrandSocialContext();
     const { selectedBrand, hasCapability } = useBrandContext();
     const { openModal } = useConfirmationModel();
@@ -247,7 +259,8 @@ const CreateContentScreen = () => {
     }, [title, idea, caption, hashtags, script, imagePrompt, status, timeOfPosting, attachments, destinations, platformOptions, scheduleMode, date, targetPlatforms]);
 
     // ── Right side panel (comments + AI chat) ────────────────────────────────
-    const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("none");
+    // On web (xl) the AI chat panel opens by default; on mobile it stays collapsed.
+    const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>(xl ? "chat" : "none");
     const [chatFocusItems, setChatFocusItems] = useState<FocusItem[]>([]);
     // Measured width of the split row — feeds the RightSidePanel resize bounds.
     const [splitWidth, setSplitWidth] = useState(0);
@@ -257,6 +270,46 @@ const CreateContentScreen = () => {
         setChatFocusItems((prev) => [...prev, { id: `focus-${Date.now()}`, label }]);
         setRightPanelMode("chat");
     }, []);
+
+    // Auto-send channel for the AI chat (used by "Ask AI to apply" in the Design
+    // Stage): queues a message that AIChatPanel sends once the thread is ready.
+    const [pendingChatMessage, setPendingChatMessage] = useState<string | undefined>(undefined);
+
+    // "Ask AI to apply" on a selected design element: attach the element as a
+    // reference chip and auto-send the instruction as the actual message.
+    const handleAskAI = useCallback((instruction: string, reference: string) => {
+        const label = reference.length > 80 ? reference.slice(0, 80) + "…" : reference;
+        setChatFocusItems((prev) => [
+            ...prev,
+            { id: `focus-${Date.now()}`, label, contextText: reference },
+        ]);
+        setPendingChatMessage(instruction);
+        setRightPanelMode("chat");
+    }, []);
+
+    // ── Media ↔ Design stage ────────────────────────────────────────────────
+    // The centre column shows the MediaStage (home) by default; the DesignStage
+    // takes it over when the user opens it or the AI generates a new design.
+    const [stage, setStage] = useState<"media" | "design">("media");
+    // Baseline of the design revision we've already "seen". Captured on first
+    // load so an EXISTING design doesn't auto-open the stage, and updated as new
+    // revisions arrive so a design the user just closed doesn't yank them back —
+    // only a genuinely newer revision auto-opens the DesignStage.
+    const seenRevisionRef = useRef<string | undefined>(undefined);
+    const revisionBaselinedRef = useRef(false);
+    useEffect(() => {
+        if (!seedItem) return;
+        const rev = seedItem.designRef?.revisionId;
+        if (!revisionBaselinedRef.current) {
+            seenRevisionRef.current = rev;
+            revisionBaselinedRef.current = true;
+            return;
+        }
+        if (rev && rev !== seenRevisionRef.current) {
+            seenRevisionRef.current = rev;
+            setStage("design");
+        }
+    }, [seedItem, seedItem?.designRef?.revisionId]);
 
     // "Send to AI" on a comment: focus its text in the chat (opens the panel).
     const handleCommentToChat = useCallback(
@@ -1148,8 +1201,14 @@ const CreateContentScreen = () => {
         [styles, colors, handleSave, saveState, xl, anyDirty, locked, selectedBrand?.id, contentId, hasCapability, handleOpenPublish, handleDuplicate, handleDelete]
     );
 
+    // When the Design Stage takes over the centre column it goes truly
+    // full-bleed — the page header hides so the canvas owns the whole screen.
+    // The DesignStage's own ✕ brings the user (and this header) back.
+    const designTakeover = stage === "design" && mediaSpec.kind !== "none";
+
     return (
         <AppLayout>
+            {!designTakeover ? (
             <PageHeader
                 title={title || "Create Content"}
                 showBackButton
@@ -1211,6 +1270,7 @@ const CreateContentScreen = () => {
                     </View>
                 }
             />
+            ) : null}
 
             {/* ── Split layout: form (left) + comments panel (right) ─────── */}
             <View
@@ -1222,6 +1282,25 @@ const CreateContentScreen = () => {
                     style={styles.flex1}
                     behavior={Platform.OS === "ios" ? "padding" : undefined}
                 >
+                    {designTakeover ? (
+                        <View style={styles.designTakeover}>
+                            <DesignStage
+                                contentId={contentId}
+                                brandId={selectedBrand?.id ?? ""}
+                                contentType={contentType}
+                                isVideo={mediaSpec.kind === "video"}
+                                designRef={seedItem?.designRef}
+                                voiceoverSource={script || caption}
+                                audio={seedItem?.audio}
+                                onAudioChange={(audio) => updateContent(contentId, { audio })}
+                                onSendToChat={handleSendToChat}
+                                onAskAI={handleAskAI}
+                                onClose={() => setStage("media")}
+                                onOpenChat={() => setRightPanelMode("chat")}
+                                readOnly={locked}
+                            />
+                        </View>
+                    ) : (
                     <ScrollView
                         contentContainerStyle={styles.scroll}
                         showsVerticalScrollIndicator={false}
@@ -1393,11 +1472,7 @@ const CreateContentScreen = () => {
                                     contentType={contentType}
                                     attachments={attachments}
                                     onAttachmentsChange={setAttachments}
-                                    imagePrompt={imagePrompt}
-                                    onImagePromptChange={setImagePrompt}
-                                    onGenerateImage={handleImageGenerate}
-                                    isGeneratingImage={imageGenerating}
-                                    generationError={imageGenError}
+                                    onOpenDesign={() => setStage("design")}
                                     readOnly={locked}
                                 />
                             )}
@@ -1618,6 +1693,7 @@ const CreateContentScreen = () => {
 
                         <View style={styles.bottomPad} />
                     </ScrollView>
+                    )}
                 </KeyboardAvoidingView>
 
                 {/* Right: split-pane comments on desktop only. Mobile uses
@@ -1643,6 +1719,8 @@ const CreateContentScreen = () => {
                                         setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
                                     }
                                     getLiveContent={getLiveChatContent}
+                                    initialMessage={pendingChatMessage}
+                                    onInitialMessageSent={() => setPendingChatMessage(undefined)}
                                     isCompact
                                 />
                             }
@@ -1682,6 +1760,8 @@ const CreateContentScreen = () => {
                                 setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
                             }
                             getLiveContent={getLiveChatContent}
+                            initialMessage={pendingChatMessage}
+                            onInitialMessageSent={() => setPendingChatMessage(undefined)}
                             isCompact
                             onCollapse={() => setRightPanelMode("none")}
                             // Tab bar owns the bottom inset (don't double it), but this
@@ -1756,6 +1836,19 @@ const CreateContentScreen = () => {
                 onChangePlatforms={setTargetPlatforms}
                 onClose={() => setShowInfoModal(false)}
                 readOnly={locked}
+                contentPillars={seedItem?.contentPillars}
+                strategyId={seedItem?.strategyId}
+                strategyName={
+                    seedItem?.strategyId
+                        ? strategies.find((s) => s.id === seedItem.strategyId)?.title
+                        : undefined
+                }
+                onOpenStrategy={(strategyId) =>
+                    router.push({
+                        pathname: "/(main)/(drawer)/(tabs)/(content)/content-strategies/[strategyId]" as any,
+                        params: { strategyId },
+                    })
+                }
             />
 
             {selectedBrand?.id && contentId ? (
@@ -1822,6 +1915,11 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
         () =>
             StyleSheet.create({
                 flex1: {
+                    flex: 1,
+                },
+                designTakeover: {
+                    // Full-bleed: the Design Stage owns the entire centre column,
+                    // edge to edge (no padding, no readable-column max width).
                     flex: 1,
                 },
                 scroll: {

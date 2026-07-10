@@ -58,6 +58,8 @@ export interface ChatMessage {
     control?: AIControl;
     /** Image URLs attached to (user) or produced by (assistant) this message. */
     images?: string[];
+    /** Reference/context attached to a user message (from focus chips). */
+    focusedText?: string;
 }
 
 export interface FocusItem {
@@ -415,14 +417,27 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     // conversation has finished initializing, so it lands cleanly in the thread.
     const sentInitialRef = useRef<string | null>(null);
     useEffect(() => {
-        if (!initialMessage) return;
+        // Reset the guard when the queued message is cleared, so the SAME message
+        // text can be auto-sent again later (e.g. the same AI directive applied to
+        // a different element).
+        if (!initialMessage) {
+            sentInitialRef.current = null;
+            return;
+        }
         if (readOnly) return; // locked strategy — never start a new turn
         if (tokensExhausted) return; // out of AI tokens — block shows instead
         if (notReady) return;
         if (sentInitialRef.current === initialMessage) return;
         sentInitialRef.current = initialMessage;
         setStartingConversation(true);
-        sendMessage(initialMessage, undefined, selectedModel, undefined, getLiveContent?.());
+        // Attach any reference chips (focus items) to the auto-sent message, just
+        // like a manual send does, then clear them.
+        const focusedText =
+            focusItems.length > 0
+                ? focusItems.map((f) => f.contextText ?? f.label).join("\n")
+                : undefined;
+        sendMessage(initialMessage, focusedText, selectedModel, undefined, getLiveContent?.());
+        focusItems.forEach((f) => onRemoveFocusItem?.(f.id));
         onInitialMessageSent?.();
     }, [initialMessage, notReady, sendMessage, selectedModel, onInitialMessageSent]);
 
@@ -524,6 +539,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
             text: m.content,
             timestamp: m.timestamp,
             control: m.control,
+            focusedText: m.focusedText,
             images: m.images && m.images.length > 0
                 ? m.images
                 : m.imageUrl
@@ -655,6 +671,14 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         return (
             <View style={[styles.messageRow, isAI ? styles.aiRow : styles.userRow]}>
                 <View style={[styles.messageColumn, isAI ? styles.messageColumnAI : styles.messageColumnUser]}>
+                    {!isAI && !!item.focusedText && (
+                        <View style={styles.refChip}>
+                            <View style={styles.refAccent} />
+                            <Text style={styles.refText} numberOfLines={4}>
+                                {item.focusedText}
+                            </Text>
+                        </View>
+                    )}
                     {item.images && item.images.length > 0 && (
                         <View style={[styles.imageGrid, isAI ? styles.imageGridAI : styles.imageGridUser]}>
                             {item.images.map((url, idx) => (
@@ -1272,6 +1296,25 @@ function useStyles(
                 bubbleText: { fontSize: isCompact ? 13 : 14, lineHeight: isCompact ? 19 : 21 },
                 aiText: { color: colors.text },
                 userText: { color: colors.onPrimary },
+                // Reference/context attached to a user message (from a focus chip).
+                refChip: {
+                    flexDirection: "row",
+                    overflow: "hidden",
+                    borderRadius: 8,
+                    backgroundColor: colors.tag,
+                    maxWidth: "100%",
+                    marginBottom: 4,
+                },
+                refAccent: { width: 3, backgroundColor: colors.primary },
+                refText: {
+                    flex: 1,
+                    paddingHorizontal: 8,
+                    paddingVertical: 5,
+                    fontSize: 11,
+                    lineHeight: 15,
+                    color: colors.textSecondary,
+                    fontStyle: "italic",
+                },
                 typingRow: {
                     flexDirection: "row",
                     alignItems: "flex-start",

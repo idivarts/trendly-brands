@@ -7,6 +7,7 @@ import MonthViewMobile from "@/components/content-calendar/MonthViewMobile";
 import WeekView from "@/components/content-calendar/WeekView";
 import { CalendarItem, CalendarView } from "@/components/content-calendar/types";
 import { ContentItem } from "@/components/contents/types";
+import { useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapsed-context";
 import { useSidebarParam } from "@/components/drawer-layout/use-sidebar-param";
 import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
 import { PanelComment } from "@/components/shared/CommentsPanel";
@@ -20,6 +21,7 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { useContents } from "@/hooks/use-contents";
 import { useFeatureTour } from "@/hooks/use-feature-tour";
+import { useStrategies } from "@/hooks/use-strategies";
 import AppLayout from "@/layouts/app-layout";
 import Colors from "@/shared-uis/constants/Colors";
 import {
@@ -58,6 +60,16 @@ const ContentCalendarScreen = () => {
     const styles = useStyles(colors, xl);
 
     const { items: allContents, addContent, updateContent } = useContents();
+    const { strategies } = useStrategies();
+    const handleOpenStrategy = useCallback(
+        (strategyId: string) => {
+            router.push({
+                pathname: "/(main)/(drawer)/(tabs)/(content)/content-strategies/[strategyId]" as any,
+                params: { strategyId },
+            });
+        },
+        [router]
+    );
     const items = useMemo<CalendarItem[]>(
         () => allContents.filter((i) => !!i.date && !i.isArchived),
         [allContents]
@@ -98,10 +110,22 @@ const ContentCalendarScreen = () => {
     const [detailItem, setDetailItem] = useState<ContentItem | null>(null);
 
     // ── Right panel ───────────────────────────────────────────────────────────
-    // 'chat'     → AI chat panel (desktop default)
+    // 'chat'     → AI chat panel
     // 'comments' → Calendar comments panel (month or item level)
     // 'none'     → collapsed; on mobile the panel floats over the page when open
-    const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>(xl ? "chat" : "none");
+    // Collapsed by default on web (xl) too — the calendar wants the full width.
+    const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("none");
+
+    // Opening the right panel (any mode) on web collapses the drawer rail to make
+    // room; closing it (mode → 'none') leaves the drawer as the user left it.
+    const { setCollapsed: setSidebarCollapsed } = useSidebarCollapsed();
+    const handleRightPanelModeChange = useCallback(
+        (mode: RightPanelMode) => {
+            if (xl && mode !== "none") setSidebarCollapsed(true);
+            setRightPanelMode(mode);
+        },
+        [xl, setSidebarCollapsed]
+    );
 
     // Which content item's comments are currently in focus.
     // null = month-level comments; set = item-level comments.
@@ -130,14 +154,14 @@ const ContentCalendarScreen = () => {
             if (prev.find((f) => f.id === item.id)) return prev;
             return [...prev, { id: item.id, label, contextText }];
         });
-        setRightPanelMode("chat");
-    }, []);
+        handleRightPanelModeChange("chat");
+    }, [handleRightPanelModeChange]);
 
     // Tapping the 💬 icon on a content chip: opens item-level comments.
     const handleComment = useCallback((item: CalendarItem) => {
         setSelectedCommentItem(item);
-        setRightPanelMode("comments");
-    }, []);
+        handleRightPanelModeChange("comments");
+    }, [handleRightPanelModeChange]);
 
     // "Send to AI" on a comment: focus its text in the chat panel and open chat.
     // Comments live either at month level or on a specific content item; we tell
@@ -154,9 +178,9 @@ const ContentCalendarScreen = () => {
                 ...prev,
                 { id: `comment-${comment.id}-${Date.now()}`, label, contextText },
             ]);
-            setRightPanelMode("chat");
+            handleRightPanelModeChange("chat");
         },
-        [selectedCommentItem]
+        [selectedCommentItem, handleRightPanelModeChange]
     );
 
     // Tapping a content chip body: first show a short-details preview modal.
@@ -266,7 +290,7 @@ const ContentCalendarScreen = () => {
     const rightSidePanel = (
         <RightSidePanel
             mode={rightPanelMode}
-            onModeChange={setRightPanelMode}
+            onModeChange={handleRightPanelModeChange}
             containerWidth={splitWidth}
             chatAnchorId="gt-calendar-ai-chat"
             commentsAnchorId="gt-calendar-comments"
@@ -400,7 +424,7 @@ const ContentCalendarScreen = () => {
             {!xl && hasItems && (
                 <RightPanelFab
                     mode={rightPanelMode}
-                    onModeChange={setRightPanelMode}
+                    onModeChange={handleRightPanelModeChange}
                     bottomOffset={70}
                     anchorId="gt-calendar-fab"
                     actions={[
@@ -431,6 +455,12 @@ const ContentCalendarScreen = () => {
                     setDetailItem(null);
                     handleFocusChat(item);
                 }}
+                strategyName={
+                    detailItem?.strategyId
+                        ? strategies.find((s) => s.id === detailItem.strategyId)?.title
+                        : undefined
+                }
+                onOpenStrategy={handleOpenStrategy}
             />
         </AppLayout>
     );

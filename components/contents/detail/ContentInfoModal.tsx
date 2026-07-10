@@ -12,7 +12,7 @@ import {
 import { Platform } from "@/shared-libs/firestore/trendly-pro/constants/platform";
 import Colors from "@/shared-uis/constants/Colors";
 import { useBreakpoints } from "@/hooks";
-import { faCircleInfo, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faCircleInfo, faLayerGroup, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
@@ -48,6 +48,14 @@ export interface ContentInfoModalProps {
     onClose: () => void;
     /** When true, status/title/idea/platforms are locked (content is scheduled or posted). */
     readOnly?: boolean;
+    /** AI-write-only content pillar tags, shown read-only when present. Never editable here. */
+    contentPillars?: string[];
+    /** Display name of the linked strategy, resolved by the caller (if `strategyId` is set). */
+    strategyName?: string;
+    /** Id of the strategy this content was generated from, if any. */
+    strategyId?: string;
+    /** Navigate to the linked strategy (only rendered when `strategyId` is set). */
+    onOpenStrategy?: (strategyId: string) => void;
 }
 
 const ContentInfoModal: React.FC<ContentInfoModalProps> = ({
@@ -64,6 +72,10 @@ const ContentInfoModal: React.FC<ContentInfoModalProps> = ({
     onChangePlatforms,
     onClose,
     readOnly = false,
+    contentPillars,
+    strategyName,
+    strategyId,
+    onOpenStrategy,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -276,6 +288,42 @@ const ContentInfoModal: React.FC<ContentInfoModalProps> = ({
                             accessibilityLabel="Idea or vision"
                             aria-labelledby="ci-idea"
                         />
+
+                        {!!contentPillars?.length && (
+                            <>
+                                <Text style={[styles.label, styles.mt18]}>Content Pillars</Text>
+                                <View style={styles.statusRow}>
+                                    {contentPillars.map((pillar) => (
+                                        <View key={pillar} style={[styles.platformChip, styles.platformChipActive]}>
+                                            <Text style={[styles.platformChipText, styles.platformChipTextActive]}>
+                                                {pillar}
+                                            </Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            </>
+                        )}
+
+                        {!!strategyId && (
+                            <>
+                                <Text style={[styles.label, styles.mt18]}>Strategy</Text>
+                                <Pressable
+                                    style={({ pressed }) => [styles.strategyLink, pressed && styles.pressed]}
+                                    onPress={() => {
+                                        onClose();
+                                        onOpenStrategy?.(strategyId);
+                                    }}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`Open strategy${strategyName ? `: ${strategyName}` : ""}`}
+                                >
+                                    <FontAwesomeIcon icon={faLayerGroup} size={13} color={colors.primary} />
+                                    <Text style={styles.strategyLinkText} numberOfLines={1}>
+                                        {strategyName ?? "View strategy"}
+                                    </Text>
+                                    <FontAwesomeIcon icon={faArrowRight} size={11} color={colors.primary} />
+                                </Pressable>
+                            </>
+                        )}
                     </ScrollView>
 
                     <View style={styles.footer}>
@@ -415,6 +463,23 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
         platformChipTextActive: {
             color: colors.primary,
             fontWeight: "700",
+        },
+        strategyLink: {
+            flexDirection: "row",
+            alignItems: "center",
+            alignSelf: "flex-start",
+            gap: 8,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderRadius: 10,
+            backgroundColor: colors.tag,
+            maxWidth: "100%",
+        },
+        strategyLinkText: {
+            fontSize: 13,
+            fontWeight: "600",
+            color: colors.primary,
+            flexShrink: 1,
         },
         lockNote: {
             fontSize: 12,
