@@ -3,6 +3,7 @@ import ContentCommentsPanel from "@/components/contents/ContentCommentsPanel";
 import ContentActionsMenu from "@/components/contents/detail/ContentActionsMenu";
 import ContentInfoModal from "@/components/contents/detail/ContentInfoModal";
 import { MEDIA_SPEC } from "@/components/contents/detail/media-spec";
+import MediaStage from "@/components/contents/detail/MediaStage";
 import DesignStage from "@/components/contents/detail/design-stage/DesignStage";
 import NoSocialsModal from "@/components/contents/detail/NoSocialsModal";
 import PostingSummary from "@/components/contents/detail/PostingSummary";
@@ -269,6 +270,30 @@ const CreateContentScreen = () => {
         setChatFocusItems((prev) => [...prev, { id: `focus-${Date.now()}`, label }]);
         setRightPanelMode("chat");
     }, []);
+
+    // ── Media ↔ Design stage ────────────────────────────────────────────────
+    // The centre column shows the MediaStage (home) by default; the DesignStage
+    // takes it over when the user opens it or the AI generates a new design.
+    const [stage, setStage] = useState<"media" | "design">("media");
+    // Baseline of the design revision we've already "seen". Captured on first
+    // load so an EXISTING design doesn't auto-open the stage, and updated as new
+    // revisions arrive so a design the user just closed doesn't yank them back —
+    // only a genuinely newer revision auto-opens the DesignStage.
+    const seenRevisionRef = useRef<string | undefined>(undefined);
+    const revisionBaselinedRef = useRef(false);
+    useEffect(() => {
+        if (!seedItem) return;
+        const rev = seedItem.designRef?.revisionId;
+        if (!revisionBaselinedRef.current) {
+            seenRevisionRef.current = rev;
+            revisionBaselinedRef.current = true;
+            return;
+        }
+        if (rev && rev !== seenRevisionRef.current) {
+            seenRevisionRef.current = rev;
+            setStage("design");
+        }
+    }, [seedItem, seedItem?.designRef?.revisionId]);
 
     // "Send to AI" on a comment: focus its text in the chat (opens the panel).
     const handleCommentToChat = useCallback(
@@ -1160,8 +1185,14 @@ const CreateContentScreen = () => {
         [styles, colors, handleSave, saveState, xl, anyDirty, locked, selectedBrand?.id, contentId, hasCapability, handleOpenPublish, handleDuplicate, handleDelete]
     );
 
+    // When the Design Stage takes over the centre column it goes truly
+    // full-bleed — the page header hides so the canvas owns the whole screen.
+    // The DesignStage's own ✕ brings the user (and this header) back.
+    const designTakeover = stage === "design" && mediaSpec.kind !== "none";
+
     return (
         <AppLayout>
+            {!designTakeover ? (
             <PageHeader
                 title={title || "Create Content"}
                 showBackButton
@@ -1223,6 +1254,7 @@ const CreateContentScreen = () => {
                     </View>
                 }
             />
+            ) : null}
 
             {/* ── Split layout: form (left) + comments panel (right) ─────── */}
             <View
@@ -1234,6 +1266,24 @@ const CreateContentScreen = () => {
                     style={styles.flex1}
                     behavior={Platform.OS === "ios" ? "padding" : undefined}
                 >
+                    {designTakeover ? (
+                        <View style={styles.designTakeover}>
+                            <DesignStage
+                                contentId={contentId}
+                                brandId={selectedBrand?.id ?? ""}
+                                contentType={contentType}
+                                isVideo={mediaSpec.kind === "video"}
+                                designRef={seedItem?.designRef}
+                                voiceoverSource={script || caption}
+                                audio={seedItem?.audio}
+                                onAudioChange={(audio) => updateContent(contentId, { audio })}
+                                onSendToChat={handleSendToChat}
+                                onClose={() => setStage("media")}
+                                onOpenChat={() => setRightPanelMode("chat")}
+                                readOnly={locked}
+                            />
+                        </View>
+                    ) : (
                     <ScrollView
                         contentContainerStyle={styles.scroll}
                         showsVerticalScrollIndicator={false}
@@ -1401,23 +1451,11 @@ const CreateContentScreen = () => {
                             ) : null}
 
                             {mediaSpec.kind !== "none" && (
-                                <DesignStage
-                                    contentId={contentId}
-                                    brandId={selectedBrand?.id ?? ""}
+                                <MediaStage
                                     contentType={contentType}
-                                    isVideo={mediaSpec.kind === "video"}
-                                    designRef={seedItem?.designRef}
-                                    voiceoverSource={script || caption}
-                                    audio={seedItem?.audio}
-                                    onAudioChange={(audio) => updateContent(contentId, { audio })}
-                                    onSendToChat={handleSendToChat}
                                     attachments={attachments}
                                     onAttachmentsChange={setAttachments}
-                                    imagePrompt={imagePrompt}
-                                    onImagePromptChange={setImagePrompt}
-                                    onGenerateImage={handleImageGenerate}
-                                    isGeneratingImage={imageGenerating}
-                                    generationError={imageGenError}
+                                    onOpenDesign={() => setStage("design")}
                                     readOnly={locked}
                                 />
                             )}
@@ -1638,6 +1676,7 @@ const CreateContentScreen = () => {
 
                         <View style={styles.bottomPad} />
                     </ScrollView>
+                    )}
                 </KeyboardAvoidingView>
 
                 {/* Right: split-pane comments on desktop only. Mobile uses
@@ -1855,6 +1894,11 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
         () =>
             StyleSheet.create({
                 flex1: {
+                    flex: 1,
+                },
+                designTakeover: {
+                    // Full-bleed: the Design Stage owns the entire centre column,
+                    // edge to edge (no padding, no readable-column max width).
                     flex: 1,
                 },
                 scroll: {

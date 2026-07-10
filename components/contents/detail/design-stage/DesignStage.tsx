@@ -1,22 +1,42 @@
 /**
- * DesignStage — the HTML-design MediaStage. The AI authors the post as HTML/CSS;
- * this renders it in a WebView/iframe (WYSIWYG), lets the user tap an element to
- * edit its text (deterministic, via the frame's DOM) or pin a comment / AI
- * directive, captures the frame to a PNG on "Save render" (preview == export),
- * and hands off to Canva. Falls back to the legacy upload/generate gallery when
- * there is no design yet. Video contents also get the audio panel.
+ * DesignStage — the full-screen design canvas that takes over the content
+ * detail's centre column. The AI authors the post as HTML/CSS; this renders it
+ * in a WebView/iframe (WYSIWYG), lets the user tap an element to edit its text
+ * (deterministic, via the frame's DOM) or pin a comment / AI directive, captures
+ * the frame to a PNG/MP4 on "Render" (preview == export), and hands off to Canva.
+ *
+ * It is opened explicitly from the MediaStage (or auto-opened when the AI writes
+ * a new design), and closed with the ✕ in its header — which returns the user to
+ * the MediaStage where the caption, script and everything else lives. When there
+ * is no design yet it shows a clean empty state pointing at the AI chat. Video
+ * contents get a collapsible Soundtrack panel that slides up from the bottom.
  */
 import { ContentType } from "@/components/content-calendar/types";
+import { useBreakpoints } from "@/hooks";
 import { useContentComments } from "@/hooks/use-content-comments";
-import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { IContentAudio, IContentDesignRef } from "@/shared-libs/firestore/trendly-pro/models/design";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
-import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
+import {
+    faChevronUp,
+    faMusic,
+    faWandMagicSparkles,
+    faXmark,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import MediaStage from "../MediaStage";
+import {
+    ActivityIndicator,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+} from "react-native";
 import { DesignFrameHandle, FrameOutMsg } from "./bridge";
 import DesignFrame from "./DesignFrame";
 import SoundtrackPanel from "./SoundtrackPanel";
@@ -33,16 +53,11 @@ interface DesignStageProps {
     audio?: IContentAudio;
     onAudioChange: (audio: IContentAudio) => void;
     onSendToChat: (text: string) => void;
+    /** Close the Design Stage and return to the MediaStage view. */
+    onClose: () => void;
+    /** Open the AI chat (used by the empty state on mobile, where it's an overlay). */
+    onOpenChat: () => void;
     readOnly?: boolean;
-
-    // Legacy gallery pass-through (no design yet).
-    attachments: Attachment[];
-    onAttachmentsChange: (next: Attachment[]) => void;
-    imagePrompt: string;
-    onImagePromptChange: (v: string) => void;
-    onGenerateImage: (prompt?: string, focusedSlideIndex?: number, model?: string) => void;
-    isGeneratingImage: boolean;
-    generationError?: string | null;
 }
 
 type Selected = { id: string; text: string } | null;
@@ -50,10 +65,10 @@ type Selected = { id: string; text: string } | null;
 const fmtTime = (ms: number) => `${(Math.max(ms, 0) / 1000).toFixed(1)}s`;
 
 const DesignStage: React.FC<DesignStageProps> = (props) => {
-    const { contentId, brandId, designRef, isVideo, readOnly } = props;
+    const { contentId, brandId, designRef, isVideo, readOnly, onClose, onOpenChat } = props;
     const theme = useTheme();
     const colors = Colors(theme);
-    const { width } = useBreakpoints();
+    const { width, xl } = useBreakpoints();
     const styles = useStyles(colors);
 
     const { revision, history, addRevision, setRenders, setVideoRender, revertTo } = useContentDesign(contentId, designRef);
@@ -73,6 +88,8 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     const [durMs, setDurMs] = useState(0);
     const [trackW, setTrackW] = useState(1);
     const [videoNote, setVideoNote] = useState<string | null>(null);
+    // Soundtrack starts collapsed — the user opens it on demand.
+    const [musicOpen, setMusicOpen] = useState(false);
 
     const html = revision?.html ?? "";
     const w = revision?.width ?? designRef?.width ?? 1080;
@@ -84,6 +101,14 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     const displayWidth = Math.min(width - 32, 340);
     const progress = durMs > 0 ? Math.min(curMs / durMs, 1) : 0;
 
+    // Short summary of what audio is attached — shown on the collapsed trigger.
+    const audioSummary = useMemo(() => {
+        const parts: string[] = [];
+        if (props.audio?.musicUrl) parts.push(props.audio.musicTitle || "Music");
+        if (props.audio?.voiceoverUrl) parts.push("Voiceover");
+        return parts.join(" · ");
+    }, [props.audio?.musicUrl, props.audio?.musicTitle, props.audio?.voiceoverUrl]);
+
     const goToSlide = (i: number) => {
         const clamped = Math.max(0, Math.min(i, slideCount - 1));
         setSlide(clamped);
@@ -92,7 +117,6 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
 
     const onMessage = (msg: FrameOutMsg) => {
         if (msg.type === "ready") {
-            // Video: pause at frame 0 so the user controls playback via the scrubber.
             if (isVideoDesign) frameRef.current?.seek(0);
         } else if (msg.type === "time") {
             setCurMs(msg.ms);
@@ -111,13 +135,8 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
         } else if (msg.type === "tap") {
             setSelected({ id: msg.id, text: msg.text });
         } else if (msg.type === "html") {
-            // A deterministic text edit returned the new full HTML → new revision.
             addRevision(msg.html, w, h, slideCount, docType, "text", revision?.id);
         } else if (msg.type === "renderSlides") {
-            // Upload each slide with a UNIQUE filename. These run concurrently, so
-            // deriving the name from Date.now() alone collides (same ms → same S3
-            // key → slides overwrite each other) — include the slide index + a
-            // random suffix so every slide lands on its own object.
             Promise.all(msg.dataUrls.map((d, i) => uploadPng(d, i)))
                 .then((urls) => revision && setRenders(revision.id, urls))
                 .finally(() => setCapturing(false));
@@ -168,7 +187,6 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
         }
     };
 
-    // Tap-to-seek on the scrubber track (track is `displayWidth` wide).
     const seekToFraction = (frac: number) => {
         if (durMs <= 0) return;
         const clamped = Math.max(0, Math.min(frac, 1));
@@ -185,8 +203,6 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                 setVideoNote("Video render is available on web for now.");
                 return;
             }
-            // Client-side MP4 encode (WebCodecs). Pause playback first so the
-            // capture loop controls the animation timeline.
             frameRef.current?.pause();
             void player.pause();
             setPlaying(false);
@@ -251,132 +267,180 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
         }
     };
 
+    const renderTitle = isVideoDesign ? "Render video" : slideCount > 1 ? "Render slides" : "Render";
+
     return (
         <View style={styles.container}>
-            {hasDesign ? (
-                <>
-                    <View style={styles.header}>
-                        <Text style={styles.title}>Studio</Text>
-                        <View style={styles.headerActions}>
-                            {history.length > 1 && !readOnly ? (
-                                <Pressable onPress={() => revertTo(history[1].id)} style={styles.headerBtn}>
-                                    <Text style={styles.headerBtnText}>Revert</Text>
-                                </Pressable>
-                            ) : null}
-                            {!readOnly ? (
-                                <Pressable onPress={saveRender} style={styles.headerBtn} disabled={capturing}>
-                                    {capturing ? (
-                                        <ActivityIndicator size="small" color={colors.text} />
-                                    ) : (
-                                        <Text style={styles.headerBtnText}>Save render</Text>
-                                    )}
-                                </Pressable>
-                            ) : null}
-                        </View>
-                    </View>
-
-                    <View style={styles.canvasWrap}>
-                        <DesignFrame
-                            ref={frameRef}
-                            html={html}
-                            width={w}
-                            height={h}
-                            displayWidth={displayWidth}
-                            onMessage={onMessage}
-                        />
-                        {isVideoDesign ? (
-                            <View style={[styles.videoBar, { width: displayWidth }]}>
-                                <Pressable style={styles.playBtn} onPress={togglePlay}>
-                                    <Text style={styles.playIcon}>{playing ? "❚❚" : "▶"}</Text>
-                                </Pressable>
-                                <Pressable
-                                    style={styles.track}
-                                    onLayout={(e) => setTrackW(e.nativeEvent.layout.width)}
-                                    onPress={(e) => seekToFraction(e.nativeEvent.locationX / Math.max(trackW, 1))}
-                                >
-                                    <View style={[styles.trackFill, { width: `${progress * 100}%` }]} />
-                                </Pressable>
-                                <Text style={styles.time}>
-                                    {fmtTime(curMs)} / {fmtTime(durMs)}
-                                </Text>
-                            </View>
-                        ) : slideCount > 1 ? (
-                            <View style={styles.slideNav}>
-                                <Pressable style={styles.slideArrow} onPress={() => goToSlide(slide - 1)}>
-                                    <Text style={styles.slideArrowText}>‹</Text>
-                                </Pressable>
-                                <View style={styles.dots}>
-                                    {Array.from({ length: slideCount }).map((_, i) => (
-                                        <Pressable key={i} onPress={() => goToSlide(i)} hitSlop={8}>
-                                            <View style={[styles.dot, i === slide && styles.dotActive]} />
-                                        </Pressable>
-                                    ))}
-                                </View>
-                                <Pressable style={styles.slideArrow} onPress={() => goToSlide(slide + 1)}>
-                                    <Text style={styles.slideArrowText}>›</Text>
-                                </Pressable>
-                            </View>
-                        ) : null}
-                        {videoNote ? <Text style={styles.videoNote}>{videoNote}</Text> : null}
-                    </View>
-
-                    {selected && !readOnly ? (
-                        <View style={styles.actionBar}>
-                            <Text style={styles.actionLabel}>Selected: {selected.id}</Text>
-                            <View style={styles.actionBtns}>
-                                <Pressable style={styles.action} onPress={openEdit}>
-                                    <Text style={styles.actionText}>Edit text</Text>
-                                </Pressable>
-                                <Pressable style={styles.action} onPress={openComment}>
-                                    <Text style={styles.actionText}>Comment / Ask AI</Text>
-                                </Pressable>
-                            </View>
-                            <Text style={styles.hint}>Tap text to edit. Pin a comment on anything and the AI applies it.</Text>
-                        </View>
-                    ) : null}
-                </>
-            ) : (
-                <>
-                    <MediaStage
-                        contentType={props.contentType}
-                        attachments={props.attachments}
-                        onAttachmentsChange={props.onAttachmentsChange}
-                        imagePrompt={props.imagePrompt}
-                        onImagePromptChange={props.onImagePromptChange}
-                        onGenerateImage={props.onGenerateImage}
-                        isGeneratingImage={props.isGeneratingImage}
-                        generationError={props.generationError}
-                        readOnly={readOnly}
-                    />
-                    {!readOnly ? (
-                        <Pressable
-                            style={styles.designCta}
-                            onPress={() =>
-                                props.onSendToChat(
-                                    "Design an on-brand post for this content (headline + visual + logo) as HTML that I can edit."
-                                )
-                            }
-                        >
-                            <Text style={styles.designCtaText}>Design with AI</Text>
+            {/* Header — close (✕) on the left, primary Render on the right. */}
+            <View style={styles.header}>
+                <Pressable
+                    style={({ pressed }) => [styles.closeBtn, pressed && styles.pressed]}
+                    onPress={onClose}
+                    accessibilityRole="button"
+                    accessibilityLabel="Close the Design Stage"
+                    hitSlop={8}
+                >
+                    <FontAwesomeIcon icon={faXmark} size={16} color={colors.text} />
+                </Pressable>
+                <Text style={styles.title}>Design Studio</Text>
+                <View style={styles.headerActions}>
+                    {hasDesign && history.length > 1 && !readOnly ? (
+                        <Pressable onPress={() => revertTo(history[1].id)} style={styles.secondaryBtn}>
+                            <Text style={styles.secondaryBtnText}>Revert</Text>
                         </Pressable>
                     ) : null}
-                </>
-            )}
+                    {hasDesign && !readOnly ? (
+                        <Pressable
+                            onPress={saveRender}
+                            style={({ pressed }) => [styles.renderBtn, pressed && styles.pressed]}
+                            disabled={capturing}
+                        >
+                            {capturing ? (
+                                <ActivityIndicator size="small" color={colors.onPrimary} />
+                            ) : (
+                                <Text style={styles.renderBtnText}>{renderTitle}</Text>
+                            )}
+                        </Pressable>
+                    ) : null}
+                </View>
+            </View>
 
-            {isVideo ? (
-                <SoundtrackPanel
-                    brandId={brandId}
-                    voiceoverSource={props.voiceoverSource}
-                    audio={props.audio}
-                    onAudioChange={props.onAudioChange}
-                    readOnly={readOnly}
-                />
+            {/* Body — canvas when there's a design, else a clean empty state. */}
+            <View style={styles.body}>
+                {hasDesign ? (
+                    <ScrollView
+                        contentContainerStyle={styles.canvasScroll}
+                        showsVerticalScrollIndicator={false}
+                    >
+                        <View style={styles.canvasWrap}>
+                            <DesignFrame
+                                ref={frameRef}
+                                html={html}
+                                width={w}
+                                height={h}
+                                displayWidth={displayWidth}
+                                onMessage={onMessage}
+                            />
+                            {isVideoDesign ? (
+                                <View style={[styles.videoBar, { width: displayWidth }]}>
+                                    <Pressable style={styles.playBtn} onPress={togglePlay}>
+                                        <Text style={styles.playIcon}>{playing ? "❚❚" : "▶"}</Text>
+                                    </Pressable>
+                                    <Pressable
+                                        style={styles.track}
+                                        onLayout={(e) => setTrackW(e.nativeEvent.layout.width)}
+                                        onPress={(e) => seekToFraction(e.nativeEvent.locationX / Math.max(trackW, 1))}
+                                    >
+                                        <View style={[styles.trackFill, { width: `${progress * 100}%` }]} />
+                                    </Pressable>
+                                    <Text style={styles.time}>
+                                        {fmtTime(curMs)} / {fmtTime(durMs)}
+                                    </Text>
+                                </View>
+                            ) : slideCount > 1 ? (
+                                <View style={styles.slideNav}>
+                                    <Pressable style={styles.slideArrow} onPress={() => goToSlide(slide - 1)}>
+                                        <Text style={styles.slideArrowText}>‹</Text>
+                                    </Pressable>
+                                    <View style={styles.dots}>
+                                        {Array.from({ length: slideCount }).map((_, i) => (
+                                            <Pressable key={i} onPress={() => goToSlide(i)} hitSlop={8}>
+                                                <View style={[styles.dot, i === slide && styles.dotActive]} />
+                                            </Pressable>
+                                        ))}
+                                    </View>
+                                    <Pressable style={styles.slideArrow} onPress={() => goToSlide(slide + 1)}>
+                                        <Text style={styles.slideArrowText}>›</Text>
+                                    </Pressable>
+                                </View>
+                            ) : null}
+                            {videoNote ? <Text style={styles.videoNote}>{videoNote}</Text> : null}
+
+                            {selected && !readOnly ? (
+                                <View style={styles.actionBar}>
+                                    <Text style={styles.actionLabel}>Selected: {selected.id}</Text>
+                                    <View style={styles.actionBtns}>
+                                        <Pressable style={styles.action} onPress={openEdit}>
+                                            <Text style={styles.actionText}>Edit text</Text>
+                                        </Pressable>
+                                        <Pressable style={styles.action} onPress={openComment}>
+                                            <Text style={styles.actionText}>Comment / Ask AI</Text>
+                                        </Pressable>
+                                    </View>
+                                    <Text style={styles.hint}>
+                                        Tap text to edit. Pin a comment on anything and the AI applies it.
+                                    </Text>
+                                </View>
+                            ) : null}
+
+                            {!readOnly ? (
+                                <Pressable style={styles.canvaBtn} onPress={designInCanva}>
+                                    <Text style={styles.canvaBtnText}>Deep-edit in Canva</Text>
+                                </Pressable>
+                            ) : null}
+                        </View>
+                    </ScrollView>
+                ) : (
+                    <View style={styles.empty}>
+                        <View style={styles.emptyIcon}>
+                            <FontAwesomeIcon icon={faWandMagicSparkles} size={26} color={colors.primary} />
+                        </View>
+                        <Text style={styles.emptyTitle}>Let's design this together</Text>
+                        <Text style={styles.emptySub}>
+                            {xl
+                                ? "Describe what you want in the AI chat on the right and I'll generate an editable design right here."
+                                : "Tell the AI what you want and I'll generate an editable design right here."}
+                        </Text>
+                        {!xl ? (
+                            <Pressable
+                                style={({ pressed }) => [styles.emptyCta, pressed && styles.pressed]}
+                                onPress={onOpenChat}
+                            >
+                                <Text style={styles.emptyCtaText}>Talk to the AI</Text>
+                            </Pressable>
+                        ) : null}
+                    </View>
+                )}
+            </View>
+
+            {/* Soundtrack — collapsed trigger + bottom panel (video only). */}
+            {isVideo && !musicOpen ? (
+                <Pressable
+                    style={({ pressed }) => [styles.musicTrigger, pressed && styles.pressed]}
+                    onPress={() => setMusicOpen(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Add music and voiceover"
+                >
+                    <View style={styles.musicIcon}>
+                        <FontAwesomeIcon icon={faMusic} size={14} color={colors.primary} />
+                    </View>
+                    <View style={styles.musicTriggerBody}>
+                        <Text style={styles.musicTriggerTitle}>
+                            {audioSummary ? "Soundtrack" : "Add music & voiceover"}
+                        </Text>
+                        {audioSummary ? (
+                            <Text style={styles.musicTriggerSub} numberOfLines={1}>
+                                {audioSummary}
+                            </Text>
+                        ) : null}
+                    </View>
+                    <FontAwesomeIcon icon={faChevronUp} size={13} color={colors.textSecondary} />
+                </Pressable>
             ) : null}
 
-            {hasDesign && !readOnly ? (
-                <Pressable style={styles.canvaBtn} onPress={designInCanva}>
-                    <Text style={styles.canvaBtnText}>Deep-edit in Canva</Text>
-                </Pressable>
+            {isVideo && musicOpen ? (
+                <View style={styles.musicSheet}>
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                        <SoundtrackPanel
+                            brandId={brandId}
+                            voiceoverSource={props.voiceoverSource}
+                            audio={props.audio}
+                            onAudioChange={props.onAudioChange}
+                            readOnly={readOnly}
+                            onClose={() => setMusicOpen(false)}
+                        />
+                    </ScrollView>
+                </View>
             ) : null}
 
             <Modal visible={modalOpen !== null} transparent animationType="fade" onRequestClose={close}>
@@ -405,8 +469,8 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                                 </Pressable>
                             ) : (
                                 <>
-                                    <Pressable style={styles.secondaryBtn} onPress={addPlainComment}>
-                                        <Text style={styles.secondaryBtnText}>Comment</Text>
+                                    <Pressable style={styles.modalSecondaryBtn} onPress={addPlainComment}>
+                                        <Text style={styles.modalSecondaryBtnText}>Comment</Text>
                                     </Pressable>
                                     <Pressable style={styles.primaryBtn} onPress={askAI}>
                                         <Text style={styles.primaryBtnText}>Ask AI to apply</Text>
@@ -425,13 +489,60 @@ const useStyles = (colors: any) =>
     useMemo(
         () =>
             StyleSheet.create({
-                container: { gap: 12 },
-                header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-                title: { fontSize: 16, fontWeight: "600", color: colors.text },
-                headerActions: { flexDirection: "row", gap: 8 },
-                headerBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.tag },
-                headerBtnText: { fontSize: 13, color: colors.text },
-                canvasWrap: { alignItems: "center", gap: 10 },
+                container: {
+                    // Full-area surface (not a card): fills the whole centre column
+                    // and sits on the app background so the header/soundtrack read as
+                    // real toolbars rather than a floating card.
+                    flex: 1,
+                    backgroundColor: colors.background,
+                    overflow: "hidden",
+                },
+                header: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 12,
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.06,
+                    elevation: 3,
+                    backgroundColor: colors.card,
+                    zIndex: 2,
+                },
+                closeBtn: {
+                    width: 34,
+                    height: 34,
+                    borderRadius: 17,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.tag,
+                },
+                title: { flex: 1, fontSize: 16, fontWeight: "700", color: colors.text },
+                headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+                secondaryBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: colors.tag },
+                secondaryBtnText: { fontSize: 13, color: colors.text },
+                renderBtn: {
+                    paddingHorizontal: 16,
+                    paddingVertical: 9,
+                    borderRadius: 9,
+                    backgroundColor: colors.primary,
+                    minWidth: 84,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowRadius: 12,
+                    shadowOpacity: 0.35,
+                    elevation: 4,
+                },
+                renderBtnText: { fontSize: 13, fontWeight: "700", color: colors.onPrimary },
+
+                body: { flex: 1 },
+                canvasScroll: { alignItems: "center", padding: 16, gap: 12 },
+                canvasWrap: { alignItems: "center", gap: 12 },
+
                 slideNav: { flexDirection: "row", alignItems: "center", gap: 12 },
                 slideArrow: {
                     width: 32,
@@ -459,12 +570,14 @@ const useStyles = (colors: any) =>
                     shadowOpacity: 0.35,
                     elevation: 4,
                 },
-                playIcon: { color: "#fff", fontSize: 13 },
+                playIcon: { color: colors.onPrimary, fontSize: 13 },
                 track: { flex: 1, height: 6, borderRadius: 3, backgroundColor: colors.tag, overflow: "hidden" },
                 trackFill: { height: 6, borderRadius: 3, backgroundColor: colors.primary },
                 time: { fontSize: 12, color: colors.textSecondary, minWidth: 64, textAlign: "right" },
                 videoNote: { fontSize: 12, color: colors.textSecondary },
+
                 actionBar: {
+                    alignSelf: "stretch",
                     borderRadius: 12,
                     backgroundColor: colors.card,
                     padding: 12,
@@ -480,10 +593,44 @@ const useStyles = (colors: any) =>
                 action: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: colors.tag },
                 actionText: { fontSize: 14, color: colors.text },
                 hint: { fontSize: 12, color: colors.textSecondary },
-                designCta: {
-                    alignSelf: "flex-start",
+
+                canvaBtn: {
+                    alignSelf: "center",
                     paddingHorizontal: 14,
                     paddingVertical: 10,
+                    borderRadius: 10,
+                    backgroundColor: colors.tag,
+                },
+                canvaBtnText: { color: colors.text, fontSize: 14 },
+
+                // Empty state
+                empty: {
+                    flex: 1,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: 28,
+                    gap: 12,
+                },
+                emptyIcon: {
+                    width: 64,
+                    height: 64,
+                    borderRadius: 20,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.aliceBlue,
+                },
+                emptyTitle: { fontSize: 17, fontWeight: "700", color: colors.text },
+                emptySub: {
+                    fontSize: 13,
+                    lineHeight: 20,
+                    color: colors.textSecondary,
+                    textAlign: "center",
+                    maxWidth: 320,
+                },
+                emptyCta: {
+                    marginTop: 4,
+                    paddingHorizontal: 18,
+                    paddingVertical: 11,
                     borderRadius: 10,
                     backgroundColor: colors.primary,
                     shadowColor: colors.primary,
@@ -492,15 +639,48 @@ const useStyles = (colors: any) =>
                     shadowOpacity: 0.35,
                     elevation: 4,
                 },
-                designCtaText: { color: "#fff", fontSize: 14, fontWeight: "600" },
-                canvaBtn: {
-                    alignSelf: "flex-start",
+                emptyCtaText: { color: colors.onPrimary, fontSize: 14, fontWeight: "700" },
+
+                // Soundtrack collapsed trigger
+                musicTrigger: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 12,
                     paddingHorizontal: 14,
-                    paddingVertical: 10,
-                    borderRadius: 10,
-                    backgroundColor: colors.tag,
+                    paddingVertical: 12,
+                    backgroundColor: colors.card,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: -3 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.06,
+                    elevation: 4,
                 },
-                canvaBtnText: { color: colors.text, fontSize: 14 },
+                musicIcon: {
+                    width: 34,
+                    height: 34,
+                    borderRadius: 10,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.aliceBlue,
+                },
+                musicTriggerBody: { flex: 1, gap: 2 },
+                musicTriggerTitle: { fontSize: 14, fontWeight: "700", color: colors.text },
+                musicTriggerSub: { fontSize: 12, color: colors.textSecondary },
+
+                // Soundtrack expanded bottom panel — narrows the design above it.
+                musicSheet: {
+                    maxHeight: "62%",
+                    backgroundColor: colors.card,
+                    borderTopLeftRadius: 16,
+                    borderTopRightRadius: 16,
+                    paddingTop: 6,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: -6 },
+                    shadowRadius: 16,
+                    shadowOpacity: 0.1,
+                    elevation: 8,
+                },
+
                 backdrop: {
                     flex: 1,
                     backgroundColor: "rgba(0,0,0,0.45)",
@@ -519,8 +699,8 @@ const useStyles = (colors: any) =>
                     backgroundColor: colors.tag,
                 },
                 sheetBtns: { flexDirection: "row", justifyContent: "flex-end", gap: 10 },
-                secondaryBtn: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, backgroundColor: colors.tag },
-                secondaryBtnText: { color: colors.text, fontSize: 14 },
+                modalSecondaryBtn: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, backgroundColor: colors.tag },
+                modalSecondaryBtnText: { color: colors.text, fontSize: 14 },
                 primaryBtn: {
                     paddingHorizontal: 14,
                     paddingVertical: 10,
@@ -532,7 +712,8 @@ const useStyles = (colors: any) =>
                     shadowOpacity: 0.35,
                     elevation: 4,
                 },
-                primaryBtnText: { color: "#fff", fontSize: 14, fontWeight: "600" },
+                primaryBtnText: { color: colors.onPrimary, fontSize: 14, fontWeight: "600" },
+                pressed: { opacity: 0.72 },
             }),
         [colors]
     );

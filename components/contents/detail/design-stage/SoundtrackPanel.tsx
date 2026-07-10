@@ -31,6 +31,8 @@ interface SoundtrackPanelProps {
     audio?: IContentAudio;
     onAudioChange: (audio: IContentAudio) => void;
     readOnly?: boolean;
+    /** When provided, renders a "Done" action in the header that collapses the panel. */
+    onClose?: () => void;
 }
 
 const SoundtrackPanel: React.FC<SoundtrackPanelProps> = ({
@@ -39,6 +41,7 @@ const SoundtrackPanel: React.FC<SoundtrackPanelProps> = ({
     audio,
     onAudioChange,
     readOnly,
+    onClose,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -180,8 +183,20 @@ const SoundtrackPanel: React.FC<SoundtrackPanelProps> = ({
         <View style={styles.card}>
             <View style={styles.header}>
                 <Text style={styles.title}>Soundtrack</Text>
-                <View style={styles.meter}>
-                    <TokenMeterBar tokens={tokens} />
+                <View style={styles.headerRight}>
+                    <View style={styles.meter}>
+                        <TokenMeterBar tokens={tokens} />
+                    </View>
+                    {onClose ? (
+                        <Pressable
+                            style={styles.doneBtn}
+                            onPress={onClose}
+                            accessibilityRole="button"
+                            accessibilityLabel="Collapse the soundtrack panel"
+                        >
+                            <Text style={styles.doneBtnText}>Done</Text>
+                        </Pressable>
+                    ) : null}
                 </View>
             </View>
             <TokenMeterNotice tokens={tokens} />
@@ -390,8 +405,11 @@ const useStyles = (colors: any) =>
                     elevation: 3,
                 },
                 header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+                headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
                 title: { fontSize: 15, fontWeight: "600", color: colors.text },
                 meter: { width: 90 },
+                doneBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.primary },
+                doneBtnText: { fontSize: 13, fontWeight: "700", color: "#fff" },
                 searchRow: {
                     flexDirection: "row",
                     alignItems: "center",

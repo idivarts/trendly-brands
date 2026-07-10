@@ -1,29 +1,40 @@
+/**
+ * MediaStage — the default "home" view of a content's media on the detail page.
+ *
+ * It is deliberately NOT a creation surface: it shows the media that's already
+ * there — uploaded by the user, or baked (rendered) out of the Design Studio —
+ * with large, fully-visible previews (single image, single video with a real
+ * first-frame thumbnail, or a multi-image carousel). Creation happens in one of
+ * two ways only: the prominent "Design with AI" action (opens the Design Stage)
+ * or a quiet, secondary "Upload your own" link. There is no middle-ground
+ * generate/enhance step here any more — that all lives in the Design Stage.
+ */
 import { ContentType } from "@/components/content-calendar/types";
-import AIGeneratingHint from "@/components/shared/AIGeneratingHint";
-import FloatingPromptInput from "@/components/shared/FloatingPromptInput";
+import { useBreakpoints } from "@/hooks";
 import { useAWSContext } from "@/shared-libs/contexts/aws-context.provider";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { pickMedia, pickMediaMulti, PickedAsset } from "@/shared-libs/utils/media-picker";
-import Colors from "@/shared-uis/constants/Colors";
 import AssetPreviewModal from "@/shared-uis/components/carousel/asset-preview-modal";
+import Colors from "@/shared-uis/constants/Colors";
 import {
     faArrowUpFromBracket,
     faChevronLeft,
     faChevronRight,
     faImage,
-    faMagicWandSparkles,
-    faPen,
     faPlay,
+    faWandMagicSparkles,
     faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useCallback, useEffect, useState } from "react";
+import { ResizeMode, Video } from "expo-av";
+import React, { useCallback, useState } from "react";
 import {
     ActivityIndicator,
     Image,
     Platform,
     Pressable,
+    ScrollView,
     StyleSheet,
     Text,
     View,
@@ -34,70 +45,50 @@ interface MediaStageProps {
     contentType: ContentType;
     attachments: Attachment[];
     onAttachmentsChange: (next: Attachment[]) => void;
-    /** AI image-generation prompt (only used when the type supports generation). */
-    imagePrompt: string;
-    onImagePromptChange: (v: string) => void;
-    /**
-     * Kick off generation/enhancement. `focusedSlideIndex` (carousel only) is the
-     * slide the prompt should act on; the backend decides edit-vs-add. `model` is
-     * the AI model picked in the prompt's model selector (optional).
-     */
-    onGenerateImage: (prompt?: string, focusedSlideIndex?: number, model?: string) => void;
-    isGeneratingImage: boolean;
-    /** Backend image-generation error to surface (e.g. after a failed job). */
-    generationError?: string | null;
+    /** Open the Design Stage (primary creation path). */
+    onOpenDesign: () => void;
     /** When true the media is read-only (content is scheduled or posted). */
     readOnly?: boolean;
 }
 
-const SUBTITLE: Record<ContentType, string> = {
-    reel: "Upload your finished reel video. You can also draft a script below.",
-    post: "Upload an image or generate one with AI.",
-    carousel: "Add slides in order — upload or generate each one.",
-    story: "Upload an image or generate one with AI.",
-    live: "",
-    text: "",
-    video: ""
-};
+const videoUrlOf = (a: Attachment): string | null =>
+    Platform.OS === "ios"
+        ? a.appleUrl ?? a.playUrl ?? null
+        : a.playUrl ?? a.appleUrl ?? null;
 
 const MediaStage: React.FC<MediaStageProps> = ({
     contentType,
     attachments,
     onAttachmentsChange,
-    imagePrompt,
-    onImagePromptChange,
-    onGenerateImage,
-    isGeneratingImage,
-    generationError = null,
+    onOpenDesign,
     readOnly = false,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useStyles(colors);
+    const { xl } = useBreakpoints();
+    const styles = useStyles(colors, xl);
     const spec = MEDIA_SPEC[contentType];
     const { uploadFileUri } = useAWSContext();
 
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [showPrompt, setShowPrompt] = useState(false);
-    // Carousel: which slide an enhance prompt acts on. Tap a slide to focus it.
-    const [focusedSlideIndex, setFocusedSlideIndex] = useState<number | null>(null);
-    // Full-screen preview (tap a slide). Holds either an image or a video URL —
-    // the modal shows a video player when previewVideoUrl is set, else the image.
-    const [previewImage, setPreviewImage] = useState(false);
+    const [previewOpen, setPreviewOpen] = useState(false);
     const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
     const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
 
-    // Once an image exists (AI-generated OR uploaded), generation becomes an
-    // image-to-image "Enhance" on the current image(s). Video types never enhance.
-    const isEnhance = spec.kind === "image" && attachments.length > 0;
+    const hasMedia = attachments.length > 0;
 
-    // Keep the focused slide valid as slides are added/removed.
-    useEffect(() => {
-        if (focusedSlideIndex !== null && focusedSlideIndex >= attachments.length) {
-            setFocusedSlideIndex(null);
+    const openPreview = useCallback((a: Attachment) => {
+        const isVideo = a.type === "video" || a.type === "reel";
+        if (isVideo) {
+            setPreviewVideoUrl(videoUrlOf(a));
+            setPreviewImageUrl(null);
+        } else {
+            setPreviewImageUrl(a.imageUrl ?? null);
+            setPreviewVideoUrl(null);
         }
-    }, [attachments.length, focusedSlideIndex]);
+        setPreviewOpen(true);
+    }, []);
 
     const uploadPicked = useCallback(
         (p: PickedAsset) =>
@@ -113,14 +104,10 @@ const MediaStage: React.FC<MediaStageProps> = ({
     const handleUpload = useCallback(async () => {
         setError(null);
         try {
-            // Carousels (multi): pick several at once and upload them together,
-            // rather than forcing one-at-a-time selection.
             if (spec.multi) {
                 const picked = await pickMediaMulti(spec.kind === "video" ? "video" : "image");
                 if (!picked.length) return;
 
-                // Enforce the per-type aspect ratio on each; upload the valid ones
-                // and report how many were skipped.
                 const valid = picked.filter((p) => !aspectError(contentType, p.width, p.height));
                 if (!valid.length) {
                     setError(aspectError(contentType, picked[0].width, picked[0].height));
@@ -143,7 +130,6 @@ const MediaStage: React.FC<MediaStageProps> = ({
             const picked = await pickMedia(spec.kind === "video" ? "video" : "image");
             if (!picked) return;
 
-            // Phase 2: enforce the per-type aspect-ratio range before uploading.
             const ratioError = aspectError(contentType, picked.width, picked.height);
             if (ratioError) {
                 setError(ratioError);
@@ -161,9 +147,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
     }, [attachments, contentType, spec.kind, spec.multi, spec.aspectLabel, uploadPicked, onAttachmentsChange]);
 
     const removeAt = useCallback(
-        (index: number) => {
-            onAttachmentsChange(attachments.filter((_, i) => i !== index));
-        },
+        (index: number) => onAttachmentsChange(attachments.filter((_, i) => i !== index)),
         [attachments, onAttachmentsChange]
     );
 
@@ -178,163 +162,187 @@ const MediaStage: React.FC<MediaStageProps> = ({
         [attachments, onAttachmentsChange]
     );
 
-    const generateLabel =
-        spec.kind === "video" ? "Generate" : isEnhance ? "Enhance with AI" : "Generate with AI";
+    const uploadLabel = spec.multi
+        ? "Upload slides"
+        : spec.kind === "video"
+            ? "Upload a video"
+            : "Upload an image";
+
+    // ── Preview renderers ────────────────────────────────────────────────────
+    const renderSingle = (a: Attachment) => {
+        const isVideo = a.type === "video" || a.type === "reel";
+        const vUrl = isVideo ? videoUrlOf(a) : null;
+        const canPreview = isVideo ? !!vUrl : !!a.imageUrl;
+        return (
+            <Pressable
+                style={styles.singleWrap}
+                onPress={canPreview ? () => openPreview(a) : undefined}
+                disabled={!canPreview}
+                accessibilityLabel={isVideo ? "Preview video full screen" : "Preview image full screen"}
+            >
+                {isVideo ? (
+                    vUrl ? (
+                        <>
+                            <Video
+                                source={{ uri: vUrl }}
+                                style={styles.singleMedia}
+                                resizeMode={ResizeMode.CONTAIN}
+                                shouldPlay={false}
+                                isMuted
+                                useNativeControls={false}
+                            />
+                            <View style={styles.playOverlay} pointerEvents="none">
+                                <View style={styles.playBadge}>
+                                    <FontAwesomeIcon icon={faPlay} size={18} color={colors.onPrimary} />
+                                </View>
+                            </View>
+                        </>
+                    ) : (
+                        <View style={styles.mediaFallback}>
+                            <FontAwesomeIcon icon={faPlay} size={22} color={colors.textSecondary} />
+                        </View>
+                    )
+                ) : a.imageUrl ? (
+                    <Image source={{ uri: a.imageUrl }} style={styles.singleMedia} resizeMode="contain" />
+                ) : (
+                    <View style={styles.mediaFallback}>
+                        <FontAwesomeIcon icon={faImage} size={22} color={colors.textSecondary} />
+                    </View>
+                )}
+
+                {!readOnly ? (
+                    <Pressable
+                        style={({ pressed }) => [styles.removeBtn, pressed && styles.pressed]}
+                        onPress={(e) => {
+                            e.stopPropagation();
+                            removeAt(0);
+                        }}
+                        accessibilityLabel="Remove media"
+                    >
+                        <FontAwesomeIcon icon={faXmark} size={12} color={colors.onPrimary} />
+                    </Pressable>
+                ) : null}
+            </Pressable>
+        );
+    };
+
+    const renderCarousel = () => (
+        <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.carousel}
+        >
+            {attachments.map((a, i) => {
+                const isVideo = a.type === "video" || a.type === "reel";
+                const vUrl = isVideo ? videoUrlOf(a) : null;
+                const canPreview = isVideo ? !!vUrl : !!a.imageUrl;
+                return (
+                    <View key={`${a.imageUrl ?? a.playUrl ?? "a"}-${i}`} style={styles.slideCol}>
+                        <Pressable
+                            style={styles.slideTile}
+                            onPress={canPreview ? () => openPreview(a) : undefined}
+                            disabled={!canPreview}
+                            accessibilityLabel={`Preview slide ${i + 1}`}
+                        >
+                            {isVideo ? (
+                                vUrl ? (
+                                    <>
+                                        <Video
+                                            source={{ uri: vUrl }}
+                                            style={styles.slideMedia}
+                                            resizeMode={ResizeMode.COVER}
+                                            shouldPlay={false}
+                                            isMuted
+                                            useNativeControls={false}
+                                        />
+                                        <View style={styles.playOverlay} pointerEvents="none">
+                                            <View style={styles.playBadgeSm}>
+                                                <FontAwesomeIcon icon={faPlay} size={12} color={colors.onPrimary} />
+                                            </View>
+                                        </View>
+                                    </>
+                                ) : (
+                                    <View style={styles.mediaFallback}>
+                                        <FontAwesomeIcon icon={faPlay} size={18} color={colors.textSecondary} />
+                                    </View>
+                                )
+                            ) : a.imageUrl ? (
+                                <Image source={{ uri: a.imageUrl }} style={styles.slideMedia} resizeMode="cover" />
+                            ) : (
+                                <View style={styles.mediaFallback}>
+                                    <FontAwesomeIcon icon={faImage} size={18} color={colors.textSecondary} />
+                                </View>
+                            )}
+
+                            <View style={styles.orderBadge}>
+                                <Text style={styles.orderBadgeText}>{i + 1}</Text>
+                            </View>
+
+                            {!readOnly ? (
+                                <Pressable
+                                    style={({ pressed }) => [styles.removeBtn, pressed && styles.pressed]}
+                                    onPress={(e) => {
+                                        e.stopPropagation();
+                                        removeAt(i);
+                                    }}
+                                    accessibilityLabel={`Remove slide ${i + 1}`}
+                                >
+                                    <FontAwesomeIcon icon={faXmark} size={11} color={colors.onPrimary} />
+                                </Pressable>
+                            ) : null}
+                        </Pressable>
+
+                        {!readOnly && attachments.length > 1 ? (
+                            <View style={styles.reorderRow}>
+                                <Pressable
+                                    style={({ pressed }) => [styles.reorderBtn, pressed && styles.pressed]}
+                                    onPress={() => moveBy(i, -1)}
+                                    disabled={i === 0}
+                                >
+                                    <FontAwesomeIcon
+                                        icon={faChevronLeft}
+                                        size={11}
+                                        color={i === 0 ? colors.textSecondary : colors.primary}
+                                    />
+                                </Pressable>
+                                <Pressable
+                                    style={({ pressed }) => [styles.reorderBtn, pressed && styles.pressed]}
+                                    onPress={() => moveBy(i, 1)}
+                                    disabled={i === attachments.length - 1}
+                                >
+                                    <FontAwesomeIcon
+                                        icon={faChevronRight}
+                                        size={11}
+                                        color={i === attachments.length - 1 ? colors.textSecondary : colors.primary}
+                                    />
+                                </Pressable>
+                            </View>
+                        ) : null}
+                    </View>
+                );
+            })}
+        </ScrollView>
+    );
 
     return (
         <View style={styles.card}>
             <View style={styles.headerRow}>
-                <Text style={styles.cardTitle}>
-                    {spec.kind === "video" ? "Video" : "Visuals"}
-                </Text>
+                <Text style={styles.cardTitle}>{spec.kind === "video" ? "Video" : "Visuals"}</Text>
                 {spec.aspectLabel ? (
                     <View style={styles.ratioChip}>
                         <Text style={styles.ratioChipText}>{spec.aspectLabel}</Text>
                     </View>
                 ) : null}
             </View>
-            <Text style={styles.cardSub}>{SUBTITLE[contentType]}</Text>
 
-            {/* Gallery */}
-            {attachments.length > 0 ? (
-                <View style={styles.gallery}>
-                    {attachments.map((a, i) => {
-                        const isVideo = a.type === "video" || a.type === "reel";
-                        const canFocus = spec.multi && !readOnly;
-                        const isFocused = spec.multi && focusedSlideIndex === i;
-                        // iOS plays the HLS/apple URL best; everything else uses playUrl.
-                        const videoUrl = isVideo
-                            ? Platform.OS === "ios"
-                                ? a.appleUrl ?? a.playUrl ?? null
-                                : a.playUrl ?? a.appleUrl ?? null
-                            : null;
-                        // Tapping the tile opens the full-screen preview (image or video).
-                        const canPreview = isVideo ? !!videoUrl : !!a.imageUrl;
-                        return (
-                            <View key={`${a.imageUrl ?? a.playUrl ?? a.appleUrl ?? "a"}-${i}`} style={styles.tileWrap}>
-                                <Pressable
-                                    style={[styles.tile, isFocused && styles.tileFocused]}
-                                    onPress={
-                                        canPreview
-                                            ? () => {
-                                                  if (isVideo) {
-                                                      setPreviewVideoUrl(videoUrl);
-                                                      setPreviewImageUrl(null);
-                                                  } else {
-                                                      setPreviewImageUrl(a.imageUrl ?? null);
-                                                      setPreviewVideoUrl(null);
-                                                  }
-                                                  setPreviewImage(true);
-                                              }
-                                            : undefined
-                                    }
-                                    disabled={!canPreview}
-                                    accessibilityLabel={
-                                        canPreview
-                                            ? isVideo
-                                                ? "Preview video full screen"
-                                                : "Preview image full screen"
-                                            : undefined
-                                    }
-                                >
-                                    {isVideo ? (
-                                        <View style={styles.videoTile}>
-                                            <FontAwesomeIcon icon={faPlay} size={18} color={colors.onPrimary} />
-                                            <Text style={styles.videoTileText}>Video</Text>
-                                        </View>
-                                    ) : a.imageUrl ? (
-                                        <Image source={{ uri: a.imageUrl }} style={styles.tileImg} resizeMode="cover" />
-                                    ) : (
-                                        <View style={styles.videoTile}>
-                                            <FontAwesomeIcon icon={faImage} size={18} color={colors.onPrimary} />
-                                        </View>
-                                    )}
-
-                                    {!readOnly ? (
-                                        <Pressable
-                                            style={({ pressed }) => [styles.removeBtn, pressed && styles.pressed]}
-                                            onPress={(e) => {
-                                                e.stopPropagation();
-                                                removeAt(i);
-                                            }}
-                                            accessibilityLabel="Remove media"
-                                        >
-                                            <FontAwesomeIcon icon={faXmark} size={11} color={colors.onPrimary} />
-                                        </Pressable>
-                                    ) : null}
-
-                                    {/* Focus this slide for AI editing — carousel only. Sits where the
-                                        magnify button used to; tapping the image now opens the preview. */}
-                                    {canFocus && !isVideo ? (
-                                        <Pressable
-                                            style={({ pressed }) => [
-                                                styles.focusBtn,
-                                                isFocused && styles.focusBtnActive,
-                                                pressed && styles.pressed,
-                                            ]}
-                                            onPress={(e) => {
-                                                e.stopPropagation();
-                                                setFocusedSlideIndex((cur) => (cur === i ? null : i));
-                                            }}
-                                            accessibilityLabel={
-                                                isFocused
-                                                    ? "Stop editing this slide"
-                                                    : "Edit this slide with AI"
-                                            }
-                                        >
-                                            <FontAwesomeIcon icon={faPen} size={10} color={colors.onPrimary} />
-                                        </Pressable>
-                                    ) : null}
-
-                                    {spec.multi ? (
-                                        <View style={styles.orderBadge}>
-                                            <Text style={styles.orderBadgeText}>{i + 1}</Text>
-                                        </View>
-                                    ) : null}
-
-                                    {isFocused ? (
-                                        <View style={styles.editingBadge}>
-                                            <Text style={styles.editingBadgeText}>Editing</Text>
-                                        </View>
-                                    ) : null}
-                                </Pressable>
-
-                                {/* Reorder controls — carousel only */}
-                                {!readOnly && spec.multi && attachments.length > 1 ? (
-                                    <View style={styles.reorderRow}>
-                                        <Pressable
-                                            style={({ pressed }) => [styles.reorderBtn, pressed && styles.pressed]}
-                                            onPress={() => moveBy(i, -1)}
-                                            disabled={i === 0}
-                                        >
-                                            <FontAwesomeIcon
-                                                icon={faChevronLeft}
-                                                size={11}
-                                                color={i === 0 ? colors.textSecondary : colors.primary}
-                                            />
-                                        </Pressable>
-                                        <Pressable
-                                            style={({ pressed }) => [styles.reorderBtn, pressed && styles.pressed]}
-                                            onPress={() => moveBy(i, 1)}
-                                            disabled={i === attachments.length - 1}
-                                        >
-                                            <FontAwesomeIcon
-                                                icon={faChevronRight}
-                                                size={11}
-                                                color={i === attachments.length - 1 ? colors.textSecondary : colors.primary}
-                                            />
-                                        </Pressable>
-                                    </View>
-                                ) : null}
-                            </View>
-                        );
-                    })}
-                </View>
-            ) : isGeneratingImage ? null : (
-                <View style={styles.emptyState}>
+            {/* Preview of what's already here (uploaded or baked from the Studio) */}
+            {hasMedia ? (
+                spec.multi ? renderCarousel() : renderSingle(attachments[0])
+            ) : (
+                <View style={styles.emptyPreview}>
                     <FontAwesomeIcon
                         icon={spec.kind === "video" ? faPlay : faImage}
-                        size={20}
+                        size={22}
                         color={colors.textSecondary}
                     />
                     <Text style={styles.emptyText}>
@@ -343,125 +351,59 @@ const MediaStage: React.FC<MediaStageProps> = ({
                 </View>
             )}
 
-            {/* Generation progress — image jobs run on the backend, so this also
-                shows after a reload while a job is still finishing. */}
-            {isGeneratingImage ? (
-                <View style={styles.generatingWrap}>
-                    <AIGeneratingHint
-                        title={spec.multi ? "Generating slide…" : "Generating image…"}
-                        subtitle="This can take up to a minute. You can keep working — it'll appear here automatically when it's ready."
-                    />
-                </View>
-            ) : null}
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-            {error || generationError ? (
-                <Text style={styles.errorText}>{error || generationError}</Text>
-            ) : null}
-
-            {!readOnly && isEnhance && spec.multi ? (
-                <Text style={styles.focusHint}>
-                    {focusedSlideIndex !== null
-                        ? `Editing slide ${focusedSlideIndex + 1}. Tap its edit button again to deselect.`
-                        : "Tap a slide's edit button to enhance it — or just describe a new slide to add."}
-                </Text>
-            ) : null}
-
-            {/* Actions — hidden when the content is locked (scheduled / posted) */}
+            {/* Primary path — design with AI. The whole block invites the user in. */}
             {!readOnly ? (
-                <View style={styles.actionRow}>
+                <>
                     <Pressable
-                        style={({ pressed }) => [styles.uploadBtn, pressed && styles.pressed]}
-                        onPress={handleUpload}
-                        disabled={uploading}
+                        style={({ pressed }) => [styles.designHero, pressed && styles.heroPressed]}
+                        onPress={onOpenDesign}
+                        accessibilityRole="button"
+                        accessibilityLabel="Open the Design Stage to create with AI"
                     >
-                        {uploading ? (
-                            <ActivityIndicator size="small" color={colors.primary} />
-                        ) : (
-                            <FontAwesomeIcon icon={faArrowUpFromBracket} size={13} color={colors.primary} />
-                        )}
-                        <Text style={styles.uploadBtnText}>
-                            {uploading
-                                ? "Uploading…"
-                                : spec.multi
-                                    ? "Upload slides"
-                                    : spec.kind === "video"
-                                        ? "Upload video"
-                                        : "Upload image"}
-                        </Text>
+                        <View style={styles.heroIcon}>
+                            <FontAwesomeIcon icon={faWandMagicSparkles} size={18} color={colors.onPrimary} />
+                        </View>
+                        <View style={styles.heroBody}>
+                            <Text style={styles.heroTitle}>
+                                {hasMedia ? "Refine in the Design Stage" : "Design with AI"}
+                            </Text>
+                            <Text style={styles.heroSub}>
+                                {hasMedia
+                                    ? "Open the Studio to edit this design, or ask the AI for a new one."
+                                    : "Create an on-brand, editable design — the AI does the heavy lifting."}
+                            </Text>
+                        </View>
+                        <FontAwesomeIcon icon={faChevronRight} size={15} color={colors.onPrimary} />
                     </Pressable>
 
-                    {spec.canGenerate ? (
-                        <Pressable
-                            style={({ pressed }) => [
-                                styles.genToggleBtn,
-                                showPrompt && styles.genToggleBtnActive,
-                                pressed && styles.pressed,
-                            ]}
-                            onPress={() => setShowPrompt(true)}
-                        >
-                            <FontAwesomeIcon
-                                icon={faMagicWandSparkles}
-                                size={13}
-                                color={showPrompt ? colors.onPrimary : colors.primary}
-                            />
-                            <Text
-                                style={[
-                                    styles.genToggleText,
-                                    showPrompt && styles.genToggleTextActive,
-                                ]}
-                            >
-                                {generateLabel}
-                            </Text>
-                        </Pressable>
-                    ) : null}
-                </View>
+                    {/* Secondary, intentionally quiet — upload your own. */}
+                    <Pressable
+                        style={styles.uploadLink}
+                        onPress={handleUpload}
+                        disabled={uploading}
+                        accessibilityRole="button"
+                        accessibilityLabel={uploadLabel}
+                    >
+                        {uploading ? (
+                            <ActivityIndicator size="small" color={colors.textSecondary} />
+                        ) : (
+                            <FontAwesomeIcon icon={faArrowUpFromBracket} size={12} color={colors.textSecondary} />
+                        )}
+                        <Text style={styles.uploadLinkText}>
+                            {uploading ? "Uploading…" : `or ${uploadLabel.toLowerCase()} instead`}
+                        </Text>
+                    </Pressable>
+                </>
             ) : null}
 
-            {/* AI generation prompt — floating gradient box (web) / modal (mobile) */}
-            {!readOnly && spec.canGenerate ? (
-                <FloatingPromptInput
-                    visible={showPrompt}
-                    title={
-                        isEnhance
-                            ? spec.multi
-                                ? focusedSlideIndex !== null
-                                    ? `Enhance slide ${focusedSlideIndex + 1}`
-                                    : "Enhance or add a slide"
-                                : "Enhance this image with AI"
-                            : spec.multi
-                                ? "Generate a slide with AI"
-                                : "Generate an image with AI"
-                    }
-                    subtitle={
-                        isEnhance
-                            ? "Describe the change — the AI edits your current image, keeping the rest consistent."
-                            : "Describe the visual — style, subject, brand colours…"
-                    }
-                    placeholder="E.g. minimalist flat-lay of orthopedic sandals on a warm beige background…"
-                    ctaLabel={isEnhance ? "Enhance" : spec.multi ? "Generate slide" : "Generate image"}
-                    // Always open empty — each generation/enhancement starts a fresh
-                    // prompt rather than re-showing the last one entered.
-                    initialValue=""
-                    task="image"
-                    onClose={() => setShowPrompt(false)}
-                    onGenerate={(prompt, model) => {
-                        onImagePromptChange(prompt);
-                        onGenerateImage(
-                            prompt,
-                            spec.multi && focusedSlideIndex !== null ? focusedSlideIndex : undefined,
-                            model
-                        );
-                    }}
-                />
-            ) : null}
-
-            {/* Full-screen image preview */}
-            {previewImage ? (
+            {previewOpen ? (
                 <AssetPreviewModal
-                    previewImage={previewImage}
+                    previewImage={previewOpen}
                     previewImageUrl={previewImageUrl}
                     previewVideoUrl={previewVideoUrl}
-                    setPreviewImage={setPreviewImage}
+                    setPreviewImage={setPreviewOpen}
                     theme={theme}
                 />
             ) : null}
@@ -469,12 +411,14 @@ const MediaStage: React.FC<MediaStageProps> = ({
     );
 };
 
-function useStyles(colors: ReturnType<typeof Colors>) {
+function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
+    const previewHeight = xl ? 340 : 260;
     return StyleSheet.create({
         card: {
             backgroundColor: colors.card,
             borderRadius: 14,
             padding: 16,
+            gap: 14,
             shadowColor: "#000",
             shadowOffset: { width: 0, height: 2 },
             shadowRadius: 8,
@@ -503,199 +447,184 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             letterSpacing: 0.4,
             color: colors.primary,
         },
-        cardSub: {
-            fontSize: 12,
-            color: colors.textSecondary,
-            lineHeight: 18,
-            marginTop: 4,
-            marginBottom: 14,
-        },
-        gallery: {
-            flexDirection: "row",
-            flexWrap: "wrap",
-            gap: 10,
-            marginBottom: 12,
-        },
-        tileWrap: {
-            alignItems: "center",
-            gap: 6,
-        },
-        tile: {
-            width: 96,
-            height: 120,
-            borderRadius: 10,
+
+        // Single preview — big and fully visible (contain, not cropped).
+        singleWrap: {
+            width: "100%",
+            height: previewHeight,
+            borderRadius: 12,
             overflow: "hidden",
             backgroundColor: colors.tag,
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 1 },
-            shadowRadius: 3,
-            shadowOpacity: 0.06,
-            elevation: 1,
+            alignItems: "center",
+            justifyContent: "center",
         },
-        tileFocused: {
-            shadowColor: colors.primary,
-            shadowOffset: { width: 0, height: 0 },
-            shadowRadius: 10,
-            shadowOpacity: 0.6,
-            elevation: 6,
-        },
-        tileImg: {
+        singleMedia: {
             width: "100%",
             height: "100%",
         },
-        editingBadge: {
-            position: "absolute",
-            top: 5,
-            left: 5,
-            paddingHorizontal: 6,
-            paddingVertical: 2,
-            borderRadius: 6,
-            backgroundColor: colors.primary,
-        },
-        editingBadgeText: {
-            fontSize: 9,
-            fontWeight: "800",
-            letterSpacing: 0.3,
-            color: colors.onPrimary,
-        },
-        focusHint: {
-            fontSize: 11.5,
-            color: colors.textSecondary,
-            fontStyle: "italic",
-            marginBottom: 10,
-        },
-        videoTile: {
+        mediaFallback: {
             flex: 1,
+            width: "100%",
             alignItems: "center",
             justifyContent: "center",
+        },
+        playOverlay: {
+            ...StyleSheet.absoluteFillObject,
+            alignItems: "center",
+            justifyContent: "center",
+        },
+        playBadge: {
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.backdropStrong,
+        },
+        playBadgeSm: {
+            width: 34,
+            height: 34,
+            borderRadius: 17,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.backdropStrong,
+        },
+
+        // Multi-image carousel — larger tiles than before.
+        carousel: {
+            gap: 12,
+            paddingVertical: 2,
+        },
+        slideCol: {
+            alignItems: "center",
             gap: 6,
-            backgroundColor: colors.primary,
         },
-        videoTileText: {
-            fontSize: 11,
-            fontWeight: "700",
-            color: colors.onPrimary,
-        },
-        removeBtn: {
-            position: "absolute",
-            top: 5,
-            right: 5,
-            width: 22,
-            height: 22,
-            borderRadius: 11,
+        slideTile: {
+            width: 150,
+            height: 188,
+            borderRadius: 12,
+            overflow: "hidden",
+            backgroundColor: colors.tag,
             alignItems: "center",
             justifyContent: "center",
-            backgroundColor: colors.backdropStrong,
         },
-        focusBtn: {
-            position: "absolute",
-            bottom: 5,
-            right: 5,
-            width: 22,
-            height: 22,
-            borderRadius: 11,
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: colors.backdropStrong,
-        },
-        focusBtnActive: {
-            backgroundColor: colors.primary,
+        slideMedia: {
+            width: "100%",
+            height: "100%",
         },
         orderBadge: {
             position: "absolute",
-            bottom: 5,
-            left: 5,
-            minWidth: 20,
-            height: 20,
-            paddingHorizontal: 5,
-            borderRadius: 10,
+            bottom: 6,
+            left: 6,
+            minWidth: 22,
+            height: 22,
+            paddingHorizontal: 6,
+            borderRadius: 11,
             alignItems: "center",
             justifyContent: "center",
             backgroundColor: colors.primary,
         },
         orderBadgeText: {
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: "800",
             color: colors.onPrimary,
         },
         reorderRow: {
             flexDirection: "row",
-            gap: 6,
+            gap: 8,
         },
         reorderBtn: {
-            width: 30,
-            height: 24,
-            borderRadius: 7,
+            width: 34,
+            height: 26,
+            borderRadius: 8,
             alignItems: "center",
             justifyContent: "center",
             backgroundColor: colors.tag,
         },
-        emptyState: {
+
+        removeBtn: {
+            position: "absolute",
+            top: 8,
+            right: 8,
+            width: 26,
+            height: 26,
+            borderRadius: 13,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.backdropStrong,
+        },
+
+        emptyPreview: {
             alignItems: "center",
             justifyContent: "center",
             gap: 8,
-            paddingVertical: 22,
-            borderRadius: 10,
+            height: previewHeight,
+            borderRadius: 12,
             backgroundColor: colors.tag,
-            marginBottom: 12,
         },
         emptyText: {
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: "600",
             color: colors.textSecondary,
-        },
-        generatingWrap: {
-            marginBottom: 12,
         },
         errorText: {
             fontSize: 12,
             color: colors.toastError,
-            marginBottom: 10,
         },
-        actionRow: {
-            flexDirection: "row",
-            gap: 10,
-        },
-        uploadBtn: {
-            flex: 1,
+
+        // Primary CTA — dominant, this is where we want the user to go.
+        designHero: {
             flexDirection: "row",
             alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            paddingVertical: 11,
-            borderRadius: 10,
-            backgroundColor: colors.aliceBlue,
-        },
-        uploadBtnText: {
-            fontSize: 13,
-            fontWeight: "700",
-            color: colors.primary,
-        },
-        genToggleBtn: {
-            flex: 1,
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            paddingVertical: 11,
-            borderRadius: 10,
-            backgroundColor: colors.tag,
-        },
-        genToggleBtnActive: {
+            gap: 14,
+            padding: 16,
+            borderRadius: 14,
             backgroundColor: colors.primary,
             shadowColor: colors.primary,
-            shadowOffset: { width: 0, height: 3 },
-            shadowRadius: 8,
-            shadowOpacity: 0.3,
-            elevation: 3,
+            shadowOffset: { width: 0, height: 6 },
+            shadowRadius: 16,
+            shadowOpacity: 0.35,
+            elevation: 6,
         },
-        genToggleText: {
-            fontSize: 13,
-            fontWeight: "700",
-            color: colors.primary,
+        heroPressed: {
+            opacity: 0.9,
         },
-        genToggleTextActive: {
+        heroIcon: {
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.backdropStrong,
+        },
+        heroBody: {
+            flex: 1,
+            gap: 3,
+        },
+        heroTitle: {
+            fontSize: 15,
+            fontWeight: "800",
             color: colors.onPrimary,
+        },
+        heroSub: {
+            fontSize: 12,
+            lineHeight: 17,
+            color: colors.onPrimary,
+            opacity: 0.85,
+        },
+
+        // Secondary — quiet, low-emphasis upload link.
+        uploadLink: {
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 7,
+            paddingVertical: 4,
+        },
+        uploadLinkText: {
+            fontSize: 13,
+            fontWeight: "600",
+            color: colors.textSecondary,
         },
         pressed: {
             opacity: 0.72,
