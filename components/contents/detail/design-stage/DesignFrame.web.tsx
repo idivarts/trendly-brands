@@ -25,7 +25,7 @@ const DesignFrameWeb = forwardRef<DesignFrameHandle, DesignFrameProps>(
             play: () => post({ type: "play" }),
             pause: () => post({ type: "pause" }),
             seek: (ms) => post({ type: "seek", ms }),
-            captureVideo: (fps, durationMs) => post({ type: "captureVideo", fps, durationMs }),
+            captureVideo: (fps, audio) => post({ type: "captureVideo", fps, audio }),
         }));
 
         useEffect(() => {

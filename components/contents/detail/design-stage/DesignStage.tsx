@@ -17,9 +17,10 @@ import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import MediaStage from "../MediaStage";
-import AudioPanel from "../media-stage/AudioPanel";
 import { DesignFrameHandle, FrameOutMsg } from "./bridge";
 import DesignFrame from "./DesignFrame";
+import SoundtrackPanel from "./SoundtrackPanel";
+import { useSoundtrackPlayer } from "./use-audio-player";
 import { useContentDesign } from "./use-content-design";
 
 interface DesignStageProps {
@@ -57,6 +58,9 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
 
     const { revision, history, addRevision, setRenders, setVideoRender, revertTo } = useContentDesign(contentId, designRef);
     const { addComment } = useContentComments(contentId);
+    // Video-synced audio: plays the music bed + voiceover in step with the video
+    // preview so "play" reflects the final mix (music ducked under the voice).
+    const player = useSoundtrackPlayer(props.audio);
 
     const frameRef = useRef<DesignFrameHandle>(null);
     const [selected, setSelected] = useState<Selected>(null);
@@ -95,6 +99,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
             setDurMs(msg.duration);
         } else if (msg.type === "ended") {
             setPlaying(false);
+            void player.pause();
         } else if (msg.type === "renderProgress") {
             setVideoNote(`Rendering video… ${msg.frame}/${msg.total}`);
         } else if (msg.type === "renderVideo") {
@@ -152,10 +157,13 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     const togglePlay = () => {
         if (playing) {
             frameRef.current?.pause();
+            void player.pause();
             setPlaying(false);
         } else {
+            const from = progress >= 1 ? 0 : curMs;
             if (progress >= 1) frameRef.current?.seek(0);
             frameRef.current?.play();
+            void player.playFrom(from);
             setPlaying(true);
         }
     };
@@ -164,8 +172,10 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     const seekToFraction = (frac: number) => {
         if (durMs <= 0) return;
         const clamped = Math.max(0, Math.min(frac, 1));
+        const ms = Math.round(clamped * durMs);
         setPlaying(false);
-        frameRef.current?.seek(Math.round(clamped * durMs));
+        frameRef.current?.seek(ms);
+        void player.seek(ms);
     };
 
     const saveRender = () => {
@@ -178,10 +188,20 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
             // Client-side MP4 encode (WebCodecs). Pause playback first so the
             // capture loop controls the animation timeline.
             frameRef.current?.pause();
+            void player.pause();
             setPlaying(false);
             setCapturing(true);
             setVideoNote("Rendering video…");
-            frameRef.current?.captureVideo(24, durMs || designRef?.durationMs || 6000);
+            const a = props.audio;
+            frameRef.current?.captureVideo(24, a
+                ? {
+                      musicUrl: a.musicUrl,
+                      voiceoverUrl: a.voiceoverUrl,
+                      musicVolume: a.musicVolume,
+                      voiceoverVolume: a.voiceoverVolume,
+                      duckMusic: a.duckMusic,
+                  }
+                : undefined);
             return;
         }
         setCapturing(true);
@@ -344,7 +364,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
             )}
 
             {isVideo ? (
-                <AudioPanel
+                <SoundtrackPanel
                     brandId={brandId}
                     voiceoverSource={props.voiceoverSource}
                     audio={props.audio}

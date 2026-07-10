@@ -29,7 +29,7 @@ const DesignFrameNative = forwardRef<DesignFrameHandle, DesignFrameProps>(
             seek: (ms) => send({ type: "seek", ms }),
             // WebCodecs isn't available in the native WebView — the bridge will
             // report an error, which DesignStage surfaces.
-            captureVideo: (fps, durationMs) => send({ type: "captureVideo", fps, durationMs }),
+            captureVideo: (fps, audio) => send({ type: "captureVideo", fps, audio }),
         }));
 
         return (

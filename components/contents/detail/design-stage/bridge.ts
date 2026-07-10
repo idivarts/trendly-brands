@@ -45,9 +45,51 @@ export const BRIDGE_SCRIPT = `
       window.parent.postMessage({ __frameBlob: true, type: type, blob: blob }, '*');
     }
   }
-  // Web-only: render the animated design to a single MP4 via html2canvas frames
-  // + WebCodecs VideoEncoder + mp4-muxer.
-  function captureVideo(fps){
+  // Decode + mix the music bed (ducked) + voiceover into rendered PCM channels,
+  // for muxing into the MP4. Resolves null if audio is absent or unsupported —
+  // the render then falls back to video-only (never blocks the export).
+  function prepAudio(cfg, totalMs){
+    return new Promise(function(resolve){
+      if (!cfg || (!cfg.musicUrl && !cfg.voiceoverUrl)){ resolve(null); return; }
+      var AC = window.AudioContext || window.webkitAudioContext;
+      var OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      if (!AC || !OAC || !window.AudioEncoder || !window.AudioData){ resolve(null); return; }
+      var sampleRate = 44100;
+      var length = Math.max(1, Math.ceil((totalMs/1000) * sampleRate));
+      var ctx = new AC();
+      function fetchDecode(url){
+        if (!url) return Promise.resolve(null);
+        return fetch(url, {mode:'cors'}).then(function(r){ return r.arrayBuffer(); }).then(function(b){ return ctx.decodeAudioData(b); }).catch(function(){ return null; });
+      }
+      Promise.all([fetchDecode(cfg.musicUrl), fetchDecode(cfg.voiceoverUrl)]).then(function(res){
+        var music = res[0], voice = res[1];
+        if (!music && !voice){ try{ctx.close();}catch(e){} resolve(null); return; }
+        var offline = new OAC(2, length, sampleRate);
+        if (music){
+          var m = offline.createBufferSource(); m.buffer = music; m.loop = true;
+          var mg = offline.createGain();
+          var base = (cfg.musicVolume==null?0.7:cfg.musicVolume);
+          mg.gain.value = (cfg.duckMusic!==false && voice) ? base*0.35 : base;
+          m.connect(mg); mg.connect(offline.destination); m.start(0);
+        }
+        if (voice){
+          var v = offline.createBufferSource(); v.buffer = voice;
+          var vg = offline.createGain(); vg.gain.value = (cfg.voiceoverVolume==null?1:cfg.voiceoverVolume);
+          v.connect(vg); vg.connect(offline.destination); v.start(0);
+        }
+        offline.startRendering().then(function(rendered){
+          try{ctx.close();}catch(e){}
+          var ch0 = rendered.getChannelData(0);
+          var ch1 = rendered.numberOfChannels>1 ? rendered.getChannelData(1) : ch0;
+          resolve({ ch0: ch0, ch1: ch1, sampleRate: sampleRate, length: rendered.length });
+        }).catch(function(){ try{ctx.close();}catch(e){} resolve(null); });
+      }).catch(function(){ try{ctx.close();}catch(e){} resolve(null); });
+    });
+  }
+
+  // Web-only: render the animated design to a single MP4 (html2canvas frames +
+  // WebCodecs VideoEncoder) with the soundtrack (AAC) muxed in via mp4-muxer.
+  function captureVideo(fps, audioCfg){
     if (!window.VideoEncoder || !window.VideoFrame){ send({type:'error',message:'WebCodecs not supported in this browser'}); return; }
     if (!vInited) vInit();
     var H0 = vScenes[0] ? vScenes[0].offsetHeight : 0;
@@ -56,42 +98,61 @@ export const BRIDGE_SCRIPT = `
     if (W <= 0 || H <= 0){ send({type:'error',message:'could not measure the video frame'}); return; }
     loadH2C(function(){
       loadScript(${JSON.stringify(MP4_MUXER_URL)}, 'Mp4Muxer', function(){
-        try {
-          if (!window.Mp4Muxer || !window.Mp4Muxer.Muxer){ send({type:'error',message:'mp4-muxer failed to load'}); return; }
-          var muxer = new window.Mp4Muxer.Muxer({
-            target: new window.Mp4Muxer.ArrayBufferTarget(),
-            video: { codec: 'avc', width: W, height: H },
-            fastStart: 'in-memory'
-          });
-          var encoder = new VideoEncoder({
-            output: function(chunk, meta){ muxer.addVideoChunk(chunk, meta); },
-            error: function(e){ send({type:'error',message:'encoder: '+String(e)}); }
-          });
-          encoder.configure({ codec: 'avc1.42001f', width: W, height: H, bitrate: 5000000, framerate: fps });
-          var frames = Math.max(1, Math.round(totalMs/1000*fps));
-          function nextFrame(i){
-            if (i >= frames){
-              encoder.flush().then(function(){
-                encoder.close();
-                muxer.finalize();
-                sendBlob('renderVideo', new Blob([muxer.target.buffer], {type:'video/mp4'}));
-              }).catch(function(e){ send({type:'error',message:'flush: '+String(e)}); });
-              return;
+        if (!window.Mp4Muxer || !window.Mp4Muxer.Muxer){ send({type:'error',message:'mp4-muxer failed to load'}); return; }
+        prepAudio(audioCfg, totalMs).then(function(audio){
+          try {
+            var muxerCfg = { target: new window.Mp4Muxer.ArrayBufferTarget(), video: { codec: 'avc', width: W, height: H }, fastStart: 'in-memory' };
+            if (audio){ muxerCfg.audio = { codec: 'aac', numberOfChannels: 2, sampleRate: audio.sampleRate }; }
+            var muxer = new window.Mp4Muxer.Muxer(muxerCfg);
+
+            var venc = new VideoEncoder({ output: function(c,m){ muxer.addVideoChunk(c,m); }, error: function(e){ send({type:'error',message:'venc: '+String(e)}); } });
+            venc.configure({ codec: 'avc1.42001f', width: W, height: H, bitrate: 5000000, framerate: fps });
+
+            // Encode the mixed audio up-front in ~1s AudioData chunks.
+            var audioDone = Promise.resolve();
+            if (audio){
+              try {
+                var aenc = new AudioEncoder({ output: function(c,m){ muxer.addAudioChunk(c,m); }, error: function(){} });
+                aenc.configure({ codec: 'mp4a.40.2', numberOfChannels: 2, sampleRate: audio.sampleRate, bitrate: 128000 });
+                var chunk = audio.sampleRate; // 1s
+                for (var off = 0; off < audio.length; off += chunk){
+                  var n = Math.min(chunk, audio.length - off);
+                  var planar = new Float32Array(n*2);
+                  planar.set(audio.ch0.subarray(off, off+n), 0);
+                  planar.set(audio.ch1.subarray(off, off+n), n);
+                  var ad = new AudioData({ format:'f32-planar', sampleRate: audio.sampleRate, numberOfFrames: n, numberOfChannels: 2, timestamp: Math.round(off/audio.sampleRate*1000000), data: planar });
+                  aenc.encode(ad); ad.close();
+                }
+                audioDone = aenc.flush().then(function(){ aenc.close(); }).catch(function(){});
+              } catch(e){ /* audio best-effort */ }
             }
-            var t = i * (1000/fps);
-            var idx = vSceneAt(t); vTranslate(idx); vSetTime(idx, t - vOffsets[idx]);
-            var stage = vScenes[idx] || document.body;
-            window.html2canvas(stage, {backgroundColor:'#ffffff', useCORS:true, scale:1, width:W, height:H, onclone:cleanClone}).then(function(canvas){
-              var frame = new VideoFrame(canvas, { timestamp: Math.round(t*1000), duration: Math.round(1000000/fps) });
-              encoder.encode(frame, { keyFrame: (i % fps === 0) });
-              frame.close();
-              i++;
-              if (i % 5 === 0) send({type:'renderProgress', frame:i, total:frames});
-              setTimeout(function(){ nextFrame(i); }, 0);
-            }).catch(function(e){ send({type:'error',message:String(e)}); });
-          }
-          nextFrame(0);
-        } catch(e){ send({type:'error',message:String(e)}); }
+
+            var frames = Math.max(1, Math.round(totalMs/1000*fps));
+            function nextFrame(i){
+              if (i >= frames){
+                audioDone.then(function(){
+                  venc.flush().then(function(){
+                    venc.close(); muxer.finalize();
+                    sendBlob('renderVideo', new Blob([muxer.target.buffer], {type:'video/mp4'}));
+                  }).catch(function(e){ send({type:'error',message:'flush: '+String(e)}); });
+                });
+                return;
+              }
+              var t = i * (1000/fps);
+              var idx = vSceneAt(t); vTranslate(idx); vSetTime(idx, t - vOffsets[idx]);
+              var stage = vScenes[idx] || document.body;
+              window.html2canvas(stage, {backgroundColor:'#ffffff', useCORS:true, scale:1, width:W, height:H, onclone:cleanClone}).then(function(canvas){
+                var frame = new VideoFrame(canvas, { timestamp: Math.round(t*1000), duration: Math.round(1000000/fps) });
+                venc.encode(frame, { keyFrame: (i % fps === 0) });
+                frame.close();
+                i++;
+                if (i % 5 === 0) send({type:'renderProgress', frame:i, total:frames});
+                setTimeout(function(){ nextFrame(i); }, 0);
+              }).catch(function(e){ send({type:'error',message:String(e)}); });
+            }
+            nextFrame(0);
+          } catch(e){ send({type:'error',message:String(e)}); }
+        });
       });
     });
   }
@@ -200,7 +261,7 @@ export const BRIDGE_SCRIPT = `
     if (msg.type === 'play'){ play(); return; }
     if (msg.type === 'pause'){ pause(); return; }
     if (msg.type === 'seek'){ seek(msg.ms||0); return; }
-    if (msg.type === 'captureVideo'){ captureVideo(msg.fps||24); return; }
+    if (msg.type === 'captureVideo'){ captureVideo(msg.fps||24, msg.audio); return; }
     if (msg.type === 'setText'){
       var el = document.querySelector('[data-el="'+msg.id+'"]');
       if (el){ el.textContent = msg.text; }
@@ -274,6 +335,14 @@ export type FrameOutMsg =
     | { type: "renderVideo"; blob: Blob }
     | { type: "error"; message: string };
 
+export interface CaptureAudio {
+    musicUrl?: string;
+    voiceoverUrl?: string;
+    musicVolume?: number;
+    voiceoverVolume?: number;
+    duckMusic?: boolean;
+}
+
 export interface DesignFrameHandle {
     setText: (id: string, text: string) => void;
     /** Page the carousel to slide `index` (slideWidth = per-slide px width). */
@@ -284,8 +353,9 @@ export interface DesignFrameHandle {
     play: () => void;
     pause: () => void;
     seek: (ms: number) => void;
-    /** Web only: encode the animated design to a single MP4 (renderVideo message). */
-    captureVideo: (fps: number, durationMs: number) => void;
+    /** Web only: encode the animated design to a single MP4 with the soundtrack
+     *  muxed in (renderVideo message). `audio` carries the music/voice URLs + mix. */
+    captureVideo: (fps: number, audio?: CaptureAudio) => void;
 }
 
 export interface DesignFrameProps {
