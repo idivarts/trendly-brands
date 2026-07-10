@@ -58,6 +58,8 @@ export interface ChatMessage {
     control?: AIControl;
     /** Image URLs attached to (user) or produced by (assistant) this message. */
     images?: string[];
+    /** Reference/context attached to a user message (from focus chips). */
+    focusedText?: string;
 }
 
 export interface FocusItem {
@@ -537,6 +539,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
             text: m.content,
             timestamp: m.timestamp,
             control: m.control,
+            focusedText: m.focusedText,
             images: m.images && m.images.length > 0
                 ? m.images
                 : m.imageUrl
@@ -668,6 +671,14 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         return (
             <View style={[styles.messageRow, isAI ? styles.aiRow : styles.userRow]}>
                 <View style={[styles.messageColumn, isAI ? styles.messageColumnAI : styles.messageColumnUser]}>
+                    {!isAI && !!item.focusedText && (
+                        <View style={styles.refChip}>
+                            <View style={styles.refAccent} />
+                            <Text style={styles.refText} numberOfLines={4}>
+                                {item.focusedText}
+                            </Text>
+                        </View>
+                    )}
                     {item.images && item.images.length > 0 && (
                         <View style={[styles.imageGrid, isAI ? styles.imageGridAI : styles.imageGridUser]}>
                             {item.images.map((url, idx) => (
@@ -1285,6 +1296,25 @@ function useStyles(
                 bubbleText: { fontSize: isCompact ? 13 : 14, lineHeight: isCompact ? 19 : 21 },
                 aiText: { color: colors.text },
                 userText: { color: colors.onPrimary },
+                // Reference/context attached to a user message (from a focus chip).
+                refChip: {
+                    flexDirection: "row",
+                    overflow: "hidden",
+                    borderRadius: 8,
+                    backgroundColor: colors.tag,
+                    maxWidth: "100%",
+                    marginBottom: 4,
+                },
+                refAccent: { width: 3, backgroundColor: colors.primary },
+                refText: {
+                    flex: 1,
+                    paddingHorizontal: 8,
+                    paddingVertical: 5,
+                    fontSize: 11,
+                    lineHeight: 15,
+                    color: colors.textSecondary,
+                    fontStyle: "italic",
+                },
                 typingRow: {
                     flexDirection: "row",
                     alignItems: "flex-start",
