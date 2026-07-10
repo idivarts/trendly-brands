@@ -91,6 +91,14 @@ export interface ContentItem extends CalendarItem {
     status: ContentStatus;
     /** Platforms this content is planned for (publishing intent). Mirrors `IContent.platforms`. */
     platforms: Platform[];
+    /** Strategy this content was generated from, if any. Mirrors `IContent.strategyId`. */
+    strategyId?: string;
+    /**
+     * AI-write-only content pillar tags. Only ever set by AI generation
+     * (push-to-calendar or the calendar chat's create_content tool) — never
+     * exposed as an editable field in any UI. Mirrors `IContent.contentPillars`.
+     */
+    contentPillars?: string[];
     caption?: string;
     hashtags?: string;
     timeOfPosting?: string; // "HH:MM"

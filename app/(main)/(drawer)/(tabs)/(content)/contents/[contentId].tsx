@@ -45,6 +45,7 @@ import { LiveContent, LiveContentVariation } from "@/hooks/use-ai-chat";
 import { CaptionVariant, HashtagGroup, useAIGenerate } from "@/hooks/use-ai-generate";
 import { useContents } from "@/hooks/use-contents";
 import { useContentVariations } from "@/hooks/use-content-variations";
+import { useStrategies } from "@/hooks/use-strategies";
 import AppLayout from "@/layouts/app-layout";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { isFormatPlatformCompatible } from "@/shared-libs/firestore/trendly-pro/constants/content-format";
@@ -139,6 +140,7 @@ const CreateContentScreen = () => {
         deleteVariation,
         saveVariations,
     } = useContentVariations(contentId ?? null);
+    const { strategies } = useStrategies();
     const { socialAccounts } = useBrandSocialContext();
     const { selectedBrand, hasCapability } = useBrandContext();
     const { openModal } = useConfirmationModel();
@@ -1774,6 +1776,19 @@ const CreateContentScreen = () => {
                 onChangePlatforms={setTargetPlatforms}
                 onClose={() => setShowInfoModal(false)}
                 readOnly={locked}
+                contentPillars={seedItem?.contentPillars}
+                strategyId={seedItem?.strategyId}
+                strategyName={
+                    seedItem?.strategyId
+                        ? strategies.find((s) => s.id === seedItem.strategyId)?.title
+                        : undefined
+                }
+                onOpenStrategy={(strategyId) =>
+                    router.push({
+                        pathname: "/(main)/(drawer)/(tabs)/(content)/content-strategies/[strategyId]" as any,
+                        params: { strategyId },
+                    })
+                }
             />
 
             {selectedBrand?.id && contentId ? (

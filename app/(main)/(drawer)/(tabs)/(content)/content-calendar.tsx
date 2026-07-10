@@ -21,6 +21,7 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { useContents } from "@/hooks/use-contents";
 import { useFeatureTour } from "@/hooks/use-feature-tour";
+import { useStrategies } from "@/hooks/use-strategies";
 import AppLayout from "@/layouts/app-layout";
 import Colors from "@/shared-uis/constants/Colors";
 import {
@@ -59,6 +60,16 @@ const ContentCalendarScreen = () => {
     const styles = useStyles(colors, xl);
 
     const { items: allContents, addContent, updateContent } = useContents();
+    const { strategies } = useStrategies();
+    const handleOpenStrategy = useCallback(
+        (strategyId: string) => {
+            router.push({
+                pathname: "/(main)/(drawer)/(tabs)/(content)/content-strategies/[strategyId]" as any,
+                params: { strategyId },
+            });
+        },
+        [router]
+    );
     const items = useMemo<CalendarItem[]>(
         () => allContents.filter((i) => !!i.date && !i.isArchived),
         [allContents]
@@ -444,6 +455,12 @@ const ContentCalendarScreen = () => {
                     setDetailItem(null);
                     handleFocusChat(item);
                 }}
+                strategyName={
+                    detailItem?.strategyId
+                        ? strategies.find((s) => s.id === detailItem.strategyId)?.title
+                        : undefined
+                }
+                onOpenStrategy={handleOpenStrategy}
             />
         </AppLayout>
     );

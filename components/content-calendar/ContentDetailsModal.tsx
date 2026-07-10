@@ -5,7 +5,7 @@ import {
 } from "@/components/contents/types";
 import { SOCIAL_PLATFORM_MAP } from "@/constants/Socials";
 import Colors from "@/shared-uis/constants/Colors";
-import { faArrowRight, faCommentDots, faRobot, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faCommentDots, faLayerGroup, faRobot, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
@@ -23,6 +23,10 @@ interface ContentDetailsModalProps {
     onAddComment?: (item: CalendarItem) => void;
     /** Focus this content in the AI chat panel (optional). */
     onSendToAI?: (item: CalendarItem) => void;
+    /** Display name of the linked strategy, resolved by the caller (if `item.strategyId` is set). */
+    strategyName?: string;
+    /** Navigate to the linked strategy (only rendered when `item.strategyId` is set). */
+    onOpenStrategy?: (strategyId: string) => void;
 }
 
 /**
@@ -37,6 +41,8 @@ const ContentDetailsModal: React.FC<ContentDetailsModalProps> = ({
     onOpenContentPage,
     onAddComment,
     onSendToAI,
+    strategyName,
+    onOpenStrategy,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -123,6 +129,43 @@ const ContentDetailsModal: React.FC<ContentDetailsModalProps> = ({
                         <Text style={styles.ideaText}>
                             {item.idea?.trim() ? item.idea : "No idea added yet."}
                         </Text>
+
+                        {!!item.contentPillars?.length && (
+                            <>
+                                <Text style={styles.label}>Content Pillars</Text>
+                                <View style={styles.platformRow}>
+                                    {item.contentPillars.map((pillar) => (
+                                        <View key={pillar} style={styles.platformChip}>
+                                            <Text style={styles.platformChipText}>{pillar}</Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            </>
+                        )}
+
+                        {!!item.strategyId && (
+                            <>
+                                <Text style={styles.label}>Strategy</Text>
+                                <Pressable
+                                    style={({ pressed }) => [
+                                        styles.strategyLink,
+                                        pressed && styles.btnPressed,
+                                    ]}
+                                    onPress={() => {
+                                        onClose();
+                                        onOpenStrategy?.(item.strategyId!);
+                                    }}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`Open strategy${strategyName ? `: ${strategyName}` : ""}`}
+                                >
+                                    <FontAwesomeIcon icon={faLayerGroup} size={13} color={colors.primary} />
+                                    <Text style={styles.strategyLinkText} numberOfLines={1}>
+                                        {strategyName ?? "View strategy"}
+                                    </Text>
+                                    <FontAwesomeIcon icon={faArrowRight} size={11} color={colors.primary} />
+                                </Pressable>
+                            </>
+                        )}
                     </ScrollView>
 
                     {(onAddComment || onSendToAI) && (
@@ -300,6 +343,23 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     fontSize: 14,
                     color: colors.text,
                     lineHeight: 20,
+                },
+                strategyLink: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    alignSelf: "flex-start",
+                    gap: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    borderRadius: 10,
+                    backgroundColor: colors.tag,
+                    maxWidth: "100%",
+                },
+                strategyLinkText: {
+                    fontSize: 13,
+                    fontWeight: "600",
+                    color: colors.primary,
+                    flexShrink: 1,
                 },
                 footer: {
                     flexDirection: "row",

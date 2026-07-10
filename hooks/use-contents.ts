@@ -73,6 +73,8 @@ function toContentItem(id: string, data: IContent): ContentItem {
         isArchived: data.isArchived ?? false,
         commentCount: data.commentCount ?? 0,
         createdAt: epochToIsoDate(data.createdAt),
+        strategyId: data.strategyId,
+        contentPillars: data.contentPillars,
     };
 }
 
