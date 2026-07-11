@@ -37,7 +37,7 @@ const useStreamThemeNative = (
                 ...defaultTheme.messageSimple.content,
             },
         },
-    });
+    } as DeepPartial<StreamTheme>);
 
     return {
         getTheme,

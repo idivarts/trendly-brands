@@ -1,3 +1,4 @@
+import { Focus, focusesToPromptString } from "@/types/focus";
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
@@ -92,7 +93,10 @@ export interface AIMessage {
     role: "user" | "assistant" | "tool";
     content: string;
     model?: string;
+    /** Legacy plain-string focus (read for old messages). */
     focusedText?: string;
+    /** Structured focus target(s) attached to this (user) message. */
+    focus?: Focus[];
     /** Legacy single-image field (kept for back-compat). New code uses `images`. */
     imageUrl?: string;
     /**
@@ -515,7 +519,7 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
     const sendMessage = useCallback(
         async (
             content: string,
-            focusedText?: string,
+            focus?: Focus[],
             model?: string,
             images?: string[],
             liveContent?: LiveContent
@@ -528,10 +532,14 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
             }
             const clientMsgId = newClientMsgId();
             const imgs = images && images.length > 0 ? images : undefined;
+            const focusList = focus && focus.length > 0 ? focus : undefined;
+            // Derived plain-string focus — a prompt fallback so the backend renders
+            // the reference even before it consumes the structured `focus` object.
+            const focusedText = focusList ? focusesToPromptString(focusList) : undefined;
             // Optimistic user bubble — dropped once its Firestore doc syncs.
             setPendingUsers((prev) => [
                 ...prev,
-                { role: "user", content, focusedText, images: imgs, clientMsgId, timestamp: Date.now() },
+                { role: "user", content, focus: focusList, focusedText, images: imgs, clientMsgId, timestamp: Date.now() },
             ]);
             streamingRef.current = "";
             streamImagesRef.current = [];
@@ -545,6 +553,7 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
                 conversationId: convId,
                 clientMsgId,
                 content,
+                focus: focusList,
                 focusedText,
                 model,
                 images: imgs,

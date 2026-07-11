@@ -62,6 +62,12 @@ export interface PanelComment {
     resolved?: boolean;
     /** Strategy inline snippet — shown as a quoted block above the text. */
     snippet?: string;
+    /**
+     * The structured target this comment is anchored to (a design element, a
+     * strategy passage, …). Lets "Send to AI" build a comment focus that inherits
+     * the underlying reference. See types/focus.ts.
+     */
+    focusArea?: import("@/types/focus").FocusArea;
 }
 
 export interface SharedCommentsPanelProps {

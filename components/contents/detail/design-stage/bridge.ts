@@ -196,6 +196,8 @@ export const BRIDGE_SCRIPT = `
             onclone: cleanClone
           }).then(function(canvas){
             urls.push(canvas.toDataURL('image/png'));
+            // Report progress per slide so the UI can show a determinate bar.
+            send({type:'renderProgress', frame: i+1, total: list.length});
             next(i+1);
           }).catch(function(e){ send({type:'error',message:String(e)}); });
         }

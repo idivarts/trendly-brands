@@ -94,7 +94,6 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             zIndex: 9999,
         },
         backdrop: {
-            position: "absolute",
             ...StyleSheet.absoluteFillObject,
             backgroundColor: colors.backdrop,
         },

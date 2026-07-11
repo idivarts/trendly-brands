@@ -35,7 +35,9 @@ const BrandAge: React.FC<BrandAgeProps> = ({
     const brandAge = brandData.age;
 
     const Wrapper = plainSection ? View : Surface;
-    const wrapperProps = plainSection
+    // View vs Surface accept different prop sets (elevation is Surface-only) —
+    // the union confuses the JSX spread, so widen to any.
+    const wrapperProps: any = plainSection
         ? { style: styles.wrapperPlain }
         : { style: styles.wrapperCard, elevation: 1 };
 

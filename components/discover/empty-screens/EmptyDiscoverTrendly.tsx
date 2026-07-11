@@ -16,7 +16,7 @@ export default function EmptyTrendlyInternalSelected() {
     const { selectedOrgBilling } = useOrganizationContext();
     const { selectedDb, setShowFilters } = useDiscovery();
 
-    const gradientColors = [colors.surface || colors.tag, colors.tag || colors.card];
+    const gradientColors: readonly [string, string] = [colors.surface || colors.tag, colors.tag || colors.card];
 
     return (
         <View style={styles.container}>

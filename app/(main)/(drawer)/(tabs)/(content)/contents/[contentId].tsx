@@ -29,7 +29,8 @@ import {
     isLockedStatus,
 } from "@/components/contents/types";
 import { useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapsed-context";
-import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
+import AIChatPanel from "@/components/shared/AIChatPanel";
+import { Focus, FocusArea } from "@/types/focus";
 import AIGeneratingHint from "@/components/shared/AIGeneratingHint";
 import { PanelComment } from "@/components/shared/CommentsPanel";
 import FloatingPromptInput from "@/components/shared/FloatingPromptInput";
@@ -238,6 +239,32 @@ const CreateContentScreen = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [seedItem?.status]);
 
+    // A Design-Stage render writes the baked images/video straight to the content
+    // doc (designRef.renderUrl + attachments) — out-of-band from the one-shot
+    // hydration above. Mirror the new attachments into local state the moment the
+    // baked cover changes, so MediaStage + the Preview panel show the render
+    // immediately instead of only after a page refresh. Baselined on first load so
+    // an existing render doesn't clobber anything, and treated as clean (the doc is
+    // already saved, so this isn't an unsaved edit).
+    const seenRenderRef = useRef<string | undefined>(undefined);
+    const renderBaselinedRef = useRef(false);
+    useEffect(() => {
+        if (!seedItem) return;
+        const renderUrl = seedItem.designRef?.renderUrl;
+        if (!renderBaselinedRef.current) {
+            seenRenderRef.current = renderUrl;
+            renderBaselinedRef.current = true;
+            return;
+        }
+        if (renderUrl && renderUrl !== seenRenderRef.current) {
+            seenRenderRef.current = renderUrl;
+            setAttachments(seedItem.attachments ?? []);
+            skipDirtyRef.current = true;
+            setDirty(false);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [seedItem, seedItem?.designRef?.renderUrl]);
+
     // ── Unsaved-changes (dirty) tracking ─────────────────────────────────────
     const [dirty, setDirty] = useState(false);
     const skipDirtyRef = useRef(true);
@@ -261,29 +288,35 @@ const CreateContentScreen = () => {
     // ── Right side panel (comments + AI chat) ────────────────────────────────
     // On web (xl) the AI chat panel opens by default; on mobile it stays collapsed.
     const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>(xl ? "chat" : "none");
-    const [chatFocusItems, setChatFocusItems] = useState<FocusItem[]>([]);
+    const [chatFocusItems, setChatFocusItems] = useState<Focus[]>([]);
     // Measured width of the split row — feeds the RightSidePanel resize bounds.
     const [splitWidth, setSplitWidth] = useState(0);
 
     const handleSendToChat = useCallback((text: string) => {
-        const label = text.length > 120 ? text.slice(0, 120) + "…" : text;
-        setChatFocusItems((prev) => [...prev, { id: `focus-${Date.now()}`, label }]);
+        const focusText = text.length > 80 ? text.slice(0, 80) + "…" : text;
+        setChatFocusItems((prev) => [
+            ...prev,
+            { id: `focus-${Date.now()}`, focusText, focusArea: { type: "content", contentId, title } },
+        ]);
         setRightPanelMode("chat");
-    }, []);
+    }, [contentId, title]);
 
     // Auto-send channel for the AI chat (used by "Ask AI to apply" in the Design
     // Stage): queues a message that AIChatPanel sends once the thread is ready.
     const [pendingChatMessage, setPendingChatMessage] = useState<string | undefined>(undefined);
 
-    // "Ask AI to apply" on a selected design element: attach the element as a
-    // reference chip and auto-send the instruction as the actual message.
-    const handleAskAI = useCallback((instruction: string, reference: string) => {
-        const label = reference.length > 80 ? reference.slice(0, 80) + "…" : reference;
-        setChatFocusItems((prev) => [
-            ...prev,
-            { id: `focus-${Date.now()}`, label, contextText: reference },
-        ]);
+    // "Ask AI to apply" on a selected design element: attach the structured focus
+    // and auto-send the instruction as the actual message.
+    const handleAskAI = useCallback((instruction: string, focus: Focus) => {
+        setChatFocusItems((prev) => [...prev, focus]);
         setPendingChatMessage(instruction);
+        setRightPanelMode("chat");
+    }, []);
+
+    // "Focus" on a design element: just attach it to the chat (no message sent),
+    // so the user's next message is scoped to that element.
+    const handleFocusElement = useCallback((focus: Focus) => {
+        setChatFocusItems((prev) => [...prev, focus]);
         setRightPanelMode("chat");
     }, []);
 
@@ -311,11 +344,20 @@ const CreateContentScreen = () => {
         }
     }, [seedItem, seedItem?.designRef?.revisionId]);
 
-    // "Send to AI" on a comment: focus its text in the chat (opens the panel).
-    const handleCommentToChat = useCallback(
-        (comment: PanelComment) => handleSendToChat(comment.text),
-        [handleSendToChat]
-    );
+    // "Send to AI" on a comment: attach a structured comment focus (inheriting
+    // whatever the comment itself is anchored to — e.g. a design element) and
+    // open the chat. The user types their ask; the reference travels with it.
+    const handleCommentToChat = useCallback((comment: PanelComment) => {
+        const focusArea: FocusArea = {
+            type: "comment",
+            commentId: comment.id,
+            text: comment.text,
+            inherits: comment.focusArea,
+        };
+        const focusText = `Comment: "${(comment.text || "").slice(0, 60)}"`;
+        setChatFocusItems((prev) => [...prev, { id: `focus-${Date.now()}`, focusText, focusArea }]);
+        setRightPanelMode("chat");
+    }, []);
 
     // `magicTarget` drives ONLY the prompt modal (which field's prompt is open).
     // `magicPlatform` remembers which editor the modal was opened from — "generic"
@@ -1295,6 +1337,7 @@ const CreateContentScreen = () => {
                                 onAudioChange={(audio) => updateContent(contentId, { audio })}
                                 onSendToChat={handleSendToChat}
                                 onAskAI={handleAskAI}
+                                onFocus={handleFocusElement}
                                 onClose={() => setStage("media")}
                                 onOpenChat={() => setRightPanelMode("chat")}
                                 readOnly={locked}

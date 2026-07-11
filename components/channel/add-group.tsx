@@ -21,7 +21,7 @@ const AddGroup: React.FC<AddGroupProps> = ({
         const channel = client.channel('messaging', groupName.toLowerCase().replace(/\s+/g, '-'), {
             name: groupName,
             members: [client.user?.id as string],
-        });
+        } as any);
 
         await channel.create();
         await channel.watch();
