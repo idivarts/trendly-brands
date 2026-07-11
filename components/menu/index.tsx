@@ -26,6 +26,7 @@ import {
     faGem,
     faHandshake,
     faLock,
+    faPalette,
     faPenToSquare,
     faPeopleGroup,
     faShareNodes,
@@ -177,6 +178,7 @@ const Menu = () => {
                 {
                     items: [
                         { id: "brand-profile", icon: faAddressCard, title: "Brand Profile", href: "/brand-profile" },
+                        { id: "design-system", icon: faPalette, title: "Design System", href: "/design-system" },
                         { id: "connected-accounts", icon: faShareNodes, title: "Connected Accounts", href: "/connected-accounts" },
                         { id: "members", icon: faUsers, title: "Members", href: "/members" },
                         ...(Platform.OS === "web"
