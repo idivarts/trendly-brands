@@ -13,11 +13,13 @@
  */
 import { ContentType } from "@/components/content-calendar/types";
 import { useBreakpoints } from "@/hooks";
+import { Focus, FocusArea } from "@/types/focus";
 import { useContentComments } from "@/hooks/use-content-comments";
 import { IContentAudio, IContentDesignRef } from "@/shared-libs/firestore/trendly-pro/models/design";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Colors from "@/shared-uis/constants/Colors";
 import {
+    faBullseye,
     faChevronUp,
     faClockRotateLeft,
     faComment,
@@ -59,8 +61,10 @@ interface DesignStageProps {
     audio?: IContentAudio;
     onAudioChange: (audio: IContentAudio) => void;
     onSendToChat: (text: string) => void;
-    /** Auto-send an AI directive: (instruction message, element reference). */
-    onAskAI: (instruction: string, reference: string) => void;
+    /** Auto-send an AI directive with a structured focus on the picked element. */
+    onAskAI: (instruction: string, focus: Focus) => void;
+    /** Attach the picked element to the AI chat as a focus (no message sent). */
+    onFocus: (focus: Focus) => void;
     /** Close the Design Stage and return to the MediaStage view. */
     onClose: () => void;
     /** Open the AI chat (used by the empty state on mobile, where it's an overlay). */
@@ -310,18 +314,43 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
         await addComment(modalText, { mediaAnchor: { elementId: selected.id, label: "element" } });
         close();
     };
+    // Structured focus on the exact selected element — carries elementId, slide,
+    // doc type + content id so the AI can target precisely (not just prose).
+    const buildElementFocus = (): Focus | null => {
+        if (!selected) return null;
+        const multi = slideCount > 1;
+        const area: FocusArea = {
+            type: "design-element",
+            contentId,
+            revisionId: revision?.id,
+            elementId: selected.id,
+            slideIndex: multi || isVideoDesign ? slide : undefined,
+            slideCount: multi ? slideCount : undefined,
+            docType,
+            text: selected.text?.trim() || undefined,
+        };
+        const focusText = selected.text?.trim()
+            ? `Design${multi ? ` · slide ${slide + 1}` : ""}: "${selected.text.trim().slice(0, 60)}"`
+            : `Design element${multi ? ` · slide ${slide + 1}` : ""}`;
+        return { id: `focus-${Date.now()}`, focusText, focusArea: area };
+    };
+
     const askAI = async () => {
         if (!modalText.trim() || !selected) return;
+        const focus = buildElementFocus();
+        if (!focus) return;
         const instruction = modalText.trim();
         await addComment(instruction, { mediaAnchor: { elementId: selected.id, label: "element" }, isDirective: true });
-        // Reference the element by its visible text when it has any (a locatable
-        // anchor for the AI), else fall back to its id. Auto-sends the instruction
-        // as the message with this reference attached.
-        const reference = selected.text?.trim()
-            ? `Applies to the design element that reads: "${selected.text.trim().slice(0, 120)}"`
-            : `Applies to the selected design element (id: ${selected.id})`;
-        props.onAskAI(instruction, reference);
+        props.onAskAI(instruction, focus);
         close();
+    };
+
+    // Just attach the element to the chat as a focus — no message, no comment.
+    const focusElement = () => {
+        const focus = buildElementFocus();
+        if (!focus) return;
+        props.onFocus(focus);
+        clearSelection();
     };
 
     const designInCanva = async () => {
@@ -461,6 +490,15 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                                                     <Text style={styles.tbBtnText}>Edit</Text>
                                                 </Pressable>
                                             ) : null}
+                                            <Pressable
+                                                style={({ pressed }) => [styles.tbBtn, pressed && styles.pressed]}
+                                                onPress={focusElement}
+                                                accessibilityRole="button"
+                                                accessibilityLabel="Focus this element in the AI chat"
+                                            >
+                                                <FontAwesomeIcon icon={faBullseye} size={12} color={colors.text} />
+                                                <Text style={styles.tbBtnText}>Focus</Text>
+                                            </Pressable>
                                             <Pressable
                                                 style={({ pressed }) => [styles.tbBtn, pressed && styles.pressed]}
                                                 onPress={openComment}

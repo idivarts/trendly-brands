@@ -24,9 +24,25 @@ const CommentsPanel: React.FC<CommentsPanelProps> = ({ strategyId, onCollapse, o
     const { comments, loading, addComment, addReply, resolveComment, deleteComment } =
         useStrategyComments(strategyId);
 
+    // Expose each comment's anchored passage as a structured focusArea so
+    // "Send to AI" builds a comment focus that inherits the exact snippet.
+    const panelComments: PanelComment[] = comments.map((c) => ({
+        ...c,
+        focusArea:
+            c.snippet && strategyId
+                ? {
+                      type: "strategy-snippet",
+                      strategyId,
+                      snippet: c.snippet,
+                      anchorStart: c.anchorStart,
+                      anchorEnd: c.anchorEnd,
+                  }
+                : undefined,
+    }));
+
     return (
         <SharedCommentsPanel
-            comments={comments}
+            comments={panelComments}
             loading={loading}
             onAddComment={addComment}
             onAddReply={addReply}

@@ -5,6 +5,7 @@ import AIChatHistory from "@/components/shared/AIChatHistory";
 import MarkdownMessage from "@/components/shared/MarkdownMessage";
 import { getAIChatStarter } from "@/constants/AIChatStarters";
 import { useBreakpoints } from "@/hooks";
+import { Focus } from "@/types/focus";
 import { AIControl, AIModule, LiveContent, useAIChat } from "@/hooks/use-ai-chat";
 import { useAIModels } from "@/hooks/use-ai-models";
 import { useEntitlements } from "@/hooks/use-entitlements";
@@ -58,20 +59,17 @@ export interface ChatMessage {
     control?: AIControl;
     /** Image URLs attached to (user) or produced by (assistant) this message. */
     images?: string[];
-    /** Reference/context attached to a user message (from focus chips). */
+    /** Structured focus target(s) attached to a user message. */
+    focus?: Focus[];
+    /** Legacy plain-string focus (shown for old messages without `focus`). */
     focusedText?: string;
 }
 
-export interface FocusItem {
-    id: string;
-    label: string;
-    /**
-     * Optional text sent to the AI in place of `label`. Use it to give the model
-     * the actionable identity of the focused thing (e.g. a content id) while the
-     * chip still shows a short human label. Falls back to `label` when unset.
-     */
-    contextText?: string;
-}
+// Focus lives in the shared focus module (types/focus.ts). Re-exported here for
+// convenience; `FocusItem` is a deprecated alias kept for existing imports.
+export type { Focus, FocusArea } from "@/types/focus";
+/** @deprecated use `Focus` (structured focus with a `focusArea`). */
+export type FocusItem = Focus;
 
 /**
  * The panel's two header actions, lifted out so a host (e.g. the Playground
@@ -150,7 +148,7 @@ interface AIChatPanelProps {
     onInitialMessageSent?: () => void;
 
     /** Selection chips lifted from the editor. Same shape as before. */
-    focusItems?: FocusItem[];
+    focusItems?: Focus[];
     onRemoveFocusItem?: (id: string) => void;
 
     /**
@@ -430,13 +428,9 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         if (sentInitialRef.current === initialMessage) return;
         sentInitialRef.current = initialMessage;
         setStartingConversation(true);
-        // Attach any reference chips (focus items) to the auto-sent message, just
-        // like a manual send does, then clear them.
-        const focusedText =
-            focusItems.length > 0
-                ? focusItems.map((f) => f.contextText ?? f.label).join("\n")
-                : undefined;
-        sendMessage(initialMessage, focusedText, selectedModel, undefined, getLiveContent?.());
+        // Attach the current focus items to the auto-sent message, just like a
+        // manual send does, then clear them.
+        sendMessage(initialMessage, focusItems, selectedModel, undefined, getLiveContent?.());
         focusItems.forEach((f) => onRemoveFocusItem?.(f.id));
         onInitialMessageSent?.();
     }, [initialMessage, notReady, sendMessage, selectedModel, onInitialMessageSent]);
@@ -539,6 +533,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
             text: m.content,
             timestamp: m.timestamp,
             control: m.control,
+            focus: m.focus,
             focusedText: m.focusedText,
             images: m.images && m.images.length > 0
                 ? m.images
@@ -583,10 +578,6 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         const trimmed = input.trim();
         if (readOnly || tokensExhausted || isStreaming || busy || uploadingImages) return;
         if (!trimmed && readyImageUrls.length === 0) return;
-        const focusedText =
-            focusItems.length > 0
-                ? focusItems.map((f) => f.contextText ?? f.label).join("\n")
-                : undefined;
         // Starting a brand-new conversation (e.g. from the hero/starter) requires
         // an async createThread round-trip before streaming begins. Flip on the
         // loader now so the user leaves the starter immediately instead of sitting
@@ -596,7 +587,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         if (startingNew) setStartingConversation(true);
         sendMessage(
             trimmed,
-            focusedText,
+            focusItems,
             selectedModel,
             readyImageUrls.length > 0 ? readyImageUrls : undefined,
             getLiveContent?.()
@@ -671,14 +662,23 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         return (
             <View style={[styles.messageRow, isAI ? styles.aiRow : styles.userRow]}>
                 <View style={[styles.messageColumn, isAI ? styles.messageColumnAI : styles.messageColumnUser]}>
-                    {!isAI && !!item.focusedText && (
-                        <View style={styles.refChip}>
-                            <View style={styles.refAccent} />
-                            <Text style={styles.refText} numberOfLines={4}>
-                                {item.focusedText}
-                            </Text>
-                        </View>
-                    )}
+                    {!isAI && item.focus && item.focus.length > 0
+                        ? item.focus.map((f) => (
+                              <View key={f.id} style={styles.refChip}>
+                                  <View style={styles.refAccent} />
+                                  <Text style={styles.refText} numberOfLines={3}>
+                                      {f.focusText}
+                                  </Text>
+                              </View>
+                          ))
+                        : !isAI && !!item.focusedText && (
+                              <View style={styles.refChip}>
+                                  <View style={styles.refAccent} />
+                                  <Text style={styles.refText} numberOfLines={4}>
+                                      {item.focusedText}
+                                  </Text>
+                              </View>
+                          )}
                     {item.images && item.images.length > 0 && (
                         <View style={[styles.imageGrid, isAI ? styles.imageGridAI : styles.imageGridUser]}>
                             {item.images.map((url, idx) => (
@@ -1045,7 +1045,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                                     <View key={item.id} style={styles.focusChip}>
                                         <View style={styles.focusChipAccent} />
                                         <Text style={styles.focusChipText} numberOfLines={1}>
-                                            {item.label}
+                                            {item.focusText}
                                         </Text>
                                         {onRemoveFocusItem && (
                                             <Pressable

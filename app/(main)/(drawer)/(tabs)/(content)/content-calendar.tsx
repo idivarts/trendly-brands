@@ -9,7 +9,8 @@ import { CalendarItem, CalendarView } from "@/components/content-calendar/types"
 import { ContentItem } from "@/components/contents/types";
 import { useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapsed-context";
 import { useSidebarParam } from "@/components/drawer-layout/use-sidebar-param";
-import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
+import AIChatPanel from "@/components/shared/AIChatPanel";
+import { Focus, FocusArea } from "@/types/focus";
 import { PanelComment } from "@/components/shared/CommentsPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
 import RightPanelFab from "@/components/shared/RightPanelFab";
@@ -131,7 +132,7 @@ const ContentCalendarScreen = () => {
     // null = month-level comments; set = item-level comments.
     const [selectedCommentItem, setSelectedCommentItem] = useState<CalendarItem | null>(null);
 
-    const [focusItems, setFocusItems] = useState<FocusItem[]>([]);
+    const [focusItems, setFocusItems] = useState<Focus[]>([]);
 
     const hasItems = items.length > 0;
 
@@ -146,13 +147,25 @@ const ContentCalendarScreen = () => {
 
     // Sending an item to chat: focuses it in the chat panel and opens chat if closed.
     const handleFocusChat = useCallback((item: CalendarItem) => {
-        const label = item.title.length > 80 ? item.title.slice(0, 80) + "..." : item.title;
-        // Carry the post's id (+ date/type) to the AI so calendar tools can act on
-        // this exact item; the chip itself still shows just the title.
-        const contextText = `Focused post [id:${item.id}] "${item.title}" (${item.type}, ${item.date})`;
+        const focusText = item.title.length > 60 ? item.title.slice(0, 60) + "…" : item.title;
+        // Structured calendar-content focus — carries the post's id/type/date so
+        // calendar tools can act on this exact item; the chip shows just the title.
         setFocusItems((prev) => {
             if (prev.find((f) => f.id === item.id)) return prev;
-            return [...prev, { id: item.id, label, contextText }];
+            return [
+                ...prev,
+                {
+                    id: item.id,
+                    focusText,
+                    focusArea: {
+                        type: "calendar-content",
+                        contentId: item.id,
+                        title: item.title,
+                        contentType: item.type,
+                        date: item.date,
+                    },
+                },
+            ];
         });
         handleRightPanelModeChange("chat");
     }, [handleRightPanelModeChange]);
@@ -168,15 +181,27 @@ const ContentCalendarScreen = () => {
     // the AI which, and (for item comments) the post's id so it can act on it.
     const handleSendCommentToAI = useCallback(
         (comment: PanelComment) => {
-            const label =
-                comment.text.length > 80 ? comment.text.slice(0, 80) + "..." : comment.text;
-            const target = selectedCommentItem
-                ? `on post [id:${selectedCommentItem.id}] "${selectedCommentItem.title}"`
-                : "on the calendar month";
-            const contextText = `Comment ${target}: "${comment.text}"`;
+            // A comment focus that inherits the item it's on (or the comment's own
+            // anchor for month-level comments).
+            const inherits: FocusArea | undefined = selectedCommentItem
+                ? {
+                      type: "calendar-content",
+                      contentId: selectedCommentItem.id,
+                      title: selectedCommentItem.title,
+                      contentType: selectedCommentItem.type,
+                      date: selectedCommentItem.date,
+                  }
+                : comment.focusArea;
+            const focusArea: FocusArea = {
+                type: "comment",
+                commentId: comment.id,
+                text: comment.text,
+                inherits,
+            };
+            const focusText = `Comment: "${(comment.text || "").slice(0, 60)}"`;
             setFocusItems((prev) => [
                 ...prev,
-                { id: `comment-${comment.id}-${Date.now()}`, label, contextText },
+                { id: `comment-${comment.id}-${Date.now()}`, focusText, focusArea },
             ]);
             handleRightPanelModeChange("chat");
         },

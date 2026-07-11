@@ -15,7 +15,8 @@ import { useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapse
 import { useSidebarParam } from "@/components/drawer-layout/use-sidebar-param";
 import { GUIDE_TOUR_STRATEGY_MOBILE, GUIDE_TOUR_STRATEGY_WEB } from "@/components/guide-tour/guide-tour-config";
 import { formatDateForWebInput } from "@/components/modals/DatePickerModal";
-import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
+import AIChatPanel from "@/components/shared/AIChatPanel";
+import { Focus, FocusArea } from "@/types/focus";
 import { PanelComment } from "@/components/shared/CommentsPanel";
 import RightPanelFab from "@/components/shared/RightPanelFab";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
@@ -93,7 +94,7 @@ const ContentStrategyDetail = () => {
     // toolbar's own Share modal (which shares the strategy currently open).
     const [shareStrategy, setShareStrategy] = useState<ContentStrategy | null>(null);
     const canShare = hasCapability("manage_content_strategy") && !!selectedBrand?.id;
-    const [chatFocusItems, setChatFocusItems] = useState<FocusItem[]>([]);
+    const [chatFocusItems, setChatFocusItems] = useState<Focus[]>([]);
     const [initialChatMessage, setInitialChatMessage] = useState<string | undefined>(
         initialPrompt
     );
@@ -335,21 +336,31 @@ const ContentStrategyDetail = () => {
     );
 
     const handleSendToChat = useCallback((text: string) => {
-        const label = text.length > 120 ? text.slice(0, 120) + "..." : text;
-        setChatFocusItems((prev) => {
-            const id = `focus-${Date.now()}`;
-            return [...prev, { id, label }];
-        });
-    }, []);
+        const snippet = text.trim();
+        const focusText = snippet.length > 80 ? snippet.slice(0, 80) + "…" : snippet;
+        setChatFocusItems((prev) => [
+            ...prev,
+            {
+                id: `focus-${Date.now()}`,
+                focusText,
+                focusArea: { type: "strategy-snippet", strategyId: strategyId ?? "", snippet },
+            },
+        ]);
+    }, [strategyId]);
 
-    // "Send to AI" on a comment: focus its text in the chat and open the panel.
-    const handleCommentToChat = useCallback(
-        (comment: PanelComment) => {
-            handleSendToChat(comment.text);
-            setRightPanelMode("chat");
-        },
-        [handleSendToChat]
-    );
+    // "Send to AI" on a comment: attach a structured comment focus (inheriting
+    // the passage the comment is anchored to) and open the chat.
+    const handleCommentToChat = useCallback((comment: PanelComment) => {
+        const focusArea: FocusArea = {
+            type: "comment",
+            commentId: comment.id,
+            text: comment.text,
+            inherits: comment.focusArea,
+        };
+        const focusText = `Comment: "${(comment.text || "").slice(0, 60)}"`;
+        setChatFocusItems((prev) => [...prev, { id: `focus-${Date.now()}`, focusText, focusArea }]);
+        setRightPanelMode("chat");
+    }, []);
 
     const handleNewStrategy = useCallback(() => {
         router.push("/(main)/(drawer)/(tabs)/(content)/content-strategies" as any);
