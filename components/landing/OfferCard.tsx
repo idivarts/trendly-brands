@@ -240,7 +240,7 @@ const WaitToRender = () => {
         [colors]
     );
 
-    const gradientColors = isExpired
+    const gradientColors: readonly [string, string, string] = isExpired
         ? [colors.offerGradientExpired1, colors.offerGradientExpired2, colors.offerGradientExpired3]
         : [colors.offerGradientActive1, colors.offerGradientActive2, colors.offerGradientActive3];
 

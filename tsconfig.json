@@ -18,6 +18,11 @@
     "./shared-libs/node_modules/*",
     "./shared-uis/node_modules/*",
     "./shared-constants/node_modules/*",
-    "./_deprecated/**/*"
+    "./_deprecated/**/*",
+    "./shared-uis/components/AuthenticationUI/**/*",
+    "./shared-uis/components/textbox-rtf/**/*",
+    "./shared-uis/components/FormValidation.tsx",
+    "./shared-libs/contexts/scrape-images.tsx",
+    "./shared-libs/firestore/crowdy-chat/tests/**/*"
   ]
 }
