@@ -239,6 +239,32 @@ const CreateContentScreen = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [seedItem?.status]);
 
+    // A Design-Stage render writes the baked images/video straight to the content
+    // doc (designRef.renderUrl + attachments) — out-of-band from the one-shot
+    // hydration above. Mirror the new attachments into local state the moment the
+    // baked cover changes, so MediaStage + the Preview panel show the render
+    // immediately instead of only after a page refresh. Baselined on first load so
+    // an existing render doesn't clobber anything, and treated as clean (the doc is
+    // already saved, so this isn't an unsaved edit).
+    const seenRenderRef = useRef<string | undefined>(undefined);
+    const renderBaselinedRef = useRef(false);
+    useEffect(() => {
+        if (!seedItem) return;
+        const renderUrl = seedItem.designRef?.renderUrl;
+        if (!renderBaselinedRef.current) {
+            seenRenderRef.current = renderUrl;
+            renderBaselinedRef.current = true;
+            return;
+        }
+        if (renderUrl && renderUrl !== seenRenderRef.current) {
+            seenRenderRef.current = renderUrl;
+            setAttachments(seedItem.attachments ?? []);
+            skipDirtyRef.current = true;
+            setDirty(false);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [seedItem, seedItem?.designRef?.renderUrl]);
+
     // ── Unsaved-changes (dirty) tracking ─────────────────────────────────────
     const [dirty, setDirty] = useState(false);
     const skipDirtyRef = useRef(true);

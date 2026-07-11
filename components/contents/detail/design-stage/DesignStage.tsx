@@ -18,6 +18,7 @@ import { useContentComments } from "@/hooks/use-content-comments";
 import { IContentAudio, IContentDesignRef } from "@/shared-libs/firestore/trendly-pro/models/design";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Colors from "@/shared-uis/constants/Colors";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import {
     faBullseye,
     faChevronUp,
@@ -27,6 +28,7 @@ import {
     faMusic,
     faPen,
     faPenRuler,
+    faTriangleExclamation,
     faWandMagicSparkles,
     faXmark,
 } from "@fortawesome/free-solid-svg-icons";
@@ -106,6 +108,11 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     const [durMs, setDurMs] = useState(0);
     const [trackW, setTrackW] = useState(1);
     const [videoNote, setVideoNote] = useState<string | null>(null);
+    // Render progress: { done, total } while capturing (total 0 = indeterminate
+    // "preparing" phase). Drives the on-canvas progress overlay + header %.
+    const [renderProg, setRenderProg] = useState<{ done: number; total: number } | null>(null);
+    // Render failure surfaced on the canvas (gracious, dismissible, with retry).
+    const [renderError, setRenderError] = useState<{ message: string; retry: boolean } | null>(null);
     // Soundtrack starts collapsed — the user opens it on demand.
     const [musicOpen, setMusicOpen] = useState(false);
     // Header overflow (⋮) menu — currently just the Canva hand-off.
@@ -137,6 +144,20 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     if (!(displayWidth > 0)) displayWidth = Math.min(width - 32, 340);
     const displayHeight = w > 0 ? (displayWidth * h) / w : displayWidth;
     const progress = durMs > 0 ? Math.min(curMs / durMs, 1) : 0;
+
+    // Render-overlay derived values: a determinate fraction (null while the total
+    // is still unknown) + a human label per render type.
+    const renderFrac =
+        renderProg && renderProg.total > 0 ? Math.min(renderProg.done / renderProg.total, 1) : null;
+    const renderLabel = isVideoDesign
+        ? renderFrac != null
+            ? `Encoding video… ${Math.round(renderFrac * 100)}%`
+            : "Preparing video…"
+        : slideCount > 1
+            ? renderProg && renderProg.total > 0
+                ? `Rendering slide ${renderProg.done} of ${renderProg.total}`
+                : "Rendering slides…"
+            : "Rendering image…";
 
     // Clear the selection everywhere (RN state + the frame's outline).
     const clearSelection = () => {
@@ -189,13 +210,26 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
             setPlaying(false);
             void player.pause();
         } else if (msg.type === "renderProgress") {
-            setVideoNote(`Rendering video… ${msg.frame}/${msg.total}`);
+            setRenderProg({ done: msg.frame, total: msg.total });
         } else if (msg.type === "renderVideo") {
+            // Uploading the encoded MP4 — flip to an indeterminate "saving" state.
+            setRenderProg({ done: 0, total: 0 });
             uploadVideo(msg.blob)
                 .then((url) => revision && setVideoRender(revision.id, url))
-                .then(() => setVideoNote("Video saved."))
-                .catch(() => setVideoNote("Couldn't save the video. Try again."))
-                .finally(() => setCapturing(false));
+                .then(() => {
+                    setVideoNote("Video saved.");
+                    Toaster.success("Video rendered", "Saved to your content.");
+                })
+                .catch(() =>
+                    setRenderError({
+                        message: "Your video rendered, but we couldn't save it. Check your connection and try again.",
+                        retry: true,
+                    })
+                )
+                .finally(() => {
+                    setCapturing(false);
+                    setRenderProg(null);
+                });
         } else if (msg.type === "tap") {
             setSelected({ id: msg.id, text: msg.text, editable: msg.editable, rect: msg.rect });
         } else if (msg.type === "deselect") {
@@ -203,16 +237,49 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
         } else if (msg.type === "html") {
             addRevision(msg.html, w, h, slideCount, docType, "text", revision?.id);
         } else if (msg.type === "renderSlides") {
+            // Slides captured — now uploading them (indeterminate).
+            setRenderProg({ done: 0, total: 0 });
             Promise.all(msg.dataUrls.map((d, i) => uploadPng(d, i)))
                 .then((urls) => revision && setRenders(revision.id, urls))
-                .finally(() => setCapturing(false));
+                .then(() =>
+                    Toaster.success(slideCount > 1 ? "Slides rendered" : "Image rendered", "Saved to your content.")
+                )
+                .catch(() =>
+                    setRenderError({
+                        message: "Couldn't save the render. Check your connection and try again.",
+                        retry: true,
+                    })
+                )
+                .finally(() => {
+                    setCapturing(false);
+                    setRenderProg(null);
+                });
         } else if (msg.type === "render") {
             uploadPng(msg.dataUrl, 0)
                 .then((url) => revision && setRenders(revision.id, [url]))
-                .finally(() => setCapturing(false));
+                .then(() => Toaster.success("Image rendered", "Saved to your content."))
+                .catch(() =>
+                    setRenderError({
+                        message: "Couldn't save the render. Check your connection and try again.",
+                        retry: true,
+                    })
+                )
+                .finally(() => {
+                    setCapturing(false);
+                    setRenderProg(null);
+                });
         } else if (msg.type === "error") {
             setCapturing(false);
-            if (isVideoDesign) setVideoNote("Video render failed — this browser may not support WebCodecs.");
+            setRenderProg(null);
+            setRenderError(
+                isVideoDesign
+                    ? {
+                          message:
+                              "Couldn't render the video — your browser may not support in-browser video export. Try Chrome on desktop.",
+                          retry: true,
+                      }
+                    : { message: "Something went wrong while rendering. Please try again.", retry: true }
+            );
         }
     };
 
@@ -265,16 +332,18 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
 
     const saveRender = () => {
         if (!hasDesign) return;
+        setRenderError(null);
         if (isVideoDesign) {
             if (Platform.OS !== "web") {
-                setVideoNote("Video render is available on web for now.");
+                setRenderError({ message: "Video export is available in the web app for now.", retry: false });
                 return;
             }
             frameRef.current?.pause();
             void player.pause();
             setPlaying(false);
             setCapturing(true);
-            setVideoNote("Rendering video…");
+            setRenderProg({ done: 0, total: 0 });
+            setVideoNote(null);
             const a = props.audio;
             frameRef.current?.captureVideo(24, a
                 ? {
@@ -288,6 +357,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
             return;
         }
         setCapturing(true);
+        setRenderProg({ done: 0, total: slideCount });
         frameRef.current?.captureAll(slideCount);
     };
 
@@ -401,7 +471,11 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                             disabled={capturing}
                         >
                             {capturing ? (
-                                <ActivityIndicator size="small" color={colors.onPrimary} />
+                                renderFrac != null ? (
+                                    <Text style={styles.renderBtnText}>{Math.round(renderFrac * 100)}%</Text>
+                                ) : (
+                                    <ActivityIndicator size="small" color={colors.onPrimary} />
+                                )
                             ) : (
                                 <Text style={styles.renderBtnText}>{renderTitle}</Text>
                             )}
@@ -521,6 +595,29 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                                         </View>
                                     </View>
                                 ) : null}
+
+                                {/* Render progress — a determinate bar over the
+                                    canvas so a slow export (esp. video) shows how
+                                    much is done, not just a spinner. */}
+                                {capturing ? (
+                                    <View style={styles.renderOverlay}>
+                                        <View style={styles.renderCard}>
+                                            <View style={styles.renderRow}>
+                                                <ActivityIndicator size="small" color={colors.primary} />
+                                                <Text style={styles.renderLabelText}>{renderLabel}</Text>
+                                            </View>
+                                            <View style={styles.renderTrack}>
+                                                {renderFrac != null ? (
+                                                    <View
+                                                        style={[styles.renderFill, { width: `${Math.round(renderFrac * 100)}%` }]}
+                                                    />
+                                                ) : (
+                                                    <View style={styles.renderFillIndeterminate} />
+                                                )}
+                                            </View>
+                                        </View>
+                                    </View>
+                                ) : null}
                             </View>
                             {isVideoDesign ? (
                                 <View style={[styles.videoBar, { width: displayWidth }]}>
@@ -556,6 +653,41 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                                 </View>
                             ) : null}
                             {videoNote ? <Text style={styles.videoNote}>{videoNote}</Text> : null}
+
+                            {/* Gracious render-failure card — calm, explains what
+                                happened, and offers a retry. */}
+                            {!capturing && renderError ? (
+                                <View style={styles.renderErrorCard}>
+                                    <View style={styles.renderErrorAccent} />
+                                    <View style={styles.renderErrorBody}>
+                                        <View style={styles.renderErrorHead}>
+                                            <FontAwesomeIcon
+                                                icon={faTriangleExclamation}
+                                                size={13}
+                                                color={colors.toastError}
+                                            />
+                                            <Text style={styles.renderErrorTitle}>Render didn't finish</Text>
+                                        </View>
+                                        <Text style={styles.renderErrorMsg}>{renderError.message}</Text>
+                                        <View style={styles.renderErrorActions}>
+                                            {renderError.retry ? (
+                                                <Pressable
+                                                    style={({ pressed }) => [styles.renderRetryBtn, pressed && styles.pressed]}
+                                                    onPress={saveRender}
+                                                >
+                                                    <Text style={styles.renderRetryText}>Try again</Text>
+                                                </Pressable>
+                                            ) : null}
+                                            <Pressable
+                                                style={({ pressed }) => [styles.renderDismissBtn, pressed && styles.pressed]}
+                                                onPress={() => setRenderError(null)}
+                                            >
+                                                <Text style={styles.renderDismissText}>Dismiss</Text>
+                                            </Pressable>
+                                        </View>
+                                    </View>
+                                </View>
+                            ) : null}
                         </View>
                     </ScrollView>
                 ) : (
@@ -768,6 +900,68 @@ const useStyles = (colors: any) =>
                 canvasScroll: { flexGrow: 1, alignItems: "center", justifyContent: "center", padding: 16, gap: 12 },
                 canvasWrap: { alignItems: "center", gap: 12 },
                 frameWrap: { borderRadius: 12, overflow: "visible" },
+
+                // Render progress overlay (over the canvas while capturing)
+                renderOverlay: {
+                    ...StyleSheet.absoluteFillObject,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 12,
+                    backgroundColor: colors.backdrop,
+                    padding: 16,
+                },
+                renderCard: {
+                    width: "100%",
+                    maxWidth: 300,
+                    gap: 12,
+                    padding: 16,
+                    borderRadius: 12,
+                    backgroundColor: colors.card,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowRadius: 16,
+                    shadowOpacity: 0.2,
+                    elevation: 10,
+                },
+                renderRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+                renderLabelText: { flex: 1, fontSize: 13, fontWeight: "700", color: colors.text },
+                renderTrack: { height: 8, borderRadius: 4, backgroundColor: colors.tag, overflow: "hidden" },
+                renderFill: { height: 8, borderRadius: 4, backgroundColor: colors.primary },
+                renderFillIndeterminate: { height: 8, borderRadius: 4, width: "40%", backgroundColor: colors.primary, opacity: 0.5 },
+
+                // Render-failure card (accent stripe, not a border, per style rules)
+                renderErrorCard: {
+                    alignSelf: "stretch",
+                    flexDirection: "row",
+                    overflow: "hidden",
+                    borderRadius: 12,
+                    backgroundColor: colors.card,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.07,
+                    elevation: 3,
+                },
+                renderErrorAccent: { width: 4, backgroundColor: colors.toastError },
+                renderErrorBody: { flex: 1, padding: 12, gap: 6 },
+                renderErrorHead: { flexDirection: "row", alignItems: "center", gap: 8 },
+                renderErrorTitle: { fontSize: 13, fontWeight: "700", color: colors.text },
+                renderErrorMsg: { fontSize: 12, lineHeight: 17, color: colors.textSecondary },
+                renderErrorActions: { flexDirection: "row", gap: 8, marginTop: 2 },
+                renderRetryBtn: {
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                    borderRadius: 8,
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.3,
+                    elevation: 3,
+                },
+                renderRetryText: { fontSize: 13, fontWeight: "700", color: colors.onPrimary },
+                renderDismissBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: colors.tag },
+                renderDismissText: { fontSize: 13, fontWeight: "600", color: colors.text },
 
                 // Selection overlay + floating contextual toolbar
                 selectionOverlay: { ...StyleSheet.absoluteFillObject },
