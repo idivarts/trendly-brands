@@ -323,6 +323,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         messages: aiMessages,
         streamingContent,
         isStreaming,
+        statusLabel,
         loading,
         initializing,
         hasMore,
@@ -1020,17 +1021,22 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                         {!busy && isAITyping && (
                             <View style={[styles.typingRow, splitMode && styles.centered]}>
                                 <View style={styles.typingBubble}>
-                                    <Text style={styles.typingText}>Thinking…</Text>
+                                    {/* Before the first token: show what the AI is
+                                    working on (a tool label pushed by the backend)
+                                    if we have one, else the generic "Thinking…". */}
+                                    <Text style={styles.typingText}>{statusLabel || "Thinking…"}</Text>
                                 </View>
                             </View>
                         )}
 
                         {/* Tokens are already flowing into the streaming bubble; this
-                        slim row makes it obvious the AI hasn't stalled mid-reply. */}
+                        slim row makes it obvious the AI hasn't stalled mid-reply. A
+                        live status label (e.g. "Designing your visual…") takes over
+                        during token-silent tool calls, then reverts to "Generating…". */}
                         {!busy && isStreaming && !!streamingContent && (
                             <View style={[styles.streamingStatus, splitMode && styles.centered]}>
                                 <ActivityIndicator size="small" color={colors.primary} />
-                                <Text style={styles.streamingStatusText}>Generating…</Text>
+                                <Text style={styles.streamingStatusText}>{statusLabel || "Generating…"}</Text>
                             </View>
                         )}
 

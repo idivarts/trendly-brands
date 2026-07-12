@@ -171,6 +171,12 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
     const [committed, setCommitted] = useState<AIMessage[]>([]);
     const [streamingContent, setStreamingContent] = useState<string>("");
     const [isStreaming, setIsStreaming] = useState(false);
+    // A short human label for what the AI is doing right now (e.g. "Designing
+    // your visual…", "Reading your content calendar…"), pushed by the backend as
+    // `status` frames during token-silent phases. Empty → the panel falls back
+    // to its generic "Thinking…/Generating…" copy. Cleared when prose resumes
+    // (a token frame) and when the turn ends.
+    const [statusLabel, setStatusLabel] = useState<string>("");
     const [loading, setLoading] = useState(false);
     const [pageSize, setPageSize] = useState(MESSAGE_PAGE_SIZE);
     const [hasMore, setHasMore] = useState(false);
@@ -217,15 +223,19 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
     // bubble at `done` so they show before the committed doc syncs.
     const streamImagesRef = useRef<string[]>([]);
     const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    // Generous: a single image gen + a second model round-trip can be silent for
-    // a while. This only fires when NOTHING (not even a token) arrived in window.
-    const STREAM_SILENCE_TIMEOUT_MS = 90_000;
+    // The backend heartbeats a `ping` frame every ~15s for the whole turn (plus
+    // `status`/`token`/`chat_image` frames), so a live-but-slow turn keeps
+    // re-arming this. It therefore only fires when the connection has gone truly
+    // silent — the turn died (lambda timeout / dropped socket) — for which 60s
+    // (≈4 missed heartbeats, tolerant of one reconnect-backoff cycle) is ample.
+    const STREAM_SILENCE_TIMEOUT_MS = 60_000;
 
     const finishStreaming = useCallback(() => {
         streamingRef.current = "";
         pendingControlRef.current = null;
         streamImagesRef.current = [];
         setStreamingContent("");
+        setStatusLabel("");
         setIsStreaming(false);
         if (watchdogRef.current) {
             clearTimeout(watchdogRef.current);
@@ -238,12 +248,14 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
         watchdogRef.current = setTimeout(() => {
             watchdogRef.current = null;
             if (!isStreamingRef.current) return;
-            // No WS activity for the whole window: the turn almost certainly died
-            // (lambda timeout / dropped connection). Stop the spinner and lean on
-            // Firestore — if the assistant doc committed it's already on screen;
-            // otherwise the user can retry.
+            // No WS activity for the whole window despite the backend heartbeat:
+            // the turn almost certainly died (lambda timeout / dropped
+            // connection). Stop the spinner and lean on Firestore — if the
+            // assistant doc committed it's already on screen; otherwise the user
+            // can retry. (Not a slowness message: heartbeats mean a genuinely
+            // slow-but-alive turn never reaches here.)
             finishStreaming();
-            Toaster.error("The AI took too long to respond. Please try again.");
+            Toaster.error("The AI response was interrupted. Please try again.");
         }, STREAM_SILENCE_TIMEOUT_MS);
     }, [finishStreaming]);
 
@@ -460,8 +472,18 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
             // watchdog out so a slow-but-progressing image gen isn't aborted.
             if (isStreamingRef.current) armWatchdog();
             if (msg.type === "token" && typeof msg.delta === "string") {
+                // Prose is flowing again — drop any tool/status label so the
+                // panel reverts to its generic "Generating…" copy.
+                setStatusLabel((prev) => (prev ? "" : prev));
                 streamingRef.current += msg.delta;
                 setStreamingContent(streamingRef.current);
+            } else if (msg.type === "status") {
+                // Progress label for a token-silent phase (a server tool running,
+                // before the first token). Purely cosmetic; the watchdog was
+                // already re-armed above by the frame arriving.
+                if (typeof msg.label === "string" && msg.label) {
+                    setStatusLabel(msg.label);
+                }
             } else if (msg.type === "chat_image") {
                 // Images generated mid-turn (generate_image tool). Buffer them so
                 // they attach to the lingering bubble at `done`; meanwhile the
@@ -544,6 +566,7 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
             streamingRef.current = "";
             streamImagesRef.current = [];
             setStreamingContent("");
+            setStatusLabel("");
             setIsStreaming(true);
             // Backstop in case the turn dies before any frame comes back.
             armWatchdog();
@@ -613,6 +636,7 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
         messages,
         streamingContent,
         isStreaming,
+        statusLabel,
         loading,
         initializing,
         hasMore,

@@ -13,7 +13,7 @@
 
 export const HTML2CANVAS_URL =
     "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
-export const MP4_MUXER_URL = "https://cdn.jsdelivr.net/npm/mp4-muxer@5.0.3/build/mp4-muxer.min.js";
+export const MP4_MUXER_URL = "https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/build/mp4-muxer.min.js";
 
 // The bridge runs inside the frame. It works in both environments: native uses
 // window.ReactNativeWebView.postMessage + a global __cmd(payload); web uses
@@ -34,9 +34,23 @@ export const BRIDGE_SCRIPT = `
   function loadScript(url, globalName, cb){
     if (globalName && window[globalName]) return cb();
     var s = document.createElement('script');
+    var done = false;
+    // A CDN request that stalls or is silently aborted (bad version, offline,
+    // ad/privacy blocker) can fire neither onload nor onerror — which would leave
+    // the render spinning forever. Fail loudly after a timeout instead.
+    var to = setTimeout(function(){
+      if (done) return; done = true;
+      send({type:'error',message:'timed out loading '+url});
+    }, 20000);
     s.src = url;
-    s.onload = cb;
-    s.onerror = function(){ send({type:'error',message:'failed to load '+url}); };
+    s.onload = function(){
+      if (done) return; done = true; clearTimeout(to);
+      // Some CDNs answer a missing version with a 200 text body: onload fires but
+      // the expected global is never defined. Treat that as a load failure.
+      if (globalName && !window[globalName]){ send({type:'error',message:'failed to load '+url}); return; }
+      cb();
+    };
+    s.onerror = function(){ if (done) return; done = true; clearTimeout(to); send({type:'error',message:'failed to load '+url}); };
     document.head.appendChild(s);
   }
   function loadH2C(cb){ loadScript(${JSON.stringify(HTML2CANVAS_URL)}, 'html2canvas', cb); }
