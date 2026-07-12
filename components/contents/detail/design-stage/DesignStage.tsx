@@ -47,6 +47,7 @@ import {
     View,
 } from "react-native";
 import { Menu } from "react-native-paper";
+import DesignSystemNudge from "@/components/design-system/DesignSystemNudge";
 import { DesignFrameHandle, FrameOutMsg } from "./bridge";
 import DesignFrame from "./DesignFrame";
 import SoundtrackPanel from "./SoundtrackPanel";
@@ -513,6 +514,9 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                     ) : null}
                 </View>
             </View>
+
+            {/* Nudge to complete the brand's Design System for better AI designs. */}
+            {!readOnly && <DesignSystemNudge />}
 
             {/* Body — canvas when there's a design, else a clean empty state. */}
             <View

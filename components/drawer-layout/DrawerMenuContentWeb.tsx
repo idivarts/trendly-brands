@@ -23,6 +23,7 @@ import {
     faCreditCard,
     faInbox,
     faLayerGroup,
+    faPalette,
     faPenRuler,
     faPlus,
     faShareNodes,
@@ -133,6 +134,11 @@ const BRAND_DETAILS_MENU_ITEMS = (theme: Theme): Tab[] => [
         href: "/brand-profile",
         icon: ({ focused }) => <DrawerIcon href="" icon={faFileLines} focused={focused} />,
         label: "Brand Profile",
+    },
+    {
+        href: "/design-system",
+        icon: ({ focused }) => <DrawerIcon href="" icon={faPalette} focused={focused} />,
+        label: "Design System",
     },
 ];
 
