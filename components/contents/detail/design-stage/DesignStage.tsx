@@ -37,7 +37,9 @@ import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
+    GestureResponderEvent,
     Modal,
+    PanResponder,
     Platform,
     Pressable,
     ScrollView,
@@ -99,6 +101,28 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     const player = useSoundtrackPlayer(props.audio);
 
     const frameRef = useRef<DesignFrameHandle>(null);
+    // Scrubber (video timeline drag-to-seek) plumbing.
+    const wasPlayingBeforeScrubRef = useRef(false);
+    const scrubHandlersRef = useRef<{
+        onGrant: (e: GestureResponderEvent) => void;
+        onMove: (e: GestureResponderEvent) => void;
+        onRelease: (e: GestureResponderEvent) => void;
+        onTerminate: () => void;
+    } | null>(null);
+    // Created once; its callbacks delegate to the latest handlers via the ref so a
+    // gesture already in progress keeps working across re-renders.
+    const scrubResponder = useRef(
+        PanResponder.create({
+            onStartShouldSetPanResponder: () => true,
+            onMoveShouldSetPanResponder: () => true,
+            onStartShouldSetPanResponderCapture: () => true,
+            onMoveShouldSetPanResponderCapture: () => true,
+            onPanResponderGrant: (e) => scrubHandlersRef.current?.onGrant(e),
+            onPanResponderMove: (e) => scrubHandlersRef.current?.onMove(e),
+            onPanResponderRelease: (e) => scrubHandlersRef.current?.onRelease(e),
+            onPanResponderTerminate: () => scrubHandlersRef.current?.onTerminate(),
+        }),
+    ).current;
     const [selected, setSelected] = useState<Selected>(null);
     const [modalOpen, setModalOpen] = useState<null | "edit" | "comment">(null);
     const [modalText, setModalText] = useState("");
@@ -108,6 +132,10 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     const [curMs, setCurMs] = useState(0);
     const [durMs, setDurMs] = useState(0);
     const [trackW, setTrackW] = useState(1);
+    // While the user drags the scrubber, curMs (which lags behind, arriving via
+    // "time" messages from the frame) is overridden by this local fraction so the
+    // fill + thumb track the finger with zero lag. null = not scrubbing.
+    const [scrubFrac, setScrubFrac] = useState<number | null>(null);
     const [videoNote, setVideoNote] = useState<string | null>(null);
     // Render progress: { done, total } while capturing (total 0 = indeterminate
     // "preparing" phase). Drives the on-canvas progress overlay + header %.
@@ -145,6 +173,9 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     if (!(displayWidth > 0)) displayWidth = Math.min(width - 32, 340);
     const displayHeight = w > 0 ? (displayWidth * h) / w : displayWidth;
     const progress = durMs > 0 ? Math.min(curMs / durMs, 1) : 0;
+    // What the fill + thumb actually render: the live drag fraction while
+    // scrubbing, otherwise the real playback progress.
+    const displayFrac = scrubFrac ?? progress;
 
     // Render-overlay derived values: a determinate fraction (null while the total
     // is still unknown) + a human label per render type.
@@ -322,14 +353,56 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
         }
     };
 
-    const seekToFraction = (frac: number) => {
-        if (durMs <= 0) return;
-        const clamped = Math.max(0, Math.min(frac, 1));
-        const ms = Math.round(clamped * durMs);
-        setPlaying(false);
-        frameRef.current?.seek(ms);
-        void player.seek(ms);
+    // Seek both the video frame and the soundtrack/voiceover mix to `ms`.
+    const seekBoth = (ms: number) => {
+        frameRef.current?.seek(Math.max(0, ms));
+        void player.seek(Math.max(0, ms));
     };
+
+    // Map a tap/drag X (relative to the track) to a 0..1 fraction of the timeline.
+    const fracFromX = (x: number) => Math.max(0, Math.min(x / Math.max(trackW, 1), 1));
+
+    // Latest scrub handlers, refreshed every render so the (stable) PanResponder
+    // below always closes over the current durMs / playing / player / clearSelection
+    // — avoids the classic "PanResponder captured stale state" bug without
+    // re-creating the responder (which would drop an in-flight gesture).
+    const scrubHandlers = {
+        onGrant: (e: GestureResponderEvent) => {
+            if (durMs <= 0) return;
+            // Remember whether we interrupted playback so we can resume on release.
+            wasPlayingBeforeScrubRef.current = playing;
+            if (playing) {
+                frameRef.current?.pause();
+                void player.pause();
+                setPlaying(false);
+            }
+            const frac = fracFromX(e.nativeEvent.locationX);
+            setScrubFrac(frac);
+            seekBoth(Math.round(frac * durMs));
+        },
+        onMove: (e: GestureResponderEvent) => {
+            if (durMs <= 0) return;
+            const frac = fracFromX(e.nativeEvent.locationX);
+            setScrubFrac(frac);
+            seekBoth(Math.round(frac * durMs));
+        },
+        onRelease: (e: GestureResponderEvent) => {
+            if (durMs <= 0) return;
+            const frac = fracFromX(e.nativeEvent.locationX);
+            const ms = Math.round(frac * durMs);
+            seekBoth(ms);
+            setScrubFrac(null);
+            // Resume playback from the dropped position if we were playing.
+            if (wasPlayingBeforeScrubRef.current) {
+                clearSelection();
+                frameRef.current?.play();
+                void player.playFrom(ms);
+                setPlaying(true);
+            }
+        },
+        onTerminate: () => setScrubFrac(null),
+    };
+    scrubHandlersRef.current = scrubHandlers;
 
     const saveRender = () => {
         if (!hasDesign) return;
@@ -628,15 +701,24 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                                     <Pressable style={styles.playBtn} onPress={togglePlay}>
                                         <Text style={styles.playIcon}>{playing ? "❚❚" : "▶"}</Text>
                                     </Pressable>
-                                    <Pressable
-                                        style={styles.track}
+                                    <View
+                                        style={styles.trackHit}
                                         onLayout={(e) => setTrackW(e.nativeEvent.layout.width)}
-                                        onPress={(e) => seekToFraction(e.nativeEvent.locationX / Math.max(trackW, 1))}
+                                        {...scrubResponder.panHandlers}
                                     >
-                                        <View style={[styles.trackFill, { width: `${progress * 100}%` }]} />
-                                    </Pressable>
+                                        <View style={styles.track}>
+                                            <View
+                                                pointerEvents="none"
+                                                style={[styles.trackFill, { width: `${displayFrac * 100}%` }]}
+                                            />
+                                        </View>
+                                        <View
+                                            pointerEvents="none"
+                                            style={[styles.thumb, { left: `${displayFrac * 100}%` }]}
+                                        />
+                                    </View>
                                     <Text style={styles.time}>
-                                        {fmtTime(curMs)} / {fmtTime(durMs)}
+                                        {fmtTime(scrubFrac != null ? scrubFrac * durMs : curMs)} / {fmtTime(durMs)}
                                     </Text>
                                 </View>
                             ) : slideCount > 1 ? (
@@ -1030,8 +1112,25 @@ const useStyles = (colors: any) =>
                     elevation: 4,
                 },
                 playIcon: { color: colors.onPrimary, fontSize: 13 },
-                track: { flex: 1, height: 6, borderRadius: 3, backgroundColor: colors.tag, overflow: "hidden" },
+                // Tall, transparent hit area so the thin bar is easy to grab/drag.
+                trackHit: { flex: 1, height: 24, justifyContent: "center" },
+                track: { height: 6, borderRadius: 3, backgroundColor: colors.tag, overflow: "hidden" },
                 trackFill: { height: 6, borderRadius: 3, backgroundColor: colors.primary },
+                thumb: {
+                    position: "absolute",
+                    top: "50%",
+                    width: 14,
+                    height: 14,
+                    borderRadius: 7,
+                    marginTop: -7,
+                    marginLeft: -7,
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowRadius: 6,
+                    shadowOpacity: 0.4,
+                    elevation: 3,
+                },
                 time: { fontSize: 12, color: colors.textSecondary, minWidth: 64, textAlign: "right" },
                 videoNote: { fontSize: 12, color: colors.textSecondary },
 
