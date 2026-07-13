@@ -20,6 +20,7 @@ import {
     faLock,
     faPaperPlane,
     faPenToSquare,
+    faStop,
     faUpRightAndDownLeftFromCenter,
     faWandMagicSparkles,
     faXmark
@@ -334,6 +335,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         renameThread,
         deleteThread,
         refreshThreads,
+        stopStreaming,
     } = useAIChat({
         module,
         contextId,
@@ -811,19 +813,32 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                             />
                         </View>
                         <TokenMeterBar tokens={tokens} />
-                        <Pressable
-                            style={({ pressed }) => [
-                                styles.sendBtn,
-                                pressed && styles.sendBtnPressed,
-                                !canSend && styles.sendBtnDisabled,
-                            ]}
-                            onPress={handleSend}
-                            disabled={!canSend}
-                            hitSlop={8}
-                            accessibilityLabel="Send message"
-                        >
-                            <FontAwesomeIcon icon={faPaperPlane} size={16} color={colors.onPrimary} />
-                        </Pressable>
+                        {isStreaming ? (
+                            // Mid-generation: the send action becomes a Stop control so
+                            // the user can interrupt and get control back immediately.
+                            <Pressable
+                                style={({ pressed }) => [styles.sendBtn, pressed && styles.sendBtnPressed]}
+                                onPress={stopStreaming}
+                                hitSlop={8}
+                                accessibilityLabel="Stop generating"
+                            >
+                                <FontAwesomeIcon icon={faStop} size={14} color={colors.onPrimary} />
+                            </Pressable>
+                        ) : (
+                            <Pressable
+                                style={({ pressed }) => [
+                                    styles.sendBtn,
+                                    pressed && styles.sendBtnPressed,
+                                    !canSend && styles.sendBtnDisabled,
+                                ]}
+                                onPress={handleSend}
+                                disabled={!canSend}
+                                hitSlop={8}
+                                accessibilityLabel="Send message"
+                            >
+                                <FontAwesomeIcon icon={faPaperPlane} size={16} color={colors.onPrimary} />
+                            </Pressable>
+                        )}
                     </View>
                 </View>
             </View>
