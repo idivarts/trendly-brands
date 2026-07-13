@@ -203,6 +203,12 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
     // Guards auto-open so it fires once per module + contextId, not on every
     // thread-list snapshot. Reset when the scope changes.
     const autoOpenedRef = useRef(false);
+    // Set when the user interrupts the current turn (Stop button). While true we
+    // ignore the interrupted turn's late WS frames (token/status/done/…) so the
+    // transient streaming bubble doesn't resurrect after control was returned.
+    // Firestore remains the source of truth — the committed (partial) assistant
+    // doc still syncs in. Cleared when the next turn starts.
+    const interruptedRef = useRef(false);
 
     // ── Streaming watchdog / Firestore-fallback resolution ────────────────
     // The exit from `isStreaming` must NOT depend solely on the WS `done` frame.
@@ -399,6 +405,7 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
     // setActiveThreadId is enough — the subscription above loads history. Kept
     // async + same name so existing callers don't change.
     const loadThread = useCallback(async (conversationId: string) => {
+        interruptedRef.current = false;
         setPageSize(MESSAGE_PAGE_SIZE);
         setActiveThreadId(conversationId);
     }, []);
@@ -434,6 +441,7 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
     // later thread-list snapshot can't auto-open over the draft.
     const startNewChat = useCallback(() => {
         autoOpenedRef.current = true;
+        interruptedRef.current = false;
         setActiveThreadId(null);
         setCommitted([]);
         setPendingUsers([]);
@@ -468,6 +476,11 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
         const remove = aiWS.addListener((msg: any) => {
             if (!activeThreadId) return;
             if (msg.conversationId && msg.conversationId !== activeThreadId) return;
+            // The user interrupted this turn — control is already back with them.
+            // Drop the turn's trailing frames so the streaming bubble/status don't
+            // flicker back; the committed (partial) doc still arrives via Firestore.
+            // (stop_ack is a no-op either way.)
+            if (interruptedRef.current) return;
             // Any frame proves the turn is still alive — push the silence
             // watchdog out so a slow-but-progressing image gen isn't aborted.
             if (isStreamingRef.current) armWatchdog();
@@ -563,6 +576,9 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
                 ...prev,
                 { role: "user", content, focus: focusList, focusedText, images: imgs, clientMsgId, timestamp: Date.now() },
             ]);
+            // A fresh turn — clear any interrupt guard from a previous stop so
+            // this turn's frames stream normally.
+            interruptedRef.current = false;
             streamingRef.current = "";
             streamImagesRef.current = [];
             setStreamingContent("");
@@ -589,6 +605,22 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
         },
         [brandId, manager?.id, activeThreadId, createThread, armWatchdog]
     );
+
+    // Interrupt the in-flight turn and hand control back to the user immediately.
+    // Two parts: (1) tell the backend to stop generating (best-effort — it aborts
+    // the running turn and stops billing tokens; harmless if an older backend
+    // doesn't handle `stop`), and (2) locally finish streaming right away so the
+    // composer re-enables without waiting on the network. `interruptedRef` makes
+    // the listener ignore the turn's trailing frames; the committed (partial) doc
+    // still syncs from Firestore.
+    const stopStreaming = useCallback(() => {
+        if (!isStreamingRef.current) return;
+        interruptedRef.current = true;
+        if (activeThreadId) {
+            aiWS.send({ type: "stop", conversationId: activeThreadId }).catch(() => {});
+        }
+        finishStreaming();
+    }, [activeThreadId, finishStreaming]);
 
     // Rendered history = committed (Firestore) + any optimistic user bubbles not
     // yet synced + the lingering assistant turn not yet synced. The panel adds
@@ -647,6 +679,7 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
         deleteThread,
         renameThread,
         sendMessage,
+        stopStreaming,
         refreshThreads,
     };
 }
