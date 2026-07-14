@@ -174,6 +174,68 @@ export const BRIDGE_SCRIPT = `
     var c = document.querySelector('[data-carousel]');
     if (c){ c.style.transition='transform .2s'; c.style.transform='translateX('+(-i*slideWidth)+'px)'; }
   }
+  // ── Export-safe gradient fix ─────────────────────────────────────────────
+  // html2canvas renders the CSS keyword \`transparent\` as transparent BLACK, so
+  // our soft blob/glow shapes (radial-gradients fading to \`transparent\`) come out
+  // as muddy gray blobs in the export while looking fine in the live preview.
+  // Rewrite each gradient's transparent stops to the SAME color at alpha 0 — which
+  // renders identically in the browser but cleanly in html2canvas. String-scanned
+  // (no regex) so it stays safe inside this bridge template literal, and only ever
+  // applied to the html2canvas CLONE, so the live design is untouched.
+  function gradFirstColor(body){
+    var hi = body.indexOf('#');
+    if (hi !== -1){
+      var hex='';
+      for (var p=hi+1; p<body.length; p++){ var ch=body[p];
+        if ((ch>='0'&&ch<='9')||(ch>='a'&&ch<='f')||(ch>='A'&&ch<='F')){ hex+=ch; } else { break; } }
+      if (hex.length>=6){ return parseInt(hex.slice(0,2),16)+','+parseInt(hex.slice(2,4),16)+','+parseInt(hex.slice(4,6),16); }
+      if (hex.length>=3){ var s=hex.slice(0,3); return parseInt(s[0]+s[0],16)+','+parseInt(s[1]+s[1],16)+','+parseInt(s[2]+s[2],16); }
+    }
+    var low=body.toLowerCase(), from=0;
+    while (true){
+      var ri=low.indexOf('rgb', from);
+      if (ri===-1) break;
+      var lp=body.indexOf('(', ri), rp=body.indexOf(')', ri);
+      if (lp===-1||rp===-1) break;
+      var parts=body.slice(lp+1, rp).split(',');
+      if (parts.length>=3){
+        var a = parts.length>=4 ? parseFloat(parts[3]) : 1;
+        if (a>0){ return parseInt(parts[0],10)+','+parseInt(parts[1],10)+','+parseInt(parts[2],10); }
+      }
+      from=rp+1;
+    }
+    return null;
+  }
+  function gradReplaceAll(str, needleLower, rep){
+    var out='', low=str.toLowerCase(), i=0;
+    while (true){ var idx=low.indexOf(needleLower, i); if (idx===-1){ out+=str.slice(i); break; } out+=str.slice(i, idx)+rep; i=idx+needleLower.length; }
+    return out;
+  }
+  function gradFixBody(body){
+    var c=gradFirstColor(body); if (!c) return body;
+    var rep='rgba('+c+',0)';
+    body=gradReplaceAll(body, 'transparent', rep);
+    body=gradReplaceAll(body, 'rgba(0, 0, 0, 0)', rep);
+    body=gradReplaceAll(body, 'rgba(0,0,0,0)', rep);
+    return body;
+  }
+  function fixTransparentGradients(css){
+    if (!css) return css;
+    var low=css.toLowerCase();
+    if (low.indexOf('gradient(')===-1) return css;
+    var out='', i=0, n=css.length;
+    while (i<n){
+      var g=low.indexOf('gradient(', i);
+      if (g===-1){ out+=css.slice(i); break; }
+      var open=g+8;                    // index of '(' after 'gradient'
+      out += css.slice(i, open+1);
+      var depth=1, j=open+1;
+      for (; j<n; j++){ var ch=css[j]; if (ch==='('){ depth++; } else if (ch===')'){ depth--; if (depth===0){ break; } } }
+      out += gradFixBody(css.slice(open+1, j)) + ')';
+      i = j+1;
+    }
+    return out;
+  }
   // Strip the display transform/clip in the html2canvas CLONE so each slide is
   // rendered at its natural size/position (the live preview keeps its transform).
   function cleanClone(doc){
@@ -189,6 +251,27 @@ export const BRIDGE_SCRIPT = `
       // Never bake the editor's hover/selection outline into the export.
       var marked = doc.querySelectorAll('.__el-hover, .__el-selected');
       for (var i=0;i<marked.length;i++){ marked[i].classList.remove('__el-hover'); marked[i].classList.remove('__el-selected'); }
+      // Fix gradients fading to \`transparent\` so soft blobs don't export as gray.
+      var gStyles = doc.querySelectorAll('style');
+      for (var gi=0; gi<gStyles.length; gi++){ gStyles[gi].textContent = fixTransparentGradients(gStyles[gi].textContent); }
+      var gEls = doc.querySelectorAll('[style]');
+      for (var gk=0; gk<gEls.length; gk++){
+        var st = gEls[gk].getAttribute('style');
+        if (st && st.toLowerCase().indexOf('gradient(') !== -1){ gEls[gk].setAttribute('style', fixTransparentGradients(st)); }
+      }
+      // Cache-bust cross-origin images so html2canvas always fetches a CORS-enabled
+      // response. A logo cached earlier as a non-CORS copy by a plain <img> in the
+      // live preview would otherwise be reused for html2canvas's crossOrigin request
+      // and silently dropped from the export. The asset CloudFront distributions use
+      // QueryString:false, so this extra query param doesn't fragment the edge cache —
+      // it only changes the URL the browser keys its own HTTP cache on.
+      var cimgs = doc.querySelectorAll('img');
+      for (var ci=0; ci<cimgs.length; ci++){
+        var isrc = cimgs[ci].getAttribute('src');
+        if (isrc && isrc.indexOf('http')===0 && isrc.indexOf('__cors=')===-1){
+          cimgs[ci].setAttribute('src', isrc + (isrc.indexOf('?')===-1 ? '?' : '&') + '__cors=1');
+        }
+      }
     } catch(e){}
   }
   function captureSlides(){
