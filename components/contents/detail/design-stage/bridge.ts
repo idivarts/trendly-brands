@@ -164,7 +164,7 @@ export const BRIDGE_SCRIPT = `
                 setTimeout(function(){ nextFrame(i); }, 0);
               }).catch(function(e){ send({type:'error',message:String(e)}); });
             }
-            nextFrame(0);
+            whenImagesReady(document).then(function(){ nextFrame(0); });
           } catch(e){ send({type:'error',message:String(e)}); }
         });
       });
@@ -259,25 +259,35 @@ export const BRIDGE_SCRIPT = `
         var st = gEls[gk].getAttribute('style');
         if (st && st.toLowerCase().indexOf('gradient(') !== -1){ gEls[gk].setAttribute('style', fixTransparentGradients(st)); }
       }
-      // Cache-bust cross-origin images so html2canvas always fetches a CORS-enabled
-      // response. A logo cached earlier as a non-CORS copy by a plain <img> in the
-      // live preview would otherwise be reused for html2canvas's crossOrigin request
-      // and silently dropped from the export. The asset CloudFront distributions use
-      // QueryString:false, so this extra query param doesn't fragment the edge cache —
-      // it only changes the URL the browser keys its own HTTP cache on.
-      var cimgs = doc.querySelectorAll('img');
-      for (var ci=0; ci<cimgs.length; ci++){
-        var isrc = cimgs[ci].getAttribute('src');
-        if (isrc && isrc.indexOf('http')===0 && isrc.indexOf('__cors=')===-1){
-          cimgs[ci].setAttribute('src', isrc + (isrc.indexOf('?')===-1 ? '?' : '&') + '__cors=1');
-        }
-      }
+      // NOTE: do NOT rewrite <img> src here (e.g. a cache-buster). html2canvas
+      // registers images for loading BEFORE onclone runs, so changing src in the
+      // clone makes it render without waiting for the new URL → the image is
+      // dropped from the export. Cross-origin loading is handled by useCORS + the
+      // CloudFront CORS headers; freshness is handled by whenImagesReady() before
+      // capture. Keep this hook free of image-src mutations.
     } catch(e){}
+  }
+  // Resolve once every <img> under \`root\` has finished loading (or errored), so we
+  // never capture a frame before its images have painted — html2canvas rasterizes
+  // whatever is loaded at call time, and an image still in flight would be dropped.
+  // Each image is capped by a timeout so one stuck asset can't hang the render.
+  function whenImagesReady(root){
+    var imgs = Array.prototype.slice.call((root || document).querySelectorAll('img'));
+    return Promise.all(imgs.map(function(im){
+      if (im.complete && im.naturalWidth > 0) return null;
+      return new Promise(function(res){
+        var done = false;
+        function fin(){ if (done) return; done = true; res(); }
+        im.addEventListener('load', fin);
+        im.addEventListener('error', fin);
+        setTimeout(fin, 10000);
+      });
+    }));
   }
   function captureSlides(){
     loadH2C(function(){
-      var ready = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
-      ready.then(function(){
+      var fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+      Promise.all([fontsReady, whenImagesReady(document)]).then(function(){
         var nodes = document.querySelectorAll('[data-slide]');
         var list = nodes.length ? Array.prototype.slice.call(nodes) : [target()];
         var urls = [];
