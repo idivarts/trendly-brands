@@ -21,9 +21,18 @@ import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { TokenMeterBar, TokenMeterNotice } from "../../../billing/TokenMeter";
-import { useAudition } from "./use-audio-player";
+import { safeVolume, useAudioDuration, useAudition } from "./use-audio-player";
 
 const MOODS = ["upbeat", "cinematic", "corporate", "chill", "dramatic"];
+
+// "12.4s" for short clips, "1:05" once past a minute.
+const fmtDuration = (ms: number): string => {
+    const s = ms / 1000;
+    if (s < 60) return `${s.toFixed(1)}s`;
+    const m = Math.floor(s / 60);
+    const rem = Math.round(s % 60);
+    return `${m}:${String(rem).padStart(2, "0")}`;
+};
 
 interface SoundtrackPanelProps {
     brandId: string;
@@ -48,6 +57,9 @@ const SoundtrackPanel: React.FC<SoundtrackPanelProps> = ({
     const { tokens } = useEntitlements();
     const exhausted = tokens.state === "exhausted";
     const audition = useAudition();
+    // Length of the attached voiceover, read from the clip (not stored), so the
+    // user can see how long their voiceover runs vs. the video.
+    const voiceoverMs = useAudioDuration(audio?.voiceoverUrl);
     const styles = useStyles(colors);
 
     const [mood, setMood] = useState<string>("");
@@ -307,7 +319,7 @@ const SoundtrackPanel: React.FC<SoundtrackPanelProps> = ({
                     <VolumeBar
                         colors={colors}
                         label="Music"
-                        value={audio.musicVolume ?? 0.7}
+                        value={safeVolume(audio.musicVolume, 0.7)}
                         onChange={(v) => patch({ musicVolume: v })}
                     />
                     <View style={styles.toggleRow}>
@@ -354,9 +366,12 @@ const SoundtrackPanel: React.FC<SoundtrackPanelProps> = ({
                 <View style={styles.mix}>
                     <View style={styles.row}>
                         <PlayBtn url={audio.voiceoverUrl} />
-                        <Text style={styles.rowTitle}>Voiceover added</Text>
+                        <Text style={styles.voAddedTitle}>Voiceover added</Text>
+                        <Text style={styles.voDuration}>
+                            {voiceoverMs != null ? fmtDuration(voiceoverMs) : "…"}
+                        </Text>
                     </View>
-                    <VolumeBar colors={colors} label="Voice" value={audio.voiceoverVolume ?? 1} onChange={(v) => patch({ voiceoverVolume: v })} />
+                    <VolumeBar colors={colors} label="Voice" value={safeVolume(audio.voiceoverVolume, 1)} onChange={(v) => patch({ voiceoverVolume: v })} />
                 </View>
             ) : null}
 
@@ -374,17 +389,26 @@ const VolumeBar: React.FC<{ colors: any; label: string; value: number; onChange:
 }) => {
     const [w, setW] = useState(1);
     const styles = useStyles(colors);
+    // value may arrive as NaN from legacy data; clamp for display so it never
+    // renders "NaN%" or an invalid fill width.
+    const pct = Math.round(safeVolume(value, 0) * 100);
     return (
         <View style={styles.volRow}>
             <Text style={styles.volLabel}>{label}</Text>
             <Pressable
                 style={styles.volTrack}
                 onLayout={(e) => setW(e.nativeEvent.layout.width)}
-                onPress={(e) => onChange(Math.max(0, Math.min(e.nativeEvent.locationX / Math.max(w, 1), 1)))}
+                onPress={(e) => {
+                    // react-native-web can report locationX as undefined → NaN;
+                    // ignore those taps so we never persist a NaN volume.
+                    const x = e.nativeEvent.locationX;
+                    if (!Number.isFinite(x)) return;
+                    onChange(Math.max(0, Math.min(x / Math.max(w, 1), 1)));
+                }}
             >
-                <View style={[styles.volFill, { width: `${Math.round(value * 100)}%` }]} />
+                <View style={[styles.volFill, { width: `${pct}%` }]} />
             </Pressable>
-            <Text style={styles.volPct}>{Math.round(value * 100)}%</Text>
+            <Text style={styles.volPct}>{pct}%</Text>
         </View>
     );
 };
@@ -434,6 +458,8 @@ const useStyles = (colors: any) =>
                 rowSelected: { backgroundColor: colors.tag },
                 rowMeta: { flex: 1 },
                 rowTitle: { fontSize: 13, fontWeight: "500", color: colors.text },
+                voAddedTitle: { flex: 1, fontSize: 13, fontWeight: "500", color: colors.text },
+                voDuration: { fontSize: 12, fontWeight: "600", color: colors.textSecondary, fontVariant: ["tabular-nums"] },
                 rowSub: { fontSize: 11, color: colors.textSecondary },
                 added: { fontSize: 12, color: colors.primary, fontWeight: "500" },
                 useBtn: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8, backgroundColor: colors.tag },
