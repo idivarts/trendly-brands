@@ -101,6 +101,31 @@ export const BRIDGE_SCRIPT = `
     });
   }
 
+  // Pick an H.264 codec string whose LEVEL is high enough for this frame size.
+  // The old hardcoded Baseline L3.1 ('avc1.42001f') rejects portrait social
+  // frames — 1080x1350 and 1080x1920 exceed L3.1's ~921,600 max coded area — so
+  // every reel/story render aborted with NotSupportedError. Try descending
+  // profiles/levels and use the first the browser's VideoEncoder truly supports.
+  function pickAvcCodec(w, h, fps){
+    var candidates = [
+      'avc1.640034','avc1.64002a','avc1.640028',   // High  L5.2 / L4.2 / L4.0
+      'avc1.4d0034','avc1.4d002a','avc1.4d0028',   // Main  L5.2 / L4.2 / L4.0
+      'avc1.420034','avc1.42002a','avc1.420028',   // Base  L5.2 / L4.2 / L4.0
+      'avc1.42001f'                                // Base  L3.1 (small frames only)
+    ];
+    var i = 0;
+    return new Promise(function(resolve){
+      function next(){
+        if (i >= candidates.length){ resolve(null); return; }
+        var c = candidates[i++];
+        if (!(window.VideoEncoder && VideoEncoder.isConfigSupported)){ resolve(c); return; }
+        VideoEncoder.isConfigSupported({ codec: c, width: w, height: h, bitrate: 5000000, framerate: fps })
+          .then(function(r){ if (r && r.supported){ resolve(c); } else { next(); } })
+          .catch(function(){ next(); });
+      }
+      next();
+    });
+  }
   // Web-only: render the animated design to a single MP4 (html2canvas frames +
   // WebCodecs VideoEncoder) with the soundtrack (AAC) muxed in via mp4-muxer.
   function captureVideo(fps, audioCfg){
@@ -113,6 +138,8 @@ export const BRIDGE_SCRIPT = `
     loadH2C(function(){
       loadScript(${JSON.stringify(MP4_MUXER_URL)}, 'Mp4Muxer', function(){
         if (!window.Mp4Muxer || !window.Mp4Muxer.Muxer){ send({type:'error',message:'mp4-muxer failed to load'}); return; }
+        pickAvcCodec(W, H, fps).then(function(vcodec){
+        if (!vcodec){ send({type:'error',message:'This video size ('+W+'x'+H+') is not supported for H.264 encoding in this browser.'}); return; }
         prepAudio(audioCfg, totalMs).then(function(audio){
           try {
             var muxerCfg = { target: new window.Mp4Muxer.ArrayBufferTarget(), video: { codec: 'avc', width: W, height: H }, fastStart: 'in-memory' };
@@ -120,7 +147,7 @@ export const BRIDGE_SCRIPT = `
             var muxer = new window.Mp4Muxer.Muxer(muxerCfg);
 
             var venc = new VideoEncoder({ output: function(c,m){ muxer.addVideoChunk(c,m); }, error: function(e){ send({type:'error',message:'venc: '+String(e)}); } });
-            venc.configure({ codec: 'avc1.42001f', width: W, height: H, bitrate: 5000000, framerate: fps });
+            venc.configure({ codec: vcodec, width: W, height: H, bitrate: 5000000, framerate: fps });
 
             // Encode the mixed audio up-front in ~1s AudioData chunks.
             var audioDone = Promise.resolve();
@@ -142,6 +169,60 @@ export const BRIDGE_SCRIPT = `
             }
 
             var frames = Math.max(1, Math.round(totalMs/1000*fps));
+            // Yield between frames via MessageChannel, NOT setTimeout. Background
+            // tabs throttle setTimeout HARD (clamped to ~1s, then ~1/min after ~5
+            // min hidden), which crawls a long export to a near-halt when the tab
+            // isn't focused. MessageChannel callbacks are exempt from that
+            // throttling, so the render runs at full html2canvas speed even in a
+            // background tab.
+            var _yieldQ = [];
+            var _yieldMC = new MessageChannel();
+            _yieldMC.port1.onmessage = function(){ var fn = _yieldQ.shift(); if (fn) fn(); };
+            function yieldTick(fn){ _yieldQ.push(fn); _yieldMC.port2.postMessage(0); }
+            // html2canvas (once per frame) is the render bottleneck — a 30s reel at
+            // 24fps is 720 rasterizations and can take many minutes. But a scene is
+            // only visually changing while its ENTRY animations run; once they
+            // finish, animation-fill-mode holds the end state, so every remaining
+            // frame of that scene is identical. So we rasterize only animating
+            // frames + scene changes and REUSE the last canvas for static holds.
+            var lastCanvas = null, renderedIdx = -1, settledRendered = false, settleCache = {};
+            function sceneSettle(i){
+              if (settleCache[i] !== undefined) return settleCache[i];
+              var anims = vSceneAnims(i), mx = 0;
+              for (var k = 0; k < anims.length; k++){
+                try {
+                  var e = anims[k].effect.getComputedTiming().endTime;
+                  if (!isFinite(e)){ mx = Infinity; break; }
+                  if (e > mx) mx = e;
+                } catch(_){}
+              }
+              settleCache[i] = mx; return mx;
+            }
+            function advance(i){
+              // Backpressure: reused frames emit with no html2canvas delay, so cap
+              // the encoder's in-flight queue (bounds memory). Wait on the encoder's
+              // own 'dequeue' event so we resume the instant it drains — never a
+              // busy-spin, never a deadlock.
+              if (venc.encodeQueueSize > 30){
+                var onDeq = function(){ venc.removeEventListener('dequeue', onDeq); advance(i); };
+                venc.addEventListener('dequeue', onDeq);
+                return;
+              }
+              yieldTick(function(){ nextFrame(i); });
+            }
+            function emitFrame(canvas, t, i){
+              // Encode in a try/catch: the reuse path calls this outside the
+              // html2canvas promise, so an encode throw would otherwise kill the
+              // loop silently instead of surfacing an error.
+              try {
+                var frame = new VideoFrame(canvas, { timestamp: Math.round(t*1000), duration: Math.round(1000000/fps) });
+                venc.encode(frame, { keyFrame: (i % fps === 0) });
+                frame.close();
+              } catch(e){ send({type:'error',message:'encode: '+String(e)}); return; }
+              i++;
+              if (i % 5 === 0) send({type:'renderProgress', frame:i, total:frames});
+              advance(i);
+            }
             function nextFrame(i){
               if (i >= frames){
                 audioDone.then(function(){
@@ -153,19 +234,23 @@ export const BRIDGE_SCRIPT = `
                 return;
               }
               var t = i * (1000/fps);
-              var idx = vSceneAt(t); vTranslate(idx); vSetTime(idx, t - vOffsets[idx]);
+              var idx = vSceneAt(t); var localMs = t - vOffsets[idx];
+              vTranslate(idx); vSetTime(idx, localMs);
+              var animating = localMs < sceneSettle(idx);
+              // Static hold of the same scene → reuse the last raster (no html2canvas).
+              if (!animating && idx === renderedIdx && settledRendered && lastCanvas){
+                emitFrame(lastCanvas, t, i);
+                return;
+              }
               var stage = vScenes[idx] || document.body;
               window.html2canvas(stage, {backgroundColor:'#ffffff', useCORS:true, scale:1, width:W, height:H, onclone:cleanClone}).then(function(canvas){
-                var frame = new VideoFrame(canvas, { timestamp: Math.round(t*1000), duration: Math.round(1000000/fps) });
-                venc.encode(frame, { keyFrame: (i % fps === 0) });
-                frame.close();
-                i++;
-                if (i % 5 === 0) send({type:'renderProgress', frame:i, total:frames});
-                setTimeout(function(){ nextFrame(i); }, 0);
+                lastCanvas = canvas; renderedIdx = idx; settledRendered = !animating;
+                emitFrame(canvas, t, i);
               }).catch(function(e){ send({type:'error',message:String(e)}); });
             }
             whenImagesReady(document).then(function(){ nextFrame(0); });
           } catch(e){ send({type:'error',message:String(e)}); }
+        });
         });
       });
     });
