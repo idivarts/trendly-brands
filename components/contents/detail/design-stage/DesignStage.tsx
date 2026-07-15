@@ -303,14 +303,17 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
         } else if (msg.type === "error") {
             setCapturing(false);
             setRenderProg(null);
+            // Surface the frame's actual reason (don't hard-code "browser may not
+            // support…" for every video failure — that masked a real encoder bug).
+            if (msg.message) console.warn("[design render] error:", msg.message);
+            const detail = msg.message ? ` (${msg.message})` : "";
             setRenderError(
                 isVideoDesign
                     ? {
-                          message:
-                              "Couldn't render the video — your browser may not support in-browser video export. Try Chrome on desktop.",
+                          message: `Couldn't render the video.${detail} If this keeps happening, try Chrome on desktop.`,
                           retry: true,
                       }
-                    : { message: "Something went wrong while rendering. Please try again.", retry: true }
+                    : { message: `Something went wrong while rendering.${detail} Please try again.`, retry: true }
             );
         }
     };
@@ -419,7 +422,11 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
             setRenderProg({ done: 0, total: 0 });
             setVideoNote(null);
             const a = props.audio;
-            frameRef.current?.captureVideo(24, a
+            // 15fps (not 24): the export rasterizes each frame with html2canvas at
+            // ~1s/frame regardless of resolution, so frame count is the only real
+            // lever on render time — 15fps ~halves it and stays smooth for these
+            // motion-graphic reels. (Real fix for long videos = server-side render.)
+            frameRef.current?.captureVideo(15, a
                 ? {
                       musicUrl: a.musicUrl,
                       voiceoverUrl: a.voiceoverUrl,

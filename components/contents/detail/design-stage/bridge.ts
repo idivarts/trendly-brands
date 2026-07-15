@@ -101,6 +101,31 @@ export const BRIDGE_SCRIPT = `
     });
   }
 
+  // Pick an H.264 codec string whose LEVEL is high enough for this frame size.
+  // The old hardcoded Baseline L3.1 ('avc1.42001f') rejects portrait social
+  // frames — 1080x1350 and 1080x1920 exceed L3.1's ~921,600 max coded area — so
+  // every reel/story render aborted with NotSupportedError. Try descending
+  // profiles/levels and use the first the browser's VideoEncoder truly supports.
+  function pickAvcCodec(w, h, fps){
+    var candidates = [
+      'avc1.640034','avc1.64002a','avc1.640028',   // High  L5.2 / L4.2 / L4.0
+      'avc1.4d0034','avc1.4d002a','avc1.4d0028',   // Main  L5.2 / L4.2 / L4.0
+      'avc1.420034','avc1.42002a','avc1.420028',   // Base  L5.2 / L4.2 / L4.0
+      'avc1.42001f'                                // Base  L3.1 (small frames only)
+    ];
+    var i = 0;
+    return new Promise(function(resolve){
+      function next(){
+        if (i >= candidates.length){ resolve(null); return; }
+        var c = candidates[i++];
+        if (!(window.VideoEncoder && VideoEncoder.isConfigSupported)){ resolve(c); return; }
+        VideoEncoder.isConfigSupported({ codec: c, width: w, height: h, bitrate: 5000000, framerate: fps })
+          .then(function(r){ if (r && r.supported){ resolve(c); } else { next(); } })
+          .catch(function(){ next(); });
+      }
+      next();
+    });
+  }
   // Web-only: render the animated design to a single MP4 (html2canvas frames +
   // WebCodecs VideoEncoder) with the soundtrack (AAC) muxed in via mp4-muxer.
   function captureVideo(fps, audioCfg){
@@ -113,6 +138,8 @@ export const BRIDGE_SCRIPT = `
     loadH2C(function(){
       loadScript(${JSON.stringify(MP4_MUXER_URL)}, 'Mp4Muxer', function(){
         if (!window.Mp4Muxer || !window.Mp4Muxer.Muxer){ send({type:'error',message:'mp4-muxer failed to load'}); return; }
+        pickAvcCodec(W, H, fps).then(function(vcodec){
+        if (!vcodec){ send({type:'error',message:'This video size ('+W+'x'+H+') is not supported for H.264 encoding in this browser.'}); return; }
         prepAudio(audioCfg, totalMs).then(function(audio){
           try {
             var muxerCfg = { target: new window.Mp4Muxer.ArrayBufferTarget(), video: { codec: 'avc', width: W, height: H }, fastStart: 'in-memory' };
@@ -120,7 +147,7 @@ export const BRIDGE_SCRIPT = `
             var muxer = new window.Mp4Muxer.Muxer(muxerCfg);
 
             var venc = new VideoEncoder({ output: function(c,m){ muxer.addVideoChunk(c,m); }, error: function(e){ send({type:'error',message:'venc: '+String(e)}); } });
-            venc.configure({ codec: 'avc1.42001f', width: W, height: H, bitrate: 5000000, framerate: fps });
+            venc.configure({ codec: vcodec, width: W, height: H, bitrate: 5000000, framerate: fps });
 
             // Encode the mixed audio up-front in ~1s AudioData chunks.
             var audioDone = Promise.resolve();
@@ -142,6 +169,60 @@ export const BRIDGE_SCRIPT = `
             }
 
             var frames = Math.max(1, Math.round(totalMs/1000*fps));
+            // Yield between frames via MessageChannel, NOT setTimeout. Background
+            // tabs throttle setTimeout HARD (clamped to ~1s, then ~1/min after ~5
+            // min hidden), which crawls a long export to a near-halt when the tab
+            // isn't focused. MessageChannel callbacks are exempt from that
+            // throttling, so the render runs at full html2canvas speed even in a
+            // background tab.
+            var _yieldQ = [];
+            var _yieldMC = new MessageChannel();
+            _yieldMC.port1.onmessage = function(){ var fn = _yieldQ.shift(); if (fn) fn(); };
+            function yieldTick(fn){ _yieldQ.push(fn); _yieldMC.port2.postMessage(0); }
+            // html2canvas (once per frame) is the render bottleneck — a 30s reel at
+            // 24fps is 720 rasterizations and can take many minutes. But a scene is
+            // only visually changing while its ENTRY animations run; once they
+            // finish, animation-fill-mode holds the end state, so every remaining
+            // frame of that scene is identical. So we rasterize only animating
+            // frames + scene changes and REUSE the last canvas for static holds.
+            var lastCanvas = null, renderedIdx = -1, settledRendered = false, settleCache = {};
+            function sceneSettle(i){
+              if (settleCache[i] !== undefined) return settleCache[i];
+              var anims = vSceneAnims(i), mx = 0;
+              for (var k = 0; k < anims.length; k++){
+                try {
+                  var e = anims[k].effect.getComputedTiming().endTime;
+                  if (!isFinite(e)){ mx = Infinity; break; }
+                  if (e > mx) mx = e;
+                } catch(_){}
+              }
+              settleCache[i] = mx; return mx;
+            }
+            function advance(i){
+              // Backpressure: reused frames emit with no html2canvas delay, so cap
+              // the encoder's in-flight queue (bounds memory). Wait on the encoder's
+              // own 'dequeue' event so we resume the instant it drains — never a
+              // busy-spin, never a deadlock.
+              if (venc.encodeQueueSize > 30){
+                var onDeq = function(){ venc.removeEventListener('dequeue', onDeq); advance(i); };
+                venc.addEventListener('dequeue', onDeq);
+                return;
+              }
+              yieldTick(function(){ nextFrame(i); });
+            }
+            function emitFrame(canvas, t, i){
+              // Encode in a try/catch: the reuse path calls this outside the
+              // html2canvas promise, so an encode throw would otherwise kill the
+              // loop silently instead of surfacing an error.
+              try {
+                var frame = new VideoFrame(canvas, { timestamp: Math.round(t*1000), duration: Math.round(1000000/fps) });
+                venc.encode(frame, { keyFrame: (i % fps === 0) });
+                frame.close();
+              } catch(e){ send({type:'error',message:'encode: '+String(e)}); return; }
+              i++;
+              if (i % 5 === 0) send({type:'renderProgress', frame:i, total:frames});
+              advance(i);
+            }
             function nextFrame(i){
               if (i >= frames){
                 audioDone.then(function(){
@@ -153,19 +234,23 @@ export const BRIDGE_SCRIPT = `
                 return;
               }
               var t = i * (1000/fps);
-              var idx = vSceneAt(t); vTranslate(idx); vSetTime(idx, t - vOffsets[idx]);
+              var idx = vSceneAt(t); var localMs = t - vOffsets[idx];
+              vTranslate(idx); vSetTime(idx, localMs);
+              var animating = localMs < sceneSettle(idx);
+              // Static hold of the same scene → reuse the last raster (no html2canvas).
+              if (!animating && idx === renderedIdx && settledRendered && lastCanvas){
+                emitFrame(lastCanvas, t, i);
+                return;
+              }
               var stage = vScenes[idx] || document.body;
               window.html2canvas(stage, {backgroundColor:'#ffffff', useCORS:true, scale:1, width:W, height:H, onclone:cleanClone}).then(function(canvas){
-                var frame = new VideoFrame(canvas, { timestamp: Math.round(t*1000), duration: Math.round(1000000/fps) });
-                venc.encode(frame, { keyFrame: (i % fps === 0) });
-                frame.close();
-                i++;
-                if (i % 5 === 0) send({type:'renderProgress', frame:i, total:frames});
-                setTimeout(function(){ nextFrame(i); }, 0);
+                lastCanvas = canvas; renderedIdx = idx; settledRendered = !animating;
+                emitFrame(canvas, t, i);
               }).catch(function(e){ send({type:'error',message:String(e)}); });
             }
-            nextFrame(0);
+            whenImagesReady(document).then(function(){ nextFrame(0); });
           } catch(e){ send({type:'error',message:String(e)}); }
+        });
         });
       });
     });
@@ -173,6 +258,68 @@ export const BRIDGE_SCRIPT = `
   function showSlide(i, slideWidth){
     var c = document.querySelector('[data-carousel]');
     if (c){ c.style.transition='transform .2s'; c.style.transform='translateX('+(-i*slideWidth)+'px)'; }
+  }
+  // ── Export-safe gradient fix ─────────────────────────────────────────────
+  // html2canvas renders the CSS keyword \`transparent\` as transparent BLACK, so
+  // our soft blob/glow shapes (radial-gradients fading to \`transparent\`) come out
+  // as muddy gray blobs in the export while looking fine in the live preview.
+  // Rewrite each gradient's transparent stops to the SAME color at alpha 0 — which
+  // renders identically in the browser but cleanly in html2canvas. String-scanned
+  // (no regex) so it stays safe inside this bridge template literal, and only ever
+  // applied to the html2canvas CLONE, so the live design is untouched.
+  function gradFirstColor(body){
+    var hi = body.indexOf('#');
+    if (hi !== -1){
+      var hex='';
+      for (var p=hi+1; p<body.length; p++){ var ch=body[p];
+        if ((ch>='0'&&ch<='9')||(ch>='a'&&ch<='f')||(ch>='A'&&ch<='F')){ hex+=ch; } else { break; } }
+      if (hex.length>=6){ return parseInt(hex.slice(0,2),16)+','+parseInt(hex.slice(2,4),16)+','+parseInt(hex.slice(4,6),16); }
+      if (hex.length>=3){ var s=hex.slice(0,3); return parseInt(s[0]+s[0],16)+','+parseInt(s[1]+s[1],16)+','+parseInt(s[2]+s[2],16); }
+    }
+    var low=body.toLowerCase(), from=0;
+    while (true){
+      var ri=low.indexOf('rgb', from);
+      if (ri===-1) break;
+      var lp=body.indexOf('(', ri), rp=body.indexOf(')', ri);
+      if (lp===-1||rp===-1) break;
+      var parts=body.slice(lp+1, rp).split(',');
+      if (parts.length>=3){
+        var a = parts.length>=4 ? parseFloat(parts[3]) : 1;
+        if (a>0){ return parseInt(parts[0],10)+','+parseInt(parts[1],10)+','+parseInt(parts[2],10); }
+      }
+      from=rp+1;
+    }
+    return null;
+  }
+  function gradReplaceAll(str, needleLower, rep){
+    var out='', low=str.toLowerCase(), i=0;
+    while (true){ var idx=low.indexOf(needleLower, i); if (idx===-1){ out+=str.slice(i); break; } out+=str.slice(i, idx)+rep; i=idx+needleLower.length; }
+    return out;
+  }
+  function gradFixBody(body){
+    var c=gradFirstColor(body); if (!c) return body;
+    var rep='rgba('+c+',0)';
+    body=gradReplaceAll(body, 'transparent', rep);
+    body=gradReplaceAll(body, 'rgba(0, 0, 0, 0)', rep);
+    body=gradReplaceAll(body, 'rgba(0,0,0,0)', rep);
+    return body;
+  }
+  function fixTransparentGradients(css){
+    if (!css) return css;
+    var low=css.toLowerCase();
+    if (low.indexOf('gradient(')===-1) return css;
+    var out='', i=0, n=css.length;
+    while (i<n){
+      var g=low.indexOf('gradient(', i);
+      if (g===-1){ out+=css.slice(i); break; }
+      var open=g+8;                    // index of '(' after 'gradient'
+      out += css.slice(i, open+1);
+      var depth=1, j=open+1;
+      for (; j<n; j++){ var ch=css[j]; if (ch==='('){ depth++; } else if (ch===')'){ depth--; if (depth===0){ break; } } }
+      out += gradFixBody(css.slice(open+1, j)) + ')';
+      i = j+1;
+    }
+    return out;
   }
   // Strip the display transform/clip in the html2canvas CLONE so each slide is
   // rendered at its natural size/position (the live preview keeps its transform).
@@ -189,12 +336,43 @@ export const BRIDGE_SCRIPT = `
       // Never bake the editor's hover/selection outline into the export.
       var marked = doc.querySelectorAll('.__el-hover, .__el-selected');
       for (var i=0;i<marked.length;i++){ marked[i].classList.remove('__el-hover'); marked[i].classList.remove('__el-selected'); }
+      // Fix gradients fading to \`transparent\` so soft blobs don't export as gray.
+      var gStyles = doc.querySelectorAll('style');
+      for (var gi=0; gi<gStyles.length; gi++){ gStyles[gi].textContent = fixTransparentGradients(gStyles[gi].textContent); }
+      var gEls = doc.querySelectorAll('[style]');
+      for (var gk=0; gk<gEls.length; gk++){
+        var st = gEls[gk].getAttribute('style');
+        if (st && st.toLowerCase().indexOf('gradient(') !== -1){ gEls[gk].setAttribute('style', fixTransparentGradients(st)); }
+      }
+      // NOTE: do NOT rewrite <img> src here (e.g. a cache-buster). html2canvas
+      // registers images for loading BEFORE onclone runs, so changing src in the
+      // clone makes it render without waiting for the new URL → the image is
+      // dropped from the export. Cross-origin loading is handled by useCORS + the
+      // CloudFront CORS headers; freshness is handled by whenImagesReady() before
+      // capture. Keep this hook free of image-src mutations.
     } catch(e){}
+  }
+  // Resolve once every <img> under \`root\` has finished loading (or errored), so we
+  // never capture a frame before its images have painted — html2canvas rasterizes
+  // whatever is loaded at call time, and an image still in flight would be dropped.
+  // Each image is capped by a timeout so one stuck asset can't hang the render.
+  function whenImagesReady(root){
+    var imgs = Array.prototype.slice.call((root || document).querySelectorAll('img'));
+    return Promise.all(imgs.map(function(im){
+      if (im.complete && im.naturalWidth > 0) return null;
+      return new Promise(function(res){
+        var done = false;
+        function fin(){ if (done) return; done = true; res(); }
+        im.addEventListener('load', fin);
+        im.addEventListener('error', fin);
+        setTimeout(fin, 10000);
+      });
+    }));
   }
   function captureSlides(){
     loadH2C(function(){
-      var ready = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
-      ready.then(function(){
+      var fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+      Promise.all([fontsReady, whenImagesReady(document)]).then(function(){
         var nodes = document.querySelectorAll('[data-slide]');
         var list = nodes.length ? Array.prototype.slice.call(nodes) : [target()];
         var urls = [];
