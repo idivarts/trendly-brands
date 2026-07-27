@@ -57,6 +57,7 @@ jobs:
           EXPO_PUBLIC_APP_STAGE: ${{ env.STAGE }}
           EXPO_PUBLIC_WEBSOCKET_TRENDLY: ${{ env.STAGE == 'prod' && vars.WEBSOCKET_PROD_TRENDLY || vars.WEBSOCKET_DEV_TRENDLY }}
           EXPO_PUBLIC_FIRESTORE_DATABASE_ID: ${{ env.STAGE == 'prod' && vars.FIRESTORE_DATABASE_PROD_ID || vars.FIRESTORE_DATABASE_DEV_ID }}
+          EXPO_PUBLIC_REVENUECAT_KEY: ${{ vars.REVENUECAT_ANDROID_KEY }}
         run: npm run build-android
 
       - name: Submit to Play Store
