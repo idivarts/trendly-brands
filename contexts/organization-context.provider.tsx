@@ -11,6 +11,7 @@ import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { Organization } from "@/types/Organization";
+import { identifyOrg } from "@/utils/iap/purchases";
 import {
     collection,
     collectionGroup,
@@ -214,6 +215,14 @@ export const OrganizationProvider = ({ children }: { children: React.ReactNode }
             });
         });
         return () => unsubscribe();
+    }, [selectedBrand?.organizationId]);
+
+    // Attach native In-App Purchases (RevenueCat) to the active org — billing is
+    // org-level, so purchases must key off organizationId. No-op on web (Razorpay).
+    useEffect(() => {
+        const orgId = selectedBrand?.organizationId;
+        if (!orgId) return;
+        identifyOrg(orgId);
     }, [selectedBrand?.organizationId]);
 
     const selectedOrgBilling = selectedOrganization?.billing;
