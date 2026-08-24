@@ -1,4 +1,4 @@
-import { REDDIT_ENABLED } from "@/constants/features";
+import { LINKEDIN_PAGE_ENABLED, REDDIT_ENABLED } from "@/constants/features";
 import { ISocialAccount } from "@/contexts/brand-social-context.provider";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
@@ -93,12 +93,15 @@ const ALL_SOCIAL_PLATFORMS: SocialPlatformMeta[] = [
 
 /**
  * The platforms a brand can connect, gated by feature flags. Reddit is hidden
- * until REDDIT_ENABLED is turned on (see constants/features.ts). The MAP below is
- * built from the FULL list so display lookups (icon/label/color) still resolve
- * for any account that somehow exists.
+ * until REDDIT_ENABLED is turned on, and LinkedIn Page is hidden until
+ * LINKEDIN_PAGE_ENABLED is turned on (see constants/features.ts) — personal
+ * LinkedIn stays enabled. The MAP below is built from the FULL list so display
+ * lookups (icon/label/color) still resolve for any account that somehow exists.
  */
 export const SOCIAL_PLATFORMS: SocialPlatformMeta[] = ALL_SOCIAL_PLATFORMS.filter(
-    (p) => p.key !== "reddit" || REDDIT_ENABLED
+    (p) =>
+        (p.key !== "reddit" || REDDIT_ENABLED) &&
+        (p.key !== "linkedin_page" || LINKEDIN_PAGE_ENABLED)
 );
 
 export const SOCIAL_PLATFORM_MAP: Record<SocialPlatform, SocialPlatformMeta> =
