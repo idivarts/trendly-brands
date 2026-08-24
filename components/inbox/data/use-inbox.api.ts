@@ -21,7 +21,7 @@
 import { collection, onSnapshot } from "firebase/firestore";
 import { useCallback, useEffect, useState } from "react";
 
-import { REDDIT_ENABLED } from "@/constants/features";
+import { LINKEDIN_PAGE_ENABLED, REDDIT_ENABLED } from "@/constants/features";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
@@ -42,7 +42,7 @@ import {
  */
 const INBOX_CHANNELS = new Set(
     ["instagram", "facebook", "linkedin_page", "twitter", "reddit"].filter(
-        (c) => c !== "reddit" || REDDIT_ENABLED
+        (c) => (c !== "reddit" || REDDIT_ENABLED) && (c !== "linkedin_page" || LINKEDIN_PAGE_ENABLED)
     )
 );
 

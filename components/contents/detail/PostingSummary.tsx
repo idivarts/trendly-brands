@@ -4,7 +4,7 @@ import {
     ScheduleMode,
     SocialDestination,
 } from "@/components/contents/types";
-import { REDDIT_ENABLED } from "@/constants/features";
+import { LINKEDIN_PAGE_ENABLED, REDDIT_ENABLED } from "@/constants/features";
 import Colors from "@/shared-uis/constants/Colors";
 import {
     faBolt,
@@ -24,10 +24,10 @@ import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 // Platforms Trendly can publish to. Kept in sync with ScheduleBar's set so the
 // recap chips match the destinations the user actually selected. Reddit is gated
-// by REDDIT_ENABLED.
+// by REDDIT_ENABLED, LinkedIn Page by LINKEDIN_PAGE_ENABLED.
 const PUBLISHABLE = new Set(
     ["instagram", "facebook", "linkedin", "linkedin_page", "twitter", "youtube", "reddit"].filter(
-        (p) => p !== "reddit" || REDDIT_ENABLED
+        (p) => (p !== "reddit" || REDDIT_ENABLED) && (p !== "linkedin_page" || LINKEDIN_PAGE_ENABLED)
     )
 );
 

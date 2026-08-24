@@ -1,7 +1,7 @@
 import DateField from "@/components/modals/DateField";
 import { ISocialAccount, socialAccountLabel } from "@/contexts/brand-social-context.provider";
 import { PlatformOptions, POPULAR_POSTING_TIMES, ScheduleMode, SocialDestination } from "@/components/contents/types";
-import { REDDIT_ENABLED } from "@/constants/features";
+import { LINKEDIN_PAGE_ENABLED, REDDIT_ENABLED } from "@/constants/features";
 import Colors from "@/shared-uis/constants/Colors";
 import {
     faBolt,
@@ -52,10 +52,11 @@ interface ScheduleBarProps {
 }
 
 // Platforms Trendly can publish to. Each has a backend publish path
-// (internal/trendlyapis/publishing/publish.go). Reddit is gated by REDDIT_ENABLED.
+// (internal/trendlyapis/publishing/publish.go). Reddit is gated by REDDIT_ENABLED,
+// LinkedIn Page by LINKEDIN_PAGE_ENABLED.
 const PUBLISHABLE = new Set(
     ["instagram", "facebook", "linkedin", "linkedin_page", "twitter", "youtube", "reddit"].filter(
-        (p) => p !== "reddit" || REDDIT_ENABLED
+        (p) => (p !== "reddit" || REDDIT_ENABLED) && (p !== "linkedin_page" || LINKEDIN_PAGE_ENABLED)
     )
 );
 
