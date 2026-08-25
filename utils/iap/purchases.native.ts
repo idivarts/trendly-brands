@@ -20,9 +20,18 @@ import {
 
 export const isIapSupported = Platform.OS === "ios" || Platform.OS === "android";
 
-const apiKey = (): string | undefined =>
-    Platform.OS !== "web"
-        ? process.env.EXPO_PUBLIC_REVENUECAT_KEY : undefined;
+// RevenueCat Test Store key — only valid for local Metro-served builds
+// (expo run:ios/android, dev client). The SDK hard-rejects this key on any
+// build with a real store receipt context (TestFlight, Play internal testing,
+// App Store), so it must never be the key baked into an EAS/CI build; __DEV__
+// is false in those builds, so this branch never applies there.
+const TEST_STORE_API_KEY = "test_bdbNJhLEhiGNOnKxbNaMDpvUhyi";
+
+const apiKey = (): string | undefined => {
+    if (Platform.OS === "web") return undefined;
+    if (__DEV__) return TEST_STORE_API_KEY;
+    return process.env.EXPO_PUBLIC_REVENUECAT_KEY;
+};
 
 export const isIapConfigured = (): boolean => isIapSupported && !!apiKey();
 
