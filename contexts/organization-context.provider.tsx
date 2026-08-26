@@ -79,6 +79,9 @@ interface OrganizationContextProps {
     // always-available fallback (stuck sync, lapsed subscription, or just
     // opting out). Does not cancel any real store/Razorpay subscription.
     downgradeToFree: (orgId: string) => Promise<boolean>;
+    // Clears a previously recorded IapRestoreConflict once the popup has been
+    // shown (see RestoreConflictModal). Does not change the org's plan.
+    dismissRestoreConflict: (orgId: string) => Promise<boolean>;
     // The parent organization of the currently selected brand, kept in sync via
     // a Firestore subscription. Undefined for legacy brands with no
     // organizationId or while the subscription is still hydrating.
@@ -126,6 +129,7 @@ const OrganizationContext = createContext<OrganizationContextProps>({
     getOrganizationMembers: async () => [],
     removeOrganizationMember: noop,
     downgradeToFree: async () => false,
+    dismissRestoreConflict: async () => false,
     selectedOrganization: undefined,
     selectedOrgBilling: undefined,
     selectedOrgEntitlements: undefined,
@@ -526,6 +530,19 @@ export const OrganizationProvider = ({ children }: { children: React.ReactNode }
         []
     );
 
+    const dismissRestoreConflict = useCallback(
+        async (orgId: string): Promise<boolean> => {
+            try {
+                await HttpWrapper.fetch(`/api/v2/organizations/${orgId}/iap/dismiss-restore-conflict`, { method: "POST" });
+                return true;
+            } catch (e) {
+                Toaster.error(await errorMessage(e, "Failed to dismiss"));
+                return false;
+            }
+        },
+        []
+    );
+
     return (
         <OrganizationContext.Provider
             value={{
@@ -542,6 +559,7 @@ export const OrganizationProvider = ({ children }: { children: React.ReactNode }
                 getOrganizationMembers,
                 removeOrganizationMember,
                 downgradeToFree,
+                dismissRestoreConflict,
                 selectedOrganization,
                 selectedOrgBilling,
                 selectedOrgEntitlements,
