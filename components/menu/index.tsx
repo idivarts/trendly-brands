@@ -181,9 +181,10 @@ const Menu = () => {
                         { id: "design-system", icon: faPalette, title: "Design System", href: "/design-system" },
                         { id: "connected-accounts", icon: faShareNodes, title: "Connected Accounts", href: "/connected-accounts" },
                         { id: "members", icon: faUsers, title: "Members", href: "/members" },
-                        ...(Platform.OS === "web"
-                            ? [{ id: "billing", icon: faCreditCard, title: "Billing", href: "/billing" as Href }]
-                            : [{ id: "settings", icon: faGears, title: "Settings", href: "/settings" as Href }]),
+                        { id: "billing", icon: faCreditCard, title: "Billing", href: "/billing" as Href },
+                        ...(Platform.OS !== "web"
+                            ? [{ id: "settings", icon: faGears, title: "Settings", href: "/settings" as Href }]
+                            : []),
                     ],
                 },
             ],
