@@ -276,7 +276,12 @@ export const OrganizationProvider = ({ children }: { children: React.ReactNode }
         if (selectedOrgBilling?.status !== ModelStatus.Accepted && !trialActive) {
             router.resetAndNavigate("/pay-wall");
         }
-    }, [selectedBrand, selectedOrganization, selectedOrgBilling, router]);
+        // `router` (useMyNavigation()) is a fresh object every render — it must
+        // not be a dependency here, or this effect (and its resetAndNavigate
+        // state update) re-fires on every render, which can spiral into
+        // "Maximum update depth exceeded" whenever the gate condition is true.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedBrand, selectedOrganization, selectedOrgBilling]);
 
     const createOrganization = useCallback(
         async (name: string, image?: string): Promise<Organization | null> => {
