@@ -5,6 +5,7 @@
  * from the script; control volume + fade + auto-duck. Browsing/selecting is free;
  * only generation meters the token wallet. Persists to content.audio.
  */
+import { useSubscribeNudge } from "@/contexts/subscribe-nudge-context.provider";
 import { useEntitlements } from "@/hooks/use-entitlements";
 import { IContentAudio, IMusicTrack, IVoice } from "@/shared-libs/firestore/trendly-pro/models/design";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
@@ -55,6 +56,7 @@ const SoundtrackPanel: React.FC<SoundtrackPanelProps> = ({
     const theme = useTheme();
     const colors = Colors(theme);
     const { tokens } = useEntitlements();
+    const { maybeNudge } = useSubscribeNudge();
     const exhausted = tokens.state === "exhausted";
     const audition = useAudition();
     // Length of the attached voiceover, read from the clip (not stored), so the
@@ -139,6 +141,9 @@ const SoundtrackPanel: React.FC<SoundtrackPanelProps> = ({
 
     const generateMusic = async () => {
         if (!genPrompt.trim() || exhausted) return;
+        if (tokens.state === "low" || tokens.state === "critical") {
+            maybeNudge("generate_low_tokens");
+        }
         setGenBusy(true);
         setError(null);
         try {
@@ -163,6 +168,9 @@ const SoundtrackPanel: React.FC<SoundtrackPanelProps> = ({
             return;
         }
         if (!selectedVoiceId || exhausted) return;
+        if (tokens.state === "low" || tokens.state === "critical") {
+            maybeNudge("generate_low_tokens");
+        }
         setVoiceBusy(true);
         setError(null);
         try {
