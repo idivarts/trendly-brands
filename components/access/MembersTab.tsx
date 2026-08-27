@@ -15,6 +15,9 @@ import MemberAccessModal, { EditableMember } from "./MemberAccessModal";
 interface MembersTabProps {
     showInviteModal: boolean;
     onCloseInvite: () => void;
+    // Reported up so the screen can check the plan's seat cap when "Add Member"
+    // is tapped — the member list is owned here, not by the parent.
+    onMemberCountChange?: (count: number) => void;
 }
 
 const initialsOf = (name?: string, email?: string) => {
@@ -24,7 +27,7 @@ const initialsOf = (name?: string, email?: string) => {
     return base.slice(0, 2).toUpperCase();
 };
 
-const MembersTab: React.FC<MembersTabProps> = ({ showInviteModal, onCloseInvite }) => {
+const MembersTab: React.FC<MembersTabProps> = ({ showInviteModal, onCloseInvite, onMemberCountChange }) => {
     const theme = useTheme();
     const colors = useMemo(() => Colors(theme), [theme]);
     const { xl, width } = useBreakpoints();
@@ -57,6 +60,7 @@ const MembersTab: React.FC<MembersTabProps> = ({ showInviteModal, onCloseInvite 
                 }),
             );
             setMembers(rows);
+            onMemberCountChange?.(rows.length);
         } catch (error) {
             Console.error(error);
         }

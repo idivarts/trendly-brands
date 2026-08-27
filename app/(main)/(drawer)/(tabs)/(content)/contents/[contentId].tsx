@@ -42,6 +42,8 @@ import PageHeader from "@/components/ui/page-header";
 import { SOCIAL_PLATFORM_MAP } from "@/constants/Socials";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBrandSocialContext } from "@/contexts/brand-social-context.provider";
+import { useSubscribeNudge } from "@/contexts/subscribe-nudge-context.provider";
+import { useEntitlements } from "@/hooks/use-entitlements";
 import { useBreakpoints } from "@/hooks";
 import { LiveContent, LiveContentVariation } from "@/hooks/use-ai-chat";
 import { CaptionVariant, HashtagGroup, useAIGenerate } from "@/hooks/use-ai-generate";
@@ -145,6 +147,8 @@ const CreateContentScreen = () => {
     const { strategies } = useStrategies();
     const { socialAccounts } = useBrandSocialContext();
     const { selectedBrand, hasCapability } = useBrandContext();
+    const { maybeNudge, markAhaMoment } = useSubscribeNudge();
+    const { tokens, maxPostsPerMonth } = useEntitlements();
     const { openModal } = useConfirmationModel();
 
     // Resolve the live item from the real contents list first; fall back to
@@ -680,13 +684,16 @@ const CreateContentScreen = () => {
             }
             setDirty(false);
             setShowPublishModal(false);
+            // Aha-moment: the user has shipped their first post. Marked after a
+            // confirmed success so a failed publish never counts.
+            markAhaMoment("post_scheduled");
         } catch (e) {
             // Surface via console for now; a toast is added in the Phase 6 polish.
             console.warn("Publish/schedule error:", e);
         } finally {
             setPublishing(false);
         }
-    }, [contentId, publishing, locked, destinations, platformOptions, scheduleMode, date, timeOfPosting, updateContent, saveVariations, selectedBrand?.id, title, idea, caption, hashtags, script, imagePrompt, attachments]);
+    }, [contentId, publishing, locked, destinations, platformOptions, scheduleMode, date, timeOfPosting, updateContent, saveVariations, selectedBrand?.id, title, idea, caption, hashtags, script, imagePrompt, attachments, markAhaMoment]);
 
     // Guard the publish entry point: if the brand has no connected social
     // accounts, surface a blocking modal that routes to Connected Accounts
@@ -696,8 +703,14 @@ const CreateContentScreen = () => {
             setShowNoSocialsModal(true);
             return;
         }
+        // High-intent: the content is finished and they're one tap from
+        // shipping. Nudge when the plan caps posting (free plans only; -1 is
+        // unlimited). Non-blocking — the publish sheet still opens.
+        if (maxPostsPerMonth >= 0) {
+            maybeNudge("publish_over_cap");
+        }
         setShowPublishModal(true);
-    }, [publishableAccounts.length]);
+    }, [publishableAccounts.length, maxPostsPerMonth, maybeNudge]);
 
     // Unschedule a scheduled post: cancels the backend Step Functions execution
     // and reverts status to "approved", which unlocks the editor again. Returns
@@ -934,6 +947,12 @@ const CreateContentScreen = () => {
         (prompt: string, model?: string) => {
             const target = magicTarget;
             if (!target) return;
+            // Pre-flight: about to spend tokens on work already in progress —
+            // the strongest moment to surface the upgrade nudge. Only nudges
+            // when the wallet is already low/critical, and never blocks.
+            if (tokens.state === "low" || tokens.state === "critical") {
+                maybeNudge("generate_low_tokens");
+            }
             // The editor the modal was opened from: "generic" or a platform tab.
             const forPlatform = magicPlatform;
             const isVariation = forPlatform !== "generic";
@@ -999,7 +1018,7 @@ const CreateContentScreen = () => {
                 });
             }
         },
-        [magicTarget, magicPlatform, variationByPlatform, contentType, contentId, title, idea, caption, hashtags, script, attachments, platformOptions, aiCaptions, aiHashtags, generateCaption, generateHashtags, targetPlatforms, buildAIVariations]
+        [magicTarget, magicPlatform, variationByPlatform, contentType, contentId, title, idea, caption, hashtags, script, attachments, platformOptions, aiCaptions, aiHashtags, generateCaption, generateHashtags, targetPlatforms, buildAIVariations, tokens.state, maybeNudge]
     );
 
     const handleScriptAiEnhance = useCallback((model?: string) => {
@@ -1051,6 +1070,9 @@ const CreateContentScreen = () => {
     const handleImageGenerate = useCallback((promptArg?: string, focusedSlideIndex?: number, model?: string) => {
         const p = (promptArg ?? imagePrompt).trim();
         if (!p) return;
+        if (tokens.state === "low" || tokens.state === "critical") {
+            maybeNudge("generate_low_tokens");
+        }
         setImagePrompt(p);
         setIsGeneratingImage(true);
         generateImage({
@@ -1063,7 +1085,7 @@ const CreateContentScreen = () => {
             focusedSlideIndex,
             model,
         });
-    }, [imagePrompt, contentType, contentId, generateImage]);
+    }, [imagePrompt, contentType, contentId, generateImage, tokens.state, maybeNudge]);
 
     // React to AI generation results streaming back from the backend.
 

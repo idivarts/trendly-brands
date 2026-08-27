@@ -3,6 +3,8 @@ import { BrandContextProvider } from "@/contexts/brand-context.provider";
 import { OrganizationProvider } from "@/contexts/organization-context.provider";
 import { AIConfigProvider } from "@/contexts/ai-config-context.provider";
 import { BrandSocialContextProvider, useBrandSocialContext } from "@/contexts/brand-social-context.provider";
+import GBProvider from "@/contexts/growthbook-context-provider";
+import { SubscribeNudgeProvider } from "@/contexts/subscribe-nudge-context.provider";
 import { streamClient } from "@/contexts/chat-context.provider";
 import { createGuideTourStorageAdapter } from "@/contexts/guide-tour-storage-adapter";
 import { ScrollProvider } from "@/shared-libs/contexts/scroll-context";
@@ -87,8 +89,10 @@ const MainLayout = () => {
                             streamClient={streamClient}
                         >
                             <BrandContextProvider>
+                            <GBProvider>
                             <OrganizationProvider>
                                 <AIConfigProvider>
+                                <SubscribeNudgeProvider>
                                 <BrandSocialContextProvider>
                                     <CoachmarkProvider
                                         storage={storage}
@@ -116,8 +120,10 @@ const MainLayout = () => {
                                         </View>
                                     </CoachmarkProvider>
                                 </BrandSocialContextProvider>
+                                </SubscribeNudgeProvider>
                                 </AIConfigProvider>
                             </OrganizationProvider>
+                            </GBProvider>
                             </BrandContextProvider>
                         </CloudMessagingContextProvider>
                     </NotificationContextProvider>

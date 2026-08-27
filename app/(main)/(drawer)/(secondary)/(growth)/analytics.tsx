@@ -1,6 +1,7 @@
 import { LockedOverlay } from "@/components/billing/EntitlementGate";
 import { BarList, formatCompact, MiniLineChart } from "@/components/analytics/charts";
 import ResyncInline from "@/components/inbox/ResyncInline";
+import { useSubscribeNudge } from "@/contexts/subscribe-nudge-context.provider";
 import { useEntitlements } from "@/hooks/use-entitlements";
 import PageHeader from "@/components/ui/page-header";
 import { useBrandAnalytics } from "@/hooks/useBrandAnalytics";
@@ -9,7 +10,7 @@ import useBreakpoints from "@/shared-libs/utils/use-breakpoints";
 import Colors from "@/shared-uis/constants/Colors";
 import { AnalyticsRange, IAccountAnalytics } from "@/types/Analytics";
 import { useTheme } from "@react-navigation/native";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Image,
@@ -44,7 +45,14 @@ const AnalyticsScreen = () => {
     const styles = useMemo(() => makeStyles(colors, isWide), [colors, isWide]);
 
     const { analyticsLocked } = useEntitlements();
+    const { maybeNudge } = useSubscribeNudge();
     const [range, setRange] = useState<AnalyticsRange>("28d");
+
+    // Curiosity-driven intent: they navigated here specifically to see
+    // analytics. Nudge on arrival, ahead of the LockedOverlay's static CTA.
+    useEffect(() => {
+        if (analyticsLocked) maybeNudge("analytics_locked");
+    }, [analyticsLocked, maybeNudge]);
     const [selectedId, setSelectedId] = useState<string>("all");
     const { data, loading, error, reload, resyncAccount } = useBrandAnalytics(range);
 
