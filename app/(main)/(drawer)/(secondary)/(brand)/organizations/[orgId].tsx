@@ -11,6 +11,7 @@ import PageHeader from "@/components/ui/page-header";
 import Tag from "@/components/ui/tag";
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useSubscribeNudge } from "@/contexts/subscribe-nudge-context.provider";
 import {
     OrganizationDetail,
     OrganizationMemberRow,
@@ -33,6 +34,7 @@ const ManageOrganizationScreen = () => {
     const { xl, width } = useBreakpoints();
     const styles = useStyles(colors);
     const router = useRouter();
+    const { maybeNudge } = useSubscribeNudge();
 
     const { orgId } = useLocalSearchParams<{ orgId: string }>();
     const {
@@ -295,11 +297,20 @@ const ManageOrganizationScreen = () => {
                                         compact
                                         icon={atCap ? "arrow-up-bold" : "plus"}
                                         style={styles.ctaButton}
-                                        onPress={() =>
-                                            atCap
-                                                ? router.push(`/billing/${orgId}`)
-                                                : setAddBrandOpen(true)
-                                        }
+                                        onPress={() => {
+                                            if (!atCap) {
+                                                setAddBrandOpen(true);
+                                                return;
+                                            }
+                                            // At the cap: nudge in place rather
+                                            // than bouncing to billing. Fall back
+                                            // to the billing page when the nudge
+                                            // is suppressed (cooldown/paid plan)
+                                            // so the button is never a dead end.
+                                            if (!maybeNudge("create_brand_at_cap")) {
+                                                router.push(`/billing/${orgId}`);
+                                            }
+                                        }}
                                     >
                                         {atCap ? "Upgrade plan" : "Add brand"}
                                     </Button>

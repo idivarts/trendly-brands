@@ -1,4 +1,5 @@
 import { BRANDS_FE_URL } from '@/shared-constants/app'
+import BillingStatusBanner from '@/components/billing/BillingStatusBanner'
 import { useBrandContext } from '@/contexts/brand-context.provider'
 import { useOrganizationContext } from '@/contexts/organization-context.provider'
 import { useBreakpoints } from '@/hooks'
@@ -110,6 +111,7 @@ const PayWallComponent = () => {
         const whatsAppMessage = `Hi, I'd like to unlock the full Trendly workspace with higher limits. My brand ID is: ${brandId}.`
         return (
             <View style={styles.fallbackWrap}>
+                <BillingStatusBanner />
                 <Text style={styles.title}>The full Trendly lives on desktop</Text>
                 <Text style={styles.body}>
                     Trendly on mobile is a lightweight companion. To unlock everything and manage your
@@ -132,6 +134,7 @@ const PayWallComponent = () => {
 
     return (
         <ScrollView contentContainerStyle={styles.root}>
+            <BillingStatusBanner />
             <Text style={styles.title}>Choose your plan</Text>
             <Text style={styles.body}>Unlock higher limits and more AI tokens for your whole workspace.</Text>
 

@@ -18,6 +18,7 @@ import {
 import { GUIDE_TOUR_CONTENT_WEB } from "@/components/guide-tour/guide-tour-config";
 import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
+import { useSubscribeNudge } from "@/contexts/subscribe-nudge-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { useContents } from "@/hooks/use-contents";
 import { useFeatureTour } from "@/hooks/use-feature-tour";
@@ -40,6 +41,7 @@ const ContentsScreen = () => {
     useSidebarParam();
 
     const { items, addContent, updateContent } = useContents();
+    const { markAhaMoment } = useSubscribeNudge();
     // Default to the Board on desktop (xl); mobile is always forced to Gallery
     // via effectiveView below regardless of this initial value.
     const [view, setView] = useState<ContentView>("board");
@@ -95,6 +97,7 @@ const ContentsScreen = () => {
     ) => {
         const newId = await addContent(calItem, { platforms: extras.platforms });
         if (!newId) return;
+        markAhaMoment("content_created");
         router.push({
             pathname: "/(main)/(drawer)/(tabs)/(content)/contents/[contentId]" as any,
             params: { contentId: newId },

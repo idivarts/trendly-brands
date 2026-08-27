@@ -75,6 +75,13 @@ interface OrganizationContextProps {
     // Removes a member from the org AND every brand in it. Owner cannot be
     // removed. Returns true on success.
     removeOrganizationMember: (orgId: string, managerId: string) => Promise<boolean>;
+    // Self-service switch to the free plan — the paywall/billing screen's
+    // always-available fallback (stuck sync, lapsed subscription, or just
+    // opting out). Does not cancel any real store/Razorpay subscription.
+    downgradeToFree: (orgId: string) => Promise<boolean>;
+    // Clears a previously recorded IapRestoreConflict once the popup has been
+    // shown (see RestoreConflictModal). Does not change the org's plan.
+    dismissRestoreConflict: (orgId: string) => Promise<boolean>;
     // The parent organization of the currently selected brand, kept in sync via
     // a Firestore subscription. Undefined for legacy brands with no
     // organizationId or while the subscription is still hydrating.
@@ -94,6 +101,14 @@ interface OrganizationContextProps {
     // True when the selected brand's org has no billing record yet (org-billing
     // analogue of the old per-brand "no billing == free trial" rule).
     isOnFreeTrial: boolean;
+    // Single source of truth for the paywall gate: "loading" while the brand/org
+    // is still hydrating (never act on this), "gated" when the org must be
+    // bounced to /pay-wall, "clear" otherwise. The gate effect below drives
+    // resetAndNavigate("/pay-wall") off this; app/(main)/(onboarding)/pay-wall.tsx
+    // watches the same value to leave once it flips to "clear" — necessary
+    // because resetAndNavigate clears the back stack, so nothing else routes
+    // the user out once they're unblocked (e.g. right after downgrading there).
+    billingGateStatus: "loading" | "gated" | "clear";
 }
 
 const noop = async () => {
@@ -113,12 +128,15 @@ const OrganizationContext = createContext<OrganizationContextProps>({
     getOrganization: noop,
     getOrganizationMembers: async () => [],
     removeOrganizationMember: noop,
+    downgradeToFree: async () => false,
+    dismissRestoreConflict: async () => false,
     selectedOrganization: undefined,
     selectedOrgBilling: undefined,
     selectedOrgEntitlements: undefined,
     selectedOrgWallet: undefined,
     isOrgLocked: false,
     isOnFreeTrial: true,
+    billingGateStatus: "loading",
 });
 
 export const useOrganizationContext = () => useContext(OrganizationContext);
@@ -247,18 +265,21 @@ export const OrganizationProvider = ({ children }: { children: React.ReactNode }
         return !planKey || planKey === "free";
     }, [selectedBrand, selectedOrgBilling]);
 
-    // Paywall gate: bounce non-onboarded, non-trial, non-Accepted brands to the
-    // paywall. Mirrors what brand-context used to do, but reads billing off the
-    // org instead of the brand. Only mounted under (main), so landing/pre-auth
+    // Paywall gate status — single source of truth for both directions: the
+    // effect below bounces INTO /pay-wall when "gated", and
+    // app/(main)/(onboarding)/pay-wall.tsx watches this same value to leave
+    // once it flips to "clear" (see the field doc on billingGateStatus above).
+    // Mirrors what brand-context used to do, but reads billing off the org
+    // instead of the brand. Only mounted under (main), so landing/pre-auth
     // routes (which don't wrap OrganizationProvider) are unaffected.
-    useEffect(() => {
-        if (!selectedBrand) return;
+    const billingGateStatus = useMemo<"loading" | "gated" | "clear">(() => {
+        if (!selectedBrand) return "loading";
         // Draft brand mid-onboarding — never bounce.
-        if (selectedBrand.onboardingComplete === false) return;
-        if (Platform.OS === "web" && !selectedBrand.hasPayWall) return;
+        if (selectedBrand.onboardingComplete === false) return "clear";
+        if (Platform.OS === "web" && !selectedBrand.hasPayWall) return "clear";
         // Wait until the org has hydrated to avoid a false-positive redirect on
         // first render (when selectedOrgBilling is briefly undefined).
-        if (selectedBrand.organizationId && !selectedOrganization) return;
+        if (selectedBrand.organizationId && !selectedOrganization) return "loading";
 
         // Free-plan orgs are never paywalled — the product is free to use and is
         // gated by credits, not a subscription. Only a lapsed PAID plan (no
@@ -267,13 +288,20 @@ export const OrganizationProvider = ({ children }: { children: React.ReactNode }
         // hasn't hydrated yet) out of the native paywall dead-end.
         const planKey = selectedOrgBilling?.planKey;
         const isFreePlan = !planKey || planKey === "free";
-        if (isFreePlan) return;
+        if (isFreePlan) return "clear";
 
         const trialActive =
             selectedOrgBilling?.isOnTrial &&
             (selectedOrgBilling?.trialEnds || 0) >= Date.now();
 
         if (selectedOrgBilling?.status !== ModelStatus.Accepted && !trialActive) {
+            return "gated";
+        }
+        return "clear";
+    }, [selectedBrand, selectedOrganization, selectedOrgBilling]);
+
+    useEffect(() => {
+        if (billingGateStatus === "gated") {
             router.resetAndNavigate("/pay-wall");
         }
         // `router` (useMyNavigation()) is a fresh object every render — it must
@@ -281,7 +309,7 @@ export const OrganizationProvider = ({ children }: { children: React.ReactNode }
         // state update) re-fires on every render, which can spiral into
         // "Maximum update depth exceeded" whenever the gate condition is true.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedBrand, selectedOrganization, selectedOrgBilling]);
+    }, [billingGateStatus]);
 
     const createOrganization = useCallback(
         async (name: string, image?: string): Promise<Organization | null> => {
@@ -488,6 +516,33 @@ export const OrganizationProvider = ({ children }: { children: React.ReactNode }
         []
     );
 
+    const downgradeToFree = useCallback(
+        async (orgId: string): Promise<boolean> => {
+            try {
+                await HttpWrapper.fetch(`/api/v2/organizations/${orgId}/downgrade-to-free`, { method: "POST" });
+                Toaster.success("Switched to the Free plan");
+                return true;
+            } catch (e) {
+                Toaster.error(await errorMessage(e, "Failed to switch to the Free plan"));
+                return false;
+            }
+        },
+        []
+    );
+
+    const dismissRestoreConflict = useCallback(
+        async (orgId: string): Promise<boolean> => {
+            try {
+                await HttpWrapper.fetch(`/api/v2/organizations/${orgId}/iap/dismiss-restore-conflict`, { method: "POST" });
+                return true;
+            } catch (e) {
+                Toaster.error(await errorMessage(e, "Failed to dismiss"));
+                return false;
+            }
+        },
+        []
+    );
+
     return (
         <OrganizationContext.Provider
             value={{
@@ -503,12 +558,15 @@ export const OrganizationProvider = ({ children }: { children: React.ReactNode }
                 getOrganization,
                 getOrganizationMembers,
                 removeOrganizationMember,
+                downgradeToFree,
+                dismissRestoreConflict,
                 selectedOrganization,
                 selectedOrgBilling,
                 selectedOrgEntitlements,
                 selectedOrgWallet,
                 isOrgLocked,
                 isOnFreeTrial,
+                billingGateStatus,
             }}
         >
             {children}
