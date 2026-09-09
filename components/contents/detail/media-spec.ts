@@ -108,6 +108,12 @@ export const MEDIA_SPEC: Record<ContentType, MediaSpec> = {
     },
 };
 
+/** Parses a "W:H" ratio label (e.g. "4:5") into a numeric tuple for crop UIs. */
+export function parseAspectRatio(ratio: string): [number, number] {
+    const [w, h] = ratio.split(":").map(Number);
+    return [w, h];
+}
+
 /** Closest common label for a measured ratio, for friendly error messages. */
 function ratioLabel(width: number, height: number): string {
     const r = width / height;
