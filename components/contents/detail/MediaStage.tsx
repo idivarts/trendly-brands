@@ -39,7 +39,7 @@ import {
     Text,
     View,
 } from "react-native";
-import { aspectError, MEDIA_SPEC } from "./media-spec";
+import { aspectError, MEDIA_SPEC, parseAspectRatio } from "./media-spec";
 
 interface MediaStageProps {
     contentType: ContentType;
@@ -127,7 +127,8 @@ const MediaStage: React.FC<MediaStageProps> = ({
                 return;
             }
 
-            const picked = await pickMedia(spec.kind === "video" ? "video" : "image");
+            const cropAspect = spec.aspectRatios[0] ? parseAspectRatio(spec.aspectRatios[0]) : undefined;
+            const picked = await pickMedia(spec.kind === "video" ? "video" : "image", cropAspect);
             if (!picked) return;
 
             const ratioError = aspectError(contentType, picked.width, picked.height);
