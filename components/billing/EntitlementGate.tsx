@@ -6,6 +6,7 @@ import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import React, { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 // Entitlement gates — capability locks (NOT consumption). Two presentations:
 //   • UpgradeInline  — a compact in-context upsell row (Inbox view-only, posting cap).
@@ -106,9 +107,9 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     elevation: 1,
                 },
                 inlineAccent: { width: 4, alignSelf: "stretch", backgroundColor: colors.primary },
-                inlineText: { flex: 1, fontSize: 12.5, color: colors.text, lineHeight: 17, paddingLeft: 2 },
+                inlineText: { flex: 1, fontSize: fs(12.5), color: colors.text, lineHeight: lh(17), paddingLeft: 2 },
                 inlineCta: { minHeight: 44, justifyContent: "center", paddingHorizontal: 12 },
-                inlineCtaText: { fontSize: 13, fontWeight: "700", color: colors.primary },
+                inlineCtaText: { fontSize: fs(13), fontWeight: "700", color: colors.primary },
                 // ── Locked overlay ──
                 overlayRoot: { flex: 1 },
                 overlayDimmed: { flex: 1, opacity: 0.25 },
@@ -140,8 +141,8 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     justifyContent: "center",
                     backgroundColor: colors.tag,
                 },
-                overlayTitle: { fontSize: 17, fontWeight: "800", color: colors.text, textAlign: "center" },
-                overlaySubtitle: { fontSize: 13, color: colors.textSecondary, textAlign: "center", lineHeight: 19 },
+                overlayTitle: { fontSize: fs(17), fontWeight: "800", color: colors.text, textAlign: "center" },
+                overlaySubtitle: { fontSize: fs(13), color: colors.textSecondary, textAlign: "center", lineHeight: lh(19) },
                 overlayCta: {
                     marginTop: 6,
                     minHeight: 44,
@@ -155,7 +156,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     shadowOpacity: 0.35,
                     elevation: 4,
                 },
-                overlayCtaText: { fontSize: 14, fontWeight: "700", color: colors.onPrimary },
+                overlayCtaText: { fontSize: fs(14), fontWeight: "700", color: colors.onPrimary },
             }),
         [colors]
     );

@@ -15,6 +15,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 interface Props {
     visible: boolean;
@@ -166,13 +167,13 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     gap: 4,
                 },
                 title: {
-                    fontSize: 16,
+                    fontSize: fs(16),
                     fontWeight: "700",
                     color: colors.text,
                 },
                 subtitle: {
-                    fontSize: 13,
-                    lineHeight: 19,
+                    fontSize: fs(13),
+                    lineHeight: lh(19),
                     color: colors.textSecondary,
                 },
                 closeBtn: {
@@ -183,8 +184,8 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     paddingVertical: 8,
                 },
                 empty: {
-                    fontSize: 13,
-                    lineHeight: 19,
+                    fontSize: fs(13),
+                    lineHeight: lh(19),
                     color: colors.textSecondary,
                     paddingVertical: 12,
                 },
@@ -220,7 +221,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                 },
                 optionText: {
                     flex: 1,
-                    fontSize: 14,
+                    fontSize: fs(14),
                     fontWeight: "700",
                     color: colors.text,
                 },
@@ -253,7 +254,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     backgroundColor: colors.tag,
                 },
                 cancelBtnText: {
-                    fontSize: 14,
+                    fontSize: fs(14),
                     fontWeight: "600",
                     color: colors.textSecondary,
                 },
@@ -278,7 +279,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     elevation: 0,
                 },
                 createBtnText: {
-                    fontSize: 14,
+                    fontSize: fs(14),
                     fontWeight: "700",
                     color: colors.onPrimary,
                 },

@@ -40,6 +40,7 @@ import { useBreakpoints } from "@/hooks";
 import { CoachmarkAnchor } from "@edwardloopez/react-native-coachmark";
 import ImageInsertModal from "./ImageInsertModal";
 import LinkInsertModal from "./LinkInsertModal";
+import { fs, lh } from "@/constants/Typography";
 
 /** Hard ceiling (px) for an inserted image's display width. */
 const MAX_IMAGE_WIDTH = 720;
@@ -158,9 +159,9 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
     // the heading hierarchy; sizes mirror the web editor's proportions.
     const htmlStyle = useMemo<HtmlStyle>(
         () => ({
-            h1: { fontSize: 26, bold: true },
-            h2: { fontSize: 22, bold: true },
-            h3: { fontSize: 19, bold: true },
+            h1: { fontSize: fs(26), bold: true },
+            h2: { fontSize: fs(22), bold: true },
+            h3: { fontSize: fs(19), bold: true },
             blockquote: { borderColor: colors.border, color: colors.textSecondary },
             code: { color: colors.text, backgroundColor: colors.tag },
             codeblock: { color: colors.text, backgroundColor: colors.tag },
@@ -586,7 +587,7 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
         },
         lockBarText: {
             flex: 1,
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.textSecondary,
         },
@@ -605,7 +606,7 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             elevation: 4,
         },
         editActionText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "700",
             color: colors.onPrimary,
         },
@@ -624,7 +625,7 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             elevation: 3,
         },
         doneActionText: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "700",
             color: colors.onPrimary,
         },
@@ -676,7 +677,7 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             borderColor: colors.secondaryBorder,
         },
         selectionActionText: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "600",
             color: colors.secondaryText,
         },
@@ -696,8 +697,8 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             alignSelf: "center",
             minHeight: 400,
             padding: 20,
-            fontSize: 16,
-            lineHeight: 26,
+            fontSize: fs(16),
+            lineHeight: lh(26),
             textAlignVertical: "top",
         },
     });

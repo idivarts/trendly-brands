@@ -12,6 +12,7 @@ import {
     View,
 } from "react-native";
 import { CalendarItem } from "./types";
+import { fs } from "@/constants/Typography";
 
 interface QuickCommentModalProps {
     visible: boolean;
@@ -135,12 +136,12 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     gap: 3,
                 },
                 headerTitle: {
-                    fontSize: 15,
+                    fontSize: fs(15),
                     fontWeight: "700",
                     color: colors.text,
                 },
                 headerSub: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     color: colors.textSecondary,
                 },
                 closeBtn: {
@@ -154,7 +155,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     borderRadius: 10,
                     paddingHorizontal: 14,
                     paddingVertical: 12,
-                    fontSize: 14,
+                    fontSize: fs(14),
                     color: colors.text,
                     minHeight: 100,
                     shadowColor: "#000",
@@ -187,7 +188,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     elevation: 0,
                 },
                 submitBtnText: {
-                    fontSize: 14,
+                    fontSize: fs(14),
                     fontWeight: "700",
                     color: colors.onPrimary,
                 },

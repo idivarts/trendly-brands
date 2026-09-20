@@ -42,6 +42,35 @@ These rules apply to every UI component touched or created in this project. Chec
 - Add new keys only when truly required — keep them aligned with the platform's professional visual tone.
 - Every new or updated UI **must** look correct in both **light and dark** themes.
 
+### Typography — never hardcode a raw `fontSize`
+The desktop web sizes in this app are correct. The same absolute pixel values on
+a phone are too small to read comfortably — which is what `constants/Typography.ts`
+reconciles.
+
+- **`fs(n)`** wraps every `fontSize`, **`lh(n)`** every `lineHeight`, and
+  **`fbox(n)`** the fixed `height`/`width` of a box that exists *only* to hold
+  text (a count badge, a pill, an avatar initial). Leave icon buttons,
+  thumbnails and image avatars alone — those are layout, not type.
+- All three are **identity functions on desktop web**: `fs(13)` is literally
+  `13` there. Wrapping a style can never change the desktop rendering, so there
+  is no reason not to wrap it.
+- On native — and on a phone-width web viewport — they apply a front-loaded
+  ramp: `9–10 → 12`, `11–14 → +2`, `15–20 → +1`, `21+` unchanged. The gain lands
+  where legibility actually suffers without blowing out display type.
+
+```ts
+fontSize: fs(13), lineHeight: lh(19),   // ✅
+fontSize: 13, lineHeight: 19,           // ❌
+```
+
+A `compact` / `isCompact` prop means *"the docked desktop panel is narrow"*. It
+must **not** shrink type on a phone, where that panel is full-screen anyway —
+see the `&& !IS_MOBILE_TYPE` pattern in `AIChatPanel` / `MarkdownMessage`.
+
+`constants/__tests__/Typography.test.ts` locks the web-identity contract in.
+Currently applied across `components/{content-calendar,content-strategy,contents,shared,ai,rich-text-editor}`,
+the `(content)` routes, and the billing/sharing widgets they embed.
+
 ### Responsive Layout
 - Use `useBreakpoints()` for `xl` (desktop) vs `!xl` (mobile) layout decisions.
 - Use `useBreakpoints().width` for constrained responsive width values.

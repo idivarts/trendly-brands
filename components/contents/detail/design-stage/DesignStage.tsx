@@ -55,6 +55,7 @@ import DesignFrame from "./DesignFrame";
 import SoundtrackPanel from "./SoundtrackPanel";
 import { useSoundtrackPlayer } from "./use-audio-player";
 import { useContentDesign } from "./use-content-design";
+import { fs, lh } from "@/constants/Typography";
 
 interface DesignStageProps {
     contentId: string;
@@ -961,7 +962,7 @@ const useStyles = (colors: any) =>
                     justifyContent: "center",
                     backgroundColor: colors.tag,
                 },
-                title: { flex: 1, fontSize: 16, fontWeight: "700", color: colors.text },
+                title: { flex: 1, fontSize: fs(16), fontWeight: "700", color: colors.text },
                 headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
                 iconBtn: {
                     width: 34,
@@ -972,7 +973,7 @@ const useStyles = (colors: any) =>
                     backgroundColor: colors.tag,
                 },
                 menuContent: { backgroundColor: colors.modalBackground, borderRadius: 12 },
-                menuItemText: { fontSize: 14, fontWeight: "500", color: colors.text },
+                menuItemText: { fontSize: fs(14), fontWeight: "500", color: colors.text },
                 renderBtn: {
                     paddingHorizontal: 16,
                     paddingVertical: 9,
@@ -987,7 +988,7 @@ const useStyles = (colors: any) =>
                     shadowOpacity: 0.35,
                     elevation: 4,
                 },
-                renderBtnText: { fontSize: 13, fontWeight: "700", color: colors.onPrimary },
+                renderBtnText: { fontSize: fs(13), fontWeight: "700", color: colors.onPrimary },
 
                 body: { flex: 1 },
                 canvasScroll: { flexGrow: 1, alignItems: "center", justifyContent: "center", padding: 16, gap: 12 },
@@ -1017,7 +1018,7 @@ const useStyles = (colors: any) =>
                     elevation: 10,
                 },
                 renderRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-                renderLabelText: { flex: 1, fontSize: 13, fontWeight: "700", color: colors.text },
+                renderLabelText: { flex: 1, fontSize: fs(13), fontWeight: "700", color: colors.text },
                 renderTrack: { height: 8, borderRadius: 4, backgroundColor: colors.tag, overflow: "hidden" },
                 renderFill: { height: 8, borderRadius: 4, backgroundColor: colors.primary },
                 renderFillIndeterminate: { height: 8, borderRadius: 4, width: "40%", backgroundColor: colors.primary, opacity: 0.5 },
@@ -1038,8 +1039,8 @@ const useStyles = (colors: any) =>
                 renderErrorAccent: { width: 4, backgroundColor: colors.toastError },
                 renderErrorBody: { flex: 1, padding: 12, gap: 6 },
                 renderErrorHead: { flexDirection: "row", alignItems: "center", gap: 8 },
-                renderErrorTitle: { fontSize: 13, fontWeight: "700", color: colors.text },
-                renderErrorMsg: { fontSize: 12, lineHeight: 17, color: colors.textSecondary },
+                renderErrorTitle: { fontSize: fs(13), fontWeight: "700", color: colors.text },
+                renderErrorMsg: { fontSize: fs(12), lineHeight: lh(17), color: colors.textSecondary },
                 renderErrorActions: { flexDirection: "row", gap: 8, marginTop: 2 },
                 renderRetryBtn: {
                     paddingHorizontal: 14,
@@ -1052,9 +1053,9 @@ const useStyles = (colors: any) =>
                     shadowOpacity: 0.3,
                     elevation: 3,
                 },
-                renderRetryText: { fontSize: 13, fontWeight: "700", color: colors.onPrimary },
+                renderRetryText: { fontSize: fs(13), fontWeight: "700", color: colors.onPrimary },
                 renderDismissBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: colors.tag },
-                renderDismissText: { fontSize: 13, fontWeight: "600", color: colors.text },
+                renderDismissText: { fontSize: fs(13), fontWeight: "600", color: colors.text },
 
                 // Selection overlay + floating contextual toolbar
                 selectionOverlay: { ...StyleSheet.absoluteFillObject },
@@ -1081,7 +1082,7 @@ const useStyles = (colors: any) =>
                     paddingVertical: 7,
                     borderRadius: 8,
                 },
-                tbBtnText: { fontSize: 13, fontWeight: "600", color: colors.text },
+                tbBtnText: { fontSize: fs(13), fontWeight: "600", color: colors.text },
                 tbDivider: { width: 1, height: 20, backgroundColor: colors.tag, marginHorizontal: 2 },
                 tbClose: {
                     width: 30,
@@ -1100,7 +1101,7 @@ const useStyles = (colors: any) =>
                     justifyContent: "center",
                     backgroundColor: colors.tag,
                 },
-                slideArrowText: { fontSize: 18, color: colors.text, lineHeight: 20 },
+                slideArrowText: { fontSize: fs(18), color: colors.text, lineHeight: lh(20) },
                 dots: { flexDirection: "row", alignItems: "center", gap: 6 },
                 dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.tag },
                 dotActive: { backgroundColor: colors.primary, width: 20 },
@@ -1118,7 +1119,7 @@ const useStyles = (colors: any) =>
                     shadowOpacity: 0.35,
                     elevation: 4,
                 },
-                playIcon: { color: colors.onPrimary, fontSize: 13 },
+                playIcon: { color: colors.onPrimary, fontSize: fs(13) },
                 // Tall, transparent hit area so the thin bar is easy to grab/drag.
                 trackHit: { flex: 1, height: 24, justifyContent: "center" },
                 track: { height: 6, borderRadius: 3, backgroundColor: colors.tag, overflow: "hidden" },
@@ -1138,8 +1139,8 @@ const useStyles = (colors: any) =>
                     shadowOpacity: 0.4,
                     elevation: 3,
                 },
-                time: { fontSize: 12, color: colors.textSecondary, minWidth: 64, textAlign: "right" },
-                videoNote: { fontSize: 12, color: colors.textSecondary },
+                time: { fontSize: fs(12), color: colors.textSecondary, minWidth: 64, textAlign: "right" },
+                videoNote: { fontSize: fs(12), color: colors.textSecondary },
 
                 // Empty state
                 empty: {
@@ -1157,10 +1158,10 @@ const useStyles = (colors: any) =>
                     justifyContent: "center",
                     backgroundColor: colors.aliceBlue,
                 },
-                emptyTitle: { fontSize: 17, fontWeight: "700", color: colors.text },
+                emptyTitle: { fontSize: fs(17), fontWeight: "700", color: colors.text },
                 emptySub: {
-                    fontSize: 13,
-                    lineHeight: 20,
+                    fontSize: fs(13),
+                    lineHeight: lh(20),
                     color: colors.textSecondary,
                     textAlign: "center",
                     maxWidth: 320,
@@ -1177,7 +1178,7 @@ const useStyles = (colors: any) =>
                     shadowOpacity: 0.35,
                     elevation: 4,
                 },
-                emptyCtaText: { color: colors.onPrimary, fontSize: 14, fontWeight: "700" },
+                emptyCtaText: { color: colors.onPrimary, fontSize: fs(14), fontWeight: "700" },
 
                 // Soundtrack collapsed trigger
                 musicTrigger: {
@@ -1202,8 +1203,8 @@ const useStyles = (colors: any) =>
                     backgroundColor: colors.aliceBlue,
                 },
                 musicTriggerBody: { flex: 1, gap: 2 },
-                musicTriggerTitle: { fontSize: 14, fontWeight: "700", color: colors.text },
-                musicTriggerSub: { fontSize: 12, color: colors.textSecondary },
+                musicTriggerTitle: { fontSize: fs(14), fontWeight: "700", color: colors.text },
+                musicTriggerSub: { fontSize: fs(12), color: colors.textSecondary },
 
                 // Soundtrack expanded bottom panel — narrows the design above it.
                 musicSheet: {
@@ -1236,8 +1237,8 @@ const useStyles = (colors: any) =>
                     justifyContent: "center",
                     backgroundColor: colors.tag,
                 },
-                sheetTitle: { fontSize: 16, fontWeight: "600", color: colors.text },
-                confirmBody: { fontSize: 13, lineHeight: 19, color: colors.textSecondary },
+                sheetTitle: { fontSize: fs(16), fontWeight: "600", color: colors.text },
+                confirmBody: { fontSize: fs(13), lineHeight: lh(19), color: colors.textSecondary },
                 sheetInput: {
                     minHeight: 44,
                     borderRadius: 10,
@@ -1248,7 +1249,7 @@ const useStyles = (colors: any) =>
                 },
                 sheetBtns: { flexDirection: "row", justifyContent: "flex-end", gap: 10 },
                 modalSecondaryBtn: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, backgroundColor: colors.tag },
-                modalSecondaryBtnText: { color: colors.text, fontSize: 14 },
+                modalSecondaryBtnText: { color: colors.text, fontSize: fs(14) },
                 primaryBtn: {
                     paddingHorizontal: 14,
                     paddingVertical: 10,
@@ -1260,7 +1261,7 @@ const useStyles = (colors: any) =>
                     shadowOpacity: 0.35,
                     elevation: 4,
                 },
-                primaryBtnText: { color: colors.onPrimary, fontSize: 14, fontWeight: "600" },
+                primaryBtnText: { color: colors.onPrimary, fontSize: fs(14), fontWeight: "600" },
                 pressed: { opacity: 0.72 },
             }),
         [colors]

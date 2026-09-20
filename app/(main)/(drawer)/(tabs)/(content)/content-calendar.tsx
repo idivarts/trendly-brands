@@ -36,6 +36,7 @@ import { parseWebInputDate } from "@/components/modals/DatePickerModal";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
+import { fs } from "@/constants/Typography";
 
 const CALENDAR_WELCOME =
     "Hi! I'm your AI Content Expert. Select items from the calendar and send them here — I can help you rewrite, rethink, or bulk-edit your content plan.";
@@ -555,7 +556,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                 },
                 addBtnPressed: { opacity: 0.75 },
                 addBtnText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.onPrimary,
                 },

@@ -33,6 +33,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 interface Props {
     platform: Platform;
@@ -263,7 +264,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             borderRadius: 5,
         },
         headerTitle: {
-            fontSize: 15,
+            fontSize: fs(15),
             fontWeight: "800",
             color: colors.text,
         },
@@ -284,9 +285,9 @@ function useStyles(colors: ReturnType<typeof Colors>) {
         },
         noteText: {
             flex: 1,
-            fontSize: 11,
+            fontSize: fs(11),
             color: colors.textSecondary,
-            lineHeight: 16,
+            lineHeight: lh(16),
         },
         section: {
             marginBottom: 20,
@@ -298,7 +299,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             marginBottom: 8,
         },
         sectionLabel: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "800",
             color: colors.textSecondary,
             letterSpacing: 0.5,
@@ -315,7 +316,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.primary,
         },
         badgeOverrideText: {
-            fontSize: 10,
+            fontSize: fs(10),
             fontWeight: "800",
             color: colors.onPrimary,
         },
@@ -329,7 +330,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.tag,
         },
         badgeInheritText: {
-            fontSize: 10,
+            fontSize: fs(10),
             fontWeight: "700",
             color: colors.textSecondary,
         },
@@ -343,7 +344,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.tag,
         },
         resetText: {
-            fontSize: 11,
+            fontSize: fs(11),
             fontWeight: "700",
             color: colors.primary,
         },
@@ -372,7 +373,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
         input: {
             paddingHorizontal: 12,
             paddingVertical: 10,
-            fontSize: 15,
+            fontSize: fs(15),
             color: colors.text,
         },
         inputFlex: {
@@ -382,16 +383,16 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             minHeight: 110,
         },
         inheritHint: {
-            fontSize: 11,
+            fontSize: fs(11),
             color: colors.textSecondary,
             marginTop: 6,
-            lineHeight: 15,
+            lineHeight: lh(15),
         },
         generatingHint: {
-            fontSize: 11,
+            fontSize: fs(11),
             color: colors.primary,
             marginTop: 6,
-            lineHeight: 15,
+            lineHeight: lh(15),
             fontWeight: "600",
         },
         wandBtn: {

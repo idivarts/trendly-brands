@@ -24,6 +24,7 @@ import {
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { fs, lh } from "@/constants/Typography";
 
 // Fallback used when a strategy has no campaign window recorded at creation.
 const DEFAULT_DURATION_DAYS = 30;
@@ -325,18 +326,18 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
             paddingBottom: 4,
         },
         title: {
-            fontSize: 18,
+            fontSize: fs(18),
             fontWeight: "700",
             color: colors.text,
         },
         subtitle: {
-            fontSize: 13,
+            fontSize: fs(13),
             color: colors.textSecondary,
             marginTop: 4,
-            lineHeight: 18,
+            lineHeight: lh(18),
         },
         sectionLabel: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "700",
             color: colors.textSecondary,
             textTransform: "uppercase",
@@ -378,12 +379,12 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
             minWidth: 0,
         },
         dateValue: {
-            fontSize: 14,
+            fontSize: fs(14),
             fontWeight: "700",
             color: colors.text,
         },
         dateHint: {
-            fontSize: 12,
+            fontSize: fs(12),
             color: colors.textSecondary,
             marginTop: 2,
         },
@@ -396,12 +397,12 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
             marginTop: 2,
         },
         recheckLink: {
-            fontSize: 12.5,
+            fontSize: fs(12.5),
             fontWeight: "600",
             color: colors.primary,
         },
         recheckHint: {
-            fontSize: 12.5,
+            fontSize: fs(12.5),
             fontWeight: "600",
             color: colors.textSecondary,
         },
@@ -427,15 +428,15 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
             minWidth: 0,
         },
         optionTitle: {
-            fontSize: 14,
+            fontSize: fs(14),
             fontWeight: "700",
             color: colors.text,
         },
         optionDesc: {
-            fontSize: 12,
+            fontSize: fs(12),
             color: colors.textSecondary,
             marginTop: 2,
-            lineHeight: 16,
+            lineHeight: lh(16),
         },
         optionDescSelected: {
             color: colors.onPrimary,
@@ -466,7 +467,7 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
             backgroundColor: colors.tag,
         },
         cancelBtnText: {
-            fontSize: 14,
+            fontSize: fs(14),
             fontWeight: "600",
             color: colors.text,
         },
@@ -486,7 +487,7 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
             elevation: 4,
         },
         confirmBtnText: {
-            fontSize: 14,
+            fontSize: fs(14),
             fontWeight: "700",
             color: colors.onPrimary,
         },

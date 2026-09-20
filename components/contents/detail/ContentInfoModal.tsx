@@ -25,6 +25,7 @@ import {
     TextInput,
     View,
 } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 // ─── ContentInfoModal ─────────────────────────────────────────────────────────
 // Title, idea/vision and status live here instead of cluttering the page, so the
@@ -384,12 +385,12 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             flex: 1,
         },
         title: {
-            fontSize: 16,
+            fontSize: fs(16),
             fontWeight: "700",
             color: colors.text,
         },
         subtitle: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "600",
             color: colors.textSecondary,
             marginTop: 1,
@@ -410,7 +411,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             paddingBottom: 8,
         },
         label: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.textSecondary,
             marginBottom: 8,
@@ -425,9 +426,9 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             marginBottom: 8,
         },
         helperText: {
-            fontSize: 12,
+            fontSize: fs(12),
             color: colors.textSecondary,
-            lineHeight: 17,
+            lineHeight: lh(17),
             marginTop: -2,
         },
         platformChip: {
@@ -456,7 +457,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             borderRadius: 5,
         },
         platformChipText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.textSecondary,
         },
@@ -476,15 +477,15 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             maxWidth: "100%",
         },
         strategyLinkText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.primary,
             flexShrink: 1,
         },
         lockNote: {
-            fontSize: 12,
+            fontSize: fs(12),
             color: colors.textSecondary,
-            lineHeight: 17,
+            lineHeight: lh(17),
         },
         statusRow: {
             flexDirection: "row",
@@ -503,14 +504,14 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             elevation: 1,
         },
         statusChipText: {
-            fontSize: 13,
+            fontSize: fs(13),
         },
         input: {
             backgroundColor: colors.tag,
             borderRadius: 10,
             paddingHorizontal: 14,
             paddingVertical: 12,
-            fontSize: 14,
+            fontSize: fs(14),
             color: colors.text,
             minHeight: 48,
             shadowColor: "#000",
@@ -542,7 +543,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             elevation: 4,
         },
         doneText: {
-            fontSize: 15,
+            fontSize: fs(15),
             fontWeight: "700",
             color: colors.onPrimary,
         },

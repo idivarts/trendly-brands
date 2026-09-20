@@ -31,6 +31,7 @@ import { useTheme } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
+import { fs } from "@/constants/Typography";
 
 const ContentsScreen = () => {
     const theme = useTheme();
@@ -232,7 +233,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     opacity: 0.75,
                 },
                 addBtnText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.onPrimary,
                 },

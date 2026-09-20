@@ -45,6 +45,7 @@ import {
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { fs, IS_MOBILE_TYPE, lh } from "@/constants/Typography";
 
 // Readable column width for the conversation in the wide (split) layout — the
 // chat doesn't stretch full-bleed; messages + composer sit in a centered column.
@@ -1156,7 +1157,7 @@ function useStyles(
                 },
                 historyPaneTitle: {
                     flex: 1,
-                    fontSize: 15,
+                    fontSize: fs(15),
                     fontWeight: "700",
                     color: colors.text,
                     letterSpacing: -0.2,
@@ -1194,15 +1195,15 @@ function useStyles(
                     marginBottom: 2,
                 },
                 heroTitle: {
-                    fontSize: isCompact ? 20 : 26,
+                    fontSize: fs(isCompact ? 20 : 26),
                     fontWeight: "700",
                     color: colors.text,
                     textAlign: "center",
                     letterSpacing: -0.4,
                 },
                 heroSubtitle: {
-                    fontSize: 14,
-                    lineHeight: 20,
+                    fontSize: fs(14),
+                    lineHeight: lh(20),
                     color: colors.textSecondary,
                     textAlign: "center",
                     maxWidth: 480,
@@ -1229,7 +1230,7 @@ function useStyles(
                     elevation: 1,
                 },
                 heroChipPressed: { opacity: 0.7 },
-                heroChipText: { fontSize: 13, fontWeight: "500", color: colors.text },
+                heroChipText: { fontSize: fs(13), fontWeight: "500", color: colors.text },
                 panelHeader: {
                     flexDirection: "row",
                     alignItems: "center",
@@ -1255,7 +1256,7 @@ function useStyles(
                 iconBtnPressed: { backgroundColor: colors.tag },
                 panelHeaderLabel: {
                     flex: 1,
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.text,
                 },
@@ -1279,7 +1280,7 @@ function useStyles(
                     gap: 10,
                     padding: 24,
                 },
-                initText: { color: colors.textSecondary, fontSize: 13 },
+                initText: { color: colors.textSecondary, fontSize: fs(13) },
                 messageRow: {
                     flexDirection: "row",
                     alignItems: "flex-start",
@@ -1314,7 +1315,14 @@ function useStyles(
                     shadowOpacity: 0.3,
                     elevation: 3,
                 },
-                bubbleText: { fontSize: isCompact ? 13 : 14, lineHeight: isCompact ? 19 : 21 },
+                // `isCompact` shrinks the type for the DOCKED desktop panel, which is
+                // only ~380pt wide. On a phone the panel is the whole screen, so the
+                // shrink buys nothing and just costs legibility — take the full size
+                // there and let fs() lift it to messaging-app scale.
+                bubbleText: {
+                    fontSize: fs(isCompact && !IS_MOBILE_TYPE ? 13 : 14),
+                    lineHeight: lh(isCompact && !IS_MOBILE_TYPE ? 19 : 21),
+                },
                 aiText: { color: colors.text },
                 userText: { color: colors.onPrimary },
                 // Reference/context attached to a user message (from a focus chip).
@@ -1331,8 +1339,8 @@ function useStyles(
                     flex: 1,
                     paddingHorizontal: 8,
                     paddingVertical: 5,
-                    fontSize: 11,
-                    lineHeight: 15,
+                    fontSize: fs(11),
+                    lineHeight: lh(15),
                     color: colors.textSecondary,
                     fontStyle: "italic",
                 },
@@ -1355,7 +1363,7 @@ function useStyles(
                     shadowOpacity: 0.06,
                     elevation: 2,
                 },
-                typingText: { fontSize: 13, color: colors.textSecondary, fontStyle: "italic" },
+                typingText: { fontSize: fs(13), color: colors.textSecondary, fontStyle: "italic" },
                 streamingStatus: {
                     flexDirection: "row",
                     alignItems: "center",
@@ -1364,7 +1372,7 @@ function useStyles(
                     paddingBottom: 8,
                 },
                 streamingStatusText: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     color: colors.textSecondary,
                     fontStyle: "italic",
                 },
@@ -1387,7 +1395,7 @@ function useStyles(
                 focusChipAccent: { width: 4, alignSelf: "stretch", backgroundColor: colors.primary },
                 focusChipText: {
                     flex: 1,
-                    fontSize: 12,
+                    fontSize: fs(12),
                     color: colors.textSecondary,
                     fontStyle: "italic",
                     paddingHorizontal: 8,
@@ -1426,7 +1434,7 @@ function useStyles(
                     paddingHorizontal: 12,
                     paddingTop: 8,
                     paddingBottom: 6,
-                    fontSize: 15,
+                    fontSize: fs(15),
                     textAlignVertical: "top",
                     // No blue focus ring on web — the composer surface already
                     // signals the active field.
@@ -1484,7 +1492,7 @@ function useStyles(
                     justifyContent: "center",
                     backgroundColor: colors.backdropStrong,
                 },
-                attachFailedText: { color: colors.onPrimary, fontWeight: "800", fontSize: 16 },
+                attachFailedText: { color: colors.onPrimary, fontWeight: "800", fontSize: fs(16) },
                 attachRemove: {
                     position: "absolute",
                     top: 3,
@@ -1553,10 +1561,10 @@ function useStyles(
                 },
                 readOnlyFooterText: {
                     flex: 1,
-                    fontSize: 12.5,
+                    fontSize: fs(12.5),
                     fontWeight: "600",
                     color: colors.textSecondary,
-                    lineHeight: 17,
+                    lineHeight: lh(17),
                 },
             }),
         [colors, isCompact, safeTop, safeBottom, messageAlign]

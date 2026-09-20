@@ -40,6 +40,7 @@ import {
     View,
 } from "react-native";
 import { aspectError, MEDIA_SPEC, parseAspectRatio } from "./media-spec";
+import { fs, lh } from "@/constants/Typography";
 
 interface MediaStageProps {
     contentType: ContentType;
@@ -432,7 +433,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             justifyContent: "space-between",
         },
         cardTitle: {
-            fontSize: 15,
+            fontSize: fs(15),
             fontWeight: "700",
             color: colors.text,
         },
@@ -443,7 +444,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             backgroundColor: colors.aliceBlue,
         },
         ratioChipText: {
-            fontSize: 11,
+            fontSize: fs(11),
             fontWeight: "700",
             letterSpacing: 0.4,
             color: colors.primary,
@@ -526,7 +527,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             backgroundColor: colors.primary,
         },
         orderBadgeText: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "800",
             color: colors.onPrimary,
         },
@@ -564,12 +565,12 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             backgroundColor: colors.tag,
         },
         emptyText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.textSecondary,
         },
         errorText: {
-            fontSize: 12,
+            fontSize: fs(12),
             color: colors.toastError,
         },
 
@@ -603,13 +604,13 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             gap: 3,
         },
         heroTitle: {
-            fontSize: 15,
+            fontSize: fs(15),
             fontWeight: "800",
             color: colors.onPrimary,
         },
         heroSub: {
-            fontSize: 12,
-            lineHeight: 17,
+            fontSize: fs(12),
+            lineHeight: lh(17),
             color: colors.onPrimary,
             opacity: 0.85,
         },
@@ -623,7 +624,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             paddingVertical: 4,
         },
         uploadLinkText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.textSecondary,
         },

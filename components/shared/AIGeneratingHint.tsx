@@ -2,6 +2,7 @@ import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import React from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 // ─── AIGeneratingHint ─────────────────────────────────────────────────────────
 // A small, NON-blocking in-flight banner shown inline next to whatever field is
@@ -61,15 +62,15 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             minWidth: 0,
         },
         title: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "700",
             color: colors.text,
             marginBottom: 2,
         },
         sub: {
-            fontSize: 11,
+            fontSize: fs(11),
             color: colors.textSecondary,
-            lineHeight: 16,
+            lineHeight: lh(16),
         },
     });
 }

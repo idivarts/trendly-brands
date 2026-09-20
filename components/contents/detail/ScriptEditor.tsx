@@ -11,6 +11,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 interface ScriptEditorProps {
     title: string;
@@ -180,27 +181,27 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             flex: 1,
         },
         cardTitle: {
-            fontSize: 15,
+            fontSize: fs(15),
             fontWeight: "700",
             color: colors.text,
             marginBottom: 4,
         },
         optional: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "600",
             color: colors.textSecondary,
         },
         cardSub: {
-            fontSize: 12,
+            fontSize: fs(12),
             color: colors.textSecondary,
-            lineHeight: 18,
+            lineHeight: lh(18),
         },
         input: {
             backgroundColor: colors.tag,
             borderRadius: 10,
             paddingHorizontal: 14,
             paddingVertical: 12,
-            fontSize: 14,
+            fontSize: fs(14),
             color: colors.text,
             shadowColor: "#000",
             shadowOffset: { width: 0, height: 1 },
@@ -227,7 +228,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             marginBottom: 10,
         },
         modelLabel: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "600",
             color: colors.textSecondary,
         },
@@ -259,7 +260,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             elevation: 0,
         },
         aiSendBtnText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.onPrimary,
         },

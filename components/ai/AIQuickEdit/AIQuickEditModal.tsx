@@ -6,6 +6,7 @@ import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import RenderHTML from "react-native-render-html";
+import { fs, lh } from "@/constants/Typography";
 
 interface Props {
     visible: boolean;
@@ -167,8 +168,8 @@ const makeStyles = (colors: any) =>
             shadowOpacity: 0.2,
             elevation: 12,
         },
-        title: { color: colors.text, fontSize: 18, fontWeight: "700" },
-        label: { color: colors.textSecondary, fontSize: 12, fontWeight: "700", textTransform: "uppercase" },
+        title: { color: colors.text, fontSize: fs(18), fontWeight: "700" },
+        label: { color: colors.textSecondary, fontSize: fs(12), fontWeight: "700", textTransform: "uppercase" },
         selectedPreview: {
             flexDirection: "row",
             backgroundColor: colors.aliceBlue,
@@ -190,7 +191,7 @@ const makeStyles = (colors: any) =>
             padding: 10,
         },
         selectedLabel: {
-            fontSize: 11,
+            fontSize: fs(11),
             fontWeight: "600",
             color: colors.primary,
             marginBottom: 4,
@@ -199,10 +200,10 @@ const makeStyles = (colors: any) =>
         },
         selectedScroll: { maxHeight: 100 },
         selectedText: {
-            fontSize: 13,
+            fontSize: fs(13),
             color: colors.textSecondary,
             fontStyle: "italic",
-            lineHeight: 18,
+            lineHeight: lh(18),
         },
         promptInput: {
             backgroundColor: colors.tag,
@@ -210,7 +211,7 @@ const makeStyles = (colors: any) =>
             borderRadius: 10,
             padding: 10,
             minHeight: 50,
-            fontSize: 14,
+            fontSize: fs(14),
         },
         runBtn: {
             alignSelf: "flex-start",
@@ -226,7 +227,7 @@ const makeStyles = (colors: any) =>
         },
         runBtnDisabled: { opacity: 0.4 },
         runBtnPressed: { opacity: 0.85 },
-        runText: { color: "#fff", fontWeight: "700", fontSize: 13 },
+        runText: { color: "#fff", fontWeight: "700", fontSize: fs(13) },
         resultHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
         resultBox: {
             backgroundColor: colors.tag,
@@ -235,7 +236,7 @@ const makeStyles = (colors: any) =>
             minHeight: 80,
             maxHeight: 240,
         },
-        resultText: { color: colors.text, fontSize: 14, lineHeight: 20 },
+        resultText: { color: colors.text, fontSize: fs(14), lineHeight: lh(20) },
         actionsRow: { flexDirection: "row", gap: 10, justifyContent: "flex-end" },
         actionBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
         discardBtn: { backgroundColor: colors.tag },

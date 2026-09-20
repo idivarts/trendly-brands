@@ -8,6 +8,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 interface EmptyContentsViewProps {
     onGoToStrategy: () => void;
@@ -179,17 +180,17 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     elevation: 3,
                 },
                 title: {
-                    fontSize: 18,
+                    fontSize: fs(18),
                     fontWeight: "700",
                     color: colors.text,
                     textAlign: "center",
                     marginBottom: 8,
                 },
                 subtitle: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     color: colors.textSecondary,
                     textAlign: "center",
-                    lineHeight: 19,
+                    lineHeight: lh(19),
                     marginBottom: 20,
                 },
                 stepsRow: {
@@ -229,7 +230,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     elevation: 3,
                 },
                 stepNum: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     fontWeight: "700",
                     color: colors.textSecondary,
                 },
@@ -237,7 +238,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     color: colors.onPrimary,
                 },
                 stepLabel: {
-                    fontSize: 11,
+                    fontSize: fs(11),
                     fontWeight: "600",
                     color: colors.textSecondary,
                     textAlign: "center",
@@ -247,10 +248,10 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     color: colors.primary,
                 },
                 stepSub: {
-                    fontSize: 10,
+                    fontSize: fs(10),
                     color: colors.textSecondary,
                     textAlign: "center",
-                    lineHeight: 14,
+                    lineHeight: lh(14),
                     opacity: 0.7,
                 },
                 ctaRow: {
@@ -275,7 +276,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     elevation: 4,
                 },
                 ctaPrimaryText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "700",
                     color: colors.onPrimary,
                 },
@@ -297,7 +298,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     elevation: 2,
                 },
                 ctaSecondaryText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.primary,
                 },

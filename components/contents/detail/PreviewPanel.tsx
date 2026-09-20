@@ -38,6 +38,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 type PreviewPlatform = Platform;
 
@@ -703,7 +704,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             elevation: 2,
         },
         headerTitle: {
-            fontSize: 15,
+            fontSize: fs(15),
             fontWeight: "700",
             color: colors.text,
         },
@@ -746,7 +747,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.primary,
         },
         tabText: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "600",
             color: colors.textSecondary,
         },
@@ -770,7 +771,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.aliceBlue,
         },
         customBannerText: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "700",
             color: colors.primary,
         },
@@ -800,7 +801,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
         },
         postUser: {
             flex: 1,
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "700",
             color: colors.text,
         },
@@ -810,11 +811,11 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             gap: 4,
         },
         metaLineText: {
-            fontSize: 11,
+            fontSize: fs(11),
             color: colors.textSecondary,
         },
         postDots: {
-            fontSize: 14,
+            fontSize: fs(14),
             color: colors.text,
             fontWeight: "700",
         },
@@ -829,7 +830,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             justifyContent: "center",
         },
         avatarInitial: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "800",
             color: colors.primary,
         },
@@ -863,7 +864,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             gap: 8,
         },
         mediaEmptyText: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "600",
             color: colors.textSecondary,
         },
@@ -925,7 +926,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             gap: 6,
         },
         reactionText: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "600",
             color: colors.textSecondary,
         },
@@ -935,8 +936,8 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             gap: 4,
         },
         captionText: {
-            fontSize: 13,
-            lineHeight: 18,
+            fontSize: fs(13),
+            lineHeight: lh(18),
             color: colors.text,
         },
         captionUser: {
@@ -947,8 +948,8 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             paddingBottom: 12,
         },
         commentText: {
-            fontSize: 12,
-            lineHeight: 17,
+            fontSize: fs(12),
+            lineHeight: lh(17),
             color: colors.textSecondary,
         },
         commentUser: {
@@ -963,14 +964,14 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             gap: 6,
         },
         textBodyText: {
-            fontSize: 14,
-            lineHeight: 20,
+            fontSize: fs(14),
+            lineHeight: lh(20),
             color: colors.text,
             paddingHorizontal: 12,
         },
         textBodyPlaceholder: {
-            fontSize: 14,
-            lineHeight: 20,
+            fontSize: fs(14),
+            lineHeight: lh(20),
             color: colors.textSecondary,
         },
         // ── Twitter / X ────────────────────────────────────────────────────
@@ -996,13 +997,13 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             paddingBottom: 4,
         },
         tweetHandle: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "400",
             color: colors.textSecondary,
         },
         tweetText: {
-            fontSize: 14,
-            lineHeight: 19,
+            fontSize: fs(14),
+            lineHeight: lh(19),
             color: colors.text,
         },
         tweetMedia: {
@@ -1041,10 +1042,10 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             gap: 8,
         },
         ytTitle: {
-            fontSize: 15,
+            fontSize: fs(15),
             fontWeight: "800",
             color: colors.text,
-            lineHeight: 20,
+            lineHeight: lh(20),
         },
         ytChannelRow: {
             flexDirection: "row",
@@ -1053,7 +1054,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
         },
         ytChannel: {
             flex: 1,
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "600",
             color: colors.textSecondary,
         },
@@ -1075,7 +1076,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             borderRadius: 9,
         },
         redditSub: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "800",
             color: colors.text,
         },
@@ -1092,17 +1093,17 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.tag,
         },
         redditTagText: {
-            fontSize: 10,
+            fontSize: fs(10),
             fontWeight: "800",
             color: colors.textSecondary,
         },
         redditTitle: {
-            fontSize: 16,
+            fontSize: fs(16),
             fontWeight: "800",
             color: colors.text,
             paddingHorizontal: 12,
             paddingTop: 8,
-            lineHeight: 21,
+            lineHeight: lh(21),
         },
         redditMedia: {
             marginTop: 10,
@@ -1146,7 +1147,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
         },
         storyUser: {
             flex: 1,
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "700",
             color: colors.white,
             textShadowColor: "rgba(0,0,0,0.5)",
@@ -1163,8 +1164,8 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             paddingVertical: 8,
         },
         storyCaptionText: {
-            fontSize: 13,
-            lineHeight: 18,
+            fontSize: fs(13),
+            lineHeight: lh(18),
             color: colors.white,
         },
         // ── Platform settings summary ──────────────────────────────────────
@@ -1177,7 +1178,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             gap: 10,
         },
         optionsTitle: {
-            fontSize: 11,
+            fontSize: fs(11),
             fontWeight: "800",
             color: colors.textSecondary,
             letterSpacing: 0.5,
@@ -1189,14 +1190,14 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             gap: 12,
         },
         optionLabel: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "600",
             color: colors.textSecondary,
             flexShrink: 0,
         },
         optionValue: {
             flex: 1,
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "600",
             color: colors.text,
             textAlign: "right",

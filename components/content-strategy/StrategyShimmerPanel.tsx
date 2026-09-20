@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useRef } from "react";
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 interface StrategyShimmerPanelProps {
     /** Optional escape hatch — when provided, renders a secondary "Write
@@ -139,17 +140,17 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     maxWidth: 320,
                 },
                 heading: {
-                    fontSize: 18,
+                    fontSize: fs(18),
                     fontWeight: "700",
                     color: colors.text,
                     textAlign: "center",
                     letterSpacing: -0.3,
                 },
                 body: {
-                    fontSize: 14,
+                    fontSize: fs(14),
                     color: colors.textSecondary,
                     textAlign: "center",
-                    lineHeight: 21,
+                    lineHeight: lh(21),
                 },
                 hint: {
                     flexDirection: "row",
@@ -157,7 +158,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     gap: 8,
                 },
                 hintText: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     fontWeight: "500",
                     color: colors.textSecondary,
                     letterSpacing: 0.3,
@@ -191,7 +192,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     opacity: 0.72,
                 },
                 secondaryBtnText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.primary,
                 },

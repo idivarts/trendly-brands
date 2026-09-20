@@ -7,6 +7,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import CalendarHeader from "./CalendarHeader";
 import ContentItemChip from "./ContentItemChip";
 import { CalendarItem, CalendarView } from "./types";
+import { fs } from "@/constants/Typography";
 
 interface WeekViewProps {
     year: number;
@@ -190,7 +191,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 },
                 sectionLabel: {
                     flex: 1,
-                    fontSize: 14,
+                    fontSize: fs(14),
                     fontWeight: "700",
                     color: colors.text,
                 },
@@ -218,7 +219,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     alignItems: "center",
                 },
                 emptyWeekText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     color: colors.textSecondary,
                     fontStyle: "italic",
                 },

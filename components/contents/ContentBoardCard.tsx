@@ -9,6 +9,7 @@ import { Image, StyleSheet, Text, View } from "react-native";
 import ContentUrgencyBadge from "./ContentUrgencyBadge";
 import TitleTooltip from "./TitleTooltip";
 import { ContentItem } from "./types";
+import { fs, lh } from "@/constants/Typography";
 
 function typeGlyph(type: ContentItem["type"]): IconDefinition {
     switch (type) {
@@ -101,10 +102,10 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     justifyContent: "center",
                 },
                 title: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "700",
                     color: colors.text,
-                    lineHeight: 17,
+                    lineHeight: lh(17),
                 },
                 metaRow: {
                     flexDirection: "row",
@@ -117,7 +118,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     borderRadius: 4,
                 },
                 meta: {
-                    fontSize: 11,
+                    fontSize: fs(11),
                     color: colors.textSecondary,
                     fontWeight: "500",
                     flexShrink: 1,

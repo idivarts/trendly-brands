@@ -41,6 +41,7 @@ import { useTheme } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Easing, Platform, Pressable, StyleSheet, Text } from "react-native";
+import { fs } from "@/constants/Typography";
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 // .replace(/<[^>]*>/g, "").trim()
@@ -1037,7 +1038,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 },
                 pushButtonText: {
                     color: colors.onPrimary,
-                    fontSize: 15,
+                    fontSize: fs(15),
                     fontWeight: "700",
                 },
             }),

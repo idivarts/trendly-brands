@@ -12,6 +12,7 @@ import {
     Text,
     View,
 } from "react-native";
+import { fs } from "@/constants/Typography";
 
 interface Props {
     models: AIModel[];
@@ -163,10 +164,10 @@ const makeStyles = (colors: any, compact: boolean) =>
         },
         chipText: {
             color: colors.tagForeground ?? colors.text,
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "600",
         },
-        chipCaret: { color: colors.tagForeground ?? colors.text, fontSize: 10 },
+        chipCaret: { color: colors.tagForeground ?? colors.text, fontSize: fs(10) },
         backdrop: {
             flex: 1,
             backgroundColor: "transparent",
@@ -197,14 +198,14 @@ const makeStyles = (colors: any, compact: boolean) =>
         rowSelected: { backgroundColor: colors.tag },
         rowPressed: { opacity: 0.7 },
         rowText: { flex: 1 },
-        rowTitle: { color: colors.text, fontSize: 13, fontWeight: "600" },
-        rowSubtitle: { color: colors.textSecondary, fontSize: 11, marginTop: 2 },
+        rowTitle: { color: colors.text, fontSize: fs(13), fontWeight: "600" },
+        rowSubtitle: { color: colors.textSecondary, fontSize: fs(11), marginTop: 2 },
         lockBadge: {
             paddingHorizontal: 6,
             paddingVertical: 2,
             backgroundColor: colors.primaryLight ?? colors.tag,
             borderRadius: 8,
         },
-        lockText: { fontSize: 10, fontWeight: "700", color: colors.primary },
-        check: { color: colors.primary, fontSize: 16, fontWeight: "700" },
+        lockText: { fontSize: fs(10), fontWeight: "700", color: colors.primary },
+        check: { color: colors.primary, fontSize: fs(16), fontWeight: "700" },
     });

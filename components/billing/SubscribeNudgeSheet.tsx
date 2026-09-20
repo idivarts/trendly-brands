@@ -18,6 +18,7 @@ import {
     Text,
     View,
 } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 // The proactive subscribe nudge (Notion: "Prompting to Subscribe to In-app
 // Purchase"). Benefits-led, with the dismiss deliberately de-emphasized: a
@@ -195,16 +196,16 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     marginBottom: 4,
                 },
                 headline: {
-                    fontSize: 19,
+                    fontSize: fs(19),
                     fontWeight: "800",
                     color: colors.text,
                     textAlign: "center",
                 },
                 body: {
-                    fontSize: 13.5,
+                    fontSize: fs(13.5),
                     color: colors.textSecondary,
                     textAlign: "center",
-                    lineHeight: 20,
+                    lineHeight: lh(20),
                 },
                 benefits: {
                     alignSelf: "stretch",
@@ -216,7 +217,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     backgroundColor: colors.tag,
                 },
                 benefitRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-                benefitText: { flex: 1, fontSize: 13, color: colors.text },
+                benefitText: { flex: 1, fontSize: fs(13), color: colors.text },
                 cta: {
                     alignSelf: "stretch",
                     minHeight: 50,
@@ -231,7 +232,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     shadowOpacity: 0.35,
                     elevation: 4,
                 },
-                ctaText: { fontSize: 15, fontWeight: "700", color: colors.white },
+                ctaText: { fontSize: fs(15), fontWeight: "700", color: colors.white },
             }),
         [colors, xl]
     );

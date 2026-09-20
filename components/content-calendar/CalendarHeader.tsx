@@ -12,6 +12,7 @@ import React, { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import MonthPickerModal from "./MonthPickerModal";
 import { CalendarView } from "./types";
+import { fs } from "@/constants/Typography";
 
 interface CalendarHeaderProps {
     year: number;
@@ -174,7 +175,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     backgroundColor: colors.tag,
                 },
                 monthLabelText: {
-                    fontSize: 16,
+                    fontSize: fs(16),
                     fontWeight: "700",
                     color: colors.text,
                 },
@@ -204,7 +205,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     elevation: 3,
                 },
                 toggleText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.textSecondary,
                 },

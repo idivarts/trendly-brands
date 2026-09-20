@@ -23,6 +23,7 @@ import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import ContentUrgencyBadge from "./ContentUrgencyBadge";
 import TitleTooltip from "./TitleTooltip";
 import { CONTENT_STATUS_LABELS, ContentItem, contentStatusColors } from "./types";
+import { fs, lh } from "@/constants/Typography";
 
 interface ContentGalleryCardProps {
     item: ContentItem;
@@ -222,7 +223,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     borderRadius: 4,
                 },
                 typeChipText: {
-                    fontSize: 10,
+                    fontSize: fs(10),
                     fontWeight: "700",
                     textTransform: "uppercase",
                     letterSpacing: 0.5,
@@ -239,19 +240,19 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     borderRadius: 6,
                 },
                 statusText: {
-                    fontSize: 11,
+                    fontSize: fs(11),
                     fontWeight: "600",
                 },
                 title: {
-                    fontSize: 14,
+                    fontSize: fs(14),
                     fontWeight: "700",
                     color: colors.text,
-                    lineHeight: 19,
+                    lineHeight: lh(19),
                 },
                 idea: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     color: colors.textSecondary,
-                    lineHeight: 16,
+                    lineHeight: lh(16),
                 },
                 footer: {
                     flexDirection: "row",
@@ -265,7 +266,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     gap: 5,
                 },
                 dateText: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     color: colors.textSecondary,
                     fontWeight: "500",
                 },
@@ -275,7 +276,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     gap: 7,
                 },
                 destMore: {
-                    fontSize: 11,
+                    fontSize: fs(11),
                     color: colors.textSecondary,
                     fontWeight: "600",
                 },

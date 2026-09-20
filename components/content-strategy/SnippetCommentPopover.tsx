@@ -35,6 +35,7 @@ import {
     Text,
     View,
 } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 interface SnippetCommentPopoverProps {
     visible: boolean;
@@ -188,7 +189,7 @@ function createStyles(colors: ReturnType<typeof Colors>) {
         },
         title: {
             flex: 1,
-            fontSize: 14,
+            fontSize: fs(14),
             fontWeight: "700",
             color: colors.text,
         },
@@ -201,10 +202,10 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             paddingLeft: 10,
         },
         quoteText: {
-            fontSize: 12,
+            fontSize: fs(12),
             color: colors.textSecondary,
             fontStyle: "italic",
-            lineHeight: 17,
+            lineHeight: lh(17),
         },
         inputWrap: {
             margin: 16,
@@ -215,7 +216,7 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             borderRadius: 10,
             paddingHorizontal: 12,
             paddingVertical: 10,
-            fontSize: 14,
+            fontSize: fs(14),
             color: colors.text,
             minHeight: 80,
             maxHeight: 160,
@@ -234,7 +235,7 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.tag,
         },
         cancelText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.textSecondary,
         },
@@ -256,7 +257,7 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             elevation: 0,
         },
         submitText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "700",
             color: colors.onPrimary,
         },

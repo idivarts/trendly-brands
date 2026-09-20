@@ -14,6 +14,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 interface Props {
     field: PlatformFieldDef;
@@ -147,7 +148,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             gap: 6,
         },
         label: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "700",
             color: colors.textSecondary,
         },
@@ -155,16 +156,16 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             color: colors.statusRejectedFg,
         },
         hint: {
-            fontSize: 11,
+            fontSize: fs(11),
             color: colors.textSecondary,
-            lineHeight: 15,
+            lineHeight: lh(15),
         },
         input: {
             backgroundColor: colors.card,
             borderRadius: 10,
             paddingHorizontal: 12,
             paddingVertical: 10,
-            fontSize: 14,
+            fontSize: fs(14),
             color: colors.text,
             shadowColor: "#000",
             shadowOffset: { width: 0, height: 1 },
@@ -198,7 +199,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             elevation: 3,
         },
         chipText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.textSecondary,
         },
@@ -247,7 +248,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             gap: 6,
         },
         manualText: {
-            fontSize: 10,
+            fontSize: fs(10),
             color: colors.textSecondary,
             flex: 1,
         },

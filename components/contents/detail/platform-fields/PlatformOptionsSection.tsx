@@ -18,6 +18,7 @@ import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { fs } from "@/constants/Typography";
 
 interface Props {
     platform: Platform;
@@ -68,7 +69,7 @@ const PlatformOptionsSection: React.FC<Props> = ({ platform, options, onChange, 
 function useStyles(colors: ReturnType<typeof Colors>) {
     return StyleSheet.create({
         label: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "800",
             color: colors.textSecondary,
             letterSpacing: 0.5,

@@ -5,6 +5,7 @@ import { Linking, Text, View } from "react-native";
 // react-native-markdown-package ships no type declarations.
 // @ts-ignore
 import Markdown from "react-native-markdown-package";
+import { fs, IS_MOBILE_TYPE, lh } from "@/constants/Typography";
 
 // Column-width tuning for the custom table rule below. Each column's flex
 // weight is its longest cell's character count, clamped so a single huge cell
@@ -63,8 +64,11 @@ function markdownStyles(
     textColor: string,
     compact: boolean
 ) {
-    const fontSize = compact ? 13 : 14;
-    const lineHeight = compact ? 19 : 21;
+    // `compact` exists for the narrow docked desktop panel. A phone renders the
+    // chat full-screen, so it gets the full size there (see AIChatPanel).
+    const tight = compact && !IS_MOBILE_TYPE;
+    const fontSize = fs(tight ? 13 : 14);
+    const lineHeight = lh(tight ? 19 : 21);
     const base = { color: textColor, fontSize, lineHeight };
     // Plain object (the library merges these per node type). Unknown keys are
     // ignored, so we cover the common keys across renderer versions.

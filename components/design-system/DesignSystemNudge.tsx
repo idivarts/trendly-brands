@@ -15,6 +15,7 @@ import { useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Text as PaperText } from "react-native-paper";
+import { fs, lh } from "@/constants/Typography";
 
 /** Below this completeness the nudge appears. */
 const NUDGE_THRESHOLD = 60;
@@ -109,8 +110,8 @@ function createStyles(colors: ReturnType<typeof Colors>) {
         message: {
             flex: 1,
             color: colors.text,
-            fontSize: 13,
-            lineHeight: 18,
+            fontSize: fs(13),
+            lineHeight: lh(18),
         },
         cta: {
             paddingHorizontal: 14,
@@ -125,7 +126,7 @@ function createStyles(colors: ReturnType<typeof Colors>) {
         },
         ctaText: {
             color: colors.onPrimary,
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "700",
         },
         dismiss: {
