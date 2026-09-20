@@ -72,6 +72,20 @@
         },
         "plugins": [
             "expo-router",
+            [
+                "expo-splash-screen",
+                {
+                    "android": {
+                        "image": "./assets/images/branding/trendly-primary-horizontal-navy.png",
+                        "imageWidth": 180,
+                        "backgroundColor": "#ffffff",
+                        "dark": {
+                            "image": "./assets/images/branding/trendly-primary-horizontal-white.png",
+                            "backgroundColor": "#000000"
+                        }
+                    }
+                }
+            ],
             "expo-apple-authentication",
             [
                 "expo-build-properties",

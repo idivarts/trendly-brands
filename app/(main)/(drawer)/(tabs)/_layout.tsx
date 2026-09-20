@@ -14,11 +14,17 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const TabLayout = () => {
     const { xl } = useBreakpoints();
     const theme = useTheme();
     const { unreadConversations } = useInboxUnread();
+    // Android is edge-to-edge (targetSdk 35), so the system nav bar paints over
+    // the app. React Navigation only adds insets.bottom to the tab bar when
+    // tabBarStyle has no numeric `height` — and any `paddingVertical` here would
+    // overwrite the paddingBottom it applies. So we fold the inset in ourselves.
+    const insets = useSafeAreaInsets();
 
     const menuTabButton = () => <ProfileIcon />;
 
@@ -34,8 +40,9 @@ const TabLayout = () => {
                 tabBarStyle: {
                     display: xl ? "none" : "flex",
                     paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    height: 70,
+                    paddingTop: 6,
+                    paddingBottom: insets.bottom + 6,
+                    height: 70 + insets.bottom,
                     borderTopWidth: 1,
                     borderTopColor: Colors(theme).border,
                     shadowColor: "#000",
