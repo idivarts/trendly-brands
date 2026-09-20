@@ -13,6 +13,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { fs } from "@/constants/Typography";
 
 /** "generic" or a platform key. */
 export type VariationTab = "generic" | Platform;
@@ -126,7 +127,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             borderRadius: 4,
         },
         tabText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "700",
             color: colors.textSecondary,
         },
@@ -151,7 +152,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.tag,
         },
         addLabel: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "700",
             color: colors.primary,
         },

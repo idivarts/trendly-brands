@@ -3,6 +3,7 @@ import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { ContentItem, getPostingUrgency, postingUrgencyColors } from "./types";
+import { fs } from "@/constants/Typography";
 
 /**
  * A small pill flagging an imminent posting deadline on a content card. Renders
@@ -52,7 +53,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     borderRadius: 3,
                 },
                 label: {
-                    fontSize: 10,
+                    fontSize: fs(10),
                     fontWeight: "700",
                 },
             }),

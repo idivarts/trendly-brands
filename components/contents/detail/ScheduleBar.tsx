@@ -24,6 +24,7 @@ import {
     View,
 } from "react-native";
 import PublishNowConfirmModal from "./PublishNowConfirmModal";
+import { fs, lh } from "@/constants/Typography";
 
 interface ScheduleBarProps {
     socialAccounts: ISocialAccount[];
@@ -462,12 +463,12 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             marginBottom: 10,
         },
         blockLabel: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.textSecondary,
         },
         countBadge: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "700",
             color: colors.textSecondary,
             backgroundColor: colors.tag,
@@ -484,9 +485,9 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             height: 18,
         },
         emptyAccounts: {
-            fontSize: 12,
+            fontSize: fs(12),
             color: colors.textSecondary,
-            lineHeight: 18,
+            lineHeight: lh(18),
         },
         accountRow: {
             flexDirection: "row",
@@ -522,7 +523,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             justifyContent: "center",
         },
         accountInitial: {
-            fontSize: 11,
+            fontSize: fs(11),
             fontWeight: "800",
             color: colors.primary,
         },
@@ -533,7 +534,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             marginLeft: -2,
         },
         accountName: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.text,
             maxWidth: 120,
@@ -554,7 +555,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.onPrimary + "33",
         },
         pickHint: {
-            fontSize: 11,
+            fontSize: fs(11),
             color: colors.textSecondary,
             marginTop: 8,
         },
@@ -566,7 +567,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             gap: 8,
         },
         optionTitle: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "700",
             color: colors.textSecondary,
         },
@@ -575,7 +576,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             borderRadius: 10,
             paddingHorizontal: 12,
             paddingVertical: 10,
-            fontSize: 14,
+            fontSize: fs(14),
             color: colors.text,
             shadowColor: "#000",
             shadowOffset: { width: 0, height: 1 },
@@ -589,9 +590,9 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             gap: 8,
         },
         optionHint: {
-            fontSize: 11,
+            fontSize: fs(11),
             color: colors.textSecondary,
-            lineHeight: 16,
+            lineHeight: lh(16),
         },
         dateStatement: {
             flexDirection: "row",
@@ -607,12 +608,12 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             flex: 1,
         },
         dateStatementLabel: {
-            fontSize: 11,
+            fontSize: fs(11),
             fontWeight: "600",
             color: colors.textSecondary,
         },
         dateStatementValue: {
-            fontSize: 14,
+            fontSize: fs(14),
             fontWeight: "700",
             color: colors.text,
             marginTop: 1,
@@ -627,12 +628,12 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.card,
         },
         changePillText: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "700",
             color: colors.primary,
         },
         timeQuestion: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.textSecondary,
             marginTop: 16,
@@ -658,7 +659,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             elevation: 3,
         },
         timeChipText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.textSecondary,
         },
@@ -670,7 +671,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             borderRadius: 10,
             paddingHorizontal: 14,
             paddingVertical: 12,
-            fontSize: 14,
+            fontSize: fs(14),
             color: colors.text,
             marginTop: 12,
             shadowColor: "#000",
@@ -680,7 +681,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             elevation: 1,
         },
         tzHint: {
-            fontSize: 11,
+            fontSize: fs(11),
             color: colors.textSecondary,
             marginTop: 10,
         },
@@ -705,7 +706,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             elevation: 0,
         },
         publishBtnText: {
-            fontSize: 14,
+            fontSize: fs(14),
             fontWeight: "700",
             color: colors.onPrimary,
         },
@@ -722,12 +723,12 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             opacity: 0.45,
         },
         publishNowText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "700",
             color: colors.primary,
         },
         hint: {
-            fontSize: 11,
+            fontSize: fs(11),
             color: colors.textSecondary,
             textAlign: "center",
             marginTop: 8,

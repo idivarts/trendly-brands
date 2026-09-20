@@ -12,6 +12,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 interface Props {
     thread: string[];
@@ -130,7 +131,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             justifyContent: "space-between",
         },
         label: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "700",
             color: colors.textSecondary,
         },
@@ -144,20 +145,20 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.tag,
         },
         autoBtnText: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "700",
             color: colors.primary,
         },
         empty: {
-            fontSize: 11,
+            fontSize: fs(11),
             color: colors.textSecondary,
-            lineHeight: 16,
+            lineHeight: lh(16),
         },
         precedence: {
-            fontSize: 11,
+            fontSize: fs(11),
             fontWeight: "600",
             color: colors.primary,
-            lineHeight: 16,
+            lineHeight: lh(16),
         },
         segment: {
             gap: 6,
@@ -176,7 +177,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             justifyContent: "space-between",
         },
         segNum: {
-            fontSize: 11,
+            fontSize: fs(11),
             fontWeight: "800",
             color: colors.textSecondary,
         },
@@ -186,7 +187,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             gap: 8,
         },
         count: {
-            fontSize: 11,
+            fontSize: fs(11),
             color: colors.textSecondary,
         },
         countOver: {
@@ -206,7 +207,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             borderRadius: 8,
             paddingHorizontal: 10,
             paddingVertical: 8,
-            fontSize: 14,
+            fontSize: fs(14),
             color: colors.text,
             minHeight: 56,
         },
@@ -225,7 +226,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.tag,
         },
         addBtnText: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "700",
             color: colors.primary,
         },

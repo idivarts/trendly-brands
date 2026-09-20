@@ -20,6 +20,7 @@ import {
     TextInput,
     View,
 } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 // ─── FloatingPromptInput ──────────────────────────────────────────────────────
 // Reusable AI-prompt surface used across the web app wherever a feature takes a
@@ -261,15 +262,15 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             flex: 1,
         },
         title: {
-            fontSize: 15,
+            fontSize: fs(15),
             fontWeight: "700",
             color: colors.text,
         },
         subtitle: {
-            fontSize: 12,
+            fontSize: fs(12),
             color: colors.textSecondary,
             marginTop: 2,
-            lineHeight: 16,
+            lineHeight: lh(16),
         },
         closeBtn: {
             padding: 4,
@@ -285,7 +286,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             borderRadius: 12,
             paddingHorizontal: 14,
             paddingVertical: 12,
-            fontSize: 14,
+            fontSize: fs(14),
             color: colors.text,
             minHeight: 52,
             maxHeight: 140,
@@ -320,7 +321,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             marginTop: 10,
         },
         cta: {
-            fontSize: 11,
+            fontSize: fs(11),
             fontWeight: "600",
             color: colors.textSecondary,
             marginLeft: 2,

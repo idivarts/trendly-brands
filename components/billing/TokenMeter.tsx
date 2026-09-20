@@ -7,6 +7,7 @@ import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
 import React, { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 // The AI-token meter family. Three presentations off one TokenStatus:
 //   • TokenMeterBar    — ambient compact strip (panel header). Quiet until low.
@@ -140,7 +141,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     overflow: "hidden",
                 },
                 barFill: { height: 6, borderRadius: 3 },
-                barLabel: { fontSize: 11, fontWeight: "700", color: colors.textSecondary },
+                barLabel: { fontSize: fs(11), fontWeight: "700", color: colors.textSecondary },
                 // ── Notice banner ──
                 noticeWrap: {
                     flexDirection: "row",
@@ -160,13 +161,13 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 },
                 noticeAccent: { width: 4, alignSelf: "stretch" },
                 noticeBody: { flex: 1, paddingVertical: 10 },
-                noticeText: { fontSize: 12.5, color: colors.text, lineHeight: 17 },
+                noticeText: { fontSize: fs(12.5), color: colors.text, lineHeight: lh(17) },
                 noticeCta: {
                     minHeight: 44,
                     justifyContent: "center",
                     paddingHorizontal: 12,
                 },
-                noticeCtaText: { fontSize: 13, fontWeight: "700", color: colors.primary },
+                noticeCtaText: { fontSize: fs(13), fontWeight: "700", color: colors.primary },
                 // ── Exhausted block ──
                 blockWrap: {
                     paddingHorizontal: 16,
@@ -180,8 +181,8 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     elevation: 4,
                 },
                 blockHeaderRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-                blockTitle: { flex: 1, fontSize: 14, fontWeight: "700", color: colors.text },
-                blockSubtitle: { fontSize: 12.5, color: colors.textSecondary, lineHeight: 18 },
+                blockTitle: { flex: 1, fontSize: fs(14), fontWeight: "700", color: colors.text },
+                blockSubtitle: { fontSize: fs(12.5), color: colors.textSecondary, lineHeight: lh(18) },
                 blockCtaRow: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 2 },
                 blockPrimary: {
                     flexDirection: "row",
@@ -197,13 +198,13 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     shadowOpacity: 0.35,
                     elevation: 4,
                 },
-                blockPrimaryText: { fontSize: 14, fontWeight: "700", color: colors.onPrimary },
+                blockPrimaryText: { fontSize: fs(14), fontWeight: "700", color: colors.onPrimary },
                 blockSecondary: {
                     minHeight: 44,
                     justifyContent: "center",
                     paddingHorizontal: 12,
                 },
-                blockSecondaryText: { fontSize: 13, fontWeight: "700", color: colors.primary },
+                blockSecondaryText: { fontSize: fs(13), fontWeight: "700", color: colors.primary },
             }),
         [colors]
     );

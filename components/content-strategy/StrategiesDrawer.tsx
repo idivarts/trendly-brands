@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import StrategyActionsMenu from "./StrategyActionsMenu";
 import { ContentStrategy } from "./types";
+import { fs } from "@/constants/Typography";
 
 interface StrategiesDrawerProps {
     visible: boolean;
@@ -155,7 +156,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     backgroundColor: colors.modalBackground,
                 },
                 drawerTitle: {
-                    fontSize: 17,
+                    fontSize: fs(17),
                     fontWeight: "700",
                     color: colors.text,
                 },
@@ -203,7 +204,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     flex: 1,
                 },
                 strategyTitle: {
-                    fontSize: 14,
+                    fontSize: fs(14),
                     fontWeight: "600",
                     color: colors.text,
                     marginBottom: 2,
@@ -212,7 +213,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     color: colors.onPrimary,
                 },
                 strategyDate: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     color: colors.textSecondary,
                 },
                 strategyDateActive: {

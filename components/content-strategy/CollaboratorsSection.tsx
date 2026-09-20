@@ -27,6 +27,7 @@ import {
     Text,
     View,
 } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 interface MemberItem extends IManagers {
     managerId: string;
@@ -204,15 +205,15 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             minWidth: 0,
         },
         title: {
-            fontSize: 14,
+            fontSize: fs(14),
             fontWeight: "700",
             color: colors.text,
         },
         subtitle: {
-            fontSize: 12,
+            fontSize: fs(12),
             color: colors.textSecondary,
             marginTop: 2,
-            lineHeight: 16,
+            lineHeight: lh(16),
         },
         loader: {
             marginVertical: 16,
@@ -239,7 +240,7 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             justifyContent: "center",
         },
         avatarText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "700",
             color: colors.primary,
         },
@@ -249,12 +250,12 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             gap: 1,
         },
         memberName: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.text,
         },
         memberEmail: {
-            fontSize: 11,
+            fontSize: fs(11),
             color: colors.textSecondary,
         },
         actionBtn: {
@@ -279,7 +280,7 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.aliceBlue,
         },
         actionBtnText: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "600",
             color: colors.onPrimary,
         },
@@ -290,7 +291,7 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             opacity: 0.72,
         },
         emptyText: {
-            fontSize: 12,
+            fontSize: fs(12),
             color: colors.textSecondary,
             textAlign: "center",
             paddingVertical: 16,

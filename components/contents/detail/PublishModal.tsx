@@ -12,6 +12,7 @@ import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import ScheduleBar from "./ScheduleBar";
+import { fs, lh } from "@/constants/Typography";
 
 // ─── PublishModal ─────────────────────────────────────────────────────────────
 // Wraps the Send-to / When controls (ScheduleBar) in a focused modal opened from
@@ -162,12 +163,12 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             flex: 1,
         },
         title: {
-            fontSize: 16,
+            fontSize: fs(16),
             fontWeight: "700",
             color: colors.text,
         },
         subtitle: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "600",
             color: colors.textSecondary,
             marginTop: 1,
@@ -199,8 +200,8 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
         },
         variationNoteText: {
             flex: 1,
-            fontSize: 12,
-            lineHeight: 17,
+            fontSize: fs(12),
+            lineHeight: lh(17),
             color: colors.textSecondary,
         },
         pressed: {

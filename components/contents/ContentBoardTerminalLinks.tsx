@@ -11,6 +11,7 @@ import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { contentStatusColors } from "./types";
+import { fs } from "@/constants/Typography";
 
 export interface TerminalCounts {
     scheduled: number;
@@ -139,7 +140,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     paddingTop: 2,
                 },
                 railHeading: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     fontWeight: "700",
                     letterSpacing: 0.4,
                     textTransform: "uppercase",
@@ -181,12 +182,12 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     minWidth: 0,
                 },
                 pillLabel: {
-                    fontSize: 14,
+                    fontSize: fs(14),
                     fontWeight: "700",
                     color: colors.text,
                 },
                 pillCaption: {
-                    fontSize: 11,
+                    fontSize: fs(11),
                     color: colors.textSecondary,
                     marginTop: 1,
                 },
@@ -200,7 +201,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     justifyContent: "center",
                 },
                 countText: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     fontWeight: "700",
                     color: colors.textSecondary,
                 },

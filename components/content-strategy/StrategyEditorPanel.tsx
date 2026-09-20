@@ -31,6 +31,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Modal, NativeSyntheticEvent, Platform, Pressable, StyleProp, StyleSheet, Text, TextInput, TextInputKeyPressEventData, View, ViewStyle } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 const PlatformEditor: React.ComponentType<EditorProps> = RichTextEditor;
 
@@ -738,17 +739,17 @@ function toolbarStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             backgroundColor: colors.tag,
         },
         titleText: {
-            fontSize: 15,
+            fontSize: fs(15),
             fontWeight: "700",
             color: colors.text,
-            lineHeight: 20,
+            lineHeight: lh(20),
             flexShrink: 1,
         },
         titleInput: {
-            fontSize: 15,
+            fontSize: fs(15),
             fontWeight: "700",
             color: colors.text,
-            lineHeight: 20,
+            lineHeight: lh(20),
             paddingVertical: 4,
             paddingHorizontal: 6,
             borderRadius: 6,
@@ -773,7 +774,7 @@ function toolbarStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             gap: 5,
         },
         statusPillText: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "700",
         },
         savedTrigger: {
@@ -810,10 +811,10 @@ function toolbarStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             right: 0,
         },
         tooltipText: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "600",
             color: colors.text,
-            lineHeight: 16,
+            lineHeight: lh(16),
         },
         actions: {
             flexDirection: "row",
@@ -853,7 +854,7 @@ function toolbarStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             elevation: 1,
         },
         secondaryBtnText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "700",
             color: colors.primary,
         },
@@ -887,7 +888,7 @@ function toolbarStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             backgroundColor: colors.secondarySurface,
         },
         menuItemText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.text,
         },

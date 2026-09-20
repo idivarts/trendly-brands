@@ -13,6 +13,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import CalendarHeader from "./CalendarHeader";
 import ContentItemChip from "./ContentItemChip";
 import { CalendarItem, CalendarView } from "./types";
+import { fs } from "@/constants/Typography";
 
 interface MonthViewMobileProps {
     year: number;
@@ -358,7 +359,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 dayLabelText: {
                     flex: 1,
                     textAlign: "center",
-                    fontSize: 11,
+                    fontSize: fs(11),
                     fontWeight: "700",
                     color: colors.textSecondary,
                 },
@@ -396,7 +397,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     opacity: 0.6,
                 },
                 dayNumber: {
-                    fontSize: 14,
+                    fontSize: fs(14),
                     fontWeight: "600",
                     color: colors.text,
                 },
@@ -442,7 +443,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     borderRadius: 3.5,
                 },
                 legendText: {
-                    fontSize: 10,
+                    fontSize: fs(10),
                     fontWeight: "600",
                     color: colors.textSecondary,
                 },
@@ -473,12 +474,12 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     minWidth: 0,
                 },
                 bottomTitle: {
-                    fontSize: 16,
+                    fontSize: fs(16),
                     fontWeight: "700",
                     color: colors.text,
                 },
                 bottomSubtitle: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     fontWeight: "600",
                     color: colors.textSecondary,
                     marginTop: 2,
@@ -513,7 +514,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     gap: 14,
                 },
                 emptyDayText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.textSecondary,
                     textAlign: "center",
@@ -536,7 +537,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     opacity: 0.8,
                 },
                 emptyDayCtaText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "700",
                     color: colors.onPrimary,
                 },

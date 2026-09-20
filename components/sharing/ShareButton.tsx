@@ -6,6 +6,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { fs } from "@/constants/Typography";
 
 interface ShareButtonProps {
     target: ShareTarget;
@@ -86,7 +87,7 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.tag,
         },
         labelText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "700",
             color: colors.primary,
         },

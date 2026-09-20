@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { fs } from "@/constants/Typography";
 
 const MONTH_NAMES = [
     "January", "February", "March", "April", "May", "June",
@@ -131,7 +132,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 yearText: {
                     flex: 1,
                     textAlign: "center",
-                    fontSize: 18,
+                    fontSize: fs(18),
                     fontWeight: "700",
                     color: colors.text,
                 },
@@ -163,7 +164,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     opacity: 0.72,
                 },
                 monthText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.textSecondary,
                 },

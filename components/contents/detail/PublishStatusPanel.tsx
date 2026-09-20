@@ -23,6 +23,7 @@ import {
     Text,
     View,
 } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 // ─── PublishStatusPanel ─────────────────────────────────────────────────────
 // Per-social publish outcome, shown on the content-detail screen while a
@@ -289,12 +290,12 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             gap: 2,
         },
         title: {
-            fontSize: 15,
+            fontSize: fs(15),
             fontWeight: "700",
             color: colors.text,
         },
         summary: {
-            fontSize: 12,
+            fontSize: fs(12),
             color: colors.textSecondary,
         },
         headerSpinner: {
@@ -313,7 +314,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.aliceBlue,
         },
         retryAllText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "700",
             color: colors.primary,
         },
@@ -345,12 +346,12 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             minWidth: 0,
         },
         rowName: {
-            fontSize: 14,
+            fontSize: fs(14),
             fontWeight: "600",
             color: colors.text,
         },
         rowAccount: {
-            fontSize: 12,
+            fontSize: fs(12),
             color: colors.textSecondary,
         },
         statusWrap: {
@@ -359,7 +360,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             gap: 6,
         },
         statusText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
         },
         failBody: {
@@ -367,8 +368,8 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             paddingLeft: 20,
         },
         errorText: {
-            fontSize: 12.5,
-            lineHeight: 18,
+            fontSize: fs(12.5),
+            lineHeight: lh(18),
             color: colors.statusRejectedFg,
         },
         rowAction: {
@@ -380,7 +381,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             paddingRight: 8,
         },
         rowActionText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "700",
             color: colors.primary,
         },

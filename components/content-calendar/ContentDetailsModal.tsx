@@ -12,6 +12,7 @@ import React, { useMemo } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { parseWebInputDate } from "@/components/modals/DatePickerModal";
 import { CalendarItem, CONTENT_TYPE_LABELS } from "./types";
+import { fs, lh } from "@/constants/Typography";
 
 interface ContentDetailsModalProps {
     visible: boolean;
@@ -255,7 +256,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 },
                 headerTitle: {
                     flex: 1,
-                    fontSize: 17,
+                    fontSize: fs(17),
                     fontWeight: "700",
                     color: colors.text,
                 },
@@ -287,7 +288,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     elevation: 3,
                 },
                 typeChipText: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     fontWeight: "700",
                     color: colors.onPrimary,
                 },
@@ -297,14 +298,14 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     borderRadius: 20,
                 },
                 statusPillText: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     fontWeight: "700",
                 },
                 metaSpacer: {
                     flex: 1,
                 },
                 dateText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     color: colors.textSecondary,
                     fontWeight: "500",
                 },
@@ -328,21 +329,21 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     borderRadius: 4,
                 },
                 platformChipText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.text,
                 },
                 label: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.textSecondary,
                     marginTop: 18,
                     marginBottom: 6,
                 },
                 ideaText: {
-                    fontSize: 14,
+                    fontSize: fs(14),
                     color: colors.text,
-                    lineHeight: 20,
+                    lineHeight: lh(20),
                 },
                 strategyLink: {
                     flexDirection: "row",
@@ -356,7 +357,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     maxWidth: "100%",
                 },
                 strategyLinkText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.primary,
                     flexShrink: 1,
@@ -379,7 +380,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     backgroundColor: colors.tag,
                 },
                 cancelBtnText: {
-                    fontSize: 14,
+                    fontSize: fs(14),
                     fontWeight: "600",
                     color: colors.textSecondary,
                 },
@@ -399,7 +400,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     elevation: 4,
                 },
                 openBtnText: {
-                    fontSize: 14,
+                    fontSize: fs(14),
                     fontWeight: "700",
                     color: colors.onPrimary,
                 },
@@ -420,7 +421,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     backgroundColor: colors.tag,
                 },
                 quickBtnText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.primary,
                 },

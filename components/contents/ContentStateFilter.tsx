@@ -3,6 +3,7 @@ import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { CONTENT_STATUS_LABELS, ContentItem, ContentStatus } from "./types";
+import { fs } from "@/constants/Typography";
 
 export type ContentStateFilterValue = ContentStatus | "all";
 
@@ -105,7 +106,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     elevation: 3,
                 },
                 chipLabel: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.textSecondary,
                 },
@@ -125,7 +126,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     backgroundColor: "rgba(255,255,255,0.25)",
                 },
                 countText: {
-                    fontSize: 11,
+                    fontSize: fs(11),
                     fontWeight: "700",
                     color: colors.textSecondary,
                 },

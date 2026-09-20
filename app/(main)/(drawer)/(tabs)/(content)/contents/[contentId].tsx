@@ -86,6 +86,7 @@ import {
     Text,
     TextInput,
 } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 
@@ -1997,9 +1998,9 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     marginBottom: 20,
                 },
                 variationHint: {
-                    fontSize: 11,
+                    fontSize: fs(11),
                     color: colors.textSecondary,
-                    lineHeight: 16,
+                    lineHeight: lh(16),
                     marginTop: 10,
                     paddingHorizontal: 2,
                 },
@@ -2044,7 +2045,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                 },
                 headerTitleText: {
                     flexShrink: 1,
-                    fontSize: 22,
+                    fontSize: fs(22),
                     fontWeight: "700",
                     color: colors.text,
                 },
@@ -2055,12 +2056,12 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     flexShrink: 0,
                 },
                 statusBadgeText: {
-                    fontSize: 11,
+                    fontSize: fs(11),
                     fontWeight: "700",
                     letterSpacing: 0.3,
                 },
                 headerTypeText: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     fontWeight: "600",
                     color: colors.textSecondary,
                     marginTop: 2,
@@ -2074,7 +2075,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     marginTop: 2,
                 },
                 headerMetaDot: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     fontWeight: "700",
                     color: colors.textSecondary,
                 },
@@ -2095,7 +2096,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     borderRadius: 4,
                 },
                 headerPlatformText: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     fontWeight: "600",
                     color: colors.textSecondary,
                 },
@@ -2110,7 +2111,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     backgroundColor: colors.aliceBlue,
                 },
                 publishHeaderText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "700",
                     color: colors.primary,
                 },
@@ -2123,18 +2124,18 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                 },
                 contentTitle: {
                     flexShrink: 1,
-                    fontSize: 18,
+                    fontSize: fs(18),
                     fontWeight: "700",
                     color: colors.text,
                 },
                 ideaText: {
-                    fontSize: 14,
-                    lineHeight: 20,
+                    fontSize: fs(14),
+                    lineHeight: lh(20),
                     color: colors.textSecondary,
                     marginBottom: 4,
                 },
                 sectionLabel: {
-                    fontSize: 11,
+                    fontSize: fs(11),
                     fontWeight: "700",
                     letterSpacing: 1.1,
                     color: colors.textSecondary,
@@ -2150,12 +2151,12 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                 },
                 fieldMetaNote: {
                     flex: 1,
-                    fontSize: 11,
-                    lineHeight: 15,
+                    fontSize: fs(11),
+                    lineHeight: lh(15),
                     color: colors.textSecondary,
                 },
                 charCounter: {
-                    fontSize: 11,
+                    fontSize: fs(11),
                     fontWeight: "600",
                     color: colors.textSecondary,
                 },
@@ -2173,15 +2174,15 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     elevation: 3,
                 },
                 cardTitle: {
-                    fontSize: 15,
+                    fontSize: fs(15),
                     fontWeight: "700",
                     color: colors.text,
                     marginBottom: 4,
                 },
                 cardSub: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     color: colors.textSecondary,
-                    lineHeight: 18,
+                    lineHeight: lh(18),
                     marginBottom: 12,
                 },
                 typeTag: {
@@ -2191,7 +2192,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     backgroundColor: colors.tag,
                 },
                 typeTagText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.textSecondary,
                 },
@@ -2203,7 +2204,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     borderRadius: 10,
                     paddingHorizontal: 14,
                     paddingVertical: 12,
-                    fontSize: 14,
+                    fontSize: fs(14),
                     color: colors.text,
                     shadowColor: "#000",
                     shadowOffset: { width: 0, height: 1 },
@@ -2265,15 +2266,15 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     padding: 16,
                 },
                 collabTitle: {
-                    fontSize: 15,
+                    fontSize: fs(15),
                     fontWeight: "700",
                     color: colors.text,
                     marginBottom: 6,
                 },
                 collabSub: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     color: colors.textSecondary,
-                    lineHeight: 19,
+                    lineHeight: lh(19),
                     marginBottom: 14,
                 },
                 collabBtn: {
@@ -2292,7 +2293,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     elevation: 4,
                 },
                 collabBtnText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "700",
                     color: colors.onPrimary,
                 },
@@ -2328,7 +2329,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     shadowColor: colors.statusApprovedFg,
                 },
                 saveBtnText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.onPrimary,
                 },
@@ -2366,15 +2367,15 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     backgroundColor: "transparent",
                 },
                 lockBannerTitle: {
-                    fontSize: 14,
+                    fontSize: fs(14),
                     fontWeight: "700",
                     color: colors.text,
                     marginBottom: 2,
                 },
                 lockBannerSub: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     color: colors.textSecondary,
-                    lineHeight: 17,
+                    lineHeight: lh(17),
                 },
                 unscheduleBtn: {
                     flexDirection: "row",
@@ -2391,7 +2392,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     elevation: 2,
                 },
                 unscheduleBtnText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "700",
                     color: colors.primary,
                 },

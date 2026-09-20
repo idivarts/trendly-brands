@@ -23,6 +23,7 @@ import {
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { fs } from "@/constants/Typography";
 
 export interface AIChatHistoryThread {
     id: string;
@@ -237,14 +238,14 @@ function useStyles(colors: ReturnType<typeof Colors>, safeBottom: number) {
                     elevation: 4,
                 },
                 newChatBtnPressed: { opacity: 0.75 },
-                newChatText: { color: colors.onPrimary, fontWeight: "700", fontSize: 13 },
+                newChatText: { color: colors.onPrimary, fontWeight: "700", fontSize: fs(13) },
                 searchInput: {
                     paddingHorizontal: 12,
                     paddingVertical: 8,
                     backgroundColor: colors.tag,
                     color: colors.text,
                     borderRadius: 10,
-                    fontSize: 13,
+                    fontSize: fs(13),
                     shadowColor: "#000",
                     shadowOffset: { width: 0, height: 1 },
                     shadowRadius: 3,
@@ -255,7 +256,7 @@ function useStyles(colors: ReturnType<typeof Colors>, safeBottom: number) {
                 historyListContent: { gap: 4, paddingBottom: 8 },
                 historyEmpty: {
                     color: colors.textSecondary,
-                    fontSize: 12,
+                    fontSize: fs(12),
                     textAlign: "center",
                     paddingVertical: 20,
                 },
@@ -276,7 +277,7 @@ function useStyles(colors: ReturnType<typeof Colors>, safeBottom: number) {
                     elevation: 3,
                 },
                 threadPress: { flex: 1, minWidth: 0 },
-                threadTitle: { color: colors.text, fontSize: 13, fontWeight: "600" },
+                threadTitle: { color: colors.text, fontSize: fs(13), fontWeight: "600" },
                 threadTitleActive: { color: colors.onPrimary },
                 threadMetaRow: {
                     flexDirection: "row",
@@ -284,7 +285,7 @@ function useStyles(colors: ReturnType<typeof Colors>, safeBottom: number) {
                     gap: 6,
                     marginTop: 3,
                 },
-                threadMeta: { color: colors.textSecondary, fontSize: 11 },
+                threadMeta: { color: colors.textSecondary, fontSize: fs(11) },
                 threadMetaActive: { color: colors.onPrimary, opacity: 0.8 },
                 // Module origin pill — neutral tag surface so it reads on the card
                 // background; flips to a translucent light fill on the active
@@ -302,7 +303,7 @@ function useStyles(colors: ReturnType<typeof Colors>, safeBottom: number) {
                 moduleBadgeActive: { backgroundColor: colors.backdrop },
                 moduleBadgeText: {
                     color: colors.textSecondary,
-                    fontSize: 10,
+                    fontSize: fs(10),
                     fontWeight: "600",
                 },
                 moduleBadgeTextActive: { color: colors.onPrimary },
@@ -322,7 +323,7 @@ function useStyles(colors: ReturnType<typeof Colors>, safeBottom: number) {
                     backgroundColor: colors.tag,
                     color: colors.text,
                     borderRadius: 6,
-                    fontSize: 13,
+                    fontSize: fs(13),
                 },
             }),
         [colors, safeBottom]

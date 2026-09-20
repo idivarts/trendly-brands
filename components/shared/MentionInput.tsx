@@ -26,6 +26,7 @@ import {
     View,
     ViewStyle,
 } from "react-native";
+import { fs } from "@/constants/Typography";
 
 interface MentionInputProps {
     value: string;
@@ -246,13 +247,13 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             justifyContent: "center",
         },
         avatarFallbackText: {
-            fontSize: 11,
+            fontSize: fs(11),
             fontWeight: "700",
             color: colors.primary,
         },
         rowName: {
             flex: 1,
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "500",
             color: colors.text,
         },

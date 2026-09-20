@@ -3,6 +3,7 @@ import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 interface Props {
     contextId?: string;
@@ -76,14 +77,14 @@ export default AICaptionSuggester;
 const makeStyles = (colors: any) =>
     StyleSheet.create({
         wrap: { padding: 14, backgroundColor: colors.card, borderRadius: 12, gap: 10 },
-        title: { color: colors.text, fontSize: 16, fontWeight: "700" },
+        title: { color: colors.text, fontSize: fs(16), fontWeight: "700" },
         input: {
             backgroundColor: colors.tag,
             color: colors.text,
             borderRadius: 10,
             paddingHorizontal: 12,
             paddingVertical: 10,
-            fontSize: 14,
+            fontSize: fs(14),
         },
         runBtn: {
             alignSelf: "flex-start",
@@ -97,13 +98,13 @@ const makeStyles = (colors: any) =>
             shadowOpacity: 0.3,
             elevation: 4,
         },
-        runText: { color: "#fff", fontWeight: "700", fontSize: 13 },
+        runText: { color: "#fff", fontWeight: "700", fontSize: fs(13) },
         btnDisabled: { opacity: 0.4 },
         btnPressed: { opacity: 0.85 },
         list: { gap: 8 },
         card: { padding: 12, backgroundColor: colors.tag, borderRadius: 10, gap: 6 },
-        cardLabel: { color: colors.primary, fontSize: 11, fontWeight: "700", textTransform: "uppercase" },
-        cardText: { color: colors.text, fontSize: 14, lineHeight: 20 },
+        cardLabel: { color: colors.primary, fontSize: fs(11), fontWeight: "700", textTransform: "uppercase" },
+        cardText: { color: colors.text, fontSize: fs(14), lineHeight: lh(20) },
         useBtn: {
             alignSelf: "flex-start",
             paddingHorizontal: 12,
@@ -111,5 +112,5 @@ const makeStyles = (colors: any) =>
             backgroundColor: colors.primary,
             borderRadius: 8,
         },
-        useText: { color: "#fff", fontWeight: "700", fontSize: 12 },
+        useText: { color: "#fff", fontWeight: "700", fontSize: fs(12) },
     });

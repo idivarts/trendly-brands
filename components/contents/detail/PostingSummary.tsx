@@ -16,6 +16,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { fs } from "@/constants/Typography";
 
 // ─── PostingSummary ───────────────────────────────────────────────────────────
 // Read-only recap of the destinations + schedule, shown above the content card
@@ -228,7 +229,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             justifyContent: "center",
         },
         avatarInitial: {
-            fontSize: 10,
+            fontSize: fs(10),
             fontWeight: "800",
             color: colors.primary,
         },
@@ -239,7 +240,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             marginLeft: -2,
         },
         destName: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.text,
             maxWidth: 140,
@@ -250,7 +251,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             gap: 7,
         },
         whenText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.text,
         },
@@ -264,7 +265,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.aliceBlue,
         },
         editText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "700",
             color: colors.primary,
         },

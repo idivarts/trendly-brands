@@ -9,6 +9,7 @@ import { useRouter } from "expo-router";
 import React, { useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { fs } from "@/constants/Typography";
 
 export interface PageHeaderProps {
     customMainContent?: React.ReactNode;
@@ -179,12 +180,12 @@ function useStyles(colors: ReturnType<typeof Colors>, topInset: number, xl: bool
                     minWidth: 0,
                 },
                 headerTitle: {
-                    fontSize: 22,
+                    fontSize: fs(22),
                     fontWeight: "700",
                     color: colors.text,
                 },
                 headerSubtitle: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     fontWeight: "600",
                     color: colors.textSecondary,
                     marginTop: 2,

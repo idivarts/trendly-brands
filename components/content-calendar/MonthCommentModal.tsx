@@ -35,6 +35,7 @@ import {
     TextInput,
     View,
 } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 const MONTH_NAMES = [
     "January", "February", "March", "April", "May", "June",
@@ -230,8 +231,8 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             justifyContent: "center",
         },
         headerText: { flex: 1, gap: 1 },
-        title: { fontSize: 15, fontWeight: "700", color: colors.text },
-        subtitle: { fontSize: 12, color: colors.textSecondary },
+        title: { fontSize: fs(15), fontWeight: "700", color: colors.text },
+        subtitle: { fontSize: fs(12), color: colors.textSecondary },
         closeBtn: { padding: 4 },
         loader: { marginVertical: 32 },
         list: { flex: 1 },
@@ -240,11 +241,11 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             gap: 12,
         },
         emptyText: {
-            fontSize: 13,
+            fontSize: fs(13),
             color: colors.textSecondary,
             textAlign: "center",
             paddingVertical: 20,
-            lineHeight: 19,
+            lineHeight: lh(19),
         },
         commentRow: {
             flexDirection: "row",
@@ -261,7 +262,7 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             flexShrink: 0,
         },
         avatarText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "700",
             color: colors.primary,
         },
@@ -272,18 +273,18 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             gap: 8,
         },
         authorName: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.text,
         },
         timestamp: {
-            fontSize: 11,
+            fontSize: fs(11),
             color: colors.textSecondary,
         },
         commentText: {
-            fontSize: 13,
+            fontSize: fs(13),
             color: colors.text,
-            lineHeight: 18,
+            lineHeight: lh(18),
         },
         deleteBtn: {
             padding: 6,
@@ -302,7 +303,7 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             borderRadius: 10,
             paddingHorizontal: 12,
             paddingVertical: 9,
-            fontSize: 14,
+            fontSize: fs(14),
             color: colors.text,
             maxHeight: 100,
         },
@@ -316,7 +317,7 @@ function createStyles(colors: ReturnType<typeof Colors>) {
         },
         sendBtnDisabled: { opacity: 0.4 },
         sendBtnText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "700",
             color: colors.onPrimary,
         },

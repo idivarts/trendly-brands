@@ -22,6 +22,7 @@ import {
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { fs, lh } from "@/constants/Typography";
 
 interface ShareModalProps {
     visible: boolean;
@@ -229,12 +230,12 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
             minWidth: 0,
         },
         title: {
-            fontSize: 18,
+            fontSize: fs(18),
             fontWeight: "700",
             color: colors.text,
         },
         subtitle: {
-            fontSize: 13,
+            fontSize: fs(13),
             color: colors.textSecondary,
             marginTop: 2,
         },
@@ -260,15 +261,15 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
             minWidth: 0,
         },
         toggleTitle: {
-            fontSize: 14,
+            fontSize: fs(14),
             fontWeight: "700",
             color: colors.text,
         },
         toggleHint: {
-            fontSize: 12,
+            fontSize: fs(12),
             color: colors.textSecondary,
             marginTop: 2,
-            lineHeight: 16,
+            lineHeight: lh(16),
         },
         linkRow: {
             flexDirection: "row",
@@ -282,7 +283,7 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
         },
         linkUrl: {
             flex: 1,
-            fontSize: 13,
+            fontSize: fs(13),
             color: colors.text,
         },
         copyBtn: {
@@ -300,14 +301,14 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
             elevation: 4,
         },
         copyBtnText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "700",
             color: colors.onPrimary,
         },
         note: {
-            fontSize: 12,
+            fontSize: fs(12),
             color: colors.textSecondary,
-            lineHeight: 17,
+            lineHeight: lh(17),
             marginTop: 12,
         },
         actions: {
@@ -323,7 +324,7 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
             backgroundColor: colors.tag,
         },
         doneBtnText: {
-            fontSize: 14,
+            fontSize: fs(14),
             fontWeight: "700",
             color: colors.text,
         },

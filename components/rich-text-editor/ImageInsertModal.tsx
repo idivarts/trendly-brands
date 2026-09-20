@@ -16,6 +16,7 @@ import {
     View,
 } from "react-native";
 import { normalizeUrl } from "./normalizeUrl";
+import { fs } from "@/constants/Typography";
 
 interface ImageInsertModalProps {
     visible: boolean;
@@ -201,7 +202,7 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             elevation: 16,
         },
         title: {
-            fontSize: 17,
+            fontSize: fs(17),
             fontWeight: "700",
             color: colors.text,
             marginBottom: 16,
@@ -221,7 +222,7 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             elevation: 1,
         },
         uploadText: {
-            fontSize: 14,
+            fontSize: fs(14),
             fontWeight: "600",
             color: colors.text,
         },
@@ -237,12 +238,12 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.tag,
         },
         dividerText: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "600",
             color: colors.textSecondary,
         },
         label: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "600",
             color: colors.textSecondary,
             marginBottom: 6,
@@ -269,7 +270,7 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
         urlInput: {
             flex: 1,
             paddingVertical: 10,
-            fontSize: 15,
+            fontSize: fs(15),
             color: colors.text,
         },
         urlInsertBtn: {
@@ -289,12 +290,12 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             elevation: 0,
         },
         urlInsertText: {
-            fontSize: 14,
+            fontSize: fs(14),
             fontWeight: "700",
             color: colors.onPrimary,
         },
         error: {
-            fontSize: 12,
+            fontSize: fs(12),
             color: colors.errorBannerText,
             marginTop: 12,
         },
@@ -310,7 +311,7 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.tag,
         },
         cancelText: {
-            fontSize: 14,
+            fontSize: fs(14),
             fontWeight: "600",
             color: colors.textSecondary,
         },
