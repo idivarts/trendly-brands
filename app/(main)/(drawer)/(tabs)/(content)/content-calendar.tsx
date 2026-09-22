@@ -7,8 +7,10 @@ import MonthViewMobile from "@/components/content-calendar/MonthViewMobile";
 import WeekView from "@/components/content-calendar/WeekView";
 import { CalendarItem, CalendarView } from "@/components/content-calendar/types";
 import { ContentItem } from "@/components/contents/types";
+import { useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapsed-context";
 import { useSidebarParam } from "@/components/drawer-layout/use-sidebar-param";
-import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
+import AIChatPanel from "@/components/shared/AIChatPanel";
+import { Focus, FocusArea } from "@/types/focus";
 import { PanelComment } from "@/components/shared/CommentsPanel";
 import RightSidePanel, { RightPanelMode } from "@/components/shared/RightSidePanel";
 import RightPanelFab from "@/components/shared/RightPanelFab";
@@ -20,6 +22,7 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { useContents } from "@/hooks/use-contents";
 import { useFeatureTour } from "@/hooks/use-feature-tour";
+import { useStrategies } from "@/hooks/use-strategies";
 import AppLayout from "@/layouts/app-layout";
 import Colors from "@/shared-uis/constants/Colors";
 import {
@@ -33,6 +36,7 @@ import { parseWebInputDate } from "@/components/modals/DatePickerModal";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
+import { fs } from "@/constants/Typography";
 
 const CALENDAR_WELCOME =
     "Hi! I'm your AI Content Expert. Select items from the calendar and send them here — I can help you rewrite, rethink, or bulk-edit your content plan.";
@@ -58,6 +62,16 @@ const ContentCalendarScreen = () => {
     const styles = useStyles(colors, xl);
 
     const { items: allContents, addContent, updateContent } = useContents();
+    const { strategies } = useStrategies();
+    const handleOpenStrategy = useCallback(
+        (strategyId: string) => {
+            router.push({
+                pathname: "/(main)/(drawer)/(tabs)/(content)/content-strategies/[strategyId]" as any,
+                params: { strategyId },
+            });
+        },
+        [router]
+    );
     const items = useMemo<CalendarItem[]>(
         () => allContents.filter((i) => !!i.date && !i.isArchived),
         [allContents]
@@ -98,16 +112,28 @@ const ContentCalendarScreen = () => {
     const [detailItem, setDetailItem] = useState<ContentItem | null>(null);
 
     // ── Right panel ───────────────────────────────────────────────────────────
-    // 'chat'     → AI chat panel (desktop default)
+    // 'chat'     → AI chat panel
     // 'comments' → Calendar comments panel (month or item level)
     // 'none'     → collapsed; on mobile the panel floats over the page when open
-    const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>(xl ? "chat" : "none");
+    // Collapsed by default on web (xl) too — the calendar wants the full width.
+    const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("none");
+
+    // Opening the right panel (any mode) on web collapses the drawer rail to make
+    // room; closing it (mode → 'none') leaves the drawer as the user left it.
+    const { setCollapsed: setSidebarCollapsed } = useSidebarCollapsed();
+    const handleRightPanelModeChange = useCallback(
+        (mode: RightPanelMode) => {
+            if (xl && mode !== "none") setSidebarCollapsed(true);
+            setRightPanelMode(mode);
+        },
+        [xl, setSidebarCollapsed]
+    );
 
     // Which content item's comments are currently in focus.
     // null = month-level comments; set = item-level comments.
     const [selectedCommentItem, setSelectedCommentItem] = useState<CalendarItem | null>(null);
 
-    const [focusItems, setFocusItems] = useState<FocusItem[]>([]);
+    const [focusItems, setFocusItems] = useState<Focus[]>([]);
 
     const hasItems = items.length > 0;
 
@@ -122,41 +148,65 @@ const ContentCalendarScreen = () => {
 
     // Sending an item to chat: focuses it in the chat panel and opens chat if closed.
     const handleFocusChat = useCallback((item: CalendarItem) => {
-        const label = item.title.length > 80 ? item.title.slice(0, 80) + "..." : item.title;
-        // Carry the post's id (+ date/type) to the AI so calendar tools can act on
-        // this exact item; the chip itself still shows just the title.
-        const contextText = `Focused post [id:${item.id}] "${item.title}" (${item.type}, ${item.date})`;
+        const focusText = item.title.length > 60 ? item.title.slice(0, 60) + "…" : item.title;
+        // Structured calendar-content focus — carries the post's id/type/date so
+        // calendar tools can act on this exact item; the chip shows just the title.
         setFocusItems((prev) => {
             if (prev.find((f) => f.id === item.id)) return prev;
-            return [...prev, { id: item.id, label, contextText }];
+            return [
+                ...prev,
+                {
+                    id: item.id,
+                    focusText,
+                    focusArea: {
+                        type: "calendar-content",
+                        contentId: item.id,
+                        title: item.title,
+                        contentType: item.type,
+                        date: item.date,
+                    },
+                },
+            ];
         });
-        setRightPanelMode("chat");
-    }, []);
+        handleRightPanelModeChange("chat");
+    }, [handleRightPanelModeChange]);
 
     // Tapping the 💬 icon on a content chip: opens item-level comments.
     const handleComment = useCallback((item: CalendarItem) => {
         setSelectedCommentItem(item);
-        setRightPanelMode("comments");
-    }, []);
+        handleRightPanelModeChange("comments");
+    }, [handleRightPanelModeChange]);
 
     // "Send to AI" on a comment: focus its text in the chat panel and open chat.
     // Comments live either at month level or on a specific content item; we tell
     // the AI which, and (for item comments) the post's id so it can act on it.
     const handleSendCommentToAI = useCallback(
         (comment: PanelComment) => {
-            const label =
-                comment.text.length > 80 ? comment.text.slice(0, 80) + "..." : comment.text;
-            const target = selectedCommentItem
-                ? `on post [id:${selectedCommentItem.id}] "${selectedCommentItem.title}"`
-                : "on the calendar month";
-            const contextText = `Comment ${target}: "${comment.text}"`;
+            // A comment focus that inherits the item it's on (or the comment's own
+            // anchor for month-level comments).
+            const inherits: FocusArea | undefined = selectedCommentItem
+                ? {
+                      type: "calendar-content",
+                      contentId: selectedCommentItem.id,
+                      title: selectedCommentItem.title,
+                      contentType: selectedCommentItem.type,
+                      date: selectedCommentItem.date,
+                  }
+                : comment.focusArea;
+            const focusArea: FocusArea = {
+                type: "comment",
+                commentId: comment.id,
+                text: comment.text,
+                inherits,
+            };
+            const focusText = `Comment: "${(comment.text || "").slice(0, 60)}"`;
             setFocusItems((prev) => [
                 ...prev,
-                { id: `comment-${comment.id}-${Date.now()}`, label, contextText },
+                { id: `comment-${comment.id}-${Date.now()}`, focusText, focusArea },
             ]);
-            setRightPanelMode("chat");
+            handleRightPanelModeChange("chat");
         },
-        [selectedCommentItem]
+        [selectedCommentItem, handleRightPanelModeChange]
     );
 
     // Tapping a content chip body: first show a short-details preview modal.
@@ -266,7 +316,7 @@ const ContentCalendarScreen = () => {
     const rightSidePanel = (
         <RightSidePanel
             mode={rightPanelMode}
-            onModeChange={setRightPanelMode}
+            onModeChange={handleRightPanelModeChange}
             containerWidth={splitWidth}
             chatAnchorId="gt-calendar-ai-chat"
             commentsAnchorId="gt-calendar-comments"
@@ -400,7 +450,7 @@ const ContentCalendarScreen = () => {
             {!xl && hasItems && (
                 <RightPanelFab
                     mode={rightPanelMode}
-                    onModeChange={setRightPanelMode}
+                    onModeChange={handleRightPanelModeChange}
                     bottomOffset={70}
                     anchorId="gt-calendar-fab"
                     actions={[
@@ -431,6 +481,12 @@ const ContentCalendarScreen = () => {
                     setDetailItem(null);
                     handleFocusChat(item);
                 }}
+                strategyName={
+                    detailItem?.strategyId
+                        ? strategies.find((s) => s.id === detailItem.strategyId)?.title
+                        : undefined
+                }
+                onOpenStrategy={handleOpenStrategy}
             />
         </AppLayout>
     );
@@ -500,7 +556,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                 },
                 addBtnPressed: { opacity: 0.75 },
                 addBtnText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.onPrimary,
                 },

@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 interface EmptyCalendarViewProps {
     onCreateStrategy: () => void;
@@ -123,7 +124,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 ghostDayLabel: {
                     flex: 1,
                     textAlign: "center",
-                    fontSize: 12,
+                    fontSize: fs(12),
                     fontWeight: "600",
                     color: colors.text,
                 },
@@ -141,7 +142,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     borderRadius: 6,
                 },
                 ghostDayNum: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     color: colors.text,
                 },
                 overlay: {
@@ -178,17 +179,17 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     elevation: 3,
                 },
                 title: {
-                    fontSize: 18,
+                    fontSize: fs(18),
                     fontWeight: "700",
                     color: colors.text,
                     textAlign: "center",
                     marginBottom: 10,
                 },
                 subtitle: {
-                    fontSize: 14,
+                    fontSize: fs(14),
                     color: colors.textSecondary,
                     textAlign: "center",
-                    lineHeight: 21,
+                    lineHeight: lh(21),
                     marginBottom: 24,
                 },
                 ctaRow: {
@@ -212,7 +213,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     elevation: 4,
                 },
                 ctaPrimaryText: {
-                    fontSize: 14,
+                    fontSize: fs(14),
                     fontWeight: "600",
                     color: colors.onPrimary,
                 },
@@ -231,7 +232,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     elevation: 2,
                 },
                 ctaOutlineText: {
-                    fontSize: 14,
+                    fontSize: fs(14),
                     fontWeight: "600",
                     color: colors.primary,
                 },

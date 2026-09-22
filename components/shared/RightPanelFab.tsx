@@ -43,6 +43,7 @@ import { Animated, Easing, PanResponder, Pressable, StyleSheet, Text, View } fro
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { RightPanelMode } from "./RightSidePanel";
+import { fs } from "@/constants/Typography";
 
 const FAB_SIZE = 56;
 const EDGE_MARGIN = 18;
@@ -324,7 +325,7 @@ function createStyles(colors: ReturnType<typeof Colors>, bottom: number) {
             elevation: 4,
         },
         labelText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.background,
         },

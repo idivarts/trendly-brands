@@ -23,6 +23,7 @@ import {
     ContentStatus,
     postingTime,
 } from "./types";
+import { fs } from "@/constants/Typography";
 
 interface ContentBoardProps {
     /** Active (non-archived) items. Only the 4 authoring statuses are shown. */
@@ -327,7 +328,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     paddingBottom: 10,
                     marginBottom: 8,
                 },
-                columnTitle: { fontSize: 15, fontWeight: "700", color: colors.text, flexShrink: 1 },
+                columnTitle: { fontSize: fs(15), fontWeight: "700", color: colors.text, flexShrink: 1 },
                 columnCount: {
                     minWidth: 22,
                     height: 22,
@@ -337,14 +338,14 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     alignItems: "center",
                     justifyContent: "center",
                 },
-                columnCountText: { fontSize: 12, fontWeight: "700", color: colors.textSecondary },
+                columnCountText: { fontSize: fs(12), fontWeight: "700", color: colors.textSecondary },
                 columnScroll: { flex: 1, paddingBottom: 8 },
                 dropHint: {
                     textAlign: "center",
                     opacity: 0.6,
                     marginTop: 24,
                     color: colors.textSecondary,
-                    fontSize: 13,
+                    fontSize: fs(13),
                 },
                 overlay: {
                     width: 260,

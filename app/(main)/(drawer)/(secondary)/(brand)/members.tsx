@@ -4,6 +4,8 @@ import { Text, View } from "@/components/theme/Themed";
 import Button from "@/components/ui/button";
 import PageHeader from "@/components/ui/page-header";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useSubscribeNudge } from "@/contexts/subscribe-nudge-context.provider";
+import { useEntitlements } from "@/hooks/use-entitlements";
 import AppLayout from "@/layouts/app-layout";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
@@ -17,10 +19,23 @@ const AccessScreen = () => {
     const colors = useMemo(() => Colors(theme), [theme]);
     const styles = useMemo(() => createStyles(colors), [colors]);
     const { selectedBrand, hasCapability } = useBrandContext();
+    const { maybeNudge } = useSubscribeNudge();
+    const { entitlements } = useEntitlements();
     const canManageMembers = hasCapability("manage_members");
 
     const [activeTab, setActiveTab] = useState<AccessTab>("members");
     const [showMemberModal, setShowMemberModal] = useState(false);
+    const [memberCount, setMemberCount] = useState(0);
+
+    // Inviting teammates at the seat cap is a scale signal — nudge, but still
+    // open the invite modal so the action is never blocked.
+    const handleAddMember = () => {
+        const maxSeats = entitlements?.maxSeats ?? -1;
+        if (maxSeats >= 0 && memberCount >= maxSeats) {
+            maybeNudge("add_member_at_cap");
+        }
+        setShowMemberModal(true);
+    };
 
     const tabs: { id: AccessTab; label: string }[] = [
         { id: "members", label: "Members" },
@@ -35,7 +50,7 @@ const AccessScreen = () => {
                 actionButtons={
                     activeTab === "members" && canManageMembers
                         ? [
-                            <Button key="add-member" onPress={() => setShowMemberModal(true)}>
+                            <Button key="add-member" onPress={handleAddMember}>
                                 Add Member
                             </Button>,
                         ]
@@ -66,6 +81,7 @@ const AccessScreen = () => {
                     <MembersTab
                         showInviteModal={showMemberModal}
                         onCloseInvite={() => setShowMemberModal(false)}
+                        onMemberCountChange={setMemberCount}
                     />
                 ) : (
                     <TeamsTab />

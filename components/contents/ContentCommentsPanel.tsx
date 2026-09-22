@@ -30,9 +30,27 @@ const ContentCommentsPanel: React.FC<ContentCommentsPanelProps> = ({
     const { comments, loading, addComment, addReply, resolveComment, deleteComment } =
         useContentComments(contentId);
 
+    // Surface each comment's design-element anchor as a structured focusArea so
+    // "Send to AI" produces a comment focus that inherits the exact element.
+    const panelComments: PanelComment[] = comments.map((c) => ({
+        ...c,
+        focusArea:
+            c.mediaAnchor?.elementId && contentId
+                ? {
+                      type: "design-element",
+                      contentId,
+                      elementId: c.mediaAnchor.elementId,
+                      text:
+                          c.mediaAnchor.label && c.mediaAnchor.label !== "element"
+                              ? c.mediaAnchor.label
+                              : undefined,
+                  }
+                : undefined,
+    }));
+
     return (
         <SharedCommentsPanel
-            comments={comments}
+            comments={panelComments}
             loading={loading}
             onAddComment={addComment}
             onAddReply={addReply}

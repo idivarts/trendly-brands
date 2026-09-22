@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React from "react";
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 // ─── PublishNowConfirmModal ───────────────────────────────────────────────────
 // Guards the irreversible "Publish now" action. Publishing posts live to the
@@ -117,15 +118,15 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             marginBottom: 14,
         },
         title: {
-            fontSize: 18,
+            fontSize: fs(18),
             fontWeight: "700",
             color: colors.text,
             marginBottom: 6,
         },
         subtitle: {
-            fontSize: 13,
+            fontSize: fs(13),
             color: colors.textSecondary,
-            lineHeight: 19,
+            lineHeight: lh(19),
             marginBottom: 20,
         },
         confirmBtn: {
@@ -143,7 +144,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             elevation: 4,
         },
         confirmBtnText: {
-            fontSize: 15,
+            fontSize: fs(15),
             fontWeight: "700",
             color: colors.onPrimary,
         },
@@ -154,7 +155,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             marginTop: 10,
         },
         cancelBtnText: {
-            fontSize: 14,
+            fontSize: fs(14),
             fontWeight: "600",
             color: colors.textSecondary,
         },

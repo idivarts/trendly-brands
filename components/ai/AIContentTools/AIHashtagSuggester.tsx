@@ -3,6 +3,7 @@ import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { fs } from "@/constants/Typography";
 
 interface Props {
     contextId?: string;
@@ -99,14 +100,14 @@ export default AIHashtagSuggester;
 const makeStyles = (colors: any) =>
     StyleSheet.create({
         wrap: { padding: 14, backgroundColor: colors.card, borderRadius: 12, gap: 10 },
-        title: { color: colors.text, fontSize: 16, fontWeight: "700" },
+        title: { color: colors.text, fontSize: fs(16), fontWeight: "700" },
         input: {
             backgroundColor: colors.tag,
             color: colors.text,
             borderRadius: 10,
             paddingHorizontal: 12,
             paddingVertical: 10,
-            fontSize: 14,
+            fontSize: fs(14),
         },
         runBtn: {
             alignSelf: "flex-start",
@@ -120,15 +121,15 @@ const makeStyles = (colors: any) =>
             shadowOpacity: 0.3,
             elevation: 4,
         },
-        runText: { color: "#fff", fontWeight: "700", fontSize: 13 },
+        runText: { color: "#fff", fontWeight: "700", fontSize: fs(13) },
         btnDisabled: { opacity: 0.4 },
         btnPressed: { opacity: 0.85 },
         group: { gap: 6 },
-        groupTitle: { color: colors.textSecondary, fontSize: 11, fontWeight: "700", textTransform: "uppercase" },
+        groupTitle: { color: colors.textSecondary, fontSize: fs(11), fontWeight: "700", textTransform: "uppercase" },
         tagWrap: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
         tag: { paddingHorizontal: 10, paddingVertical: 5, backgroundColor: colors.tag, borderRadius: 12 },
         tagActive: { backgroundColor: colors.primary },
-        tagText: { color: colors.text, fontSize: 12 },
+        tagText: { color: colors.text, fontSize: fs(12) },
         tagTextActive: { color: "#fff", fontWeight: "700" },
         applyBtn: {
             alignSelf: "flex-start",
@@ -137,5 +138,5 @@ const makeStyles = (colors: any) =>
             backgroundColor: colors.primary,
             borderRadius: 10,
         },
-        applyText: { color: "#fff", fontWeight: "700", fontSize: 13 },
+        applyText: { color: "#fff", fontWeight: "700", fontSize: fs(13) },
     });

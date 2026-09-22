@@ -17,6 +17,7 @@ import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { collection, onSnapshot } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { fs } from "@/constants/Typography";
 
 interface PresenceEntry {
     managerId: string;
@@ -120,7 +121,7 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             marginLeft: -8,
         },
         avatarText: {
-            fontSize: 11,
+            fontSize: fs(11),
             fontWeight: "700",
             color: "#fff",
         },
@@ -128,7 +129,7 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.tag,
         },
         overflowText: {
-            fontSize: 10,
+            fontSize: fs(10),
             fontWeight: "700",
             color: colors.textSecondary,
         },

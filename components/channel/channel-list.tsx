@@ -52,7 +52,7 @@ const ChannelListNative = () => {
         }
 
         return channels.filter((channel) => {
-            return channel.data?.name?.toLowerCase().includes(searchInput.toLowerCase());
+            return (channel.data as any)?.name?.toLowerCase().includes(searchInput.toLowerCase());
         });
     };
 

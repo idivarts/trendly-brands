@@ -18,6 +18,7 @@ import {
 } from "react-native";
 import StrategyActionsMenu from "./StrategyActionsMenu";
 import { ContentStrategy, ReviewStatus } from "./types";
+import { fs, lh } from "@/constants/Typography";
 
 interface EmptyPromptViewProps {
     onSubmit: (prompt: string) => void;
@@ -248,17 +249,17 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     gap: 12,
                 },
                 heading: {
-                    fontSize: 28,
+                    fontSize: fs(28),
                     fontWeight: "700",
                     color: colors.text,
                     textAlign: "center",
                     letterSpacing: -0.5,
                 },
                 subheading: {
-                    fontSize: 15,
+                    fontSize: fs(15),
                     color: colors.textSecondary,
                     textAlign: "center",
-                    lineHeight: 22,
+                    lineHeight: lh(22),
                 },
                 suggestionsRow: {
                     flexDirection: "row",
@@ -282,7 +283,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     opacity: 0.7,
                 },
                 chipText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "500",
                     color: colors.text,
                 },
@@ -305,9 +306,9 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 input: {
                     flex: 1,
                     maxHeight: 140,
-                    fontSize: 15,
+                    fontSize: fs(15),
                     color: colors.text,
-                    lineHeight: 22,
+                    lineHeight: lh(22),
                 },
                 sendBtn: {
                     width: 36,
@@ -336,7 +337,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     gap: 12,
                 },
                 resumeLabel: {
-                    fontSize: 11,
+                    fontSize: fs(11),
                     fontWeight: "700",
                     letterSpacing: 1,
                     color: colors.textSecondary,
@@ -375,7 +376,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     gap: 4,
                 },
                 resumeTitle: {
-                    fontSize: 14,
+                    fontSize: fs(14),
                     fontWeight: "600",
                     color: colors.text,
                 },
@@ -385,7 +386,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     gap: 8,
                 },
                 resumeDate: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     color: colors.textSecondary,
                     flexShrink: 1,
                 },
@@ -395,7 +396,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     borderRadius: 10,
                 },
                 statusPillText: {
-                    fontSize: 10,
+                    fontSize: fs(10),
                     fontWeight: "700",
                     letterSpacing: 0.3,
                 },

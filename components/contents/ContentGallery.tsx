@@ -4,6 +4,7 @@ import React, { useMemo, useState } from "react";
 import { FlatList, StyleSheet, Text, View } from "react-native";
 import ContentGalleryCard from "./ContentGalleryCard";
 import { ContentItem } from "./types";
+import { fs } from "@/constants/Typography";
 
 interface ContentGalleryProps {
     items: ContentItem[];
@@ -104,7 +105,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     padding: 24,
                 },
                 emptyText: {
-                    fontSize: 14,
+                    fontSize: fs(14),
                     color: colors.textSecondary,
                     textAlign: "center",
                 },

@@ -14,6 +14,7 @@ import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { CalendarItem, CONTENT_TYPE_LABELS, contentTypeColor } from "./types";
+import { fs, lh } from "@/constants/Typography";
 
 /**
  * On web, surface the full (possibly truncated) title as a native browser
@@ -249,10 +250,10 @@ function useStyles(
                     gap: 4,
                 },
                 title: {
-                    fontSize: compact ? 11 : 12,
+                    fontSize: fs(compact ? 11 : 12),
                     fontWeight: "600",
                     color: colors.text,
-                    lineHeight: compact ? 15 : 17,
+                    lineHeight: lh(compact ? 15 : 17),
                 },
                 footer: {
                     flexDirection: "row",
@@ -276,7 +277,7 @@ function useStyles(
                     borderRadius: 4,
                 },
                 statusText: {
-                    fontSize: compact ? 9 : 10,
+                    fontSize: fs(compact ? 9 : 10),
                     fontWeight: "700",
                     color: statusFg ?? colors.text,
                 },
@@ -296,7 +297,7 @@ function useStyles(
                     backgroundColor: typeColor,
                 },
                 typeText: {
-                    fontSize: compact ? 9 : 10,
+                    fontSize: fs(compact ? 9 : 10),
                     fontWeight: "700",
                     color: typeColor,
                 },

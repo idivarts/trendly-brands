@@ -5,6 +5,7 @@ import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import AIQuickEditModal from "./AIQuickEditModal";
+import { fs } from "@/constants/Typography";
 
 interface Props {
     selectedText: string;
@@ -119,8 +120,8 @@ const makeStyles = (colors: any) =>
             borderRadius: 14,
         },
         btnPressed: { opacity: 0.7 },
-        btnText: { color: colors.text, fontSize: 12, fontWeight: "600" },
+        btnText: { color: colors.text, fontSize: fs(12), fontWeight: "600" },
         customBtn: { backgroundColor: colors.primaryLight ?? colors.tag },
-        customText: { color: colors.primary, fontSize: 12, fontWeight: "700" },
-        close: { color: colors.textSecondary, fontSize: 16, paddingHorizontal: 4 },
+        customText: { color: colors.primary, fontSize: fs(12), fontWeight: "700" },
+        close: { color: colors.textSecondary, fontSize: fs(16), paddingHorizontal: 4 },
     });

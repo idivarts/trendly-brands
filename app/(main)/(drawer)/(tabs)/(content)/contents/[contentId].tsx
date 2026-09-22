@@ -4,22 +4,33 @@ import ContentActionsMenu from "@/components/contents/detail/ContentActionsMenu"
 import ContentInfoModal from "@/components/contents/detail/ContentInfoModal";
 import { MEDIA_SPEC } from "@/components/contents/detail/media-spec";
 import MediaStage from "@/components/contents/detail/MediaStage";
+import DesignStage from "@/components/contents/detail/design-stage/DesignStage";
 import NoSocialsModal from "@/components/contents/detail/NoSocialsModal";
 import PostingSummary from "@/components/contents/detail/PostingSummary";
 import PreviewPanel from "@/components/contents/detail/PreviewPanel";
 import PublishModal from "@/components/contents/detail/PublishModal";
+import PublishStatusPanel from "@/components/contents/detail/PublishStatusPanel";
 import ScriptEditor from "@/components/contents/detail/ScriptEditor";
 import UnsavedChangesModal from "@/components/contents/detail/UnsavedChangesModal";
+import PlatformOptionsSection from "@/components/contents/detail/platform-fields/PlatformOptionsSection";
+import VariationEditor from "@/components/contents/detail/VariationEditor";
+import VariationModal from "@/components/contents/detail/VariationModal";
+import VariationTabs, { VariationTab } from "@/components/contents/detail/VariationTabs";
 import { MOCK_CONTENT_ITEMS } from "@/components/contents/mock-data";
 import PostPerformance from "@/components/contents/PostPerformance";
 import {
     CONTENT_STATUS_LABELS,
     ContentStatus,
+    PlatformOptions,
+    PUBLISH_PIPELINE_STATUSES,
     ScheduleMode,
     SocialDestination,
     contentStatusColors,
+    isLockedStatus,
 } from "@/components/contents/types";
-import AIChatPanel, { FocusItem } from "@/components/shared/AIChatPanel";
+import { useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapsed-context";
+import AIChatPanel from "@/components/shared/AIChatPanel";
+import { Focus, FocusArea } from "@/types/focus";
 import AIGeneratingHint from "@/components/shared/AIGeneratingHint";
 import { PanelComment } from "@/components/shared/CommentsPanel";
 import FloatingPromptInput from "@/components/shared/FloatingPromptInput";
@@ -31,14 +42,20 @@ import PageHeader from "@/components/ui/page-header";
 import { SOCIAL_PLATFORM_MAP } from "@/constants/Socials";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBrandSocialContext } from "@/contexts/brand-social-context.provider";
+import { useSubscribeNudge } from "@/contexts/subscribe-nudge-context.provider";
+import { useEntitlements } from "@/hooks/use-entitlements";
 import { useBreakpoints } from "@/hooks";
-import { LiveContent } from "@/hooks/use-ai-chat";
+import { LiveContent, LiveContentVariation } from "@/hooks/use-ai-chat";
 import { CaptionVariant, HashtagGroup, useAIGenerate } from "@/hooks/use-ai-generate";
 import { useContents } from "@/hooks/use-contents";
+import { useContentVariations } from "@/hooks/use-content-variations";
+import { useStrategies } from "@/hooks/use-strategies";
 import AppLayout from "@/layouts/app-layout";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { isFormatPlatformCompatible } from "@/shared-libs/firestore/trendly-pro/constants/content-format";
-import { ALL_PLATFORMS } from "@/shared-libs/firestore/trendly-pro/constants/platform";
+import { ALL_PLATFORMS, Platform as ContentPlatform, PlatformEnum } from "@/shared-libs/firestore/trendly-pro/constants/platform";
+import { variationSpecForPlatform } from "@/shared-libs/firestore/trendly-pro/constants/platform-fields";
+import { effectiveContentForPlatform, VariationOverridableField } from "@/shared-libs/firestore/trendly-pro/models/variations";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
 import ReadMore from "@/shared-uis/components/ReadMore";
@@ -69,6 +86,7 @@ import {
     Text,
     TextInput,
 } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 
@@ -96,6 +114,14 @@ const CreateContentScreen = () => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
+    // Auto-collapse the web drawer rail on open so the content editor gets the
+    // full width. Applied once on mount (xl only); the user can re-expand manually after.
+    const { setCollapsed: setSidebarCollapsed } = useSidebarCollapsed();
+    useEffect(() => {
+        if (xl) setSidebarCollapsed(true);
+        // Run strictly once on mount; never fight a later manual toggle.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     const { contentId, title: paramTitle, idea: paramIdea, type: paramType, date: paramDate } =
         useLocalSearchParams<{
             contentId: string;
@@ -108,8 +134,22 @@ const CreateContentScreen = () => {
 
     const router = useRouter();
     const { items, addContent, updateContent, deleteContent } = useContents();
+    const {
+        variations,
+        byPlatform: variationByPlatform,
+        variationsDirty,
+        createVariations,
+        setOverride,
+        resetField,
+        setPlatformOptions: setVariationPlatformOptions,
+        deleteVariation,
+        saveVariations,
+    } = useContentVariations(contentId ?? null);
+    const { strategies } = useStrategies();
     const { socialAccounts } = useBrandSocialContext();
     const { selectedBrand, hasCapability } = useBrandContext();
+    const { maybeNudge, markAhaMoment } = useSubscribeNudge();
+    const { tokens, maxPostsPerMonth } = useEntitlements();
     const { openModal } = useConfirmationModel();
 
     // Resolve the live item from the real contents list first; fall back to
@@ -138,6 +178,7 @@ const CreateContentScreen = () => {
     const [imagePrompt, setImagePrompt] = useState(seedItem?.imagePrompt ?? "");
     const [attachments, setAttachments] = useState<Attachment[]>(seedItem?.attachments ?? []);
     const [destinations, setDestinations] = useState<SocialDestination[]>(seedItem?.destinations ?? []);
+    const [platformOptions, setPlatformOptions] = useState<PlatformOptions>(seedItem?.platformOptions ?? {});
     const [scheduleMode, setScheduleMode] = useState<ScheduleMode>(seedItem?.scheduleMode ?? "scheduled");
     const [publishing, setPublishing] = useState(false);
     const [unscheduling, setUnscheduling] = useState(false);
@@ -147,6 +188,9 @@ const CreateContentScreen = () => {
     // from the Content details modal; hydrated from the live item below.
     const [targetPlatforms, setTargetPlatforms] = useState(seedItem?.platforms ?? []);
     const [showInfoModal, setShowInfoModal] = useState(false);
+    // Active editor tab: "generic" (the shared base) or a platform variation.
+    const [activeTab, setActiveTab] = useState<VariationTab>("generic");
+    const [showVariationModal, setShowVariationModal] = useState(false);
     const [showPublishModal, setShowPublishModal] = useState(false);
     const [showNoSocialsModal, setShowNoSocialsModal] = useState(false);
     const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -171,6 +215,7 @@ const CreateContentScreen = () => {
         setImagePrompt(seedItem.imagePrompt ?? "");
         setAttachments(seedItem.attachments ?? []);
         setDestinations(seedItem.destinations ?? []);
+        setPlatformOptions(seedItem.platformOptions ?? {});
         setScheduleMode(seedItem.scheduleMode ?? "scheduled");
         setTimeOfPosting(seedItem.timeOfPosting ?? "");
         setTargetPlatforms(seedItem.platforms ?? []);
@@ -182,14 +227,58 @@ const CreateContentScreen = () => {
         setDirty(false);
     }, [seedItem]);
 
+    // Publish-pipeline statuses are backend-driven and arrive out-of-band — the
+    // publish worker updates the doc over SQS, so the transitions
+    // publishing → posted / partially_failed / failed land after the one-shot
+    // hydration above has already fired. Mirror just those transitions into local
+    // state so the badge, the per-social panel, and the lock state track the live
+    // document without clobbering in-progress manual edits.
+    useEffect(() => {
+        const live = seedItem?.status as ContentStatus | undefined;
+        if (!live || live === status) return;
+        if (PUBLISH_PIPELINE_STATUSES.includes(live)) {
+            setStatus(live);
+            skipDirtyRef.current = true;
+            setDirty(false);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [seedItem?.status]);
+
+    // A Design-Stage render writes the baked images/video straight to the content
+    // doc (designRef.renderUrl + attachments) — out-of-band from the one-shot
+    // hydration above. Mirror the new attachments into local state the moment the
+    // baked cover changes, so MediaStage + the Preview panel show the render
+    // immediately instead of only after a page refresh. Baselined on first load so
+    // an existing render doesn't clobber anything, and treated as clean (the doc is
+    // already saved, so this isn't an unsaved edit).
+    const seenRenderRef = useRef<string | undefined>(undefined);
+    const renderBaselinedRef = useRef(false);
+    useEffect(() => {
+        if (!seedItem) return;
+        const renderUrl = seedItem.designRef?.renderUrl;
+        if (!renderBaselinedRef.current) {
+            seenRenderRef.current = renderUrl;
+            renderBaselinedRef.current = true;
+            return;
+        }
+        if (renderUrl && renderUrl !== seenRenderRef.current) {
+            seenRenderRef.current = renderUrl;
+            setAttachments(seedItem.attachments ?? []);
+            skipDirtyRef.current = true;
+            setDirty(false);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [seedItem, seedItem?.designRef?.renderUrl]);
+
     // ── Unsaved-changes (dirty) tracking ─────────────────────────────────────
     const [dirty, setDirty] = useState(false);
     const skipDirtyRef = useRef(true);
     useEffect(() => {
-        // Scheduled / posted content is locked and cannot be edited, so it can
-        // never legitimately be dirty — never flag it (no Unsaved-Changes prompt
-        // on back). Also clear any stale dirty flag the moment it locks.
-        if (status === "scheduled" || status === "posted") {
+        // Locked content (scheduled / publishing / posted / partially-published)
+        // cannot be edited, so it can never legitimately be dirty — never flag it
+        // (no Unsaved-Changes prompt on back). Also clear any stale dirty flag the
+        // moment it locks.
+        if (isLockedStatus(status)) {
             skipDirtyRef.current = false;
             setDirty(false);
             return;
@@ -199,33 +288,96 @@ const CreateContentScreen = () => {
             return;
         }
         setDirty(true);
-    }, [title, idea, caption, hashtags, script, imagePrompt, status, timeOfPosting, attachments, destinations, scheduleMode, date, targetPlatforms]);
+    }, [title, idea, caption, hashtags, script, imagePrompt, status, timeOfPosting, attachments, destinations, platformOptions, scheduleMode, date, targetPlatforms]);
 
     // ── Right side panel (comments + AI chat) ────────────────────────────────
-    const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>("none");
-    const [chatFocusItems, setChatFocusItems] = useState<FocusItem[]>([]);
+    // On web (xl) the AI chat panel opens by default; on mobile it stays collapsed.
+    const [rightPanelMode, setRightPanelMode] = useState<RightPanelMode>(xl ? "chat" : "none");
+    const [chatFocusItems, setChatFocusItems] = useState<Focus[]>([]);
     // Measured width of the split row — feeds the RightSidePanel resize bounds.
     const [splitWidth, setSplitWidth] = useState(0);
 
     const handleSendToChat = useCallback((text: string) => {
-        const label = text.length > 120 ? text.slice(0, 120) + "…" : text;
-        setChatFocusItems((prev) => [...prev, { id: `focus-${Date.now()}`, label }]);
+        const focusText = text.length > 80 ? text.slice(0, 80) + "…" : text;
+        setChatFocusItems((prev) => [
+            ...prev,
+            { id: `focus-${Date.now()}`, focusText, focusArea: { type: "content", contentId, title } },
+        ]);
+        setRightPanelMode("chat");
+    }, [contentId, title]);
+
+    // Auto-send channel for the AI chat (used by "Ask AI to apply" in the Design
+    // Stage): queues a message that AIChatPanel sends once the thread is ready.
+    const [pendingChatMessage, setPendingChatMessage] = useState<string | undefined>(undefined);
+
+    // "Ask AI to apply" on a selected design element: attach the structured focus
+    // and auto-send the instruction as the actual message.
+    const handleAskAI = useCallback((instruction: string, focus: Focus) => {
+        setChatFocusItems((prev) => [...prev, focus]);
+        setPendingChatMessage(instruction);
         setRightPanelMode("chat");
     }, []);
 
-    // "Send to AI" on a comment: focus its text in the chat (opens the panel).
-    const handleCommentToChat = useCallback(
-        (comment: PanelComment) => handleSendToChat(comment.text),
-        [handleSendToChat]
-    );
+    // "Focus" on a design element: just attach it to the chat (no message sent),
+    // so the user's next message is scoped to that element.
+    const handleFocusElement = useCallback((focus: Focus) => {
+        setChatFocusItems((prev) => [...prev, focus]);
+        setRightPanelMode("chat");
+    }, []);
+
+    // ── Media ↔ Design stage ────────────────────────────────────────────────
+    // The centre column shows the MediaStage (home) by default; the DesignStage
+    // takes it over when the user opens it or the AI generates a new design.
+    const [stage, setStage] = useState<"media" | "design">("media");
+    // Baseline of the design revision we've already "seen". Captured on first
+    // load so an EXISTING design doesn't auto-open the stage, and updated as new
+    // revisions arrive so a design the user just closed doesn't yank them back —
+    // only a genuinely newer revision auto-opens the DesignStage.
+    const seenRevisionRef = useRef<string | undefined>(undefined);
+    const revisionBaselinedRef = useRef(false);
+    useEffect(() => {
+        if (!seedItem) return;
+        const rev = seedItem.designRef?.revisionId;
+        if (!revisionBaselinedRef.current) {
+            seenRevisionRef.current = rev;
+            revisionBaselinedRef.current = true;
+            return;
+        }
+        if (rev && rev !== seenRevisionRef.current) {
+            seenRevisionRef.current = rev;
+            setStage("design");
+        }
+    }, [seedItem, seedItem?.designRef?.revisionId]);
+
+    // "Send to AI" on a comment: attach a structured comment focus (inheriting
+    // whatever the comment itself is anchored to — e.g. a design element) and
+    // open the chat. The user types their ask; the reference travels with it.
+    const handleCommentToChat = useCallback((comment: PanelComment) => {
+        const focusArea: FocusArea = {
+            type: "comment",
+            commentId: comment.id,
+            text: comment.text,
+            inherits: comment.focusArea,
+        };
+        const focusText = `Comment: "${(comment.text || "").slice(0, 60)}"`;
+        setChatFocusItems((prev) => [...prev, { id: `focus-${Date.now()}`, focusText, focusArea }]);
+        setRightPanelMode("chat");
+    }, []);
 
     // `magicTarget` drives ONLY the prompt modal (which field's prompt is open).
-    // The in-flight state is tracked per-field below so the modal can close the
-    // instant the prompt is submitted while generation continues in the
-    // background — caption and hashtags can even generate concurrently.
+    // `magicPlatform` remembers which editor the modal was opened from — "generic"
+    // or a specific platform variation — so the result is applied to the right
+    // place even if the user switches tabs while it generates.
+    // The in-flight state is tracked per-field below (keyed by the target editor)
+    // so the modal can close the instant the prompt is submitted while generation
+    // continues in the background — caption and hashtags can even generate
+    // concurrently, and only the originating tab shows the spinner.
     const [magicTarget, setMagicTarget] = useState<"caption" | "hashtags" | null>(null);
-    const [captionGenerating, setCaptionGenerating] = useState(false);
-    const [hashtagGenerating, setHashtagGenerating] = useState(false);
+    const [magicPlatform, setMagicPlatform] = useState<VariationTab>("generic");
+    // Which editor a caption/hashtag generation is running for ("generic" | a
+    // platform), or null when idle. Drives the per-tab spinner + result routing.
+    const [captionGenTarget, setCaptionGenTarget] = useState<VariationTab | null>(null);
+    const [hashtagGenTarget, setHashtagGenTarget] = useState<VariationTab | null>(null);
     const [isGeneratingScript, setIsGeneratingScript] = useState(false);
     const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
@@ -261,6 +413,108 @@ const CreateContentScreen = () => {
         });
     }, [allowedPlatforms]);
 
+    // ── Per-platform variations ──────────────────────────────────────────────
+    // A content targeting exactly ONE platform has no use for the Generic/variation
+    // tab model — that single platform's options render inline on the main editor.
+    const soloPlatform = targetPlatforms.length === 1 ? targetPlatforms[0] : null;
+
+    // When the content targets exactly one platform, the generic editor IS that
+    // platform's editor — so apply its caption limits / hashtag rules inline
+    // (mirrors what the per-platform variation tab enforces). No solo platform →
+    // permissive generic defaults so a multi-platform caption isn't clipped here.
+    const soloSpec = useMemo(
+        () => (soloPlatform ? variationSpecForPlatform(soloPlatform) : undefined),
+        [soloPlatform]
+    );
+    const captionMaxLen = soloSpec?.captionMaxLen ?? 2200;
+    // Reddit has no hashtags — hide the field entirely when it's the solo target.
+    const showHashtags = soloPlatform !== PlatformEnum.Reddit;
+    // Live hashtag count (recommended-max is a soft cap surfaced as a hint).
+    const hashtagCount = useMemo(() => (hashtags.match(/#/g) ?? []).length, [hashtags]);
+
+    // Existing variation platforms, in canonical order for stable tabs.
+    const variationPlatforms = useMemo(() => {
+        const present = new Set(variations.map((v) => v.platform));
+        return ALL_PLATFORMS.filter((p) => present.has(p));
+    }, [variations]);
+
+    // Single-platform content never uses tabs — keep the editor on the (inline)
+    // Generic body if a stale variation tab was selected.
+    useEffect(() => {
+        if (soloPlatform && activeTab !== "generic") setActiveTab("generic");
+    }, [soloPlatform, activeTab]);
+
+    // Platforms whose per-platform options are edited OUTSIDE the publish modal —
+    // a variation tab, or the solo platform's inline section — so ScheduleBar
+    // hides its generic option fields for them.
+    const optionsHandledElsewhere = useMemo(
+        () => [...variationPlatforms, ...(soloPlatform ? [soloPlatform] : [])],
+        [variationPlatforms, soloPlatform]
+    );
+
+    // Platforms the user may still add a variation for: the content's targeted
+    // platforms that don't already have one.
+    const availableForVariation = useMemo(
+        () => targetPlatforms.filter((p) => !variationByPlatform[p]),
+        [targetPlatforms, variationByPlatform]
+    );
+
+    // If the active variation tab's doc disappears (deleted, or its platform was
+    // removed), fall back to Generic so the editor never points at nothing.
+    useEffect(() => {
+        if (activeTab !== "generic" && !variationByPlatform[activeTab]) {
+            setActiveTab("generic");
+        }
+    }, [activeTab, variationByPlatform]);
+
+    const handleCreateVariations = useCallback(
+        (platforms: ContentPlatform[]) => {
+            createVariations(platforms, { platformOptions });
+            if (platforms[0]) setActiveTab(platforms[0]);
+        },
+        [createVariations, platformOptions]
+    );
+
+    const handleSetOverride = useCallback(
+        (field: VariationOverridableField, value: string) => {
+            if (activeTab === "generic") return;
+            setOverride(activeTab, field, value);
+        },
+        [activeTab, setOverride]
+    );
+
+    const handleResetField = useCallback(
+        (field: VariationOverridableField) => {
+            if (activeTab === "generic") return;
+            resetField(activeTab, field);
+        },
+        [activeTab, resetField]
+    );
+
+    const handleSetVariationOptions = useCallback(
+        (patch: Partial<PlatformOptions>) => {
+            if (activeTab === "generic") return;
+            setVariationPlatformOptions(activeTab, patch);
+        },
+        [activeTab, setVariationPlatformOptions]
+    );
+
+    const handleDeleteActiveVariation = useCallback(() => {
+        if (activeTab === "generic") return;
+        const platform = activeTab;
+        const label = SOCIAL_PLATFORM_MAP[platform]?.label ?? platform;
+        openModal({
+            title: `Delete ${label} variation?`,
+            description: `The ${label} version of this content will be removed. ${label} will publish the Generic content instead. This cannot be undone.`,
+            confirmText: "Delete variation",
+            cancelText: "Cancel",
+            confirmAction: async () => {
+                await deleteVariation(platform);
+                setActiveTab("generic");
+            },
+        });
+    }, [activeTab, deleteVariation, openModal]);
+
     const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -280,14 +534,21 @@ const CreateContentScreen = () => {
         generateImage,
     } = useAIGenerate();
 
-    // Scheduled / posted content is locked: every edit + Save is disabled.
-    // A "scheduled" post can be unlocked by unscheduling it (reverts to
-    // "approved"); a "posted" one is locked permanently.
-    const locked = status === "scheduled" || status === "posted";
+    // Locked content: every edit + Save is disabled. A "scheduled" post can be
+    // unlocked by unscheduling it (reverts to "approved"); "publishing" /
+    // "posted" / "partially_failed" are backend-driven and stay locked. "failed"
+    // (nothing went live) is intentionally NOT locked — the user fixes + retries.
+    const locked = isLockedStatus(status);
+
+    // Unsaved changes across BOTH the generic editor and any per-platform
+    // variation the user has edited but not yet saved. Drives the Save button,
+    // the Cmd/Ctrl+S shortcut, and the leave-confirmation guard.
+    const anyDirty = dirty || variationsDirty;
 
     // Returns true when the content was persisted, false otherwise (no-op or
     // failure) — the unsaved-changes leave flow relies on this to decide whether
-    // it's safe to navigate away.
+    // it's safe to navigate away. Persists the generic content and flushes every
+    // pending variation edit together, so one Save covers the whole piece.
     const handleSave = useCallback(async (): Promise<boolean> => {
         if (!contentId || saveState === "saving" || locked) return false;
         setSaveState("saving");
@@ -302,9 +563,12 @@ const CreateContentScreen = () => {
                 script,
                 imagePrompt,
                 attachments,
+                platformOptions,
                 platforms: targetPlatforms,
                 postingTimeStamp: date ? localDateToUtcMidnight(date) : undefined,
             });
+            // Flush all pending per-platform variation edits in the same save.
+            await saveVariations();
         } catch (e) {
             console.warn("Save error:", e);
             setSaveState("idle");
@@ -315,7 +579,7 @@ const CreateContentScreen = () => {
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = setTimeout(() => setSaveState("idle"), 2000);
         return true;
-    }, [contentId, saveState, locked, updateContent, title, idea, status, caption, hashtags, timeOfPosting, script, imagePrompt, attachments, date, targetPlatforms]);
+    }, [contentId, saveState, locked, updateContent, saveVariations, title, idea, status, caption, hashtags, timeOfPosting, script, imagePrompt, attachments, platformOptions, date, targetPlatforms]);
 
     // ── Cmd/Ctrl+S keyboard shortcut to save (web) ───────────────────────────
     // Intercept the browser's native "save page" so the shortcut saves the
@@ -328,7 +592,7 @@ const CreateContentScreen = () => {
             if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "s") return;
             e.preventDefault();
             if (locked || saveState === "saving") return;
-            if (!dirty) {
+            if (!anyDirty) {
                 Toaster.success("All changes saved");
                 return;
             }
@@ -342,7 +606,7 @@ const CreateContentScreen = () => {
         // Capturing on the way down fires before any input can intercept it.
         window.addEventListener("keydown", onKeyDown, true);
         return () => window.removeEventListener("keydown", onKeyDown, true);
-    }, [locked, dirty, saveState, handleSave]);
+    }, [locked, anyDirty, saveState, handleSave]);
 
     // Publish now / schedule. Persists the latest edits + destinations to
     // Firestore so the backend reads fresh data, then calls the publish /
@@ -381,10 +645,14 @@ const CreateContentScreen = () => {
                 attachments,
                 timeOfPosting,
                 destinations,
+                platformOptions,
                 scheduleMode: mode,
                 scheduledAt,
                 postingTimeStamp: localDateToUtcMidnight(date),
             });
+            // Flush pending per-platform variation edits too, so the backend
+            // publishes the latest tailored content for each platform.
+            await saveVariations();
 
             // 2. Trigger publish-now or schedule on the backend.
             // Publishing locally flips `status`, a watched dependency of the
@@ -399,7 +667,10 @@ const CreateContentScreen = () => {
                     { method: "POST" }
                 );
                 if (!res.ok) throw new Error(`Publish failed (${res.status})`);
-                setStatus("posted");
+                // Publishing runs async on the backend (queued). Flip to
+                // "publishing" — the per-social panel + final status arrive live
+                // via the Firestore listener (see the pipeline-status effect).
+                setStatus("publishing");
             } else {
                 const res = await HttpWrapper.fetch(
                     `/api/v2/brands/${brandId}/contents/${contentId}/schedule`,
@@ -414,13 +685,16 @@ const CreateContentScreen = () => {
             }
             setDirty(false);
             setShowPublishModal(false);
+            // Aha-moment: the user has shipped their first post. Marked after a
+            // confirmed success so a failed publish never counts.
+            markAhaMoment("post_scheduled");
         } catch (e) {
             // Surface via console for now; a toast is added in the Phase 6 polish.
             console.warn("Publish/schedule error:", e);
         } finally {
             setPublishing(false);
         }
-    }, [contentId, publishing, locked, destinations, scheduleMode, date, timeOfPosting, updateContent, selectedBrand?.id, title, idea, caption, hashtags, script, imagePrompt, attachments]);
+    }, [contentId, publishing, locked, destinations, platformOptions, scheduleMode, date, timeOfPosting, updateContent, saveVariations, selectedBrand?.id, title, idea, caption, hashtags, script, imagePrompt, attachments, markAhaMoment]);
 
     // Guard the publish entry point: if the brand has no connected social
     // accounts, surface a blocking modal that routes to Connected Accounts
@@ -430,8 +704,14 @@ const CreateContentScreen = () => {
             setShowNoSocialsModal(true);
             return;
         }
+        // High-intent: the content is finished and they're one tap from
+        // shipping. Nudge when the plan caps posting (free plans only; -1 is
+        // unlimited). Non-blocking — the publish sheet still opens.
+        if (maxPostsPerMonth >= 0) {
+            maybeNudge("publish_over_cap");
+        }
         setShowPublishModal(true);
-    }, [publishableAccounts.length]);
+    }, [publishableAccounts.length, maxPostsPerMonth, maybeNudge]);
 
     // Unschedule a scheduled post: cancels the backend Step Functions execution
     // and reverts status to "approved", which unlocks the editor again. Returns
@@ -458,6 +738,33 @@ const CreateContentScreen = () => {
             setUnscheduling(false);
         }
     }, [contentId, unscheduling, selectedBrand?.id]);
+
+    // Retry only the socials that failed on the last publish run. Fire-and-forget:
+    // the backend re-queues those destinations and the panel updates live from the
+    // Firestore listener (status flips back to "publishing" for those rows).
+    const [retrying, setRetrying] = useState(false);
+    const handleRetryPublish = useCallback(async () => {
+        if (!contentId || retrying) return;
+        const brandId = selectedBrand?.id;
+        if (!brandId) return;
+        setRetrying(true);
+        try {
+            const res = await HttpWrapper.fetch(
+                `/api/v2/brands/${brandId}/contents/${contentId}/publish/retry`,
+                { method: "POST" }
+            );
+            if (!res.ok) throw new Error(`Retry failed (${res.status})`);
+        } catch (e) {
+            Toaster.error("Couldn't retry", "Please try again.");
+            console.warn("Retry publish error:", e);
+        } finally {
+            setRetrying(false);
+        }
+    }, [contentId, retrying, selectedBrand?.id]);
+
+    const handleReconnectAccounts = useCallback(() => {
+        router.push("/connected-accounts" as any);
+    }, [router]);
 
     const handleCreateCollab = useCallback(() => {
         router.push("/hire-us");
@@ -593,12 +900,12 @@ const CreateContentScreen = () => {
     // Header back press: prompt to save/discard when there are unsaved edits,
     // otherwise leave straight away.
     const handleBackPress = useCallback(() => {
-        if (dirty) {
+        if (anyDirty) {
             setShowLeaveConfirm(true);
         } else {
             doNavigateBack();
         }
-    }, [dirty, doNavigateBack]);
+    }, [anyDirty, doNavigateBack]);
 
     const handleLeaveSave = useCallback(async () => {
         const ok = await handleSave();
@@ -619,30 +926,76 @@ const CreateContentScreen = () => {
     const captionSnapRef = useRef<CaptionVariant[] | null>(null);
     const hashtagSnapRef = useRef<HashtagGroup[] | null>(null);
 
+    // Summarise every per-platform variation for the AI: the values that will
+    // actually publish to each platform (generic resolved through any override),
+    // plus which fields were explicitly overridden. Shared by the chat panel and
+    // the caption/hashtag enhance requests so the AI always sees the full set.
+    const buildAIVariations = useCallback((): LiveContentVariation[] => {
+        const generic = { caption, hashtags, attachments, platformOptions };
+        return variations.map((v) => {
+            const eff = effectiveContentForPlatform(generic, v);
+            return {
+                platform: SOCIAL_PLATFORM_MAP[v.platform]?.label ?? v.platform,
+                caption: eff.caption,
+                hashtags: eff.hashtags,
+                overriddenFields: v.overriddenFields ?? [],
+                platformOptions: v.platformOptions,
+            };
+        });
+    }, [variations, caption, hashtags, attachments, platformOptions]);
+
     const handleMagicGenerate = useCallback(
         (prompt: string, model?: string) => {
             const target = magicTarget;
             if (!target) return;
-            // Use the content's primary targeted platform as prompt context.
+            // Pre-flight: about to spend tokens on work already in progress —
+            // the strongest moment to surface the upgrade nudge. Only nudges
+            // when the wallet is already low/critical, and never blocks.
+            if (tokens.state === "low" || tokens.state === "critical") {
+                maybeNudge("generate_low_tokens");
+            }
+            // The editor the modal was opened from: "generic" or a platform tab.
+            const forPlatform = magicPlatform;
+            const isVariation = forPlatform !== "generic";
+            const variation = isVariation ? variationByPlatform[forPlatform] : undefined;
+
+            // Prompt-context platform: the variation's own platform, else the
+            // content's primary targeted platform.
             const primaryPlatform = targetPlatforms[0];
-            const platform = primaryPlatform
-                ? SOCIAL_PLATFORM_MAP[primaryPlatform]?.label ?? "Instagram"
-                : "Instagram";
-            // Pass the current (possibly unsaved) editor state so the AI writes
-            // with the context of what's on screen right now, not the last save.
+            const platform = isVariation
+                ? SOCIAL_PLATFORM_MAP[forPlatform]?.label ?? forPlatform
+                : primaryPlatform
+                    ? SOCIAL_PLATFORM_MAP[primaryPlatform]?.label ?? "Instagram"
+                    : "Instagram";
+
+            // Resolve the caption/hashtags the AI should refine: the variation's
+            // effective (overridden-or-inherited) values on a variation tab, else
+            // the generic values. Pass the current (possibly unsaved) editor state
+            // so the AI writes with what's on screen right now, not the last save.
+            const generic = { caption, hashtags, attachments, platformOptions };
+            const eff = isVariation ? effectiveContentForPlatform(generic, variation) : generic;
             const liveContent = {
                 title,
                 description: idea,
-                caption,
-                hashtags,
+                caption: eff.caption,
+                hashtags: eff.hashtags,
                 script,
             };
-            // Flip the per-field flag and fire the request. The modal closes
+            const aiVariations = buildAIVariations();
+            // Full variation context + the exact platform/field being generated,
+            // so the AI tailors the result and stays aware of the sibling variants.
+            const varCtx = {
+                variations: aiVariations,
+                targetPlatform: isVariation ? platform : undefined,
+                targetField: target,
+            };
+
+            // Flip the per-target flag and fire the request. The modal closes
             // itself (onClose) — the user is free to keep editing while the
             // inline hint shows progress and the result lands automatically.
             if (target === "caption") {
                 captionSnapRef.current = aiCaptions;
-                setCaptionGenerating(true);
+                setCaptionGenTarget(forPlatform);
                 generateCaption({
                     topic: prompt,
                     platform,
@@ -650,10 +1003,11 @@ const CreateContentScreen = () => {
                     contextId: contentId,
                     model,
                     ...liveContent,
+                    ...varCtx,
                 });
             } else {
                 hashtagSnapRef.current = aiHashtags;
-                setHashtagGenerating(true);
+                setHashtagGenTarget(forPlatform);
                 generateHashtags({
                     topic: prompt,
                     platform,
@@ -661,10 +1015,11 @@ const CreateContentScreen = () => {
                     contextId: contentId,
                     model,
                     ...liveContent,
+                    ...varCtx,
                 });
             }
         },
-        [magicTarget, contentType, contentId, title, idea, caption, hashtags, script, aiCaptions, aiHashtags, generateCaption, generateHashtags, targetPlatforms]
+        [magicTarget, magicPlatform, variationByPlatform, contentType, contentId, title, idea, caption, hashtags, script, attachments, platformOptions, aiCaptions, aiHashtags, generateCaption, generateHashtags, targetPlatforms, buildAIVariations, tokens.state, maybeNudge]
     );
 
     const handleScriptAiEnhance = useCallback((model?: string) => {
@@ -706,13 +1061,19 @@ const CreateContentScreen = () => {
                 playUrl: a.playUrl,
                 appleUrl: a.appleUrl,
             })),
+            // Every per-platform variation, so the chat AI reasons about the whole
+            // piece (generic + each tailored variant), not just the generic body.
+            variations: buildAIVariations(),
         }),
-        [title, idea, contentType, targetPlatforms, caption, hashtags, script, attachments]
+        [title, idea, contentType, targetPlatforms, caption, hashtags, script, attachments, buildAIVariations]
     );
 
     const handleImageGenerate = useCallback((promptArg?: string, focusedSlideIndex?: number, model?: string) => {
         const p = (promptArg ?? imagePrompt).trim();
         if (!p) return;
+        if (tokens.state === "low" || tokens.state === "critical") {
+            maybeNudge("generate_low_tokens");
+        }
         setImagePrompt(p);
         setIsGeneratingImage(true);
         generateImage({
@@ -725,7 +1086,7 @@ const CreateContentScreen = () => {
             focusedSlideIndex,
             model,
         });
-    }, [imagePrompt, contentType, contentId, generateImage]);
+    }, [imagePrompt, contentType, contentId, generateImage, tokens.state, maybeNudge]);
 
     // React to AI generation results streaming back from the backend.
 
@@ -737,28 +1098,33 @@ const CreateContentScreen = () => {
     useEffect(() => {
         const settled = prevCaptionLoadingRef.current && !captionLoading;
         prevCaptionLoadingRef.current = captionLoading;
-        if (!settled || !captionGenerating) return;
+        if (!settled || captionGenTarget === null) return;
         if (aiCaptions.length > 0 && aiCaptions !== captionSnapRef.current) {
-            setCaption(aiCaptions[0].text);
+            const text = aiCaptions[0].text;
+            // Route to the editor that requested it: generic field, or the
+            // variation's caption override (which also flags it overridden).
+            if (captionGenTarget === "generic") setCaption(text);
+            else setOverride(captionGenTarget, "caption", text);
         }
-        setCaptionGenerating(false);
-    }, [captionLoading, captionGenerating, aiCaptions]);
+        setCaptionGenTarget(null);
+    }, [captionLoading, captionGenTarget, aiCaptions, setOverride]);
 
     // Hashtags: flatten all tier groups into a single space-separated #tag string.
     const prevHashtagLoadingRef = useRef(false);
     useEffect(() => {
         const settled = prevHashtagLoadingRef.current && !hashtagLoading;
         prevHashtagLoadingRef.current = hashtagLoading;
-        if (!settled || !hashtagGenerating) return;
+        if (!settled || hashtagGenTarget === null) return;
         if (aiHashtags.length > 0 && aiHashtags !== hashtagSnapRef.current) {
             const joined = aiHashtags
                 .flatMap((g) => g.tags)
                 .map((t) => `#${t}`)
                 .join(" ");
-            setHashtags(joined);
+            if (hashtagGenTarget === "generic") setHashtags(joined);
+            else setOverride(hashtagGenTarget, "hashtags", joined);
         }
-        setHashtagGenerating(false);
-    }, [hashtagLoading, hashtagGenerating, aiHashtags]);
+        setHashtagGenTarget(null);
+    }, [hashtagLoading, hashtagGenTarget, aiHashtags, setOverride]);
 
     // Script: stream into the script field. Append on first run; replace the
     // streamed block on subsequent token updates so the user sees it grow live.
@@ -878,30 +1244,36 @@ const CreateContentScreen = () => {
                     key="save"
                     style={({ pressed }) => [
                         xl ? styles.saveBtn : styles.saveBtnIcon,
-                        !dirty && styles.saveBtnSaved,
+                        !anyDirty && styles.saveBtnSaved,
                         pressed && styles.btnPressed,
                     ]}
                     onPress={handleSave}
-                    disabled={saveState === "saving" || !dirty}
+                    disabled={saveState === "saving" || !anyDirty}
                     accessibilityRole="button"
-                    accessibilityLabel={dirty ? "Save (unsaved changes)" : "Saved"}
+                    accessibilityLabel={anyDirty ? "Save (unsaved changes)" : "Saved"}
                 >
                     {saveState === "saving" ? (
                         xl ? <Text style={styles.saveBtnText}>Saving…</Text> : <ActivityIndicator size="small" color={colors.onPrimary} />
                     ) : (
                         <>
                             <FontAwesomeIcon icon={faCheck} size={13} color={colors.onPrimary} />
-                            {xl && <Text style={styles.saveBtnText}>{dirty ? "Save" : "Saved"}</Text>}
+                            {xl && <Text style={styles.saveBtnText}>{anyDirty ? "Save" : "Saved"}</Text>}
                         </>
                     )}
                 </Pressable>
             ),
         ],
-        [styles, colors, handleSave, saveState, xl, dirty, locked, selectedBrand?.id, contentId, hasCapability, handleOpenPublish, handleDuplicate, handleDelete]
+        [styles, colors, handleSave, saveState, xl, anyDirty, locked, selectedBrand?.id, contentId, hasCapability, handleOpenPublish, handleDuplicate, handleDelete]
     );
+
+    // When the Design Stage takes over the centre column it goes truly
+    // full-bleed — the page header hides so the canvas owns the whole screen.
+    // The DesignStage's own ✕ brings the user (and this header) back.
+    const designTakeover = stage === "design" && mediaSpec.kind !== "none";
 
     return (
         <AppLayout>
+            {!designTakeover ? (
             <PageHeader
                 title={title || "Create Content"}
                 showBackButton
@@ -963,6 +1335,7 @@ const CreateContentScreen = () => {
                     </View>
                 }
             />
+            ) : null}
 
             {/* ── Split layout: form (left) + comments panel (right) ─────── */}
             <View
@@ -974,11 +1347,52 @@ const CreateContentScreen = () => {
                     style={styles.flex1}
                     behavior={Platform.OS === "ios" ? "padding" : undefined}
                 >
+                    {designTakeover ? (
+                        <View style={styles.designTakeover}>
+                            <DesignStage
+                                contentId={contentId}
+                                brandId={selectedBrand?.id ?? ""}
+                                contentType={contentType}
+                                isVideo={mediaSpec.kind === "video"}
+                                designRef={seedItem?.designRef}
+                                voiceoverSource={script || caption}
+                                audio={seedItem?.audio}
+                                onAudioChange={(audio) => updateContent(contentId, { audio })}
+                                onSendToChat={handleSendToChat}
+                                onAskAI={handleAskAI}
+                                onFocus={handleFocusElement}
+                                onClose={() => setStage("media")}
+                                onOpenChat={() => setRightPanelMode("chat")}
+                                readOnly={locked}
+                            />
+                        </View>
+                    ) : (
                     <ScrollView
                         contentContainerStyle={styles.scroll}
                         showsVerticalScrollIndicator={false}
                         keyboardShouldPersistTaps="handled"
                     >
+                        {/* ── Platform variation tabs (Generic + per-platform + ＋) ──
+                            Hidden when the content targets a single platform — that
+                            platform's fields render inline on the main editor. */}
+                        {!soloPlatform && (targetPlatforms.length > 1 || variationPlatforms.length > 0) ? (
+                            <View style={styles.section}>
+                                <VariationTabs
+                                    active={activeTab}
+                                    variationPlatforms={variationPlatforms}
+                                    onSelect={setActiveTab}
+                                    onAddPress={() => setShowVariationModal(true)}
+                                    canAdd={!locked && availableForVariation.length > 0}
+                                />
+                                {variationPlatforms.length === 0 && !locked ? (
+                                    <Text style={styles.variationHint}>
+                                        Tailor the caption & options for a specific platform — add a
+                                        tab. The Generic version is the shared default.
+                                    </Text>
+                                ) : null}
+                            </View>
+                        ) : null}
+
                         {/* ── Lock banner: scheduled / posted content is read-only ── */}
                         {locked ? (
                             <View style={styles.section}>
@@ -988,12 +1402,22 @@ const CreateContentScreen = () => {
                                     </View>
                                     <View style={styles.lockBannerBody}>
                                         <Text style={styles.lockBannerTitle}>
-                                            {status === "posted" ? "Posted — locked" : "Scheduled — locked"}
+                                            {status === "publishing"
+                                                ? "Publishing…"
+                                                : status === "partially_failed"
+                                                    ? "Partially published"
+                                                    : status === "posted"
+                                                        ? "Published — locked"
+                                                        : "Scheduled — locked"}
                                         </Text>
                                         <Text style={styles.lockBannerSub}>
-                                            {status === "posted"
-                                                ? "This content has been posted and can no longer be edited."
-                                                : "Editing is paused while this post is scheduled. Unschedule it to make changes."}
+                                            {status === "publishing"
+                                                ? "Publishing to your connected socials — watch the progress above."
+                                                : status === "partially_failed"
+                                                    ? "This went live on some socials. Review the failures and retry above."
+                                                    : status === "posted"
+                                                        ? "This content has been published and can no longer be edited."
+                                                        : "Editing is paused while this post is scheduled. Unschedule it to make changes."}
                                         </Text>
                                     </View>
                                     {status === "scheduled" ? (
@@ -1021,6 +1445,41 @@ const CreateContentScreen = () => {
                             </View>
                         ) : null}
 
+                        {/* ── Generic tab body, OR a platform variation editor ── */}
+                        {activeTab !== "generic" ? (
+                            <View style={styles.section}>
+                                <VariationEditor
+                                    platform={activeTab}
+                                    variation={variationByPlatform[activeTab]}
+                                    genericCaption={caption}
+                                    genericHashtags={hashtags}
+                                    onSetOverride={handleSetOverride}
+                                    onResetField={handleResetField}
+                                    onSetPlatformOptions={handleSetVariationOptions}
+                                    onDelete={handleDeleteActiveVariation}
+                                    onGenerateCaption={() => { setMagicPlatform(activeTab); setMagicTarget("caption"); }}
+                                    onGenerateHashtags={() => { setMagicPlatform(activeTab); setMagicTarget("hashtags"); }}
+                                    captionGenerating={captionGenTarget === activeTab}
+                                    hashtagGenerating={hashtagGenTarget === activeTab}
+                                    disabled={locked}
+                                />
+                            </View>
+                        ) : (
+                          <>
+                        {/* ── Per-social publish status (live while publishing + after) ── */}
+                        {seedItem?.publishResults && seedItem.publishResults.length > 0 ? (
+                            <View style={styles.section}>
+                                <PublishStatusPanel
+                                    results={seedItem.publishResults}
+                                    socialAccounts={socialAccounts}
+                                    overallStatus={status}
+                                    onRetry={handleRetryPublish}
+                                    retrying={retrying}
+                                    onReconnect={handleReconnectAccounts}
+                                />
+                            </View>
+                        ) : null}
+
                         {/* ── Posting summary (only once configured) ──────────── */}
                         {destinations.length > 0 ? (
                             <View style={styles.section}>
@@ -1031,16 +1490,18 @@ const CreateContentScreen = () => {
                                     formattedDate={formattedDate}
                                     timeOfPosting={timeOfPosting}
                                     onEdit={() => setShowPublishModal(true)}
-                                    locked={status === "posted"}
+                                    locked={status === "posted" || status === "partially_failed" || status === "publishing"}
                                     postedAt={
-                                        status === "posted" ? seedItem?.scheduledAt : undefined
+                                        status === "posted" || status === "partially_failed"
+                                            ? seedItem?.scheduledAt
+                                            : undefined
                                     }
                                 />
                             </View>
                         ) : null}
 
                         {/* ── Post performance (live analytics + comments) ────── */}
-                        {status === "posted" && seedItem ? (
+                        {(status === "posted" || status === "partially_failed") && seedItem ? (
                             <View style={styles.section}>
                                 <PostPerformance content={seedItem} />
                             </View>
@@ -1077,11 +1538,7 @@ const CreateContentScreen = () => {
                                     contentType={contentType}
                                     attachments={attachments}
                                     onAttachmentsChange={setAttachments}
-                                    imagePrompt={imagePrompt}
-                                    onImagePromptChange={setImagePrompt}
-                                    onGenerateImage={handleImageGenerate}
-                                    isGeneratingImage={imageGenerating}
-                                    generationError={imageGenError}
+                                    onOpenDesign={() => setStage("design")}
                                     readOnly={locked}
                                 />
                             )}
@@ -1133,7 +1590,7 @@ const CreateContentScreen = () => {
                                         value={caption}
                                         onChangeText={setCaption}
                                         multiline
-                                        maxLength={2200}
+                                        maxLength={captionMaxLen}
                                         textAlignVertical="top"
                                         editable={!locked}
                                     />
@@ -1143,10 +1600,10 @@ const CreateContentScreen = () => {
                                                 styles.wandBtn,
                                                 pressed && styles.btnPressed,
                                             ]}
-                                            onPress={() => setMagicTarget("caption")}
-                                            disabled={captionGenerating}
+                                            onPress={() => { setMagicPlatform("generic"); setMagicTarget("caption"); }}
+                                            disabled={captionGenTarget === "generic"}
                                         >
-                                            {captionGenerating ? (
+                                            {captionGenTarget === "generic" ? (
                                                 <ActivityIndicator size="small" color={colors.primary} />
                                             ) : (
                                                 <FontAwesomeIcon
@@ -1159,7 +1616,23 @@ const CreateContentScreen = () => {
                                     ) : null}
                                 </View>
                             </View>
-                            {captionGenerating ? (
+                            {/* Solo-platform: surface that platform's caption rule + a live counter. */}
+                            {soloPlatform ? (
+                                <View style={styles.fieldMetaRow}>
+                                    <Text style={styles.fieldMetaNote} numberOfLines={2}>
+                                        {soloSpec?.captionNote ?? ""}
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.charCounter,
+                                            caption.length >= captionMaxLen && styles.charCounterMax,
+                                        ]}
+                                    >
+                                        {caption.length}/{captionMaxLen}
+                                    </Text>
+                                </View>
+                            ) : null}
+                            {captionGenTarget === "generic" ? (
                                 <View style={styles.aiHintWrap}>
                                     <AIGeneratingHint
                                         title={contentType === "text" ? "Writing your post…" : "Writing your caption…"}
@@ -1170,6 +1643,7 @@ const CreateContentScreen = () => {
                         </View>
 
                         {/* ── Hashtags ──────────────────────────────────────────── */}
+                        {showHashtags ? (
                         <View style={styles.section}>
                             <Text style={styles.sectionLabel}>HASHTAGS</Text>
                             <View style={styles.card}>
@@ -1189,10 +1663,10 @@ const CreateContentScreen = () => {
                                                 styles.wandBtn,
                                                 pressed && styles.btnPressed,
                                             ]}
-                                            onPress={() => setMagicTarget("hashtags")}
-                                            disabled={hashtagGenerating}
+                                            onPress={() => { setMagicPlatform("generic"); setMagicTarget("hashtags"); }}
+                                            disabled={hashtagGenTarget === "generic"}
                                         >
-                                            {hashtagGenerating ? (
+                                            {hashtagGenTarget === "generic" ? (
                                                 <ActivityIndicator size="small" color={colors.primary} />
                                             ) : (
                                                 <FontAwesomeIcon
@@ -1205,7 +1679,23 @@ const CreateContentScreen = () => {
                                     ) : null}
                                 </View>
                             </View>
-                            {hashtagGenerating ? (
+                            {/* Solo-platform: surface the recommended hashtag cap + live count. */}
+                            {soloPlatform && soloSpec?.hashtagMax ? (
+                                <View style={styles.fieldMetaRow}>
+                                    <Text style={styles.fieldMetaNote} numberOfLines={1}>
+                                        Recommended: up to {soloSpec.hashtagMax} hashtags
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.charCounter,
+                                            hashtagCount > soloSpec.hashtagMax && styles.charCounterMax,
+                                        ]}
+                                    >
+                                        {hashtagCount}/{soloSpec.hashtagMax}
+                                    </Text>
+                                </View>
+                            ) : null}
+                            {hashtagGenTarget === "generic" ? (
                                 <View style={styles.aiHintWrap}>
                                     <AIGeneratingHint
                                         title="Finding the best hashtags…"
@@ -1214,6 +1704,22 @@ const CreateContentScreen = () => {
                                 </View>
                             ) : null}
                         </View>
+                        ) : null}
+
+                        {/* ── Single-platform options (inline, no tabs) ────────── */}
+                        {soloPlatform ? (
+                            <View style={styles.section}>
+                                <PlatformOptionsSection
+                                    platform={soloPlatform}
+                                    options={platformOptions}
+                                    onChange={(patch) =>
+                                        setPlatformOptions((prev) => ({ ...prev, ...patch }))
+                                    }
+                                    sourceCaption={caption}
+                                    disabled={locked}
+                                />
+                            </View>
+                        ) : null}
 
                         {/* ── Reel Collab CTA ───────────────────────────────────── */}
                         {isReel && (
@@ -1248,9 +1754,12 @@ const CreateContentScreen = () => {
                                 </View>
                             </View>
                         )}
+                          </>
+                        )}
 
                         <View style={styles.bottomPad} />
                     </ScrollView>
+                    )}
                 </KeyboardAvoidingView>
 
                 {/* Right: split-pane comments on desktop only. Mobile uses
@@ -1276,6 +1785,8 @@ const CreateContentScreen = () => {
                                         setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
                                     }
                                     getLiveContent={getLiveChatContent}
+                                    initialMessage={pendingChatMessage}
+                                    onInitialMessageSent={() => setPendingChatMessage(undefined)}
                                     isCompact
                                 />
                             }
@@ -1286,6 +1797,8 @@ const CreateContentScreen = () => {
                                     attachments={attachments}
                                     caption={caption}
                                     hashtags={hashtags}
+                                    platformOptions={platformOptions}
+                                    variationByPlatform={variationByPlatform}
                                 />
                             }
                         />
@@ -1313,6 +1826,8 @@ const CreateContentScreen = () => {
                                 setChatFocusItems((prev) => prev.filter((f) => f.id !== id))
                             }
                             getLiveContent={getLiveChatContent}
+                            initialMessage={pendingChatMessage}
+                            onInitialMessageSent={() => setPendingChatMessage(undefined)}
                             isCompact
                             onCollapse={() => setRightPanelMode("none")}
                             // Tab bar owns the bottom inset (don't double it), but this
@@ -1328,6 +1843,8 @@ const CreateContentScreen = () => {
                             attachments={attachments}
                             caption={caption}
                             hashtags={hashtags}
+                            platformOptions={platformOptions}
+                            variationByPlatform={variationByPlatform}
                             onCollapse={() => setRightPanelMode("none")}
                         />
                     }
@@ -1385,6 +1902,19 @@ const CreateContentScreen = () => {
                 onChangePlatforms={setTargetPlatforms}
                 onClose={() => setShowInfoModal(false)}
                 readOnly={locked}
+                contentPillars={seedItem?.contentPillars}
+                strategyId={seedItem?.strategyId}
+                strategyName={
+                    seedItem?.strategyId
+                        ? strategies.find((s) => s.id === seedItem.strategyId)?.title
+                        : undefined
+                }
+                onOpenStrategy={(strategyId) =>
+                    router.push({
+                        pathname: "/(main)/(drawer)/(tabs)/(content)/content-strategies/[strategyId]" as any,
+                        params: { strategyId },
+                    })
+                }
             />
 
             {selectedBrand?.id && contentId ? (
@@ -1414,6 +1944,8 @@ const CreateContentScreen = () => {
                 socialAccounts={publishableAccounts}
                 destinations={destinations}
                 onDestinationsChange={setDestinations}
+                platformOptions={platformOptions}
+                onPlatformOptionsChange={setPlatformOptions}
                 formattedDate={formattedDate}
                 dateValue={date}
                 onDateChange={setDate}
@@ -1421,6 +1953,15 @@ const CreateContentScreen = () => {
                 onTimeChange={setTimeOfPosting}
                 onPublish={handlePublish}
                 publishing={publishing}
+                variationPlatforms={variationPlatforms}
+                hideOptionPlatforms={optionsHandledElsewhere}
+            />
+
+            <VariationModal
+                visible={showVariationModal}
+                available={availableForVariation}
+                onClose={() => setShowVariationModal(false)}
+                onCreate={handleCreateVariations}
             />
 
             <UnsavedChangesModal
@@ -1442,6 +1983,11 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                 flex1: {
                     flex: 1,
                 },
+                designTakeover: {
+                    // Full-bleed: the Design Stage owns the entire centre column,
+                    // edge to edge (no padding, no readable-column max width).
+                    flex: 1,
+                },
                 scroll: {
                     paddingTop: 16,
                     paddingHorizontal: 16,
@@ -1450,6 +1996,13 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                 },
                 section: {
                     marginBottom: 20,
+                },
+                variationHint: {
+                    fontSize: fs(11),
+                    color: colors.textSecondary,
+                    lineHeight: lh(16),
+                    marginTop: 10,
+                    paddingHorizontal: 2,
                 },
                 // ── Split layout ──────────────────────────────────────────────
                 splitContainer: {
@@ -1492,7 +2045,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                 },
                 headerTitleText: {
                     flexShrink: 1,
-                    fontSize: 22,
+                    fontSize: fs(22),
                     fontWeight: "700",
                     color: colors.text,
                 },
@@ -1503,12 +2056,12 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     flexShrink: 0,
                 },
                 statusBadgeText: {
-                    fontSize: 11,
+                    fontSize: fs(11),
                     fontWeight: "700",
                     letterSpacing: 0.3,
                 },
                 headerTypeText: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     fontWeight: "600",
                     color: colors.textSecondary,
                     marginTop: 2,
@@ -1522,7 +2075,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     marginTop: 2,
                 },
                 headerMetaDot: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     fontWeight: "700",
                     color: colors.textSecondary,
                 },
@@ -1543,7 +2096,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     borderRadius: 4,
                 },
                 headerPlatformText: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     fontWeight: "600",
                     color: colors.textSecondary,
                 },
@@ -1558,7 +2111,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     backgroundColor: colors.aliceBlue,
                 },
                 publishHeaderText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "700",
                     color: colors.primary,
                 },
@@ -1571,22 +2124,44 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                 },
                 contentTitle: {
                     flexShrink: 1,
-                    fontSize: 18,
+                    fontSize: fs(18),
                     fontWeight: "700",
                     color: colors.text,
                 },
                 ideaText: {
-                    fontSize: 14,
-                    lineHeight: 20,
+                    fontSize: fs(14),
+                    lineHeight: lh(20),
                     color: colors.textSecondary,
                     marginBottom: 4,
                 },
                 sectionLabel: {
-                    fontSize: 11,
+                    fontSize: fs(11),
                     fontWeight: "700",
                     letterSpacing: 1.1,
                     color: colors.textSecondary,
                     marginBottom: 8,
+                },
+                fieldMetaRow: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    marginTop: 6,
+                    paddingHorizontal: 2,
+                },
+                fieldMetaNote: {
+                    flex: 1,
+                    fontSize: fs(11),
+                    lineHeight: lh(15),
+                    color: colors.textSecondary,
+                },
+                charCounter: {
+                    fontSize: fs(11),
+                    fontWeight: "600",
+                    color: colors.textSecondary,
+                },
+                charCounterMax: {
+                    color: colors.red,
                 },
                 card: {
                     backgroundColor: colors.card,
@@ -1599,15 +2174,15 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     elevation: 3,
                 },
                 cardTitle: {
-                    fontSize: 15,
+                    fontSize: fs(15),
                     fontWeight: "700",
                     color: colors.text,
                     marginBottom: 4,
                 },
                 cardSub: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     color: colors.textSecondary,
-                    lineHeight: 18,
+                    lineHeight: lh(18),
                     marginBottom: 12,
                 },
                 typeTag: {
@@ -1617,7 +2192,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     backgroundColor: colors.tag,
                 },
                 typeTagText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.textSecondary,
                 },
@@ -1629,7 +2204,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     borderRadius: 10,
                     paddingHorizontal: 14,
                     paddingVertical: 12,
-                    fontSize: 14,
+                    fontSize: fs(14),
                     color: colors.text,
                     shadowColor: "#000",
                     shadowOffset: { width: 0, height: 1 },
@@ -1691,15 +2266,15 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     padding: 16,
                 },
                 collabTitle: {
-                    fontSize: 15,
+                    fontSize: fs(15),
                     fontWeight: "700",
                     color: colors.text,
                     marginBottom: 6,
                 },
                 collabSub: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     color: colors.textSecondary,
-                    lineHeight: 19,
+                    lineHeight: lh(19),
                     marginBottom: 14,
                 },
                 collabBtn: {
@@ -1718,7 +2293,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     elevation: 4,
                 },
                 collabBtnText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "700",
                     color: colors.onPrimary,
                 },
@@ -1754,7 +2329,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     shadowColor: colors.statusApprovedFg,
                 },
                 saveBtnText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.onPrimary,
                 },
@@ -1792,15 +2367,15 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     backgroundColor: "transparent",
                 },
                 lockBannerTitle: {
-                    fontSize: 14,
+                    fontSize: fs(14),
                     fontWeight: "700",
                     color: colors.text,
                     marginBottom: 2,
                 },
                 lockBannerSub: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     color: colors.textSecondary,
-                    lineHeight: 17,
+                    lineHeight: lh(17),
                 },
                 unscheduleBtn: {
                     flexDirection: "row",
@@ -1817,7 +2392,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     elevation: 2,
                 },
                 unscheduleBtnText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "700",
                     color: colors.primary,
                 },

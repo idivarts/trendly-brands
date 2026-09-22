@@ -4,6 +4,7 @@ import { useTheme } from "@react-navigation/native";
 import * as Clipboard from "expo-clipboard";
 import React, { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 interface Props {
     contextId?: string;
@@ -111,11 +112,11 @@ export default AIScriptGenerator;
 const makeStyles = (colors: any) =>
     StyleSheet.create({
         wrap: { padding: 14, backgroundColor: colors.card, borderRadius: 12, gap: 10 },
-        title: { color: colors.text, fontSize: 16, fontWeight: "700" },
+        title: { color: colors.text, fontSize: fs(16), fontWeight: "700" },
         chipsRow: { flexDirection: "row", gap: 6 },
         chip: { paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.tag, borderRadius: 14 },
         chipActive: { backgroundColor: colors.primary },
-        chipText: { color: colors.text, fontSize: 12, fontWeight: "600" },
+        chipText: { color: colors.text, fontSize: fs(12), fontWeight: "600" },
         chipTextActive: { color: "#fff" },
         input: {
             backgroundColor: colors.tag,
@@ -123,7 +124,7 @@ const makeStyles = (colors: any) =>
             borderRadius: 10,
             paddingHorizontal: 12,
             paddingVertical: 10,
-            fontSize: 14,
+            fontSize: fs(14),
         },
         actionsRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
         runBtn: {
@@ -137,9 +138,9 @@ const makeStyles = (colors: any) =>
             shadowOpacity: 0.3,
             elevation: 4,
         },
-        runText: { color: "#fff", fontWeight: "700", fontSize: 13 },
+        runText: { color: "#fff", fontWeight: "700", fontSize: fs(13) },
         secondaryBtn: { paddingHorizontal: 14, paddingVertical: 8, backgroundColor: colors.tag, borderRadius: 10 },
-        secondaryText: { color: colors.text, fontWeight: "600", fontSize: 13 },
+        secondaryText: { color: colors.text, fontWeight: "600", fontSize: fs(13) },
         btnDisabled: { opacity: 0.4 },
         btnPressed: { opacity: 0.85 },
         resultBox: {
@@ -149,5 +150,5 @@ const makeStyles = (colors: any) =>
             minHeight: 200,
             maxHeight: 400,
         },
-        resultText: { color: colors.text, fontSize: 14, lineHeight: 20 },
+        resultText: { color: colors.text, fontSize: fs(14), lineHeight: lh(20) },
     });

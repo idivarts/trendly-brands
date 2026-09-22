@@ -2,6 +2,7 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { aiWS } from "@/utils/ai-ws";
+import { LiveContentVariation } from "@/hooks/use-ai-chat";
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -54,6 +55,11 @@ export function useAIGenerate() {
         caption?: string;
         hashtags?: string;
         script?: string;
+        /** Every per-platform variation, so the AI sees the sibling variants. */
+        variations?: LiveContentVariation[];
+        /** When enhancing a variation, the platform + field being generated. */
+        targetPlatform?: string;
+        targetField?: string;
     }) => {
         if (!brandId) return;
         setCaptionLoading(true);
@@ -88,6 +94,11 @@ export function useAIGenerate() {
         caption?: string;
         hashtags?: string;
         script?: string;
+        /** Every per-platform variation, so the AI sees the sibling variants. */
+        variations?: LiveContentVariation[];
+        /** When enhancing a variation, the platform + field being generated. */
+        targetPlatform?: string;
+        targetField?: string;
     }) => {
         if (!brandId) return;
         setHashtagLoading(true);

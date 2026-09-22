@@ -24,6 +24,7 @@ import { useBreakpoints } from "@/hooks";
 import { useContentPostInsights } from "@/hooks/useContentPostInsights";
 import Colors from "@/shared-uis/constants/Colors";
 import { ContentItem } from "./types";
+import { fs, lh } from "@/constants/Typography";
 
 interface Props {
     content: ContentItem;
@@ -255,16 +256,16 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     gap: 12,
                     flexWrap: "wrap",
                 },
-                heading: { fontSize: 16, fontWeight: "700", color: colors.text },
+                heading: { fontSize: fs(16), fontWeight: "700", color: colors.text },
                 subheading: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "700",
                     color: colors.textSecondary,
                     letterSpacing: 0.4,
                     textTransform: "uppercase",
                     marginTop: 4,
                 },
-                muted: { fontSize: 13, color: colors.textSecondary, lineHeight: 19 },
+                muted: { fontSize: fs(13), color: colors.textSecondary, lineHeight: lh(19) },
 
                 // Platform tabs
                 tabs: { flexDirection: "row", gap: 8 },
@@ -277,16 +278,16 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     borderRadius: 999,
                     backgroundColor: colors.tag,
                 },
-                tabText: { fontSize: 13, fontWeight: "600", color: colors.textSecondary },
+                tabText: { fontSize: fs(13), fontWeight: "600", color: colors.textSecondary },
 
                 // Post preview
                 previewRow: { flexDirection: "row", gap: 12, alignItems: "center" },
                 thumb: { width: 56, height: 56, borderRadius: 10, backgroundColor: colors.tag },
                 thumbPlaceholder: { alignItems: "center", justifyContent: "center" },
                 previewMeta: { flex: 1, gap: 4 },
-                previewCaption: { fontSize: 14, fontWeight: "600", color: colors.text },
+                previewCaption: { fontSize: fs(14), fontWeight: "600", color: colors.text },
                 viewLink: { flexDirection: "row", alignItems: "center", gap: 6 },
-                viewLinkText: { fontSize: 13, fontWeight: "600", color: colors.primary },
+                viewLinkText: { fontSize: fs(13), fontWeight: "600", color: colors.primary },
 
                 // KPI cards
                 kpiLoading: { paddingVertical: 24, alignItems: "center" },
@@ -303,10 +304,10 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     alignItems: "center",
                     gap: 4,
                 },
-                kpiValue: { fontSize: 20, fontWeight: "800", color: colors.text },
+                kpiValue: { fontSize: fs(20), fontWeight: "800", color: colors.text },
                 kpiUnavailable: { color: colors.textSecondary, fontWeight: "600" },
-                kpiLabel: { fontSize: 12, color: colors.textSecondary, fontWeight: "600" },
-                footnote: { fontSize: 11, color: colors.textSecondary, lineHeight: 16 },
+                kpiLabel: { fontSize: fs(12), color: colors.textSecondary, fontWeight: "600" },
+                footnote: { fontSize: fs(11), color: colors.textSecondary, lineHeight: lh(16) },
 
                 // Embedded comments
                 commentsWrap: {

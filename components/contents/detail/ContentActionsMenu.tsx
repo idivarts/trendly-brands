@@ -11,6 +11,7 @@ import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import { Pressable, StyleSheet } from "react-native";
 import { Menu } from "react-native-paper";
+import { fs } from "@/constants/Typography";
 
 interface ContentActionsMenuProps {
     /** Opens the content-details (title / idea / status) modal. */
@@ -132,7 +133,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     borderRadius: 12,
                 },
                 itemText: {
-                    fontSize: 14,
+                    fontSize: fs(14),
                     fontWeight: "500",
                     color: colors.text,
                 },

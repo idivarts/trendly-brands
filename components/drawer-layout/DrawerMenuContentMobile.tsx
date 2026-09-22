@@ -1,6 +1,8 @@
 import { Text, View } from "@/components/theme/Themed";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useSubscribeNudge } from "@/contexts/subscribe-nudge-context.provider";
+import { useEntitlements } from "@/hooks/use-entitlements";
 import { OpenDrawerSubject } from "@/shared-uis/components/CustomDrawer";
 import ImageComponent from "@/shared-uis/components/image-component";
 import Colors from "@/shared-uis/constants/Colors";
@@ -21,7 +23,20 @@ const DrawerMenuContentMobile: React.FC<DrawerMenuContentMobileProps> = () => {
     const theme = useTheme();
     const { brands, selectedBrand, setSelectedBrand } = useBrandContext();
     const { manager } = useAuthContext();
+    const { maybeNudge } = useSubscribeNudge();
+    const { entitlements } = useEntitlements();
     const filteredBrands = brands;
+
+    // Managing multiple brands signals agency/scale use — the highest-LTV
+    // segment. Nudge at the cap, but never block the tap.
+    const handleCreateBrand = () => {
+        const maxBrands = entitlements?.maxBrands ?? -1;
+        if (maxBrands >= 0 && brands.length >= maxBrands) {
+            maybeNudge("create_brand_at_cap");
+        }
+        router.push({ pathname: "/onboarding" });
+        OpenDrawerSubject.next(false);
+    };
 
     const handleBrandChange = (brand: Brand) => {
         OpenDrawerSubject.next(false);
@@ -96,12 +111,7 @@ const DrawerMenuContentMobile: React.FC<DrawerMenuContentMobileProps> = () => {
                     key="create-brand"
                     icon={faPlus}
                     showChevron={false}
-                    onPress={() => {
-                        router.push({
-                            pathname: "/onboarding",
-                        });
-                        OpenDrawerSubject.next(false);
-                    }}
+                    onPress={handleCreateBrand}
                     title="Create New Brand"
                     removeTopBorder={true}
                     removeBottomBorder={true}

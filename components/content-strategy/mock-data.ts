@@ -1,3 +1,4 @@
+import { StrategyStatus } from "@/shared-libs/firestore/trendly-pro/models/strategies";
 import { ContentStrategy } from "./types";
 
 export const CHATBOT_QUESTIONS = [
@@ -72,6 +73,9 @@ export const MOCK_STRATEGIES: ContentStrategy[] = [
         content: MOCK_STRATEGY_CONTENT,
         createdAt: "15 Apr 2026",
         chatMessages: [],
+        status: StrategyStatus.Draft,
+        collaboratorIds: [],
+        reviewStatus: "draft",
     },
     {
         id: "mock-2",
@@ -79,5 +83,8 @@ export const MOCK_STRATEGIES: ContentStrategy[] = [
         content: MOCK_STRATEGY_CONTENT,
         createdAt: "22 Mar 2026",
         chatMessages: [],
+        status: StrategyStatus.Draft,
+        collaboratorIds: [],
+        reviewStatus: "draft",
     },
 ];

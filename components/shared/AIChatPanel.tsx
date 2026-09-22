@@ -5,6 +5,7 @@ import AIChatHistory from "@/components/shared/AIChatHistory";
 import MarkdownMessage from "@/components/shared/MarkdownMessage";
 import { getAIChatStarter } from "@/constants/AIChatStarters";
 import { useBreakpoints } from "@/hooks";
+import { Focus } from "@/types/focus";
 import { AIControl, AIModule, LiveContent, useAIChat } from "@/hooks/use-ai-chat";
 import { useAIModels } from "@/hooks/use-ai-models";
 import { useEntitlements } from "@/hooks/use-entitlements";
@@ -19,6 +20,7 @@ import {
     faLock,
     faPaperPlane,
     faPenToSquare,
+    faStop,
     faUpRightAndDownLeftFromCenter,
     faWandMagicSparkles,
     faXmark
@@ -43,6 +45,7 @@ import {
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { fs, IS_MOBILE_TYPE, lh } from "@/constants/Typography";
 
 // Readable column width for the conversation in the wide (split) layout — the
 // chat doesn't stretch full-bleed; messages + composer sit in a centered column.
@@ -58,18 +61,17 @@ export interface ChatMessage {
     control?: AIControl;
     /** Image URLs attached to (user) or produced by (assistant) this message. */
     images?: string[];
+    /** Structured focus target(s) attached to a user message. */
+    focus?: Focus[];
+    /** Legacy plain-string focus (shown for old messages without `focus`). */
+    focusedText?: string;
 }
 
-export interface FocusItem {
-    id: string;
-    label: string;
-    /**
-     * Optional text sent to the AI in place of `label`. Use it to give the model
-     * the actionable identity of the focused thing (e.g. a content id) while the
-     * chip still shows a short human label. Falls back to `label` when unset.
-     */
-    contextText?: string;
-}
+// Focus lives in the shared focus module (types/focus.ts). Re-exported here for
+// convenience; `FocusItem` is a deprecated alias kept for existing imports.
+export type { Focus, FocusArea } from "@/types/focus";
+/** @deprecated use `Focus` (structured focus with a `focusArea`). */
+export type FocusItem = Focus;
 
 /**
  * The panel's two header actions, lifted out so a host (e.g. the Playground
@@ -148,7 +150,7 @@ interface AIChatPanelProps {
     onInitialMessageSent?: () => void;
 
     /** Selection chips lifted from the editor. Same shape as before. */
-    focusItems?: FocusItem[];
+    focusItems?: Focus[];
     onRemoveFocusItem?: (id: string) => void;
 
     /**
@@ -323,6 +325,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         messages: aiMessages,
         streamingContent,
         isStreaming,
+        statusLabel,
         loading,
         initializing,
         hasMore,
@@ -333,6 +336,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         renameThread,
         deleteThread,
         refreshThreads,
+        stopStreaming,
     } = useAIChat({
         module,
         contextId,
@@ -415,14 +419,23 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     // conversation has finished initializing, so it lands cleanly in the thread.
     const sentInitialRef = useRef<string | null>(null);
     useEffect(() => {
-        if (!initialMessage) return;
+        // Reset the guard when the queued message is cleared, so the SAME message
+        // text can be auto-sent again later (e.g. the same AI directive applied to
+        // a different element).
+        if (!initialMessage) {
+            sentInitialRef.current = null;
+            return;
+        }
         if (readOnly) return; // locked strategy — never start a new turn
         if (tokensExhausted) return; // out of AI tokens — block shows instead
         if (notReady) return;
         if (sentInitialRef.current === initialMessage) return;
         sentInitialRef.current = initialMessage;
         setStartingConversation(true);
-        sendMessage(initialMessage, undefined, selectedModel, undefined, getLiveContent?.());
+        // Attach the current focus items to the auto-sent message, just like a
+        // manual send does, then clear them.
+        sendMessage(initialMessage, focusItems, selectedModel, undefined, getLiveContent?.());
+        focusItems.forEach((f) => onRemoveFocusItem?.(f.id));
         onInitialMessageSent?.();
     }, [initialMessage, notReady, sendMessage, selectedModel, onInitialMessageSent]);
 
@@ -524,6 +537,8 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
             text: m.content,
             timestamp: m.timestamp,
             control: m.control,
+            focus: m.focus,
+            focusedText: m.focusedText,
             images: m.images && m.images.length > 0
                 ? m.images
                 : m.imageUrl
@@ -567,10 +582,6 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         const trimmed = input.trim();
         if (readOnly || tokensExhausted || isStreaming || busy || uploadingImages) return;
         if (!trimmed && readyImageUrls.length === 0) return;
-        const focusedText =
-            focusItems.length > 0
-                ? focusItems.map((f) => f.contextText ?? f.label).join("\n")
-                : undefined;
         // Starting a brand-new conversation (e.g. from the hero/starter) requires
         // an async createThread round-trip before streaming begins. Flip on the
         // loader now so the user leaves the starter immediately instead of sitting
@@ -580,7 +591,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         if (startingNew) setStartingConversation(true);
         sendMessage(
             trimmed,
-            focusedText,
+            focusItems,
             selectedModel,
             readyImageUrls.length > 0 ? readyImageUrls : undefined,
             getLiveContent?.()
@@ -655,6 +666,23 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         return (
             <View style={[styles.messageRow, isAI ? styles.aiRow : styles.userRow]}>
                 <View style={[styles.messageColumn, isAI ? styles.messageColumnAI : styles.messageColumnUser]}>
+                    {!isAI && item.focus && item.focus.length > 0
+                        ? item.focus.map((f) => (
+                              <View key={f.id} style={styles.refChip}>
+                                  <View style={styles.refAccent} />
+                                  <Text style={styles.refText} numberOfLines={3}>
+                                      {f.focusText}
+                                  </Text>
+                              </View>
+                          ))
+                        : !isAI && !!item.focusedText && (
+                              <View style={styles.refChip}>
+                                  <View style={styles.refAccent} />
+                                  <Text style={styles.refText} numberOfLines={4}>
+                                      {item.focusedText}
+                                  </Text>
+                              </View>
+                          )}
                     {item.images && item.images.length > 0 && (
                         <View style={[styles.imageGrid, isAI ? styles.imageGridAI : styles.imageGridUser]}>
                             {item.images.map((url, idx) => (
@@ -786,19 +814,32 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                             />
                         </View>
                         <TokenMeterBar tokens={tokens} />
-                        <Pressable
-                            style={({ pressed }) => [
-                                styles.sendBtn,
-                                pressed && styles.sendBtnPressed,
-                                !canSend && styles.sendBtnDisabled,
-                            ]}
-                            onPress={handleSend}
-                            disabled={!canSend}
-                            hitSlop={8}
-                            accessibilityLabel="Send message"
-                        >
-                            <FontAwesomeIcon icon={faPaperPlane} size={16} color={colors.onPrimary} />
-                        </Pressable>
+                        {isStreaming ? (
+                            // Mid-generation: the send action becomes a Stop control so
+                            // the user can interrupt and get control back immediately.
+                            <Pressable
+                                style={({ pressed }) => [styles.sendBtn, pressed && styles.sendBtnPressed]}
+                                onPress={stopStreaming}
+                                hitSlop={8}
+                                accessibilityLabel="Stop generating"
+                            >
+                                <FontAwesomeIcon icon={faStop} size={14} color={colors.onPrimary} />
+                            </Pressable>
+                        ) : (
+                            <Pressable
+                                style={({ pressed }) => [
+                                    styles.sendBtn,
+                                    pressed && styles.sendBtnPressed,
+                                    !canSend && styles.sendBtnDisabled,
+                                ]}
+                                onPress={handleSend}
+                                disabled={!canSend}
+                                hitSlop={8}
+                                accessibilityLabel="Send message"
+                            >
+                                <FontAwesomeIcon icon={faPaperPlane} size={16} color={colors.onPrimary} />
+                            </Pressable>
+                        )}
                     </View>
                 </View>
             </View>
@@ -996,17 +1037,22 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                         {!busy && isAITyping && (
                             <View style={[styles.typingRow, splitMode && styles.centered]}>
                                 <View style={styles.typingBubble}>
-                                    <Text style={styles.typingText}>Thinking…</Text>
+                                    {/* Before the first token: show what the AI is
+                                    working on (a tool label pushed by the backend)
+                                    if we have one, else the generic "Thinking…". */}
+                                    <Text style={styles.typingText}>{statusLabel || "Thinking…"}</Text>
                                 </View>
                             </View>
                         )}
 
                         {/* Tokens are already flowing into the streaming bubble; this
-                        slim row makes it obvious the AI hasn't stalled mid-reply. */}
+                        slim row makes it obvious the AI hasn't stalled mid-reply. A
+                        live status label (e.g. "Designing your visual…") takes over
+                        during token-silent tool calls, then reverts to "Generating…". */}
                         {!busy && isStreaming && !!streamingContent && (
                             <View style={[styles.streamingStatus, splitMode && styles.centered]}>
                                 <ActivityIndicator size="small" color={colors.primary} />
-                                <Text style={styles.streamingStatusText}>Generating…</Text>
+                                <Text style={styles.streamingStatusText}>{statusLabel || "Generating…"}</Text>
                             </View>
                         )}
 
@@ -1021,7 +1067,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                                     <View key={item.id} style={styles.focusChip}>
                                         <View style={styles.focusChipAccent} />
                                         <Text style={styles.focusChipText} numberOfLines={1}>
-                                            {item.label}
+                                            {item.focusText}
                                         </Text>
                                         {onRemoveFocusItem && (
                                             <Pressable
@@ -1111,7 +1157,7 @@ function useStyles(
                 },
                 historyPaneTitle: {
                     flex: 1,
-                    fontSize: 15,
+                    fontSize: fs(15),
                     fontWeight: "700",
                     color: colors.text,
                     letterSpacing: -0.2,
@@ -1149,15 +1195,15 @@ function useStyles(
                     marginBottom: 2,
                 },
                 heroTitle: {
-                    fontSize: isCompact ? 20 : 26,
+                    fontSize: fs(isCompact ? 20 : 26),
                     fontWeight: "700",
                     color: colors.text,
                     textAlign: "center",
                     letterSpacing: -0.4,
                 },
                 heroSubtitle: {
-                    fontSize: 14,
-                    lineHeight: 20,
+                    fontSize: fs(14),
+                    lineHeight: lh(20),
                     color: colors.textSecondary,
                     textAlign: "center",
                     maxWidth: 480,
@@ -1184,7 +1230,7 @@ function useStyles(
                     elevation: 1,
                 },
                 heroChipPressed: { opacity: 0.7 },
-                heroChipText: { fontSize: 13, fontWeight: "500", color: colors.text },
+                heroChipText: { fontSize: fs(13), fontWeight: "500", color: colors.text },
                 panelHeader: {
                     flexDirection: "row",
                     alignItems: "center",
@@ -1210,7 +1256,7 @@ function useStyles(
                 iconBtnPressed: { backgroundColor: colors.tag },
                 panelHeaderLabel: {
                     flex: 1,
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.text,
                 },
@@ -1234,7 +1280,7 @@ function useStyles(
                     gap: 10,
                     padding: 24,
                 },
-                initText: { color: colors.textSecondary, fontSize: 13 },
+                initText: { color: colors.textSecondary, fontSize: fs(13) },
                 messageRow: {
                     flexDirection: "row",
                     alignItems: "flex-start",
@@ -1269,9 +1315,35 @@ function useStyles(
                     shadowOpacity: 0.3,
                     elevation: 3,
                 },
-                bubbleText: { fontSize: isCompact ? 13 : 14, lineHeight: isCompact ? 19 : 21 },
+                // `isCompact` shrinks the type for the DOCKED desktop panel, which is
+                // only ~380pt wide. On a phone the panel is the whole screen, so the
+                // shrink buys nothing and just costs legibility — take the full size
+                // there and let fs() lift it to messaging-app scale.
+                bubbleText: {
+                    fontSize: fs(isCompact && !IS_MOBILE_TYPE ? 13 : 14),
+                    lineHeight: lh(isCompact && !IS_MOBILE_TYPE ? 19 : 21),
+                },
                 aiText: { color: colors.text },
                 userText: { color: colors.onPrimary },
+                // Reference/context attached to a user message (from a focus chip).
+                refChip: {
+                    flexDirection: "row",
+                    overflow: "hidden",
+                    borderRadius: 8,
+                    backgroundColor: colors.tag,
+                    maxWidth: "100%",
+                    marginBottom: 4,
+                },
+                refAccent: { width: 3, backgroundColor: colors.primary },
+                refText: {
+                    flex: 1,
+                    paddingHorizontal: 8,
+                    paddingVertical: 5,
+                    fontSize: fs(11),
+                    lineHeight: lh(15),
+                    color: colors.textSecondary,
+                    fontStyle: "italic",
+                },
                 typingRow: {
                     flexDirection: "row",
                     alignItems: "flex-start",
@@ -1291,7 +1363,7 @@ function useStyles(
                     shadowOpacity: 0.06,
                     elevation: 2,
                 },
-                typingText: { fontSize: 13, color: colors.textSecondary, fontStyle: "italic" },
+                typingText: { fontSize: fs(13), color: colors.textSecondary, fontStyle: "italic" },
                 streamingStatus: {
                     flexDirection: "row",
                     alignItems: "center",
@@ -1300,7 +1372,7 @@ function useStyles(
                     paddingBottom: 8,
                 },
                 streamingStatusText: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     color: colors.textSecondary,
                     fontStyle: "italic",
                 },
@@ -1323,7 +1395,7 @@ function useStyles(
                 focusChipAccent: { width: 4, alignSelf: "stretch", backgroundColor: colors.primary },
                 focusChipText: {
                     flex: 1,
-                    fontSize: 12,
+                    fontSize: fs(12),
                     color: colors.textSecondary,
                     fontStyle: "italic",
                     paddingHorizontal: 8,
@@ -1362,7 +1434,7 @@ function useStyles(
                     paddingHorizontal: 12,
                     paddingTop: 8,
                     paddingBottom: 6,
-                    fontSize: 15,
+                    fontSize: fs(15),
                     textAlignVertical: "top",
                     // No blue focus ring on web — the composer surface already
                     // signals the active field.
@@ -1420,7 +1492,7 @@ function useStyles(
                     justifyContent: "center",
                     backgroundColor: colors.backdropStrong,
                 },
-                attachFailedText: { color: colors.onPrimary, fontWeight: "800", fontSize: 16 },
+                attachFailedText: { color: colors.onPrimary, fontWeight: "800", fontSize: fs(16) },
                 attachRemove: {
                     position: "absolute",
                     top: 3,
@@ -1489,10 +1561,10 @@ function useStyles(
                 },
                 readOnlyFooterText: {
                     flex: 1,
-                    fontSize: 12.5,
+                    fontSize: fs(12.5),
                     fontWeight: "600",
                     color: colors.textSecondary,
-                    lineHeight: 17,
+                    lineHeight: lh(17),
                 },
             }),
         [colors, isCompact, safeTop, safeBottom, messageAlign]

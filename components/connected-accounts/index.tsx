@@ -154,22 +154,28 @@ const ConnectedAccounts: React.FC = () => {
                                     </View>
 
                                     <View style={styles.connectedInfo}>
-                                        <Text
-                                            style={styles.accountName}
-                                            numberOfLines={1}
-                                        >
-                                            {account.displayName ||
-                                                account.username}
-                                        </Text>
+                                        <View style={styles.nameRow}>
+                                            <Text
+                                                style={styles.accountName}
+                                                numberOfLines={1}
+                                            >
+                                                {account.displayName ||
+                                                    account.username}
+                                            </Text>
+                                            {account.accountType === "organization" && (
+                                                <Text style={styles.pageBadge}>Page</Text>
+                                            )}
+                                        </View>
                                         <Text
                                             style={styles.accountHandle}
                                             numberOfLines={1}
                                         >
-                                            {/* Facebook's `username` is the numeric Page id and
-                                                LinkedIn's is the OpenID `sub` member id — neither is a
-                                                handle, so don't surface it; show just the platform. */}
+                                            {/* Facebook's `username` is the numeric Page id, LinkedIn's
+                                                is the OpenID `sub` member id, and a LinkedIn Page's is the
+                                                org id — none is a handle, so show just the platform. */}
                                             {account.platform === "facebook" ||
-                                            account.platform === "linkedin"
+                                            account.platform === "linkedin" ||
+                                            account.platform === "linkedin_page"
                                                 ? (meta?.label ?? account.platform)
                                                 : `@${account.username} · ${meta?.label ?? account.platform}`}
                                         </Text>
@@ -403,10 +409,26 @@ function createStyles(colors: ReturnType<typeof Colors>) {
             gap: 2,
             minWidth: 0,
         },
+        nameRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+        },
         accountName: {
             fontSize: 15,
             fontWeight: "600",
             color: colors.text,
+            flexShrink: 1,
+        },
+        pageBadge: {
+            fontSize: 10,
+            fontWeight: "700",
+            color: colors.socialLinkedin,
+            backgroundColor: colors.tag,
+            paddingHorizontal: 6,
+            paddingVertical: 2,
+            borderRadius: 6,
+            overflow: "hidden",
         },
         accountHandle: {
             fontSize: 13,

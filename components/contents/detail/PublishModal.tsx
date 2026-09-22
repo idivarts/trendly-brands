@@ -1,15 +1,18 @@
 import { UpgradeInline } from "@/components/billing/EntitlementGate";
 import { ISocialAccount } from "@/contexts/brand-social-context.provider";
-import { ScheduleMode, SocialDestination } from "@/components/contents/types";
+import { PlatformOptions, ScheduleMode, SocialDestination } from "@/components/contents/types";
+import { SOCIAL_PLATFORM_MAP } from "@/constants/Socials";
 import { useEntitlements } from "@/hooks/use-entitlements";
+import { Platform } from "@/shared-libs/firestore/trendly-pro/constants/platform";
 import Colors from "@/shared-uis/constants/Colors";
 import { useBreakpoints } from "@/hooks";
-import { faPaperPlane, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faLayerGroup, faPaperPlane, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import ScheduleBar from "./ScheduleBar";
+import { fs, lh } from "@/constants/Typography";
 
 // ─── PublishModal ─────────────────────────────────────────────────────────────
 // Wraps the Send-to / When controls (ScheduleBar) in a focused modal opened from
@@ -21,6 +24,8 @@ export interface PublishModalProps {
     socialAccounts: ISocialAccount[];
     destinations: SocialDestination[];
     onDestinationsChange: (next: SocialDestination[]) => void;
+    platformOptions: PlatformOptions;
+    onPlatformOptionsChange: (next: PlatformOptions) => void;
     formattedDate: string;
     dateValue: Date;
     onDateChange: (next: Date) => void;
@@ -28,17 +33,32 @@ export interface PublishModalProps {
     onTimeChange: (t: string) => void;
     onPublish: (mode: ScheduleMode) => void;
     publishing: boolean;
+    /** Platforms that have a per-platform variation (publish from it, not Generic). */
+    variationPlatforms?: Platform[];
+    /** Platforms whose option fields are edited elsewhere — hidden in ScheduleBar. */
+    hideOptionPlatforms?: string[];
 }
 
 const PublishModal: React.FC<PublishModalProps> = ({
     visible,
     onClose,
+    variationPlatforms = [],
+    hideOptionPlatforms = [],
     ...scheduleProps
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
     const styles = useStyles(colors, xl);
+
+    // Which selected destinations will post from their own variation.
+    const variationLabels = useMemo(() => {
+        const set = new Set(variationPlatforms);
+        return scheduleProps.destinations
+            .filter((d) => set.has(d.platform))
+            .map((d) => SOCIAL_PLATFORM_MAP[d.platform]?.label ?? d.platform)
+            .filter((v, i, a) => a.indexOf(v) === i);
+    }, [variationPlatforms, scheduleProps.destinations]);
     // Posting cap is a free-plan entitlement (maxPostsPerMonth; -1 = unlimited).
     // Surface it here pre-emptively. NOTE: precise "X of N left" + hard blocking
     // needs a backend posting-meter (like the token wallet) — not yet built.
@@ -84,7 +104,16 @@ const PublishModal: React.FC<PublishModalProps> = ({
                                 />
                             </View>
                         ) : null}
-                        <ScheduleBar embedded {...scheduleProps} />
+                        {variationLabels.length > 0 ? (
+                            <View style={styles.variationNote}>
+                                <FontAwesomeIcon icon={faLayerGroup} size={12} color={colors.primary} />
+                                <Text style={styles.variationNoteText}>
+                                    {variationLabels.join(", ")} will post from {variationLabels.length > 1 ? "their" : "its"} own
+                                    variation. Other platforms use the Generic content.
+                                </Text>
+                            </View>
+                        ) : null}
+                        <ScheduleBar embedded {...scheduleProps} hideOptionPlatforms={hideOptionPlatforms} />
                     </ScrollView>
                 </View>
             </View>
@@ -134,12 +163,12 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             flex: 1,
         },
         title: {
-            fontSize: 16,
+            fontSize: fs(16),
             fontWeight: "700",
             color: colors.text,
         },
         subtitle: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "600",
             color: colors.textSecondary,
             marginTop: 1,
@@ -159,6 +188,21 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
         },
         gateRow: {
             marginBottom: 12,
+        },
+        variationNote: {
+            flexDirection: "row",
+            alignItems: "flex-start",
+            gap: 8,
+            padding: 12,
+            borderRadius: 10,
+            backgroundColor: colors.aliceBlue,
+            marginBottom: 12,
+        },
+        variationNoteText: {
+            flex: 1,
+            fontSize: fs(12),
+            lineHeight: lh(17),
+            color: colors.textSecondary,
         },
         pressed: {
             opacity: 0.72,

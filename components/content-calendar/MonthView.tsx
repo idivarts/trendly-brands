@@ -28,6 +28,7 @@ import {
 import CalendarHeader from "./CalendarHeader";
 import ContentItemChip from "./ContentItemChip";
 import { CalendarItem, CalendarView } from "./types";
+import { fs } from "@/constants/Typography";
 
 interface MonthViewProps {
     year: number;
@@ -519,7 +520,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 dayLabelText: {
                     flex: 1,
                     textAlign: "center",
-                    fontSize: 12,
+                    fontSize: fs(12),
                     fontWeight: "600",
                     color: colors.textSecondary,
                 },
@@ -577,7 +578,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     elevation: 8,
                 },
                 dayNumber: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.text,
                     marginBottom: 4,
@@ -596,7 +597,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     opacity: 0.6,
                 },
                 moreText: {
-                    fontSize: 11,
+                    fontSize: fs(11),
                     fontWeight: "600",
                     color: colors.primary,
                 },
@@ -624,7 +625,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     paddingHorizontal: 2,
                 },
                 popoverTitle: {
-                    fontSize: 14,
+                    fontSize: fs(14),
                     fontWeight: "700",
                     color: colors.text,
                 },
@@ -638,7 +639,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     justifyContent: "center",
                 },
                 popoverCountText: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     fontWeight: "700",
                     color: colors.textSecondary,
                 },

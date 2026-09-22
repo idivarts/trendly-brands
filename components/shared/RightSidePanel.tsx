@@ -43,6 +43,7 @@ import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import PanelResizeHandle from "./PanelResizeHandle";
+import { fs } from "@/constants/Typography";
 
 export type RightPanelMode = "none" | "comments" | "chat" | "preview";
 
@@ -220,7 +221,7 @@ const railStyles = StyleSheet.create({
         zIndex: 100,
     },
     tooltipText: {
-        fontSize: 12,
+        fontSize: fs(12),
         fontWeight: "500",
     },
 });

@@ -30,6 +30,7 @@ import {
     View,
 } from "react-native";
 import { CalendarItem, CONTENT_TYPE_LABELS, ContentType } from "./types";
+import { fs } from "@/constants/Typography";
 
 /** Extra (non-CalendarItem) fields the modal collects for a new content piece. */
 export interface AddContentExtras {
@@ -553,7 +554,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     elevation: 2,
                 },
                 headerTitle: {
-                    fontSize: 17,
+                    fontSize: fs(17),
                     fontWeight: "700",
                     color: colors.text,
                 },
@@ -570,7 +571,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     gap: 4,
                 },
                 label: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.textSecondary,
                     marginBottom: 6,
@@ -584,7 +585,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     marginBottom: 6,
                 },
                 labelInline: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.textSecondary,
                 },
@@ -593,7 +594,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 },
                 selectAllHint: {
                     marginLeft: "auto",
-                    fontSize: 11,
+                    fontSize: fs(11),
                     fontWeight: "500",
                     color: colors.textSecondary,
                     opacity: 0.8,
@@ -613,12 +614,12 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     elevation: 1,
                 },
                 dateText: {
-                    fontSize: 14,
+                    fontSize: fs(14),
                     color: colors.text,
                     fontWeight: "500",
                 },
                 datePlaceholder: {
-                    fontSize: 14,
+                    fontSize: fs(14),
                     color: colors.textSecondary,
                     fontWeight: "500",
                 },
@@ -650,7 +651,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     opacity: 0.6,
                 },
                 addDateLinkText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.textSecondary,
                 },
@@ -679,12 +680,12 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     elevation: 3,
                 },
                 weekPillDow: {
-                    fontSize: 11,
+                    fontSize: fs(11),
                     fontWeight: "600",
                     color: colors.textSecondary,
                 },
                 weekPillNum: {
-                    fontSize: 15,
+                    fontSize: fs(15),
                     fontWeight: "700",
                     color: colors.text,
                     marginTop: 2,
@@ -738,13 +739,13 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     opacity: 0.35,
                 },
                 helperText: {
-                    fontSize: 11,
+                    fontSize: fs(11),
                     color: colors.textSecondary,
                     marginBottom: 8,
                     marginTop: -2,
                 },
                 typeChipText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.textSecondary,
                 },
@@ -756,7 +757,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     borderRadius: 10,
                     paddingHorizontal: 14,
                     paddingVertical: 12,
-                    fontSize: 14,
+                    fontSize: fs(14),
                     color: colors.text,
                     shadowColor: "#000",
                     shadowOffset: { width: 0, height: 1 },
@@ -786,7 +787,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     backgroundColor: colors.tag,
                 },
                 cancelBtnText: {
-                    fontSize: 14,
+                    fontSize: fs(14),
                     fontWeight: "600",
                     color: colors.textSecondary,
                 },
@@ -808,7 +809,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     elevation: 0,
                 },
                 addBtnText: {
-                    fontSize: 14,
+                    fontSize: fs(14),
                     fontWeight: "700",
                     color: colors.onPrimary,
                 },

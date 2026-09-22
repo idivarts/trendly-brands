@@ -18,6 +18,7 @@ import {
 import { GUIDE_TOUR_CONTENT_WEB } from "@/components/guide-tour/guide-tour-config";
 import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
+import { useSubscribeNudge } from "@/contexts/subscribe-nudge-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { useContents } from "@/hooks/use-contents";
 import { useFeatureTour } from "@/hooks/use-feature-tour";
@@ -30,6 +31,7 @@ import { useTheme } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
+import { fs } from "@/constants/Typography";
 
 const ContentsScreen = () => {
     const theme = useTheme();
@@ -40,6 +42,7 @@ const ContentsScreen = () => {
     useSidebarParam();
 
     const { items, addContent, updateContent } = useContents();
+    const { markAhaMoment } = useSubscribeNudge();
     // Default to the Board on desktop (xl); mobile is always forced to Gallery
     // via effectiveView below regardless of this initial value.
     const [view, setView] = useState<ContentView>("board");
@@ -95,6 +98,7 @@ const ContentsScreen = () => {
     ) => {
         const newId = await addContent(calItem, { platforms: extras.platforms });
         if (!newId) return;
+        markAhaMoment("content_created");
         router.push({
             pathname: "/(main)/(drawer)/(tabs)/(content)/contents/[contentId]" as any,
             params: { contentId: newId },
@@ -229,7 +233,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     opacity: 0.75,
                 },
                 addBtnText: {
-                    fontSize: 13,
+                    fontSize: fs(13),
                     fontWeight: "600",
                     color: colors.onPrimary,
                 },

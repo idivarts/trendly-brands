@@ -87,7 +87,7 @@ function moveCardBetweenColumns(
       cards.splice(index, 0, {
         ...movingCard,
         crmStatus: toColumnId,
-      });
+      } as (typeof cards)[number]);
 
       return { ...col, cards };
     }

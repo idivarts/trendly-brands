@@ -27,12 +27,12 @@ export const MENU_ITEMS: { id: string, icon: any, title: string, href: Href }[] 
         title: "Contracts",
         href: "/contracts",
     },
-    ...(Platform.OS == "web" ? [{
+    {
         id: "3",
         icon: faCreditCard,
         title: "Billing",
         href: "/billing" as Href,
-    }] : []),
+    },
     ...(Platform.OS != "web" ? [{
         id: "4",
         icon: faGears,

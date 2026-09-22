@@ -15,6 +15,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { Image } from "expo-image";
+import { router } from "expo-router";
 import React, { useMemo, useRef, useState } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Menu } from "react-native-paper";
@@ -22,6 +23,7 @@ import { Menu } from "react-native-paper";
 import { UpgradeInline } from "@/components/billing/EntitlementGate";
 import { Text } from "@/components/theme/Themed";
 import { useBreakpoints } from "@/hooks";
+import { useSubscribeNudge } from "@/contexts/subscribe-nudge-context.provider";
 import { useEntitlements } from "@/hooks/use-entitlements";
 import Colors from "@/shared-uis/constants/Colors";
 import ChannelAvatar from "./ChannelAvatar";
@@ -76,6 +78,7 @@ const ThreadView: React.FC<Props> = ({
         setFailedMedia((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
 
     const { inboxReadOnly } = useEntitlements();
+    const { maybeNudge } = useSubscribeNudge();
     const isComment = conversation.kind === "comment";
     const replyable = canReply(conversation);
     const windowLeft = replyWindowLeft(conversation);
@@ -426,7 +429,14 @@ const ThreadView: React.FC<Props> = ({
             {/* Composer — view-only on the free plan (replying in the Combined
                 Social Inbox is a paid feature); else the normal 24h-window composer. */}
             {inboxReadOnly ? (
-                <UpgradeInline message="Replying is a Pro feature — upgrade to reply to comments & DMs." />
+                <UpgradeInline
+                    message="Replying is a Pro feature — upgrade to reply to comments & DMs."
+                    // Real reply intent: nudge in place, and only fall back to
+                    // the billing page when the nudge is suppressed.
+                    onPress={() => {
+                        if (!maybeNudge("inbox_read_only")) router.push("/billing");
+                    }}
+                />
             ) : (
                 <MessageComposer
                     enabled={replyable}

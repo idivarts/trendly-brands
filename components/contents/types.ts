@@ -1,7 +1,9 @@
 import { CalendarItem } from "@/components/content-calendar/types";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { Platform } from "@/shared-libs/firestore/trendly-pro/constants/platform";
-import { IImageGeneration } from "@/shared-libs/firestore/trendly-pro/models/contents";
+import { IContentPublishResult, IImageGeneration, IPlatformOptions } from "@/shared-libs/firestore/trendly-pro/models/contents";
+import { IContentAudio, IContentDesignRef } from "@/shared-libs/firestore/trendly-pro/models/design";
+import { IContentVariation } from "@/shared-libs/firestore/trendly-pro/models/variations";
 import Colors from "@/shared-uis/constants/Colors";
 
 /**
@@ -16,8 +18,35 @@ export type ContentStatus =
     | "review_pending"
     | "approved"
     | "scheduled"
+    | "publishing"
     | "posted"
+    | "partially_failed"
+    | "failed"
     | "rejected";
+
+/** Backend-driven publish-pipeline statuses (not manually settable). */
+export const PUBLISH_PIPELINE_STATUSES: ContentStatus[] = [
+    "scheduled",
+    "publishing",
+    "posted",
+    "partially_failed",
+    "failed",
+];
+
+/**
+ * Statuses that lock the editor (content is in-flight or already (partly) live).
+ * `failed` is intentionally NOT locked — with nothing published, the user can fix
+ * the content and publish again.
+ */
+export const LOCKED_CONTENT_STATUSES: ContentStatus[] = [
+    "scheduled",
+    "publishing",
+    "posted",
+    "partially_failed",
+];
+
+export const isLockedStatus = (s: ContentStatus): boolean =>
+    LOCKED_CONTENT_STATUSES.includes(s);
 
 /** A single uploaded or AI-generated media asset attached to a content piece. */
 export interface MediaAsset {
@@ -44,10 +73,32 @@ export interface SocialDestination {
 
 export type ScheduleMode = "now" | "scheduled";
 
+/**
+ * Per-platform publishing extras that don't fit the shared caption/attachment
+ * model. The full, namespaced shape lives in the shared Firestore model
+ * ({@link IPlatformOptions}); this is just the UI-facing alias so existing
+ * imports from `@/components/contents/types` keep working.
+ */
+export type PlatformOptions = IPlatformOptions;
+
+/**
+ * A per-platform content variation (UI alias of the Firestore model). The
+ * platform field doubles as the Firestore document ID.
+ */
+export type ContentVariation = IContentVariation;
+
 export interface ContentItem extends CalendarItem {
     status: ContentStatus;
     /** Platforms this content is planned for (publishing intent). Mirrors `IContent.platforms`. */
     platforms: Platform[];
+    /** Strategy this content was generated from, if any. Mirrors `IContent.strategyId`. */
+    strategyId?: string;
+    /**
+     * AI-write-only content pillar tags. Only ever set by AI generation
+     * (push-to-calendar or the calendar chat's create_content tool) — never
+     * exposed as an editable field in any UI. Mirrors `IContent.contentPillars`.
+     */
+    contentPillars?: string[];
     caption?: string;
     hashtags?: string;
     timeOfPosting?: string; // "HH:MM"
@@ -57,8 +108,14 @@ export interface ContentItem extends CalendarItem {
     attachments?: Attachment[];
     /** Live state of a backend-driven AI image-generation job, if any. */
     imageGeneration?: IImageGeneration;
+    /** AI Studio: how the media was produced + the current design pointer + audio. */
+    source?: "ai" | "upload" | "canva";
+    designRef?: IContentDesignRef;
+    audio?: IContentAudio;
     /** Target connected accounts for publish / schedule (Phase 4). */
     destinations?: SocialDestination[];
+    /** Per-platform publishing extras (YouTube title/visibility, Reddit subreddit). */
+    platformOptions?: PlatformOptions;
     /** Publish immediately or at `scheduledAt`. */
     scheduleMode?: ScheduleMode;
     /** Epoch ms when a scheduled post should go live. */
@@ -71,6 +128,12 @@ export interface ContentItem extends CalendarItem {
     publishedIds?: Record<string, string>;
     /** Permalink to the live post once posted. Mirrors `IContent.postedUrl`. */
     postedUrl?: string;
+    /**
+     * Per-destination publish outcome (in-flight / published / failed), one entry
+     * per targeted social. Drives the per-social publish status panel. Mirrors
+     * `IContent.publishResults`.
+     */
+    publishResults?: IContentPublishResult[];
     isArchived: boolean;
     createdAt: string;
 }
@@ -81,7 +144,10 @@ export const CONTENT_STATUS_LABELS: Record<ContentStatus, string> = {
     review_pending: "Review Pending",
     approved: "Approved",
     scheduled: "Scheduled",
-    posted: "Posted",
+    publishing: "Publishing",
+    posted: "Published",
+    partially_failed: "Partially published",
+    failed: "Publish failed",
     rejected: "Rejected",
 };
 
@@ -92,7 +158,10 @@ export const CONTENT_STATUS_ORDER: ContentStatus[] = [
     "review_pending",
     "approved",
     "scheduled",
+    "publishing",
     "posted",
+    "partially_failed",
+    "failed",
     "rejected",
 ];
 
@@ -137,8 +206,16 @@ export function contentStatusColors(
             return { fg: colors.statusApprovedFg, bg: colors.statusApprovedBg };
         case "scheduled":
             return { fg: colors.statusScheduledFg, bg: colors.statusScheduledBg };
+        case "publishing":
+            // In-flight: reuse the blue "scheduled" tokens (pipeline / active).
+            return { fg: colors.statusScheduledFg, bg: colors.statusScheduledBg };
         case "posted":
             return { fg: colors.statusPostedFg, bg: colors.statusPostedBg };
+        case "partially_failed":
+            // Amber: partly live, needs attention — reuse the review tokens.
+            return { fg: colors.statusReviewFg, bg: colors.statusReviewBg };
+        case "failed":
+            return { fg: colors.statusRejectedFg, bg: colors.statusRejectedBg };
         case "rejected":
             return { fg: colors.statusRejectedFg, bg: colors.statusRejectedBg };
         case "draft":

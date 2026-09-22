@@ -15,7 +15,7 @@ export default function EmptyNoDatabaseSelected({ setSelectedDb }: { setSelected
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => makeStyles(colors), [colors]);
-    const gradientColors = [colors.surface || colors.tag, colors.tag || colors.card];
+    const gradientColors: readonly [string, string] = [colors.surface || colors.tag, colors.tag || colors.card];
 
     return (
         <View style={styles.container}>

@@ -1,6 +1,7 @@
 import { canAccessNav } from "@/constants/Access";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { useOrganizationContext } from "@/contexts/organization-context.provider";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 import { truncateText } from "@/utils/text";
@@ -25,6 +26,7 @@ import {
     faGem,
     faHandshake,
     faLock,
+    faPalette,
     faPenToSquare,
     faPeopleGroup,
     faShareNodes,
@@ -94,8 +96,23 @@ const Menu = () => {
     const { xl } = useBreakpoints();
     const { selectedBrand, hasFeature, hasPrivilege, isIndiaBased } = useBrandContext();
     const { manager } = useAuthContext();
+    const { organizations } = useOrganizationContext();
 
     const [activeHub, setActiveHub] = useState<HubKey | null>(null);
+
+    // The org the active brand belongs to (used when the user has a single org).
+    const currentOrg = useMemo(
+        () => organizations.find((o) => o.id === selectedBrand?.organizationId),
+        [organizations, selectedBrand?.organizationId]
+    );
+    // Only surface the org *listing* when the user actually belongs to >1 org.
+    // With a single org, tapping the row jumps straight to that org's detail.
+    const hasMultipleOrgs = organizations.length > 1;
+    const singleOrgId = (currentOrg ?? organizations[0])?.id;
+    const orgRowTarget: Href =
+        hasMultipleOrgs || !singleOrgId
+            ? "/organizations"
+            : { pathname: "/organizations/[orgId]", params: { orgId: singleOrgId } };
 
     const hubs = useMemo<Hub[]>(() => {
         // Grow mirrors the web "Influencer Led Growth" sub-drawer plus the
@@ -161,11 +178,13 @@ const Menu = () => {
                 {
                     items: [
                         { id: "brand-profile", icon: faAddressCard, title: "Brand Profile", href: "/brand-profile" },
+                        { id: "design-system", icon: faPalette, title: "Design System", href: "/design-system" },
                         { id: "connected-accounts", icon: faShareNodes, title: "Connected Accounts", href: "/connected-accounts" },
                         { id: "members", icon: faUsers, title: "Members", href: "/members" },
-                        ...(Platform.OS === "web"
-                            ? [{ id: "billing", icon: faCreditCard, title: "Billing", href: "/billing" as Href }]
-                            : [{ id: "settings", icon: faGears, title: "Settings", href: "/settings" as Href }]),
+                        { id: "billing", icon: faCreditCard, title: "Billing", href: "/billing" as Href },
+                        ...(Platform.OS !== "web"
+                            ? [{ id: "settings", icon: faGears, title: "Settings", href: "/settings" as Href }]
+                            : []),
                     ],
                 },
             ],
@@ -362,15 +381,16 @@ const Menu = () => {
                 ))}
             </View>
 
-            {/* Organizations row */}
+            {/* Organization row — links to the listing only when the user has
+                more than one org; otherwise jumps straight to their org. */}
             <Pressable
-                onPress={() => navigate("/organizations")}
+                onPress={() => navigate(orgRowTarget)}
                 style={({ pressed }) => [
                     styles.orgRow,
                     pressed && styles.orgRowPressed,
                 ]}
                 accessibilityRole="button"
-                accessibilityLabel="Organizations"
+                accessibilityLabel={hasMultipleOrgs ? "Organizations" : "Organization"}
             >
                 <View style={styles.orgIcon}>
                     <FontAwesomeIcon
@@ -380,9 +400,13 @@ const Menu = () => {
                     />
                 </View>
                 <View style={styles.orgText}>
-                    <Text style={styles.orgTitle}>Organizations</Text>
+                    <Text style={styles.orgTitle}>
+                        {hasMultipleOrgs ? "Organizations" : "Organization"}
+                    </Text>
                     <Text style={styles.orgSubtitle} numberOfLines={1}>
-                        Switch or manage your organizations
+                        {hasMultipleOrgs
+                            ? "Switch or manage your organizations"
+                            : currentOrg?.name ?? "Manage your organization"}
                     </Text>
                 </View>
                 <FontAwesomeIcon

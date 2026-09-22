@@ -60,14 +60,21 @@ function toContentItem(id: string, data: IContent): ContentItem {
         imagePrompt: data.imagePrompt,
         attachments: data.attachments,
         imageGeneration: data.imageGeneration,
+        source: data.source,
+        designRef: data.designRef,
+        audio: data.audio,
         destinations: data.destinations as SocialDestination[] | undefined,
+        platformOptions: data.platformOptions as ContentItem["platformOptions"],
         scheduleMode: data.scheduleMode,
         scheduledAt: data.scheduledAt,
         publishedIds: data.publishedIds,
         postedUrl: data.postedUrl,
+        publishResults: data.publishResults,
         isArchived: data.isArchived ?? false,
         commentCount: data.commentCount ?? 0,
         createdAt: epochToIsoDate(data.createdAt),
+        strategyId: data.strategyId,
+        contentPillars: data.contentPillars,
     };
 }
 
@@ -115,6 +122,7 @@ function toIContent(
     if (extra.imagePrompt !== undefined) doc.imagePrompt = extra.imagePrompt;
     if (extra.attachments !== undefined) doc.attachments = extra.attachments;
     if (extra.destinations !== undefined) doc.destinations = extra.destinations;
+    if (extra.platformOptions !== undefined) doc.platformOptions = extra.platformOptions;
     if (extra.scheduleMode !== undefined) doc.scheduleMode = extra.scheduleMode;
     if (extra.scheduledAt !== undefined) doc.scheduledAt = extra.scheduledAt;
 

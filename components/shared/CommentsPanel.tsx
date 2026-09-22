@@ -44,6 +44,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useBreakpoints } from "@/hooks";
 import { useBrandMembers } from "@/hooks/use-brand-members";
 import MentionInput from "@/components/shared/MentionInput";
+import { fbox, fs, lh } from "@/constants/Typography";
 
 // ─── Public Types ─────────────────────────────────────────────────────────────
 
@@ -62,6 +63,12 @@ export interface PanelComment {
     resolved?: boolean;
     /** Strategy inline snippet — shown as a quoted block above the text. */
     snippet?: string;
+    /**
+     * The structured target this comment is anchored to (a design element, a
+     * strategy passage, …). Lets "Send to AI" build a comment focus that inherits
+     * the underlying reference. See types/focus.ts.
+     */
+    focusArea?: import("@/types/focus").FocusArea;
 }
 
 export interface SharedCommentsPanelProps {
@@ -492,27 +499,28 @@ function panelStyles(
             marginRight: 2,
         },
         backBtnText: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "600",
             color: colors.primary,
         },
         title: {
             flex: 1,
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.text,
         },
         badge: {
-            minWidth: 18,
-            height: 18,
-            borderRadius: 9,
+            // Box tracks the label: a bumped mobile digit clips an 18pt circle.
+            minWidth: fbox(18),
+            height: fbox(18),
+            borderRadius: fbox(18) / 2,
             paddingHorizontal: 4,
             backgroundColor: colors.primary,
             alignItems: "center",
             justifyContent: "center",
         },
         badgeText: {
-            fontSize: 10,
+            fontSize: fs(10),
             fontWeight: "700",
             color: colors.onPrimary,
         },
@@ -523,11 +531,11 @@ function panelStyles(
             gap: 10,
         },
         emptyText: {
-            fontSize: 13,
+            fontSize: fs(13),
             color: colors.textSecondary,
             textAlign: "center",
             paddingVertical: 24,
-            lineHeight: 20,
+            lineHeight: lh(20),
         },
         replyBanner: {
             flexDirection: "row",
@@ -538,7 +546,7 @@ function panelStyles(
             backgroundColor: colors.aliceBlue,
         },
         replyBannerText: {
-            fontSize: 12,
+            fontSize: fs(12),
             color: colors.primary,
             fontWeight: "600",
         },
@@ -565,7 +573,7 @@ function panelStyles(
             borderRadius: 10,
             paddingHorizontal: 12,
             paddingVertical: 9,
-            fontSize: 13,
+            fontSize: fs(13),
             color: colors.text,
             maxHeight: 100,
             shadowColor: "#000",
@@ -590,7 +598,7 @@ function panelStyles(
         },
         sendBtnDisabled: { opacity: 0.4, shadowOpacity: 0, elevation: 0 },
         sendBtnText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "700",
             color: colors.onPrimary,
         },
@@ -627,10 +635,10 @@ function bubbleStyles(colors: ReturnType<typeof Colors>) {
         },
         snippetText: {
             flex: 1,
-            fontSize: 11,
+            fontSize: fs(11),
             color: colors.textSecondary,
             fontStyle: "italic",
-            lineHeight: 16,
+            lineHeight: lh(16),
             paddingLeft: 8,
             paddingVertical: 6,
         },
@@ -647,20 +655,20 @@ function bubbleStyles(colors: ReturnType<typeof Colors>) {
             alignItems: "center",
             justifyContent: "center",
         },
-        avatarSmall: { width: 18, height: 18, borderRadius: 9 },
+        avatarSmall: { width: fbox(18), height: fbox(18), borderRadius: fbox(18) / 2 },
         avatarText: {
-            fontSize: 10,
+            fontSize: fs(10),
             fontWeight: "700",
             color: colors.primary,
         },
-        avatarTextSmall: { fontSize: 9 },
+        avatarTextSmall: { fontSize: fs(9) },
         authorName: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "600",
             color: colors.text,
         },
         timestamp: {
-            fontSize: 11,
+            fontSize: fs(11),
             color: colors.textSecondary,
             marginLeft: "auto",
         },
@@ -671,14 +679,14 @@ function bubbleStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.aliceBlue,
         },
         resolvedText: {
-            fontSize: 10,
+            fontSize: fs(10),
             fontWeight: "600",
             color: colors.primary,
         },
         commentText: {
-            fontSize: 13,
+            fontSize: fs(13),
             color: colors.text,
-            lineHeight: 18,
+            lineHeight: lh(18),
         },
         actionsRow: {
             flexDirection: "row",
@@ -691,7 +699,7 @@ function bubbleStyles(colors: ReturnType<typeof Colors>) {
             gap: 4,
         },
         actionText: {
-            fontSize: 11,
+            fontSize: fs(11),
             color: colors.textSecondary,
         },
         actionTextActive: { color: colors.primary },

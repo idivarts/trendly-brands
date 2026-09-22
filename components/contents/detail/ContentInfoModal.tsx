@@ -12,7 +12,7 @@ import {
 import { Platform } from "@/shared-libs/firestore/trendly-pro/constants/platform";
 import Colors from "@/shared-uis/constants/Colors";
 import { useBreakpoints } from "@/hooks";
-import { faCircleInfo, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faCircleInfo, faLayerGroup, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
@@ -25,6 +25,7 @@ import {
     TextInput,
     View,
 } from "react-native";
+import { fs, lh } from "@/constants/Typography";
 
 // ─── ContentInfoModal ─────────────────────────────────────────────────────────
 // Title, idea/vision and status live here instead of cluttering the page, so the
@@ -48,6 +49,14 @@ export interface ContentInfoModalProps {
     onClose: () => void;
     /** When true, status/title/idea/platforms are locked (content is scheduled or posted). */
     readOnly?: boolean;
+    /** AI-write-only content pillar tags, shown read-only when present. Never editable here. */
+    contentPillars?: string[];
+    /** Display name of the linked strategy, resolved by the caller (if `strategyId` is set). */
+    strategyName?: string;
+    /** Id of the strategy this content was generated from, if any. */
+    strategyId?: string;
+    /** Navigate to the linked strategy (only rendered when `strategyId` is set). */
+    onOpenStrategy?: (strategyId: string) => void;
 }
 
 const ContentInfoModal: React.FC<ContentInfoModalProps> = ({
@@ -64,6 +73,10 @@ const ContentInfoModal: React.FC<ContentInfoModalProps> = ({
     onChangePlatforms,
     onClose,
     readOnly = false,
+    contentPillars,
+    strategyName,
+    strategyId,
+    onOpenStrategy,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -276,6 +289,42 @@ const ContentInfoModal: React.FC<ContentInfoModalProps> = ({
                             accessibilityLabel="Idea or vision"
                             aria-labelledby="ci-idea"
                         />
+
+                        {!!contentPillars?.length && (
+                            <>
+                                <Text style={[styles.label, styles.mt18]}>Content Pillars</Text>
+                                <View style={styles.statusRow}>
+                                    {contentPillars.map((pillar) => (
+                                        <View key={pillar} style={[styles.platformChip, styles.platformChipActive]}>
+                                            <Text style={[styles.platformChipText, styles.platformChipTextActive]}>
+                                                {pillar}
+                                            </Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            </>
+                        )}
+
+                        {!!strategyId && (
+                            <>
+                                <Text style={[styles.label, styles.mt18]}>Strategy</Text>
+                                <Pressable
+                                    style={({ pressed }) => [styles.strategyLink, pressed && styles.pressed]}
+                                    onPress={() => {
+                                        onClose();
+                                        onOpenStrategy?.(strategyId);
+                                    }}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`Open strategy${strategyName ? `: ${strategyName}` : ""}`}
+                                >
+                                    <FontAwesomeIcon icon={faLayerGroup} size={13} color={colors.primary} />
+                                    <Text style={styles.strategyLinkText} numberOfLines={1}>
+                                        {strategyName ?? "View strategy"}
+                                    </Text>
+                                    <FontAwesomeIcon icon={faArrowRight} size={11} color={colors.primary} />
+                                </Pressable>
+                            </>
+                        )}
                     </ScrollView>
 
                     <View style={styles.footer}>
@@ -336,12 +385,12 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             flex: 1,
         },
         title: {
-            fontSize: 16,
+            fontSize: fs(16),
             fontWeight: "700",
             color: colors.text,
         },
         subtitle: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "600",
             color: colors.textSecondary,
             marginTop: 1,
@@ -362,7 +411,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             paddingBottom: 8,
         },
         label: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.textSecondary,
             marginBottom: 8,
@@ -377,9 +426,9 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             marginBottom: 8,
         },
         helperText: {
-            fontSize: 12,
+            fontSize: fs(12),
             color: colors.textSecondary,
-            lineHeight: 17,
+            lineHeight: lh(17),
             marginTop: -2,
         },
         platformChip: {
@@ -408,7 +457,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             borderRadius: 5,
         },
         platformChipText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.textSecondary,
         },
@@ -416,10 +465,27 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             color: colors.primary,
             fontWeight: "700",
         },
+        strategyLink: {
+            flexDirection: "row",
+            alignItems: "center",
+            alignSelf: "flex-start",
+            gap: 8,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderRadius: 10,
+            backgroundColor: colors.tag,
+            maxWidth: "100%",
+        },
+        strategyLinkText: {
+            fontSize: fs(13),
+            fontWeight: "600",
+            color: colors.primary,
+            flexShrink: 1,
+        },
         lockNote: {
-            fontSize: 12,
+            fontSize: fs(12),
             color: colors.textSecondary,
-            lineHeight: 17,
+            lineHeight: lh(17),
         },
         statusRow: {
             flexDirection: "row",
@@ -438,14 +504,14 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             elevation: 1,
         },
         statusChipText: {
-            fontSize: 13,
+            fontSize: fs(13),
         },
         input: {
             backgroundColor: colors.tag,
             borderRadius: 10,
             paddingHorizontal: 14,
             paddingVertical: 12,
-            fontSize: 14,
+            fontSize: fs(14),
             color: colors.text,
             minHeight: 48,
             shadowColor: "#000",
@@ -477,7 +543,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
             elevation: 4,
         },
         doneText: {
-            fontSize: 15,
+            fontSize: fs(15),
             fontWeight: "700",
             color: colors.onPrimary,
         },

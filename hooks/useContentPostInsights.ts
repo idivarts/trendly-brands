@@ -6,13 +6,16 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { InboxChannel } from "@/components/inbox/types";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { IPostAnalytics } from "@/types/PostInsights";
 
 export function useContentPostInsights(
     mediaId: string | undefined,
     socialId: string | undefined,
-    channel: "instagram" | "facebook"
+    // Any inbox channel — post-level insights are richest for Meta; non-Meta
+    // channels return whatever the backend can derive (often just the permalink).
+    channel: InboxChannel
 ) {
     const { selectedBrand } = useBrandContext();
     const brandId = selectedBrand?.id;

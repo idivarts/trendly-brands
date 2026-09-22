@@ -11,7 +11,7 @@
  */
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { IComment } from "@/shared-libs/firestore/trendly-pro/models/comments";
+import { IComment, ICommentMediaAnchor } from "@/shared-libs/firestore/trendly-pro/models/comments";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import {
     addDoc,
@@ -29,11 +29,17 @@ export interface ContentComment extends IComment {
     id: string;
 }
 
+export interface AddCommentOpts {
+    mediaAnchor?: ICommentMediaAnchor;
+    isDirective?: boolean;
+}
+
 interface UseContentCommentsReturn {
     comments: ContentComment[];
     loading: boolean;
-    /** Add a top-level comment on this content item */
-    addComment: (text: string) => Promise<void>;
+    /** Add a top-level comment on this content item, optionally pinned to a
+     *  media/scene element and/or promoted to an AI directive. */
+    addComment: (text: string, opts?: AddCommentOpts) => Promise<void>;
     /** Reply to an existing comment */
     addReply: (parentId: string, text: string) => Promise<void>;
     /** Toggle resolved state */
@@ -92,10 +98,14 @@ export function useContentComments(contentId: string | null): UseContentComments
         updatedAt: Date.now(),
     });
 
-    const addComment = async (text: string) => {
+    const addComment = async (text: string, opts?: AddCommentOpts) => {
         const ref = refPath();
         if (!ref) return;
-        await addDoc(ref, { ...buildBase(), text });
+        // Firestore rejects `undefined`; only include anchor/directive when set.
+        const extra: Partial<IComment> = {};
+        if (opts?.mediaAnchor) extra.mediaAnchor = opts.mediaAnchor;
+        if (opts?.isDirective) extra.isDirective = true;
+        await addDoc(ref, { ...buildBase(), text, ...extra });
     };
 
     const addReply = async (parentId: string, text: string) => {

@@ -3,6 +3,7 @@ import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { fs } from "@/constants/Typography";
 
 const ASPECTS = ["1:1", "4:5", "16:9", "9:16"];
 const STYLES = ["realistic", "illustrated", "minimal"];
@@ -100,20 +101,20 @@ export default AIImageGenerator;
 const makeStyles = (colors: any) =>
     StyleSheet.create({
         wrap: { padding: 14, backgroundColor: colors.card, borderRadius: 12, gap: 10 },
-        title: { color: colors.text, fontSize: 16, fontWeight: "700" },
-        label: { color: colors.textSecondary, fontSize: 11, fontWeight: "700", textTransform: "uppercase" },
+        title: { color: colors.text, fontSize: fs(16), fontWeight: "700" },
+        label: { color: colors.textSecondary, fontSize: fs(11), fontWeight: "700", textTransform: "uppercase" },
         input: {
             backgroundColor: colors.tag,
             color: colors.text,
             borderRadius: 10,
             padding: 12,
             minHeight: 60,
-            fontSize: 14,
+            fontSize: fs(14),
         },
         chipsRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
         chip: { paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.tag, borderRadius: 14 },
         chipActive: { backgroundColor: colors.primary },
-        chipText: { color: colors.text, fontSize: 12, fontWeight: "600" },
+        chipText: { color: colors.text, fontSize: fs(12), fontWeight: "600" },
         chipTextActive: { color: "#fff" },
         runBtn: {
             alignSelf: "flex-start",
@@ -127,7 +128,7 @@ const makeStyles = (colors: any) =>
             shadowOpacity: 0.3,
             elevation: 4,
         },
-        runText: { color: "#fff", fontWeight: "700", fontSize: 13 },
+        runText: { color: "#fff", fontWeight: "700", fontSize: fs(13) },
         btnDisabled: { opacity: 0.4 },
         btnPressed: { opacity: 0.85 },
         gallery: { marginTop: 6 },

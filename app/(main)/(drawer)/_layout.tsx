@@ -1,4 +1,5 @@
 import AccountLockedBanner from "@/components/billing/AccountLockedBanner";
+import RestoreConflictModal from "@/components/billing/RestoreConflictModal";
 import DrawerMenuContent from "@/components/drawer-layout/DrawerMenuContent";
 import {
     SidebarCollapsedProvider,
@@ -36,6 +37,7 @@ const DrawerLayoutInner = () => {
                 drawerWidth={drawerWidth}
             >
                 <AccountLockedBanner />
+                <RestoreConflictModal />
                 <Stack screenOptions={{ headerShown: false }} />
             </CustomDrawerWrapper>
         </BrandProtectedScreen>

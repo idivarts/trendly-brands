@@ -9,6 +9,7 @@ import {
     TextInput,
     View,
 } from "react-native";
+import { fs } from "@/constants/Typography";
 
 // Validation mirrors the brand form + backend (BrandDetailsForm / onboarding_tools.go)
 // so the chat, the fallback form, and the server all agree on what is valid.
@@ -254,7 +255,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     shadowOpacity: 0.3,
                     elevation: 3,
                 },
-                chipText: { fontSize: 13, fontWeight: "600", color: colors.text, flexShrink: 1, flexWrap: "wrap" },
+                chipText: { fontSize: fs(13), fontWeight: "600", color: colors.text, flexShrink: 1, flexWrap: "wrap" },
                 chipTextActive: { color: colors.onPrimary },
                 inputRow: { flexDirection: "row", alignItems: "center", gap: 8 },
                 // Validation-error border is an allowed exception to the no-border rule.
@@ -267,7 +268,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     color: colors.text,
                     paddingHorizontal: 12,
                     paddingVertical: 10,
-                    fontSize: 14,
+                    fontSize: fs(14),
                     shadowColor: "#000",
                     shadowOffset: { width: 0, height: 1 },
                     shadowRadius: 3,
@@ -287,7 +288,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     shadowOpacity: 0.35,
                     elevation: 4,
                 },
-                primaryBtnText: { color: colors.onPrimary, fontWeight: "700", fontSize: 13 },
+                primaryBtnText: { color: colors.onPrimary, fontWeight: "700", fontSize: fs(13) },
                 continueBtn: {
                     alignSelf: "flex-start",
                     paddingHorizontal: 20,
@@ -301,8 +302,8 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     elevation: 4,
                 },
                 skipBtn: { alignSelf: "flex-start", paddingHorizontal: 4, paddingVertical: 6 },
-                skipText: { color: colors.textSecondary, fontSize: 13, fontWeight: "600" },
-                errorText: { color: ColorsStatic.red, fontSize: 12 },
+                skipText: { color: colors.textSecondary, fontSize: fs(13), fontWeight: "600" },
+                errorText: { color: ColorsStatic.red, fontSize: fs(12) },
                 pressed: { opacity: 0.75 },
                 btnDisabled: { opacity: 0.4 },
             }),

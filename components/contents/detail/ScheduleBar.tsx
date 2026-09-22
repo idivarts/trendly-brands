@@ -1,6 +1,7 @@
 import DateField from "@/components/modals/DateField";
 import { ISocialAccount, socialAccountLabel } from "@/contexts/brand-social-context.provider";
-import { POPULAR_POSTING_TIMES, ScheduleMode, SocialDestination } from "@/components/contents/types";
+import { PlatformOptions, POPULAR_POSTING_TIMES, ScheduleMode, SocialDestination } from "@/components/contents/types";
+import { LINKEDIN_PAGE_ENABLED, REDDIT_ENABLED } from "@/constants/features";
 import Colors from "@/shared-uis/constants/Colors";
 import {
     faBolt,
@@ -12,7 +13,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Image,
@@ -23,11 +24,15 @@ import {
     View,
 } from "react-native";
 import PublishNowConfirmModal from "./PublishNowConfirmModal";
+import { fs, lh } from "@/constants/Typography";
 
 interface ScheduleBarProps {
     socialAccounts: ISocialAccount[];
     destinations: SocialDestination[];
     onDestinationsChange: (next: SocialDestination[]) => void;
+    /** Per-platform publishing extras (YouTube title/visibility, Reddit subreddit). */
+    platformOptions: PlatformOptions;
+    onPlatformOptionsChange: (next: PlatformOptions) => void;
     formattedDate: string;
     /** The currently-selected posting date (drives the inline picker). */
     dateValue: Date;
@@ -39,10 +44,29 @@ interface ScheduleBarProps {
     publishing: boolean;
     /** When true, renders without its own card chrome (sits inside a parent card). */
     embedded?: boolean;
+    /**
+     * Platforms whose per-platform option fields are edited elsewhere (a variation
+     * tab, or the single-platform inline section). They're hidden here so options
+     * aren't shown/edited in two places.
+     */
+    hideOptionPlatforms?: string[];
 }
 
-// Only these platforms are publishable from Trendly today.
-const PUBLISHABLE = new Set(["instagram", "facebook", "linkedin"]);
+// Platforms Trendly can publish to. Each has a backend publish path
+// (internal/trendlyapis/publishing/publish.go). Reddit is gated by REDDIT_ENABLED,
+// LinkedIn Page by LINKEDIN_PAGE_ENABLED.
+const PUBLISHABLE = new Set(
+    ["instagram", "facebook", "linkedin", "linkedin_page", "twitter", "youtube", "reddit"].filter(
+        (p) => (p !== "reddit" || REDDIT_ENABLED) && (p !== "linkedin_page" || LINKEDIN_PAGE_ENABLED)
+    )
+);
+
+// Reddit YouTube visibility options.
+const YT_VISIBILITY: { label: string; value: "public" | "unlisted" | "private" }[] = [
+    { label: "Public", value: "public" },
+    { label: "Unlisted", value: "unlisted" },
+    { label: "Private", value: "private" },
+];
 
 // Brand colour for a platform's dot indicator.
 const platformDotColor = (platform: string, colors: ReturnType<typeof Colors>) => {
@@ -50,7 +74,14 @@ const platformDotColor = (platform: string, colors: ReturnType<typeof Colors>) =
         case "instagram":
             return colors.socialInstagram;
         case "linkedin":
+        case "linkedin_page":
             return colors.socialLinkedin;
+        case "twitter":
+            return colors.socialTwitter;
+        case "youtube":
+            return colors.socialYoutube;
+        case "reddit":
+            return colors.socialReddit;
         default:
             return colors.socialFacebook;
     }
@@ -60,6 +91,8 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
     socialAccounts,
     destinations,
     onDestinationsChange,
+    platformOptions,
+    onPlatformOptionsChange,
     formattedDate,
     dateValue,
     onDateChange,
@@ -68,15 +101,29 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
     onPublish,
     publishing,
     embedded = false,
+    hideOptionPlatforms = [],
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useStyles(colors);
 
+    // Platforms whose options are edited elsewhere (variation tab / inline) — hide
+    // the generic option fields for them here.
+    const hiddenSet = useMemo(() => new Set(hideOptionPlatforms), [hideOptionPlatforms]);
+
     const accounts = useMemo(
         () => socialAccounts.filter((a) => PUBLISHABLE.has(a.platform)),
         [socialAccounts]
     );
+
+    // Which platforms are currently selected as destinations — drives the
+    // per-platform option fields (YouTube title/visibility, Reddit subreddit).
+    const selectedPlatforms = useMemo(
+        () => new Set(destinations.map((d) => d.platform)),
+        [destinations]
+    );
+    const setOpt = (patch: Partial<PlatformOptions>) =>
+        onPlatformOptionsChange({ ...platformOptions, ...patch });
 
     const isSelected = (id: string) => destinations.some((d) => d.socialAccountId === id);
     const toggle = (a: ISocialAccount) => {
@@ -98,6 +145,22 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
         !!timeOfPosting && !POPULAR_POSTING_TIMES.some((t) => t.value === timeOfPosting);
     const [showCustom, setShowCustom] = useState(isCustomTime);
     const [confirmNow, setConfirmNow] = useState(false);
+
+    // Close the "Publish now?" confirmation once the publish it triggered
+    // finishes. Without this, `confirmNow` stays true and the confirm modal
+    // lingers on screen (and re-opens next time) even after the parent closes the
+    // publish/schedule modal — so a completed publish-now would leave both dialogs
+    // stuck. Tracks the true→false edge of `publishing` so it only fires for a
+    // publish this modal actually started.
+    const wasPublishing = useRef(false);
+    useEffect(() => {
+        if (publishing) {
+            wasPublishing.current = true;
+        } else if (wasPublishing.current) {
+            wasPublishing.current = false;
+            setConfirmNow(false);
+        }
+    }, [publishing]);
 
     const count = destinations.length;
     const canPublish = count > 0 && !publishing;
@@ -159,7 +222,8 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
 
             {accounts.length === 0 ? (
                 <Text style={styles.emptyAccounts}>
-                    No connected accounts yet. Connect Instagram, Facebook or LinkedIn to publish.
+                    No connected accounts yet. Connect a social account (Instagram, Facebook,
+                    LinkedIn, X, YouTube or Reddit) to publish.
                 </Text>
             ) : (
                 <>
@@ -171,6 +235,86 @@ const ScheduleBar: React.FC<ScheduleBarProps> = ({
                     ) : null}
                 </>
             )}
+
+            {/* ── Per-platform options (hidden when the platform has a variation) ── */}
+            {selectedPlatforms.has("youtube") && !hiddenSet.has("youtube") ? (
+                <View style={styles.optionBlock}>
+                    <Text style={styles.optionTitle}>YouTube</Text>
+                    <TextInput
+                        style={styles.optionInput}
+                        placeholder="Video title"
+                        placeholderTextColor={colors.textSecondary}
+                        value={platformOptions.youtubeTitle ?? ""}
+                        onChangeText={(t) => setOpt({ youtubeTitle: t })}
+                        maxLength={100}
+                    />
+                    <View style={styles.visRow}>
+                        {YT_VISIBILITY.map((v) => {
+                            const on = (platformOptions.youtubePrivacy ?? "public") === v.value;
+                            return (
+                                <Pressable
+                                    key={v.value}
+                                    onPress={() => setOpt({ youtubePrivacy: v.value })}
+                                    style={({ pressed }) => [
+                                        styles.timeChip,
+                                        on && styles.timeChipOn,
+                                        pressed && styles.pressed,
+                                    ]}
+                                >
+                                    <Text style={[styles.timeChipText, on && styles.timeChipTextOn]}>
+                                        {v.label}
+                                    </Text>
+                                </Pressable>
+                            );
+                        })}
+                    </View>
+                    <Text style={styles.optionHint}>
+                        A video attachment is required. Vertical clips post as Shorts.
+                    </Text>
+                </View>
+            ) : null}
+
+            {selectedPlatforms.has("reddit") && !hiddenSet.has("reddit") ? (
+                <View style={styles.optionBlock}>
+                    <Text style={styles.optionTitle}>Reddit</Text>
+                    <TextInput
+                        style={styles.optionInput}
+                        placeholder="Subreddit (e.g. startups)"
+                        placeholderTextColor={colors.textSecondary}
+                        value={platformOptions.redditSubreddit ?? ""}
+                        onChangeText={(t) =>
+                            setOpt({ redditSubreddit: t.replace(/^\/?r\//i, "").trim() })
+                        }
+                        autoCapitalize="none"
+                    />
+                    <TextInput
+                        style={styles.optionInput}
+                        placeholder="Post title"
+                        placeholderTextColor={colors.textSecondary}
+                        value={platformOptions.redditTitle ?? ""}
+                        onChangeText={(t) => setOpt({ redditTitle: t })}
+                        maxLength={300}
+                    />
+                    <TextInput
+                        style={styles.optionInput}
+                        placeholder="Flair ID (optional)"
+                        placeholderTextColor={colors.textSecondary}
+                        value={platformOptions.redditFlairId ?? ""}
+                        onChangeText={(t) => setOpt({ redditFlairId: t })}
+                        autoCapitalize="none"
+                    />
+                    <Text style={styles.optionHint}>
+                        Subreddit & title are required. Many subreddits enforce posting rules or
+                        required flair.
+                    </Text>
+                </View>
+            ) : null}
+
+            {selectedPlatforms.has("twitter") && !hiddenSet.has("twitter") ? (
+                <Text style={styles.optionHint}>
+                    X posts are limited to 280 characters — longer captions will be rejected.
+                </Text>
+            ) : null}
 
             {/* ── When ─────────────────────────────────────────────────── */}
             <View style={styles.softDivider} />
@@ -319,12 +463,12 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             marginBottom: 10,
         },
         blockLabel: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.textSecondary,
         },
         countBadge: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "700",
             color: colors.textSecondary,
             backgroundColor: colors.tag,
@@ -341,9 +485,9 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             height: 18,
         },
         emptyAccounts: {
-            fontSize: 12,
+            fontSize: fs(12),
             color: colors.textSecondary,
-            lineHeight: 18,
+            lineHeight: lh(18),
         },
         accountRow: {
             flexDirection: "row",
@@ -379,7 +523,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             justifyContent: "center",
         },
         accountInitial: {
-            fontSize: 11,
+            fontSize: fs(11),
             fontWeight: "800",
             color: colors.primary,
         },
@@ -390,7 +534,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             marginLeft: -2,
         },
         accountName: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.text,
             maxWidth: 120,
@@ -411,9 +555,44 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.onPrimary + "33",
         },
         pickHint: {
-            fontSize: 11,
+            fontSize: fs(11),
             color: colors.textSecondary,
             marginTop: 8,
+        },
+        optionBlock: {
+            marginTop: 14,
+            padding: 12,
+            borderRadius: 12,
+            backgroundColor: colors.aliceBlue,
+            gap: 8,
+        },
+        optionTitle: {
+            fontSize: fs(12),
+            fontWeight: "700",
+            color: colors.textSecondary,
+        },
+        optionInput: {
+            backgroundColor: colors.card,
+            borderRadius: 10,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            fontSize: fs(14),
+            color: colors.text,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowRadius: 3,
+            shadowOpacity: 0.04,
+            elevation: 1,
+        },
+        visRow: {
+            flexDirection: "row",
+            flexWrap: "wrap",
+            gap: 8,
+        },
+        optionHint: {
+            fontSize: fs(11),
+            color: colors.textSecondary,
+            lineHeight: lh(16),
         },
         dateStatement: {
             flexDirection: "row",
@@ -429,12 +608,12 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             flex: 1,
         },
         dateStatementLabel: {
-            fontSize: 11,
+            fontSize: fs(11),
             fontWeight: "600",
             color: colors.textSecondary,
         },
         dateStatementValue: {
-            fontSize: 14,
+            fontSize: fs(14),
             fontWeight: "700",
             color: colors.text,
             marginTop: 1,
@@ -449,12 +628,12 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.card,
         },
         changePillText: {
-            fontSize: 12,
+            fontSize: fs(12),
             fontWeight: "700",
             color: colors.primary,
         },
         timeQuestion: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.textSecondary,
             marginTop: 16,
@@ -480,7 +659,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             elevation: 3,
         },
         timeChipText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.textSecondary,
         },
@@ -492,7 +671,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             borderRadius: 10,
             paddingHorizontal: 14,
             paddingVertical: 12,
-            fontSize: 14,
+            fontSize: fs(14),
             color: colors.text,
             marginTop: 12,
             shadowColor: "#000",
@@ -502,7 +681,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             elevation: 1,
         },
         tzHint: {
-            fontSize: 11,
+            fontSize: fs(11),
             color: colors.textSecondary,
             marginTop: 10,
         },
@@ -527,7 +706,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             elevation: 0,
         },
         publishBtnText: {
-            fontSize: 14,
+            fontSize: fs(14),
             fontWeight: "700",
             color: colors.onPrimary,
         },
@@ -544,12 +723,12 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             opacity: 0.45,
         },
         publishNowText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "700",
             color: colors.primary,
         },
         hint: {
-            fontSize: 11,
+            fontSize: fs(11),
             color: colors.textSecondary,
             textAlign: "center",
             marginTop: 8,

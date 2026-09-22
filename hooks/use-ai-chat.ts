@@ -1,3 +1,4 @@
+import { Focus, focusesToPromptString } from "@/types/focus";
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
@@ -30,6 +31,21 @@ export interface LiveContentAttachment {
     appleUrl?: string;
 }
 
+/**
+ * A per-platform variation summarised for the AI: the values that will actually
+ * publish to that platform (generic fields already resolved through any
+ * override), plus which fields the user explicitly overrode so the AI can tell a
+ * tailored value apart from an inherited one. Mirrors the backend
+ * variationBrief.
+ */
+export interface LiveContentVariation {
+    platform: string;
+    caption?: string;
+    hashtags?: string;
+    overriddenFields?: string[];
+    platformOptions?: Record<string, any>;
+}
+
 export interface LiveContent {
     title?: string;
     platform?: string;
@@ -40,6 +56,8 @@ export interface LiveContent {
     hashtags?: string;
     script?: string;
     attachments?: LiveContentAttachment[];
+    /** Every per-platform variation on this piece, so the AI sees the full set. */
+    variations?: LiveContentVariation[];
 }
 
 /** How many messages to load in the first page, and per "load older" step. */
@@ -75,7 +93,10 @@ export interface AIMessage {
     role: "user" | "assistant" | "tool";
     content: string;
     model?: string;
+    /** Legacy plain-string focus (read for old messages). */
     focusedText?: string;
+    /** Structured focus target(s) attached to this (user) message. */
+    focus?: Focus[];
     /** Legacy single-image field (kept for back-compat). New code uses `images`. */
     imageUrl?: string;
     /**
@@ -150,6 +171,12 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
     const [committed, setCommitted] = useState<AIMessage[]>([]);
     const [streamingContent, setStreamingContent] = useState<string>("");
     const [isStreaming, setIsStreaming] = useState(false);
+    // A short human label for what the AI is doing right now (e.g. "Designing
+    // your visual…", "Reading your content calendar…"), pushed by the backend as
+    // `status` frames during token-silent phases. Empty → the panel falls back
+    // to its generic "Thinking…/Generating…" copy. Cleared when prose resumes
+    // (a token frame) and when the turn ends.
+    const [statusLabel, setStatusLabel] = useState<string>("");
     const [loading, setLoading] = useState(false);
     const [pageSize, setPageSize] = useState(MESSAGE_PAGE_SIZE);
     const [hasMore, setHasMore] = useState(false);
@@ -176,6 +203,12 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
     // Guards auto-open so it fires once per module + contextId, not on every
     // thread-list snapshot. Reset when the scope changes.
     const autoOpenedRef = useRef(false);
+    // Set when the user interrupts the current turn (Stop button). While true we
+    // ignore the interrupted turn's late WS frames (token/status/done/…) so the
+    // transient streaming bubble doesn't resurrect after control was returned.
+    // Firestore remains the source of truth — the committed (partial) assistant
+    // doc still syncs in. Cleared when the next turn starts.
+    const interruptedRef = useRef(false);
 
     // ── Streaming watchdog / Firestore-fallback resolution ────────────────
     // The exit from `isStreaming` must NOT depend solely on the WS `done` frame.
@@ -196,15 +229,19 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
     // bubble at `done` so they show before the committed doc syncs.
     const streamImagesRef = useRef<string[]>([]);
     const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    // Generous: a single image gen + a second model round-trip can be silent for
-    // a while. This only fires when NOTHING (not even a token) arrived in window.
-    const STREAM_SILENCE_TIMEOUT_MS = 90_000;
+    // The backend heartbeats a `ping` frame every ~15s for the whole turn (plus
+    // `status`/`token`/`chat_image` frames), so a live-but-slow turn keeps
+    // re-arming this. It therefore only fires when the connection has gone truly
+    // silent — the turn died (lambda timeout / dropped socket) — for which 60s
+    // (≈4 missed heartbeats, tolerant of one reconnect-backoff cycle) is ample.
+    const STREAM_SILENCE_TIMEOUT_MS = 60_000;
 
     const finishStreaming = useCallback(() => {
         streamingRef.current = "";
         pendingControlRef.current = null;
         streamImagesRef.current = [];
         setStreamingContent("");
+        setStatusLabel("");
         setIsStreaming(false);
         if (watchdogRef.current) {
             clearTimeout(watchdogRef.current);
@@ -217,12 +254,14 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
         watchdogRef.current = setTimeout(() => {
             watchdogRef.current = null;
             if (!isStreamingRef.current) return;
-            // No WS activity for the whole window: the turn almost certainly died
-            // (lambda timeout / dropped connection). Stop the spinner and lean on
-            // Firestore — if the assistant doc committed it's already on screen;
-            // otherwise the user can retry.
+            // No WS activity for the whole window despite the backend heartbeat:
+            // the turn almost certainly died (lambda timeout / dropped
+            // connection). Stop the spinner and lean on Firestore — if the
+            // assistant doc committed it's already on screen; otherwise the user
+            // can retry. (Not a slowness message: heartbeats mean a genuinely
+            // slow-but-alive turn never reaches here.)
             finishStreaming();
-            Toaster.error("The AI took too long to respond. Please try again.");
+            Toaster.error("The AI response was interrupted. Please try again.");
         }, STREAM_SILENCE_TIMEOUT_MS);
     }, [finishStreaming]);
 
@@ -366,6 +405,7 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
     // setActiveThreadId is enough — the subscription above loads history. Kept
     // async + same name so existing callers don't change.
     const loadThread = useCallback(async (conversationId: string) => {
+        interruptedRef.current = false;
         setPageSize(MESSAGE_PAGE_SIZE);
         setActiveThreadId(conversationId);
     }, []);
@@ -401,6 +441,7 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
     // later thread-list snapshot can't auto-open over the draft.
     const startNewChat = useCallback(() => {
         autoOpenedRef.current = true;
+        interruptedRef.current = false;
         setActiveThreadId(null);
         setCommitted([]);
         setPendingUsers([]);
@@ -435,12 +476,27 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
         const remove = aiWS.addListener((msg: any) => {
             if (!activeThreadId) return;
             if (msg.conversationId && msg.conversationId !== activeThreadId) return;
+            // The user interrupted this turn — control is already back with them.
+            // Drop the turn's trailing frames so the streaming bubble/status don't
+            // flicker back; the committed (partial) doc still arrives via Firestore.
+            // (stop_ack is a no-op either way.)
+            if (interruptedRef.current) return;
             // Any frame proves the turn is still alive — push the silence
             // watchdog out so a slow-but-progressing image gen isn't aborted.
             if (isStreamingRef.current) armWatchdog();
             if (msg.type === "token" && typeof msg.delta === "string") {
+                // Prose is flowing again — drop any tool/status label so the
+                // panel reverts to its generic "Generating…" copy.
+                setStatusLabel((prev) => (prev ? "" : prev));
                 streamingRef.current += msg.delta;
                 setStreamingContent(streamingRef.current);
+            } else if (msg.type === "status") {
+                // Progress label for a token-silent phase (a server tool running,
+                // before the first token). Purely cosmetic; the watchdog was
+                // already re-armed above by the frame arriving.
+                if (typeof msg.label === "string" && msg.label) {
+                    setStatusLabel(msg.label);
+                }
             } else if (msg.type === "chat_image") {
                 // Images generated mid-turn (generate_image tool). Buffer them so
                 // they attach to the lingering bubble at `done`; meanwhile the
@@ -498,7 +554,7 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
     const sendMessage = useCallback(
         async (
             content: string,
-            focusedText?: string,
+            focus?: Focus[],
             model?: string,
             images?: string[],
             liveContent?: LiveContent
@@ -511,14 +567,22 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
             }
             const clientMsgId = newClientMsgId();
             const imgs = images && images.length > 0 ? images : undefined;
+            const focusList = focus && focus.length > 0 ? focus : undefined;
+            // Derived plain-string focus — a prompt fallback so the backend renders
+            // the reference even before it consumes the structured `focus` object.
+            const focusedText = focusList ? focusesToPromptString(focusList) : undefined;
             // Optimistic user bubble — dropped once its Firestore doc syncs.
             setPendingUsers((prev) => [
                 ...prev,
-                { role: "user", content, focusedText, images: imgs, clientMsgId, timestamp: Date.now() },
+                { role: "user", content, focus: focusList, focusedText, images: imgs, clientMsgId, timestamp: Date.now() },
             ]);
+            // A fresh turn — clear any interrupt guard from a previous stop so
+            // this turn's frames stream normally.
+            interruptedRef.current = false;
             streamingRef.current = "";
             streamImagesRef.current = [];
             setStreamingContent("");
+            setStatusLabel("");
             setIsStreaming(true);
             // Backstop in case the turn dies before any frame comes back.
             armWatchdog();
@@ -528,6 +592,7 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
                 conversationId: convId,
                 clientMsgId,
                 content,
+                focus: focusList,
                 focusedText,
                 model,
                 images: imgs,
@@ -540,6 +605,22 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
         },
         [brandId, manager?.id, activeThreadId, createThread, armWatchdog]
     );
+
+    // Interrupt the in-flight turn and hand control back to the user immediately.
+    // Two parts: (1) tell the backend to stop generating (best-effort — it aborts
+    // the running turn and stops billing tokens; harmless if an older backend
+    // doesn't handle `stop`), and (2) locally finish streaming right away so the
+    // composer re-enables without waiting on the network. `interruptedRef` makes
+    // the listener ignore the turn's trailing frames; the committed (partial) doc
+    // still syncs from Firestore.
+    const stopStreaming = useCallback(() => {
+        if (!isStreamingRef.current) return;
+        interruptedRef.current = true;
+        if (activeThreadId) {
+            aiWS.send({ type: "stop", conversationId: activeThreadId }).catch(() => {});
+        }
+        finishStreaming();
+    }, [activeThreadId, finishStreaming]);
 
     // Rendered history = committed (Firestore) + any optimistic user bubbles not
     // yet synced + the lingering assistant turn not yet synced. The panel adds
@@ -587,6 +668,7 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
         messages,
         streamingContent,
         isStreaming,
+        statusLabel,
         loading,
         initializing,
         hasMore,
@@ -597,6 +679,7 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
         deleteThread,
         renameThread,
         sendMessage,
+        stopStreaming,
         refreshThreads,
     };
 }

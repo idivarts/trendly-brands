@@ -6,6 +6,7 @@ import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { CONTENT_STATUS_LABELS, ContentItem, contentStatusColors } from "./types";
+import { fs, lh } from "@/constants/Typography";
 
 interface ContentCardProps {
     item: ContentItem;
@@ -113,7 +114,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     borderRadius: 6,
                 },
                 typeChipText: {
-                    fontSize: 11,
+                    fontSize: fs(11),
                     fontWeight: "700",
                     textTransform: "uppercase",
                     letterSpacing: 0.5,
@@ -124,19 +125,19 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     borderRadius: 6,
                 },
                 statusText: {
-                    fontSize: 11,
+                    fontSize: fs(11),
                     fontWeight: "600",
                 },
                 title: {
-                    fontSize: 15,
+                    fontSize: fs(15),
                     fontWeight: "700",
                     color: colors.text,
-                    lineHeight: 21,
+                    lineHeight: lh(21),
                 },
                 idea: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     color: colors.textSecondary,
-                    lineHeight: 17,
+                    lineHeight: lh(17),
                 },
                 footer: {
                     flexDirection: "row",
@@ -150,7 +151,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     gap: 5,
                 },
                 dateText: {
-                    fontSize: 12,
+                    fontSize: fs(12),
                     color: colors.textSecondary,
                     fontWeight: "500",
                 },

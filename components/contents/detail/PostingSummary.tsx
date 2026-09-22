@@ -4,6 +4,7 @@ import {
     ScheduleMode,
     SocialDestination,
 } from "@/components/contents/types";
+import { LINKEDIN_PAGE_ENABLED, REDDIT_ENABLED } from "@/constants/features";
 import Colors from "@/shared-uis/constants/Colors";
 import {
     faBolt,
@@ -15,13 +16,21 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { fs } from "@/constants/Typography";
 
 // ─── PostingSummary ───────────────────────────────────────────────────────────
 // Read-only recap of the destinations + schedule, shown above the content card
 // once the user has configured where/when to post. Tapping Edit reopens the
 // publish modal. Keeps the heavy controls off the page.
 
-const PUBLISHABLE = new Set(["instagram", "facebook", "linkedin"]);
+// Platforms Trendly can publish to. Kept in sync with ScheduleBar's set so the
+// recap chips match the destinations the user actually selected. Reddit is gated
+// by REDDIT_ENABLED, LinkedIn Page by LINKEDIN_PAGE_ENABLED.
+const PUBLISHABLE = new Set(
+    ["instagram", "facebook", "linkedin", "linkedin_page", "twitter", "youtube", "reddit"].filter(
+        (p) => (p !== "reddit" || REDDIT_ENABLED) && (p !== "linkedin_page" || LINKEDIN_PAGE_ENABLED)
+    )
+);
 
 // Brand colour for a platform's dot indicator.
 const platformDotColor = (platform: string, colors: ReturnType<typeof Colors>) => {
@@ -29,7 +38,14 @@ const platformDotColor = (platform: string, colors: ReturnType<typeof Colors>) =
         case "instagram":
             return colors.socialInstagram;
         case "linkedin":
+        case "linkedin_page":
             return colors.socialLinkedin;
+        case "twitter":
+            return colors.socialTwitter;
+        case "youtube":
+            return colors.socialYoutube;
+        case "reddit":
+            return colors.socialReddit;
         default:
             return colors.socialFacebook;
     }
@@ -213,7 +229,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             justifyContent: "center",
         },
         avatarInitial: {
-            fontSize: 10,
+            fontSize: fs(10),
             fontWeight: "800",
             color: colors.primary,
         },
@@ -224,7 +240,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             marginLeft: -2,
         },
         destName: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.text,
             maxWidth: 140,
@@ -235,7 +251,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             gap: 7,
         },
         whenText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "600",
             color: colors.text,
         },
@@ -249,7 +265,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.aliceBlue,
         },
         editText: {
-            fontSize: 13,
+            fontSize: fs(13),
             fontWeight: "700",
             color: colors.primary,
         },

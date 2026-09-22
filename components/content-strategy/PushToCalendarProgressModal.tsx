@@ -18,6 +18,7 @@ import {
     View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { fs, lh } from "@/constants/Typography";
 
 // One streamed progress line from the backend.
 interface ProgressStep {
@@ -311,16 +312,16 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
             gap: 12,
         },
         title: {
-            fontSize: 18,
+            fontSize: fs(18),
             fontWeight: "700",
             color: colors.text,
             textAlign: "center",
         },
         subtitle: {
-            fontSize: 13,
+            fontSize: fs(13),
             color: colors.textSecondary,
             marginTop: 8,
-            lineHeight: 19,
+            lineHeight: lh(19),
             textAlign: "center",
         },
         feed: {
@@ -334,7 +335,7 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
             gap: 10,
         },
         waiting: {
-            fontSize: 13,
+            fontSize: fs(13),
             color: colors.textSecondary,
             fontStyle: "italic",
         },
@@ -350,9 +351,9 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
         stepText: {
             flex: 1,
             minWidth: 0,
-            fontSize: 13,
+            fontSize: fs(13),
             color: colors.textSecondary,
-            lineHeight: 18,
+            lineHeight: lh(18),
         },
         stepTextActive: {
             color: colors.text,
@@ -405,7 +406,7 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
             marginTop: 0,
         },
         primaryBtnText: {
-            fontSize: 14,
+            fontSize: fs(14),
             fontWeight: "700",
             color: colors.onPrimary,
         },
@@ -424,7 +425,7 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
             backgroundColor: colors.tag,
         },
         cancelBtnText: {
-            fontSize: 14,
+            fontSize: fs(14),
             fontWeight: "600",
             color: colors.text,
         },
