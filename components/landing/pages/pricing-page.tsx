@@ -10,7 +10,7 @@ import AppLayout from "@/layouts/app-layout";
 import { IOrgBilling } from "@/shared-libs/firestore/trendly-pro/models/organizations";
 import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
 import { Console } from "@/shared-libs/utils/console";
-import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
+import { track } from "@/shared-libs/utils/analytics";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useMyNavigation } from "@/shared-libs/utils/router";
@@ -154,9 +154,12 @@ export default function PricingPage() {
     const handleSubmit = (isGrowthPlan: boolean) => {
         if (submitting) return;
         try {
-            analyticsLogEvent("selected_plan", {
-                isGrowthPlan,
-                discountPercentage: discountPercentage()
+            // These are this screen's own legacy INR plans (₹499/mo "growth" vs
+            // ₹4999/yr "business"), NOT the USD org tiers in PlanLimitsMap —
+            // do not map them onto free/pro/team/agency.
+            track("plan_selected", {
+                plan_key: isGrowthPlan ? "growth" : "business",
+                discount_percentage: discountPercentage(),
             })
             setSubmitting(true);
             const link = isGrowthPlan ? 0 : 1

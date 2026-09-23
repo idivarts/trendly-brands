@@ -100,6 +100,7 @@ const PublishModal: React.FC<PublishModalProps> = ({
                         {maxPostsPerMonth >= 0 ? (
                             <View style={styles.gateRow}>
                                 <UpgradeInline
+                                    feature="posting_cap"
                                     message={`Free plan includes ${maxPostsPerMonth} posts/month — upgrade for unlimited scheduling.`}
                                 />
                             </View>

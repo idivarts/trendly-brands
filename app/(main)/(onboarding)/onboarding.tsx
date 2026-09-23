@@ -1,3 +1,4 @@
+import { track } from "@/shared-libs/utils/analytics";
 import OnboardingLoader from "@/components/onboarding/OnboardingLoader";
 import PhoneNumberInput from "@/components/onboarding/PhoneNumberInput";
 import WhatNextStep, { NextChoice } from "@/components/onboarding/WhatNextStep";
@@ -201,7 +202,11 @@ const OnboardingFlow = () => {
 
     const advance = (nextForm: FormState) => {
         const s = stepsFor(nextForm.age);
+        // Emitted per completed step, so the funnel shows WHERE onboarding is
+        // abandoned rather than just how many finished it.
+        track("onboarding_step_completed", { step: currentKey });
         if (stepIndex >= s.length - 1) {
+            track("onboarding_completed", {});
             setPhase("branch");
         } else {
             setStepIndex((i) => i + 1);

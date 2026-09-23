@@ -23,7 +23,7 @@ import {
 
 import OfferCard from "@/components/landing/OfferCard";
 import { ExplainerConfig, useMyGrowthBook } from "@/contexts/growthbook-context-provider";
-import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
+import { track } from "@/shared-libs/utils/analytics";
 import { FontAwesome } from "@expo/vector-icons";
 import { ExplainerDynamic } from "../ExplainerDynamic";
 import VideoPlayer from "../VideoPlayer";
@@ -137,9 +137,9 @@ export default function TrendlyHero() {
                                     if (actionType == "demo") {
                                         Linking.openURL(demoLink)
                                     } else {
-                                        analyticsLogEvent("clicked_register", {
-                                            ...features,
-                                            discountEndTime
+                                        track("signup_started", {
+                                            method: "google",
+                                            discount_end_time: discountEndTime,
                                         })
                                         googleLogin()
                                     }

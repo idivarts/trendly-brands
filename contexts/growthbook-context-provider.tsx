@@ -3,7 +3,7 @@
 import React, { createContext, PropsWithChildren, ReactNode, useContext, useEffect, useState } from "react";
 
 import { Console } from "@/shared-libs/utils/console";
-import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
+import { track } from "@/shared-libs/utils/analytics";
 import { GrowthBook, JSONValue } from "@growthbook/growthbook";
 import { GrowthBookProvider, useFeatureValue } from "@growthbook/growthbook-react";
 import { autoAttributesPlugin } from "@growthbook/growthbook/plugins";
@@ -15,7 +15,7 @@ const growthbook = new GrowthBook({
     enableDevMode: true,
     trackingCallback: (experiment, result) => {
         // This is where you would send an event to your analytics provider
-        analyticsLogEvent("experiment_viewed", {
+        track("experiment_viewed", {
             experiment_id: experiment.key,
             variation_id: result.key,
             experiment_name: experiment.name,

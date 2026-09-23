@@ -1,5 +1,5 @@
 import { useMyGrowthBook } from '@/contexts/growthbook-context-provider'
-import { analyticsLogEvent } from '@/shared-libs/utils/firebase/analytics'
+import { track } from "@/shared-libs/utils/analytics";
 import Colors from '@/shared-uis/constants/Colors'
 import { useTheme } from '@react-navigation/native'
 import { usePathname } from 'expo-router'
@@ -24,9 +24,7 @@ const LandingHeader: React.FC<PropsWithChildren> = ({ children }) => {
             </Pressable>
             {children}
             <Pressable style={styles.demoBtn} onPress={() => {
-                analyticsLogEvent("request_demo", {
-                    pathName: path
-                })
+                track("demo_requested", { path })
                 open(demoLink ? demoLink : CAL_LINK)
             }}>
                 <Text style={styles.demoIcon}>🎥</Text>

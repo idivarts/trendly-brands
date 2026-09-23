@@ -1,5 +1,6 @@
 import { ChatContextProvider, CloudMessagingContextProvider, CollaborationContextProvider, ContractContextProvider, FirebaseStorageContextProvider, NotificationContextProvider, useAuthContext } from "@/contexts";
 import { BrandContextProvider } from "@/contexts/brand-context.provider";
+import { AnalyticsOrgSync } from "@/contexts/analytics-context.provider";
 import { OrganizationProvider } from "@/contexts/organization-context.provider";
 import { AIConfigProvider } from "@/contexts/ai-config-context.provider";
 import { BrandSocialContextProvider, useBrandSocialContext } from "@/contexts/brand-social-context.provider";
@@ -7,6 +8,7 @@ import GBProvider from "@/contexts/growthbook-context-provider";
 import { SubscribeNudgeProvider } from "@/contexts/subscribe-nudge-context.provider";
 import { streamClient } from "@/contexts/chat-context.provider";
 import { createGuideTourStorageAdapter } from "@/contexts/guide-tour-storage-adapter";
+import { track } from "@/shared-libs/utils/analytics";
 import { ScrollProvider } from "@/shared-libs/contexts/scroll-context";
 import TrackingProvider from "@/shared-libs/contexts/tracking-provider";
 import { useMyNavigation } from "@/shared-libs/utils/router";
@@ -38,6 +40,11 @@ const BrandSocialConnectHandler: React.FC = () => {
             const message = parsed.searchParams.get("message");
 
             if (status === "success") {
+                // ⭐ Activation. Tracked here rather than where the connect flow
+                // is launched (hooks/request/use-connect-brand-social.tsx),
+                // because this callback is the first point that knows the
+                // OAuth round-trip actually succeeded.
+                track("social_connected", { platform });
                 Toaster.success(`${platform.charAt(0).toUpperCase() + platform.slice(1)} connected to your brand!`);
                 refreshSocials();
             } else {
@@ -91,6 +98,8 @@ const MainLayout = () => {
                             <BrandContextProvider>
                             <GBProvider>
                             <OrganizationProvider>
+                                {/* Renders nothing — keeps org/brand/plan on every analytics event. */}
+                                <AnalyticsOrgSync />
                                 <AIConfigProvider>
                                 <SubscribeNudgeProvider>
                                 <BrandSocialContextProvider>

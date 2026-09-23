@@ -1,3 +1,4 @@
+import { track } from "@/shared-libs/utils/analytics";
 import { CONTENT_TYPE_LABELS, ContentType } from "@/components/content-calendar/types";
 import ContentCommentsPanel from "@/components/contents/ContentCommentsPanel";
 import ContentActionsMenu from "@/components/contents/detail/ContentActionsMenu";
@@ -685,10 +686,23 @@ const CreateContentScreen = () => {
             }
             setDirty(false);
             setShowPublishModal(false);
+            // ⭐ Activation. Emitted only after a confirmed success, for the same
+            // reason markAhaMoment is — a failed publish must not look like one.
+            const platforms = destinations.map((d) => d.platform);
+            if (mode === "now") {
+                track("content_published", { platforms, mode: "now", success: true });
+            } else {
+                track("content_scheduled", { platforms });
+            }
             // Aha-moment: the user has shipped their first post. Marked after a
             // confirmed success so a failed publish never counts.
             markAhaMoment("post_scheduled");
         } catch (e) {
+            track("content_published", {
+                platforms: destinations.map((d) => d.platform),
+                mode,
+                success: false,
+            });
             // Surface via console for now; a toast is added in the Phase 6 polish.
             console.warn("Publish/schedule error:", e);
         } finally {
