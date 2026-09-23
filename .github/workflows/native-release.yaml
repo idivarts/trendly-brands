@@ -15,6 +15,9 @@ name: Native Release (from tag)
 #
 # Release tags are always treated as production (channel `production`, profile
 # `production`, prod submit targets).
+#
+# The actual build lives in native-build.yaml, shared with release.yaml's dev
+# path — this file only supplies the parameters.
 
 on:
   push:
@@ -29,295 +32,50 @@ concurrency:
 permissions:
   contents: write
 
-# Branch credentials are consumed by plugins/with-branch.js during config
-# evaluation, and that plugin's output (associatedDomains / intentFilters) is
-# part of the expo-updates fingerprint — verified: the same commit resolves two
-# different runtimeVersions with and without these set.
-#
-# So they are declared at WORKFLOW level, not per step: every runtimeversion
-# resolve AND every build must see identical values, or the ledger records a
-# version the binary does not have and OTAs reach nobody.
-env:
-  EXPO_PUBLIC_BRANCH_LIVE_KEY: ${{ vars.BRANCH_LIVE_KEY }}
-  EXPO_PUBLIC_BRANCH_TEST_KEY: ${{ vars.BRANCH_TEST_KEY }}
-  EXPO_PUBLIC_BRANCH_LIVE_DOMAIN: ${{ vars.BRANCH_LIVE_DOMAIN }}
-  EXPO_PUBLIC_BRANCH_TEST_DOMAIN: ${{ vars.BRANCH_TEST_DOMAIN }}
-
 jobs:
   resolve:
-    name: Resolve runtime versions
+    uses: ./.github/workflows/resolve-runtime.yaml
+    with:
+      stage: prod
+    secrets: inherit
+
+  android-native:
+    name: Android
+    needs: resolve
+    uses: ./.github/workflows/native-build.yaml
+    with:
+      platform: android
+      stage: prod
+      channel: production
+      expected_runtime_version: ${{ needs.resolve.outputs.rtv_android }}
+      release_tag: ${{ github.ref_name }}
+    secrets: inherit
+
+  ios-native:
+    name: iOS
+    needs: resolve
+    uses: ./.github/workflows/native-build.yaml
+    with:
+      platform: ios
+      stage: prod
+      channel: production
+      expected_runtime_version: ${{ needs.resolve.outputs.rtv_ios }}
+      release_tag: ${{ github.ref_name }}
+    secrets: inherit
+
+  summary:
+    name: Summarize
+    needs: [resolve, android-native, ios-native]
+    if: always()
     runs-on: ubuntu-latest
-    environment: prod
-    outputs:
-      rtv_ios: ${{ steps.fp.outputs.rtv_ios }}
-      rtv_android: ${{ steps.fp.outputs.rtv_android }}
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-          ssh-key: ${{ secrets.GIT_SSH_KEY }}
-          fetch-depth: 0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-
-      - run: npm ci
-
-      - name: Load fingerprint inputs
-        env:
-          FIREBASE_CONFIG_BASE64: ${{ secrets.TRENDLY_BRANDS_FIREBASE_CONFIG }}
-          ENV_LOCAL_BASE64: ${{ secrets.ENV_LOCAL_FILE }}
-          ANDROID_FIREBASE_CONFIG_BASE64: ${{ secrets.ANDROID_FIREBASE_CONFIG }}
-          IOS_FIREBASE_CONFIG_BASE64: ${{ secrets.IOS_FIREBASE_CONFIG }}
-        run: |
-          set -euo pipefail
-          echo "$FIREBASE_CONFIG_BASE64"         | base64 -d > firebase-config.js
-          echo "$ENV_LOCAL_BASE64"               | base64 -d > .env.local
-          echo "$ANDROID_FIREBASE_CONFIG_BASE64" | base64 -d > google-services.json
-          echo "$IOS_FIREBASE_CONFIG_BASE64"     | base64 -d > GoogleService-Info.plist
-          for f in app.json eas.json .easignore .gitignore package.json \
-                   google-services.json GoogleService-Info.plist \
-                   plugins/with-ios-fmt-xcode26-fix.js; do
-            [ -f "$f" ] || { echo "::error::missing fingerprint input: $f"; exit 1; }
-          done
-
-      # Resolved on ubuntu so the ledger stores the same value release.yaml's
-      # `decide` job will later compare against; the macOS job asserts parity.
-      - name: Compute runtime versions
-        id: fp
-        # This workflow only ever builds prod, and the Branch config plugin
-        # resolves live-vs-test (and its link domains) from this — so it must be
-        # set wherever a runtimeVersion is resolved, not just where it is built.
-        env:
-          EXPO_PUBLIC_APP_STAGE: prod
-        run: |
-          set -euo pipefail
-          for p in ios android; do
-            out="$(npx expo-updates runtimeversion:resolve --platform "$p")"
-            wf="$(jq -r '.workflow'        <<<"$out")"
-            rtv="$(jq -r '.runtimeVersion' <<<"$out")"
-            [ "$wf" = "managed" ] || { echo "::error::$p workflow=$wf (expected managed)"; exit 1; }
-            [ -n "$rtv" ] && [ "$rtv" != "null" ] || { echo "::error::empty runtimeVersion for $p"; exit 1; }
-            echo "rtv_$p=$rtv" >> "$GITHUB_OUTPUT"
-            echo "$p runtimeVersion = $rtv"
-          done
-
-      - name: Summarize
-        env:
-          RTV_IOS: ${{ steps.fp.outputs.rtv_ios }}
-          RTV_ANDROID: ${{ steps.fp.outputs.rtv_android }}
-        run: |
+      - run: |
           {
             echo "## Native release from tag \`${GITHUB_REF#refs/tags/}\`"
             echo ""
             echo "- commit: \`${GITHUB_SHA:0:7}\`"
-            echo "- ios runtimeVersion: \`$RTV_IOS\`"
-            echo "- android runtimeVersion: \`$RTV_ANDROID\`"
-            echo ""
-            echo "Building and submitting both platforms (channel \`production\`)."
+            echo "- ios runtimeVersion: \`${{ needs.resolve.outputs.rtv_ios }}\`"
+            echo "- android runtimeVersion: \`${{ needs.resolve.outputs.rtv_android }}\`"
+            echo "- android: \`${{ needs.android-native.result }}\`"
+            echo "- ios: \`${{ needs.ios-native.result }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
-
-  android-native:
-    name: Android native build + submit
-    needs: resolve
-    runs-on: ubuntu-latest
-    environment: prod
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-          ssh-key: ${{ secrets.GIT_SSH_KEY }}
-          fetch-depth: 0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-
-      - run: npm install -g eas-cli@16.28.0
-      - run: npm ci
-
-      - name: Load Config JS
-        env:
-          FIREBASE_CONFIG_BASE64: ${{ secrets.TRENDLY_BRANDS_FIREBASE_CONFIG }}
-          ENV_LOCAL_BASE64: ${{ secrets.ENV_LOCAL_FILE }}
-          PLAY_CONSOLE_SA_BASE64: ${{ secrets.PLAY_CONSOLE_SA }}
-          ANDROID_FIREBASE_CONFIG_BASE64: ${{ secrets.ANDROID_FIREBASE_CONFIG }}
-        run: |
-          set -euo pipefail
-          echo "$FIREBASE_CONFIG_BASE64"         | base64 -d > firebase-config.js
-          echo "$ENV_LOCAL_BASE64"               | base64 -d > .env.local
-          echo "$PLAY_CONSOLE_SA_BASE64"         | base64 -d > play-console-service-account.json
-          echo "$ANDROID_FIREBASE_CONFIG_BASE64" | base64 -d > google-services.json
-
-      - name: Assert runtime version matches resolve
-        env:
-          EXPO_PUBLIC_APP_STAGE: prod
-          EXPECTED: ${{ needs.resolve.outputs.rtv_android }}
-        run: |
-          set -euo pipefail
-          LOCAL="$(npx expo-updates runtimeversion:resolve --platform android | jq -r .runtimeVersion)"
-          [ "$LOCAL" = "$EXPECTED" ] || {
-            echo "::error::android runtimeVersion mismatch: resolve=$EXPECTED here=$LOCAL"
-            echo "::error::Ledger and embedded binary would disagree; OTAs would reach nobody."
-            exit 1; }
-
-      - name: EAS Build Android (local)
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          EXPO_PUBLIC_APP_STAGE: prod
-          EXPO_PUBLIC_WEBSOCKET_TRENDLY: ${{ vars.WEBSOCKET_PROD_TRENDLY }}
-          EXPO_PUBLIC_FIRESTORE_DATABASE_ID: ${{ vars.FIRESTORE_DATABASE_PROD_ID }}
-          # PostHog has no environment dimension — its guidance is a separate
-          # PROJECT per environment, so the key IS the dev/prod separation.
-          EXPO_PUBLIC_POSTHOG_KEY: ${{ vars.POSTHOG_KEY_PROD }}
-          EXPO_PUBLIC_POSTHOG_HOST: ${{ vars.POSTHOG_HOST }}
-          # One Sentry project, segmented by its first-class `environment`
-          # field (set from EXPO_PUBLIC_APP_STAGE) — so a single DSN. Not a
-          # secret: a client DSN ships inside the bundle either way.
-          EXPO_PUBLIC_SENTRY_DSN: ${{ vars.SENTRY_DSN_BRANDS }}
-          # Marketing pixel IDs — public identifiers, so variables not secrets.
-          # Bundle-only (MarketingPixels), so they do not affect the fingerprint.
-          EXPO_PUBLIC_META_PIXEL_ID: ${{ vars.META_PIXEL_ID }}
-          EXPO_PUBLIC_GOOGLE_ADS_ID: ${{ vars.GOOGLE_ADS_ID }}
-          EXPO_PUBLIC_LINKEDIN_PARTNER_ID: ${{ vars.LINKEDIN_PARTNER_ID }}
-          EXPO_PUBLIC_TWITTER_PIXEL_ID: ${{ vars.TWITTER_PIXEL_ID }}
-          EXPO_PUBLIC_CLARITY_PROJECT_ID: ${{ vars.CLARITY_PROJECT_ID }}
-          EXPO_PUBLIC_REVENUECAT_IOS_KEY: ${{ vars.REVENUECAT_IOS_KEY }}
-          EXPO_PUBLIC_REVENUECAT_ANDROID_KEY: ${{ vars.REVENUECAT_ANDROID_KEY }}
-        run: npm run build-android
-
-      - name: Submit to Play Store
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: npm run submit-android-prod
-
-      - name: Write fingerprint ledger
-        if: success()
-        env:
-          RTV: ${{ needs.resolve.outputs.rtv_android }}
-        run: |
-          set -euo pipefail
-          TAG="ota-base-android-prod"
-          MSG="$(jq -nc \
-            --arg rtv "$RTV" --arg sha "$GITHUB_SHA" --arg ch "production" \
-            --arg ver "$(jq -r '.expo.version' app.json)" \
-            --arg rel "${GITHUB_REF#refs/tags/}" \
-            --arg run "$GITHUB_RUN_ID" --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            '{runtimeVersion:$rtv,commit:$sha,appVersion:$ver,channel:$ch,releaseTag:$rel,runId:$run,submittedAt:$at}')"
-          git config user.name  "trendly-ci"
-          git config user.email "ci@trendly.pro"
-          git tag -f -a "$TAG" -m "$MSG" "$GITHUB_SHA"
-          git push -f origin "refs/tags/$TAG"
-          echo "Ledger updated: \`$TAG\` -> \`$RTV\`" >> "$GITHUB_STEP_SUMMARY"
-
-  ios-native:
-    name: iOS native build + submit
-    needs: resolve
-    # App Store Connect requires iOS 26+ SDK (Xcode 26+); macos-latest lags.
-    runs-on: macos-26
-    environment: prod
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-          ssh-key: ${{ secrets.GIT_SSH_KEY }}
-          fetch-depth: 0
-
-      - uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: '26.4.1'
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-
-      - run: npm install -g eas-cli@16.28.0
-      - run: npm ci
-
-      - name: Load Config JS
-        env:
-          FIREBASE_CONFIG_BASE64: ${{ secrets.TRENDLY_BRANDS_FIREBASE_CONFIG }}
-          ENV_LOCAL_BASE64: ${{ secrets.ENV_LOCAL_FILE }}
-          IOS_FIREBASE_CONFIG_BASE64: ${{ secrets.IOS_FIREBASE_CONFIG }}
-        run: |
-          set -euo pipefail
-          echo "$FIREBASE_CONFIG_BASE64"     | base64 -d > firebase-config.js
-          echo "$ENV_LOCAL_BASE64"           | base64 -d > .env.local
-          echo "$IOS_FIREBASE_CONFIG_BASE64" | base64 -d > GoogleService-Info.plist
-
-      # Runs BEFORE the ~40min build: `resolve` computed this on ubuntu, and if
-      # macOS disagrees the ledger would record a fingerprint the binary does not
-      # embed, permanently breaking OTA delivery with no error anywhere.
-      - name: Assert runtime version matches resolve
-        env:
-          EXPO_PUBLIC_APP_STAGE: prod
-          EXPECTED: ${{ needs.resolve.outputs.rtv_ios }}
-        run: |
-          set -euo pipefail
-          LOCAL="$(npx expo-updates runtimeversion:resolve --platform ios | jq -r .runtimeVersion)"
-          if [ "$LOCAL" != "$EXPECTED" ]; then
-            echo "::error::iOS runtimeVersion mismatch: resolve(ubuntu)=$EXPECTED macos=$LOCAL"
-            echo "::error::Ledger and embedded binary would disagree; OTAs would reach nobody."
-            npx expo-updates fingerprint:generate --platform ios --debug > fp-ios-macos.json || true
-            exit 1
-          fi
-
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: fingerprint-debug-ios
-          path: fp-ios-macos.json
-          if-no-files-found: ignore
-
-      - name: EAS Build iOS (local)
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          EXPO_PUBLIC_APP_STAGE: prod
-          EXPO_PUBLIC_WEBSOCKET_TRENDLY: ${{ vars.WEBSOCKET_PROD_TRENDLY }}
-          EXPO_PUBLIC_FIRESTORE_DATABASE_ID: ${{ vars.FIRESTORE_DATABASE_PROD_ID }}
-          # PostHog has no environment dimension — its guidance is a separate
-          # PROJECT per environment, so the key IS the dev/prod separation.
-          EXPO_PUBLIC_POSTHOG_KEY: ${{ vars.POSTHOG_KEY_PROD }}
-          EXPO_PUBLIC_POSTHOG_HOST: ${{ vars.POSTHOG_HOST }}
-          # One Sentry project, segmented by its first-class `environment`
-          # field (set from EXPO_PUBLIC_APP_STAGE) — so a single DSN. Not a
-          # secret: a client DSN ships inside the bundle either way.
-          EXPO_PUBLIC_SENTRY_DSN: ${{ vars.SENTRY_DSN_BRANDS }}
-          # Marketing pixel IDs — public identifiers, so variables not secrets.
-          # Bundle-only (MarketingPixels), so they do not affect the fingerprint.
-          EXPO_PUBLIC_META_PIXEL_ID: ${{ vars.META_PIXEL_ID }}
-          EXPO_PUBLIC_GOOGLE_ADS_ID: ${{ vars.GOOGLE_ADS_ID }}
-          EXPO_PUBLIC_LINKEDIN_PARTNER_ID: ${{ vars.LINKEDIN_PARTNER_ID }}
-          EXPO_PUBLIC_TWITTER_PIXEL_ID: ${{ vars.TWITTER_PIXEL_ID }}
-          EXPO_PUBLIC_CLARITY_PROJECT_ID: ${{ vars.CLARITY_PROJECT_ID }}
-          EXPO_PUBLIC_REVENUECAT_IOS_KEY: ${{ vars.REVENUECAT_IOS_KEY }}
-          EXPO_PUBLIC_REVENUECAT_ANDROID_KEY: ${{ vars.REVENUECAT_ANDROID_KEY }}
-        run: npm run build-ios
-
-      - name: Submit to App Store Connect
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: npm run submit-ios
-
-      - name: Write fingerprint ledger
-        if: success()
-        env:
-          RTV: ${{ needs.resolve.outputs.rtv_ios }}
-        run: |
-          set -euo pipefail
-          TAG="ota-base-ios-prod"
-          MSG="$(jq -nc \
-            --arg rtv "$RTV" --arg sha "$GITHUB_SHA" --arg ch "production" \
-            --arg ver "$(jq -r '.expo.version' app.json)" \
-            --arg rel "${GITHUB_REF#refs/tags/}" \
-            --arg run "$GITHUB_RUN_ID" --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            '{runtimeVersion:$rtv,commit:$sha,appVersion:$ver,channel:$ch,releaseTag:$rel,runId:$run,submittedAt:$at}')"
-          git config user.name  "trendly-ci"
-          git config user.email "ci@trendly.pro"
-          git tag -f -a "$TAG" -m "$MSG" "$GITHUB_SHA"
-          git push -f origin "refs/tags/$TAG"
-          echo "Ledger updated: \`$TAG\` -> \`$RTV\`" >> "$GITHUB_STEP_SUMMARY"
