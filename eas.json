@@ -6,14 +6,17 @@
     "build": {
         "development": {
             "developmentClient": true,
-            "distribution": "internal"
+            "distribution": "internal",
+            "channel": "development"
         },
         "preview": {
+            "channel": "preview",
             "ios": {
                 "simulator": true
             }
         },
         "simulator": {
+            "channel": "development",
             "ios": {
                 "simulator": true,
                 "buildConfiguration": "Debug"
@@ -25,12 +28,22 @@
         "production": {
             "autoIncrement": true,
             "node": "20.11.1",
+            "channel": "production",
+            "android": {
+                "buildType": "app-bundle"
+            }
+        },
+        "production-dev": {
+            "autoIncrement": true,
+            "node": "20.11.1",
+            "channel": "development",
             "android": {
                 "buildType": "app-bundle"
             }
         },
         "production-apk": {
             "node": "20.11.1",
+            "channel": "production",
             "android": {
                 "buildType": "apk"
             }

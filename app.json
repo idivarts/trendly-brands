@@ -2,7 +2,7 @@
     "expo": {
         "name": "Trendly - AI Social Planner",
         "slug": "trendly-brands",
-        "version": "4.0.0",
+        "version": "4.1.0",
         "orientation": "portrait",
         "icon": "./assets/images/branding/app-icon.png",
         "scheme": "trendly-brands",
@@ -11,6 +11,15 @@
             "android",
             "web"
         ],
+        "runtimeVersion": {
+            "policy": "fingerprint"
+        },
+        "updates": {
+            "url": "https://u.expo.dev/7939ee56-e9dc-45ad-9c84-461a884e011f",
+            "enabled": true,
+            "checkAutomatically": "ON_LOAD",
+            "fallbackToCacheTimeout": 0
+        },
         "jsEngine": "hermes",
         "userInterfaceStyle": "automatic",
         "splash": {
