@@ -106,6 +106,7 @@
                 }
             ],
             "./plugins/with-ios-fmt-xcode26-fix.js",
+            "./plugins/with-android-gradle-memory.js",
             "expo-notifications",
             "@react-native-google-signin/google-signin",
             [
