@@ -1,0 +1,97 @@
+name: Resolve runtime versions (reusable)
+
+# The single definition of "what runtimeVersion does this commit produce".
+#
+# Always runs on ubuntu, for both platforms, so that every consumer compares the
+# same value: release.yaml's ledger comparison, the OTA publish, and the
+# per-platform asserts inside native-build.yaml all hang off this one answer.
+# Resolving iOS here rather than on macOS is deliberate — the macOS build job
+# asserts parity against this value before spending ~40 minutes.
+
+on:
+  workflow_call:
+    inputs:
+      stage:
+        description: 'dev | prod'
+        required: true
+        type: string
+    outputs:
+      rtv_ios:
+        description: 'iOS runtimeVersion'
+        value: ${{ jobs.resolve.outputs.rtv_ios }}
+      rtv_android:
+        description: 'Android runtimeVersion'
+        value: ${{ jobs.resolve.outputs.rtv_android }}
+
+# See native-build.yaml — a caller's workflow-level env does not reach a
+# reusable workflow, and these feed the fingerprint via plugins/with-branch.js.
+env:
+  EXPO_PUBLIC_BRANCH_LIVE_KEY: ${{ vars.BRANCH_LIVE_KEY }}
+  EXPO_PUBLIC_BRANCH_TEST_KEY: ${{ vars.BRANCH_TEST_KEY }}
+  EXPO_PUBLIC_BRANCH_LIVE_DOMAIN: ${{ vars.BRANCH_LIVE_DOMAIN }}
+  EXPO_PUBLIC_BRANCH_TEST_DOMAIN: ${{ vars.BRANCH_TEST_DOMAIN }}
+
+jobs:
+  resolve:
+    name: Resolve (${{ inputs.stage }})
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.stage }}
+    outputs:
+      rtv_ios: ${{ steps.fp.outputs.rtv_ios }}
+      rtv_android: ${{ steps.fp.outputs.rtv_android }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          ssh-key: ${{ secrets.GIT_SSH_KEY }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Load fingerprint inputs
+        env:
+          FIREBASE_CONFIG_BASE64: ${{ secrets.TRENDLY_BRANDS_FIREBASE_CONFIG }}
+          ENV_LOCAL_BASE64: ${{ secrets.ENV_LOCAL_FILE }}
+          ANDROID_FIREBASE_CONFIG_BASE64: ${{ secrets.ANDROID_FIREBASE_CONFIG }}
+          IOS_FIREBASE_CONFIG_BASE64: ${{ secrets.IOS_FIREBASE_CONFIG }}
+        run: |
+          set -euo pipefail
+          echo "$FIREBASE_CONFIG_BASE64"         | base64 -d > firebase-config.js
+          echo "$ENV_LOCAL_BASE64"               | base64 -d > .env.local
+          echo "$ANDROID_FIREBASE_CONFIG_BASE64" | base64 -d > google-services.json
+          echo "$IOS_FIREBASE_CONFIG_BASE64"     | base64 -d > GoogleService-Info.plist
+          # Both google services files are fingerprint inputs. This job resolves
+          # BOTH platforms, so a missing file silently drops a hash source and
+          # shifts the runtimeVersion — producing OTAs that reach nobody.
+          for f in app.json eas.json .easignore .gitignore package.json \
+                   google-services.json GoogleService-Info.plist \
+                   plugins/with-ios-fmt-xcode26-fix.js; do
+            [ -f "$f" ] || { echo "::error::missing fingerprint input: $f"; exit 1; }
+          done
+
+      - name: Compute runtime versions
+        id: fp
+        # Must match the build jobs: the Branch config plugin resolves
+        # live-vs-test (and therefore the link domains) from this, so resolving
+        # without it would bake a different runtimeVersion than the build
+        # produces — publishing OTAs at a version no installed binary has.
+        env:
+          EXPO_PUBLIC_APP_STAGE: ${{ inputs.stage }}
+        run: |
+          set -euo pipefail
+          for p in ios android; do
+            out="$(npx expo-updates runtimeversion:resolve --platform "$p")"
+            wf="$(jq -r '.workflow'        <<<"$out")"
+            rtv="$(jq -r '.runtimeVersion' <<<"$out")"
+            # A stray android/ios dir flips the workflow to "generic" and pulls
+            # native sources into the hash that the OTA job cannot reproduce.
+            [ "$wf" = "managed" ] || { echo "::error::$p workflow=$wf (expected managed)"; exit 1; }
+            [ -n "$rtv" ] && [ "$rtv" != "null" ] || { echo "::error::empty runtimeVersion for $p"; exit 1; }
+            echo "rtv_$p=$rtv" >> "$GITHUB_OUTPUT"
+            echo "$p runtimeVersion = $rtv"
+          done

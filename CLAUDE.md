@@ -309,6 +309,29 @@ consult the ledger, because that is what makes manual tagging useful:
 > Cut a tag by hand at any commit to seal the current JS bundle into a fresh
 > store binary, even when nothing native changed.
 
+### Workflow layout — where to make a change
+
+| file | role |
+|---|---|
+| `release.yaml` | entry point for `dev`/`master` pushes; decides, publishes OTA, allocates release tags |
+| `native-release.yaml` | entry point for `v*` tags; just supplies prod parameters |
+| `native-build.yaml` | **reusable** — the only definition of "build a store binary and ship it" |
+| `resolve-runtime.yaml` | **reusable** — the only definition of "what runtimeVersion does this commit produce" |
+
+`native-build.yaml` is called four ways — {dev, prod} × {ios, android}. Anything
+that varies is an input, so **a change to the build belongs there, once**. Do not
+reintroduce per-platform or per-stage copies in the entry-point workflows.
+
+⚠️ **Adding a new `EXPO_PUBLIC_*` bundle variable touches exactly two places:**
+the build step in `native-build.yaml` and the `Publish OTA` step in
+`release.yaml`. They must stay identical — a bundle published with different
+values than the binary embeds is the core failure mode this system guards
+against. (The web build in `deploy-action.yaml` is separate and independent.)
+
+⚠️ A caller's workflow-level `env:` does **not** propagate into a reusable
+workflow, which is why the Branch credentials are re-declared in each of
+`native-build.yaml` and `resolve-runtime.yaml` rather than inherited.
+
 ### What forces a native build
 
 Fingerprint inputs are **not** "app.json + package.json". Verified via

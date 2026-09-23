@@ -4,7 +4,7 @@ name: Mobile Release (OTA or Native)
 # JS-only (-> publish an EAS Update) or native-affecting.
 #
 # What happens on a native-affecting change differs by branch:
-#   dev    -> build + submit inline, here (fast iteration)
+#   dev    -> build + submit inline, via native-build.yaml (fast iteration)
 #   master -> allocate a release tag (vX.Y.Z, vX.Y.Z-2, ...) and stop. Pushing
 #             that tag triggers native-release.yaml, which does the build.
 #
@@ -16,6 +16,10 @@ name: Mobile Release (OTA or Native)
 # fingerprint of the last natively-built-and-submitted commit, which is stored
 # in annotated git tags (the "ledger"):
 #   ota-base-ios-dev  ota-base-android-dev  ota-base-ios-prod  ota-base-android-prod
+#
+# Shared with native-release.yaml, so neither drifts from the other:
+#   resolve-runtime.yaml  — what runtimeVersion does this commit produce
+#   native-build.yaml     — build a store binary and ship it
 #
 # Deliberately NO `tags:` trigger — this workflow pushes both ledger and release
 # tags, and a tag trigger here would make it re-enter itself.
@@ -40,14 +44,9 @@ concurrency:
 permissions:
   contents: write
 
-# Branch credentials are consumed by plugins/with-branch.js during config
-# evaluation, and that plugin's output (associatedDomains / intentFilters) is
-# part of the expo-updates fingerprint — verified: the same commit resolves two
-# different runtimeVersions with and without these set.
-#
-# So they are declared at WORKFLOW level, not per step: every runtimeversion
-# resolve AND every build must see identical values, or the ledger records a
-# version the binary does not have and OTAs reach nobody.
+# Needed by the `ota` job below, which bundles JS and re-resolves runtimeVersions.
+# The reusable workflows declare this block themselves — a caller's workflow-level
+# env does NOT propagate into a called workflow.
 env:
   EXPO_PUBLIC_BRANCH_LIVE_KEY: ${{ vars.BRANCH_LIVE_KEY }}
   EXPO_PUBLIC_BRANCH_TEST_KEY: ${{ vars.BRANCH_TEST_KEY }}
@@ -55,53 +54,31 @@ env:
   EXPO_PUBLIC_BRANCH_TEST_DOMAIN: ${{ vars.BRANCH_TEST_DOMAIN }}
 
 jobs:
+  resolve:
+    uses: ./.github/workflows/resolve-runtime.yaml
+    with:
+      stage: ${{ github.ref == 'refs/heads/master' && 'prod' || 'dev' }}
+    secrets: inherit
+
   decide:
     name: Decide OTA vs native
+    needs: resolve
     runs-on: ubuntu-latest
     environment: ${{ github.ref == 'refs/heads/master' && 'prod' || 'dev' }}
     outputs:
       stage: ${{ steps.ctx.outputs.stage }}
       channel: ${{ steps.ctx.outputs.channel }}
-      rtv_ios: ${{ steps.fp.outputs.rtv_ios }}
-      rtv_android: ${{ steps.fp.outputs.rtv_android }}
       ios_native: ${{ steps.cmp.outputs.ios_native }}
       android_native: ${{ steps.cmp.outputs.android_native }}
       ota_platform: ${{ steps.cmp.outputs.ota_platform }}
       release_tag_needed: ${{ steps.cmp.outputs.release_tag_needed }}
     steps:
+      # No npm install here: the fingerprints already came from `resolve`, so
+      # this job only needs git tags and jq.
       - uses: actions/checkout@v4
         with:
-          submodules: true
           ssh-key: ${{ secrets.GIT_SSH_KEY }}
           fetch-depth: 0 # full history + tags; the ledger needs them
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-
-      - run: npm ci
-
-      - name: Load fingerprint inputs
-        env:
-          FIREBASE_CONFIG_BASE64: ${{ secrets.TRENDLY_BRANDS_FIREBASE_CONFIG }}
-          ENV_LOCAL_BASE64: ${{ secrets.ENV_LOCAL_FILE }}
-          ANDROID_FIREBASE_CONFIG_BASE64: ${{ secrets.ANDROID_FIREBASE_CONFIG }}
-          IOS_FIREBASE_CONFIG_BASE64: ${{ secrets.IOS_FIREBASE_CONFIG }}
-        run: |
-          set -euo pipefail
-          echo "$FIREBASE_CONFIG_BASE64"         | base64 -d > firebase-config.js
-          echo "$ENV_LOCAL_BASE64"               | base64 -d > .env.local
-          echo "$ANDROID_FIREBASE_CONFIG_BASE64" | base64 -d > google-services.json
-          echo "$IOS_FIREBASE_CONFIG_BASE64"     | base64 -d > GoogleService-Info.plist
-          # Both google services files are fingerprint inputs. This job resolves
-          # BOTH platforms, so a missing file silently drops a hash source and
-          # shifts the runtimeVersion — producing OTAs that reach nobody.
-          for f in app.json eas.json .easignore .gitignore package.json \
-                   google-services.json GoogleService-Info.plist \
-                   plugins/with-ios-fmt-xcode26-fix.js; do
-            [ -f "$f" ] || { echo "::error::missing fingerprint input: $f"; exit 1; }
-          done
 
       - name: Resolve stage / channel
         id: ctx
@@ -115,35 +92,12 @@ jobs:
             echo "channel=development" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Compute runtime versions
-        id: fp
-        # EXPO_PUBLIC_APP_STAGE must be set here and match the build jobs: the
-        # Branch config plugin resolves live-vs-test (and therefore the link
-        # domains) from it, so resolving the fingerprint without it would bake a
-        # different runtimeVersion than the build produces — publishing OTAs at a
-        # version no installed binary has.
-        env:
-          EXPO_PUBLIC_APP_STAGE: ${{ steps.ctx.outputs.stage }}
-        run: |
-          set -euo pipefail
-          for p in ios android; do
-            out="$(npx expo-updates runtimeversion:resolve --platform "$p")"
-            wf="$(jq -r '.workflow'        <<<"$out")"
-            rtv="$(jq -r '.runtimeVersion' <<<"$out")"
-            # A stray android/ios dir flips the workflow to "generic" and pulls
-            # native sources into the hash that the OTA job cannot reproduce.
-            [ "$wf" = "managed" ] || { echo "::error::$p workflow=$wf (expected managed)"; exit 1; }
-            [ -n "$rtv" ] && [ "$rtv" != "null" ] || { echo "::error::empty runtimeVersion for $p"; exit 1; }
-            echo "rtv_$p=$rtv" >> "$GITHUB_OUTPUT"
-            echo "$p runtimeVersion = $rtv"
-          done
-
       - name: Read ledger and decide
         id: cmp
         env:
           STAGE: ${{ steps.ctx.outputs.stage }}
-          RTV_IOS: ${{ steps.fp.outputs.rtv_ios }}
-          RTV_ANDROID: ${{ steps.fp.outputs.rtv_android }}
+          RTV_IOS: ${{ needs.resolve.outputs.rtv_ios }}
+          RTV_ANDROID: ${{ needs.resolve.outputs.rtv_android }}
           FORCE_NATIVE: ${{ github.event_name == 'workflow_dispatch' && inputs.force_native || false }}
         run: |
           set -euo pipefail
@@ -221,7 +175,7 @@ jobs:
 
   ota:
     name: Publish OTA update
-    needs: decide
+    needs: [resolve, decide]
     if: needs.decide.outputs.ota_platform != 'none'
     runs-on: ubuntu-latest
     environment: ${{ github.ref == 'refs/heads/master' && 'prod' || 'dev' }}
@@ -255,12 +209,12 @@ jobs:
 
       - name: Re-assert runtime versions before publishing
         env:
-          # Same stage as the decide job, or this check compares two different
+          # Same stage as the resolve job, or this check compares two different
           # resolutions and passes while the real build diverges.
           EXPO_PUBLIC_APP_STAGE: ${{ needs.decide.outputs.stage }}
           OTA_PLATFORM: ${{ needs.decide.outputs.ota_platform }}
-          RTV_IOS: ${{ needs.decide.outputs.rtv_ios }}
-          RTV_ANDROID: ${{ needs.decide.outputs.rtv_android }}
+          RTV_IOS: ${{ needs.resolve.outputs.rtv_ios }}
+          RTV_ANDROID: ${{ needs.resolve.outputs.rtv_android }}
         run: |
           set -euo pipefail
           check () {
@@ -272,6 +226,7 @@ jobs:
           [ "$OTA_PLATFORM" = android ] || check ios     "$RTV_IOS"
           [ "$OTA_PLATFORM" = ios     ] || check android "$RTV_ANDROID"
 
+      # ── The bundle env. Keep in sync with the build step in native-build.yaml. ──
       - name: Publish OTA
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
@@ -308,8 +263,8 @@ jobs:
 
       - name: Verify published runtime version
         env:
-          RTV_IOS: ${{ needs.decide.outputs.rtv_ios }}
-          RTV_ANDROID: ${{ needs.decide.outputs.rtv_android }}
+          RTV_IOS: ${{ needs.resolve.outputs.rtv_ios }}
+          RTV_ANDROID: ${{ needs.resolve.outputs.rtv_android }}
         run: |
           set -euo pipefail
           cat ota-result.json
@@ -340,216 +295,35 @@ jobs:
             echo "- commit: \`${GITHUB_SHA:0:7}\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
+  # dev only: on master a native change is tagged instead, and native-release.yaml
+  # builds it. stage/channel are literals here because of that gate.
   android-native:
-    name: Android native build + submit
-    needs: decide
-    # dev only: on master a native change is tagged instead, and native-release.yaml builds it.
+    name: Android
+    needs: [resolve, decide]
     if: needs.decide.outputs.android_native == 'true' && needs.decide.outputs.stage == 'dev'
-    runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/master' && 'prod' || 'dev' }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-          ssh-key: ${{ secrets.GIT_SSH_KEY }}
-          fetch-depth: 0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-
-      - run: npm install -g eas-cli@16.28.0
-      - run: npm ci
-
-      - name: Load Config JS
-        env:
-          FIREBASE_CONFIG_BASE64: ${{ secrets.TRENDLY_BRANDS_FIREBASE_CONFIG }}
-          ENV_LOCAL_BASE64: ${{ secrets.ENV_LOCAL_FILE }}
-          PLAY_CONSOLE_SA_BASE64: ${{ secrets.PLAY_CONSOLE_SA }}
-          ANDROID_FIREBASE_CONFIG_BASE64: ${{ secrets.ANDROID_FIREBASE_CONFIG }}
-        run: |
-          set -euo pipefail
-          echo "$FIREBASE_CONFIG_BASE64"         | base64 -d > firebase-config.js
-          echo "$ENV_LOCAL_BASE64"               | base64 -d > .env.local
-          echo "$PLAY_CONSOLE_SA_BASE64"         | base64 -d > play-console-service-account.json
-          echo "$ANDROID_FIREBASE_CONFIG_BASE64" | base64 -d > google-services.json
-
-      - name: Assert runtime version matches decide
-        env:
-          EXPECTED: ${{ needs.decide.outputs.rtv_android }}
-        run: |
-          set -euo pipefail
-          LOCAL="$(npx expo-updates runtimeversion:resolve --platform android | jq -r .runtimeVersion)"
-          [ "$LOCAL" = "$EXPECTED" ] || {
-            echo "::error::android runtimeVersion mismatch: decide=$EXPECTED here=$LOCAL"
-            echo "::error::Ledger and embedded binary would disagree; OTAs would reach nobody."
-            exit 1; }
-
-      - name: EAS Build Android (local)
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          EXPO_PUBLIC_APP_STAGE: ${{ needs.decide.outputs.stage }}
-          EXPO_PUBLIC_WEBSOCKET_TRENDLY: ${{ needs.decide.outputs.stage == 'prod' && vars.WEBSOCKET_PROD_TRENDLY || vars.WEBSOCKET_DEV_TRENDLY }}
-          EXPO_PUBLIC_FIRESTORE_DATABASE_ID: ${{ needs.decide.outputs.stage == 'prod' && vars.FIRESTORE_DATABASE_PROD_ID || vars.FIRESTORE_DATABASE_DEV_ID }}
-          # PostHog has no environment dimension — its guidance is a separate
-          # PROJECT per environment, so the key IS the dev/prod separation.
-          EXPO_PUBLIC_POSTHOG_KEY: ${{ needs.decide.outputs.stage == 'prod' && vars.POSTHOG_KEY_PROD || vars.POSTHOG_KEY_DEV }}
-          EXPO_PUBLIC_POSTHOG_HOST: ${{ vars.POSTHOG_HOST }}
-          # One Sentry project, segmented by its first-class `environment`
-          # field (set from EXPO_PUBLIC_APP_STAGE) — so a single DSN. Not a
-          # secret: a client DSN ships inside the bundle either way.
-          EXPO_PUBLIC_SENTRY_DSN: ${{ vars.SENTRY_DSN_BRANDS }}
-          # Marketing pixel IDs — public identifiers, so variables not secrets.
-          # Bundle-only (MarketingPixels), so they do not affect the fingerprint.
-          EXPO_PUBLIC_META_PIXEL_ID: ${{ vars.META_PIXEL_ID }}
-          EXPO_PUBLIC_GOOGLE_ADS_ID: ${{ vars.GOOGLE_ADS_ID }}
-          EXPO_PUBLIC_LINKEDIN_PARTNER_ID: ${{ vars.LINKEDIN_PARTNER_ID }}
-          EXPO_PUBLIC_TWITTER_PIXEL_ID: ${{ vars.TWITTER_PIXEL_ID }}
-          EXPO_PUBLIC_CLARITY_PROJECT_ID: ${{ vars.CLARITY_PROJECT_ID }}
-          EXPO_PUBLIC_REVENUECAT_IOS_KEY: ${{ vars.REVENUECAT_IOS_KEY }}
-          EXPO_PUBLIC_REVENUECAT_ANDROID_KEY: ${{ vars.REVENUECAT_ANDROID_KEY }}
-        run: npm run ${{ needs.decide.outputs.stage == 'prod' && 'build-android' || 'build-android-dev' }}
-
-      - name: Submit to Play Store
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: npm run ${{ needs.decide.outputs.stage == 'prod' && 'submit-android-prod' || 'submit-android' }}
-
-      - name: Write fingerprint ledger
-        if: success()
-        env:
-          STAGE: ${{ needs.decide.outputs.stage }}
-          RTV: ${{ needs.decide.outputs.rtv_android }}
-          CHANNEL: ${{ needs.decide.outputs.channel }}
-        run: |
-          set -euo pipefail
-          TAG="ota-base-android-$STAGE"
-          MSG="$(jq -nc \
-            --arg rtv "$RTV" --arg sha "$GITHUB_SHA" --arg ch "$CHANNEL" \
-            --arg ver "$(jq -r '.expo.version' app.json)" \
-            --arg run "$GITHUB_RUN_ID" --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            '{runtimeVersion:$rtv,commit:$sha,appVersion:$ver,channel:$ch,runId:$run,submittedAt:$at}')"
-          git config user.name  "trendly-ci"
-          git config user.email "ci@trendly.pro"
-          git tag -f -a "$TAG" -m "$MSG" "$GITHUB_SHA"
-          git push -f origin "refs/tags/$TAG"
-          echo "Ledger updated: \`$TAG\` -> \`$RTV\`" >> "$GITHUB_STEP_SUMMARY"
+    uses: ./.github/workflows/native-build.yaml
+    with:
+      platform: android
+      stage: dev
+      channel: development
+      expected_runtime_version: ${{ needs.resolve.outputs.rtv_android }}
+    secrets: inherit
 
   ios-native:
-    name: iOS native build + submit
-    needs: decide
-    # dev only: on master a native change is tagged instead, and native-release.yaml builds it.
+    name: iOS
+    needs: [resolve, decide]
     if: needs.decide.outputs.ios_native == 'true' && needs.decide.outputs.stage == 'dev'
-    # App Store Connect requires iOS 26+ SDK (Xcode 26+); macos-latest lags.
-    runs-on: macos-26
-    environment: ${{ github.ref == 'refs/heads/master' && 'prod' || 'dev' }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: true
-          ssh-key: ${{ secrets.GIT_SSH_KEY }}
-          fetch-depth: 0
-
-      - uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: '26.4.1'
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'npm'
-
-      - run: npm install -g eas-cli@16.28.0
-      - run: npm ci
-
-      - name: Load Config JS
-        env:
-          FIREBASE_CONFIG_BASE64: ${{ secrets.TRENDLY_BRANDS_FIREBASE_CONFIG }}
-          ENV_LOCAL_BASE64: ${{ secrets.ENV_LOCAL_FILE }}
-          IOS_FIREBASE_CONFIG_BASE64: ${{ secrets.IOS_FIREBASE_CONFIG }}
-        run: |
-          set -euo pipefail
-          echo "$FIREBASE_CONFIG_BASE64"     | base64 -d > firebase-config.js
-          echo "$ENV_LOCAL_BASE64"           | base64 -d > .env.local
-          echo "$IOS_FIREBASE_CONFIG_BASE64" | base64 -d > GoogleService-Info.plist
-
-      # Runs BEFORE the ~40min build: `decide` computed this on ubuntu, and if
-      # macOS disagrees the ledger would record a fingerprint the binary does not
-      # embed, permanently breaking OTA delivery with no error anywhere.
-      - name: Assert runtime version matches decide
-        env:
-          EXPECTED: ${{ needs.decide.outputs.rtv_ios }}
-        run: |
-          set -euo pipefail
-          LOCAL="$(npx expo-updates runtimeversion:resolve --platform ios | jq -r .runtimeVersion)"
-          if [ "$LOCAL" != "$EXPECTED" ]; then
-            echo "::error::iOS runtimeVersion mismatch: decide(ubuntu)=$EXPECTED macos=$LOCAL"
-            echo "::error::Ledger and embedded binary would disagree; OTAs would reach nobody."
-            npx expo-updates fingerprint:generate --platform ios --debug > fp-ios-macos.json || true
-            exit 1
-          fi
-
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: fingerprint-debug-ios
-          path: fp-ios-macos.json
-          if-no-files-found: ignore
-
-      - name: EAS Build iOS (local)
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          EXPO_PUBLIC_APP_STAGE: ${{ needs.decide.outputs.stage }}
-          EXPO_PUBLIC_WEBSOCKET_TRENDLY: ${{ needs.decide.outputs.stage == 'prod' && vars.WEBSOCKET_PROD_TRENDLY || vars.WEBSOCKET_DEV_TRENDLY }}
-          EXPO_PUBLIC_FIRESTORE_DATABASE_ID: ${{ needs.decide.outputs.stage == 'prod' && vars.FIRESTORE_DATABASE_PROD_ID || vars.FIRESTORE_DATABASE_DEV_ID }}
-          # PostHog has no environment dimension — its guidance is a separate
-          # PROJECT per environment, so the key IS the dev/prod separation.
-          EXPO_PUBLIC_POSTHOG_KEY: ${{ needs.decide.outputs.stage == 'prod' && vars.POSTHOG_KEY_PROD || vars.POSTHOG_KEY_DEV }}
-          EXPO_PUBLIC_POSTHOG_HOST: ${{ vars.POSTHOG_HOST }}
-          # One Sentry project, segmented by its first-class `environment`
-          # field (set from EXPO_PUBLIC_APP_STAGE) — so a single DSN. Not a
-          # secret: a client DSN ships inside the bundle either way.
-          EXPO_PUBLIC_SENTRY_DSN: ${{ vars.SENTRY_DSN_BRANDS }}
-          # Marketing pixel IDs — public identifiers, so variables not secrets.
-          # Bundle-only (MarketingPixels), so they do not affect the fingerprint.
-          EXPO_PUBLIC_META_PIXEL_ID: ${{ vars.META_PIXEL_ID }}
-          EXPO_PUBLIC_GOOGLE_ADS_ID: ${{ vars.GOOGLE_ADS_ID }}
-          EXPO_PUBLIC_LINKEDIN_PARTNER_ID: ${{ vars.LINKEDIN_PARTNER_ID }}
-          EXPO_PUBLIC_TWITTER_PIXEL_ID: ${{ vars.TWITTER_PIXEL_ID }}
-          EXPO_PUBLIC_CLARITY_PROJECT_ID: ${{ vars.CLARITY_PROJECT_ID }}
-          EXPO_PUBLIC_REVENUECAT_IOS_KEY: ${{ vars.REVENUECAT_IOS_KEY }}
-          EXPO_PUBLIC_REVENUECAT_ANDROID_KEY: ${{ vars.REVENUECAT_ANDROID_KEY }}
-        run: npm run ${{ needs.decide.outputs.stage == 'prod' && 'build-ios' || 'build-ios-dev' }}
-
-      - name: Submit to App Store Connect
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: npm run ${{ needs.decide.outputs.stage == 'prod' && 'submit-ios' || 'submit-ios-dev' }}
-
-      - name: Write fingerprint ledger
-        if: success()
-        env:
-          STAGE: ${{ needs.decide.outputs.stage }}
-          RTV: ${{ needs.decide.outputs.rtv_ios }}
-          CHANNEL: ${{ needs.decide.outputs.channel }}
-        run: |
-          set -euo pipefail
-          TAG="ota-base-ios-$STAGE"
-          MSG="$(jq -nc \
-            --arg rtv "$RTV" --arg sha "$GITHUB_SHA" --arg ch "$CHANNEL" \
-            --arg ver "$(jq -r '.expo.version' app.json)" \
-            --arg run "$GITHUB_RUN_ID" --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            '{runtimeVersion:$rtv,commit:$sha,appVersion:$ver,channel:$ch,runId:$run,submittedAt:$at}')"
-          git config user.name  "trendly-ci"
-          git config user.email "ci@trendly.pro"
-          git tag -f -a "$TAG" -m "$MSG" "$GITHUB_SHA"
-          git push -f origin "refs/tags/$TAG"
-          echo "Ledger updated: \`$TAG\` -> \`$RTV\`" >> "$GITHUB_STEP_SUMMARY"
+    uses: ./.github/workflows/native-build.yaml
+    with:
+      platform: ios
+      stage: dev
+      channel: development
+      expected_runtime_version: ${{ needs.resolve.outputs.rtv_ios }}
+    secrets: inherit
 
   tag-release:
     name: Allocate release tag
-    needs: decide
+    needs: [resolve, decide]
     # master only. Creating the tag is the handoff: pushing it triggers
     # native-release.yaml, which builds and submits both platforms.
     if: needs.decide.outputs.stage == 'prod' && needs.decide.outputs.release_tag_needed == 'true'
@@ -558,14 +332,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
           ssh-key: ${{ secrets.GIT_SSH_KEY }}
           fetch-depth: 0
 
       - name: Create and push release tag
         env:
-          RTV_IOS: ${{ needs.decide.outputs.rtv_ios }}
-          RTV_ANDROID: ${{ needs.decide.outputs.rtv_android }}
+          RTV_IOS: ${{ needs.resolve.outputs.rtv_ios }}
+          RTV_ANDROID: ${{ needs.resolve.outputs.rtv_android }}
         run: |
           set -euo pipefail
           git fetch --tags --force --quiet origin

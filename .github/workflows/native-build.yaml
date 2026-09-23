@@ -1,0 +1,198 @@
+name: Native build + submit (reusable)
+
+# The single definition of "build a store binary and ship it".
+#
+# Called four ways — {dev, prod} x {ios, android}:
+#   release.yaml        dev  inline native builds
+#   native-release.yaml prod builds from a release tag
+#
+# Everything that varies between those is an input. Nothing about the build
+# should be duplicated in a caller: if a new EXPO_PUBLIC_* var is needed, it is
+# added to the build step here, once.
+#
+# The one sibling that also bundles JS is the `ota` job in release.yaml, which
+# must keep the same bundle env as the build step below — a bundle published
+# with different values than the binary embeds is the whole failure mode this
+# system exists to avoid.
+
+on:
+  workflow_call:
+    inputs:
+      platform:
+        description: 'ios | android'
+        required: true
+        type: string
+      stage:
+        description: 'dev | prod'
+        required: true
+        type: string
+      channel:
+        description: 'EAS Update channel baked into the binary'
+        required: true
+        type: string
+      expected_runtime_version:
+        description: 'runtimeVersion resolved on ubuntu by the caller; asserted here before building'
+        required: true
+        type: string
+      release_tag:
+        description: 'Release tag this build came from, recorded in the ledger. Empty for inline dev builds.'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+
+# Branch credentials are consumed by plugins/with-branch.js during config
+# evaluation, and that plugin's output (associatedDomains / intentFilters) is
+# part of the expo-updates fingerprint.
+#
+# Workflow-level `env` in a CALLER does not propagate into a reusable workflow,
+# so this block must live here rather than being inherited.
+env:
+  EXPO_PUBLIC_BRANCH_LIVE_KEY: ${{ vars.BRANCH_LIVE_KEY }}
+  EXPO_PUBLIC_BRANCH_TEST_KEY: ${{ vars.BRANCH_TEST_KEY }}
+  EXPO_PUBLIC_BRANCH_LIVE_DOMAIN: ${{ vars.BRANCH_LIVE_DOMAIN }}
+  EXPO_PUBLIC_BRANCH_TEST_DOMAIN: ${{ vars.BRANCH_TEST_DOMAIN }}
+
+jobs:
+  build:
+    name: ${{ inputs.platform }} ${{ inputs.stage }}
+    # App Store Connect requires iOS 26+ SDK (Xcode 26+); macos-latest lags.
+    runs-on: ${{ inputs.platform == 'ios' && 'macos-26' || 'ubuntu-latest' }}
+    environment: ${{ inputs.stage }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          ssh-key: ${{ secrets.GIT_SSH_KEY }}
+          fetch-depth: 0
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        if: inputs.platform == 'ios'
+        with:
+          xcode-version: '26.4.1'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - run: npm install -g eas-cli@16.28.0 # pinned: unpinned would jump majors silently
+      - run: npm ci
+
+      - name: Load Config JS
+        env:
+          PLATFORM: ${{ inputs.platform }}
+          FIREBASE_CONFIG_BASE64: ${{ secrets.TRENDLY_BRANDS_FIREBASE_CONFIG }}
+          ENV_LOCAL_BASE64: ${{ secrets.ENV_LOCAL_FILE }}
+          IOS_FIREBASE_CONFIG_BASE64: ${{ secrets.IOS_FIREBASE_CONFIG }}
+          ANDROID_FIREBASE_CONFIG_BASE64: ${{ secrets.ANDROID_FIREBASE_CONFIG }}
+          PLAY_CONSOLE_SA_BASE64: ${{ secrets.PLAY_CONSOLE_SA }}
+        run: |
+          set -euo pipefail
+          echo "$FIREBASE_CONFIG_BASE64" | base64 -d > firebase-config.js
+          echo "$ENV_LOCAL_BASE64"       | base64 -d > .env.local
+          if [ "$PLATFORM" = "ios" ]; then
+            echo "$IOS_FIREBASE_CONFIG_BASE64" | base64 -d > GoogleService-Info.plist
+          else
+            echo "$ANDROID_FIREBASE_CONFIG_BASE64" | base64 -d > google-services.json
+            echo "$PLAY_CONSOLE_SA_BASE64"         | base64 -d > play-console-service-account.json
+          fi
+
+      # Runs BEFORE the build (~40min on iOS): the caller resolved this on
+      # ubuntu, and if this runner disagrees the ledger would record a
+      # fingerprint the binary does not embed, permanently breaking OTA delivery
+      # with no error anywhere.
+      #
+      # EXPO_PUBLIC_APP_STAGE must be set here and match the build step — the
+      # Branch plugin resolves live-vs-test (and therefore the link domains)
+      # from it, and that feeds the fingerprint.
+      - name: Assert runtime version matches caller
+        env:
+          EXPO_PUBLIC_APP_STAGE: ${{ inputs.stage }}
+          PLATFORM: ${{ inputs.platform }}
+          EXPECTED: ${{ inputs.expected_runtime_version }}
+        run: |
+          set -euo pipefail
+          LOCAL="$(npx expo-updates runtimeversion:resolve --platform "$PLATFORM" | jq -r .runtimeVersion)"
+          if [ "$LOCAL" != "$EXPECTED" ]; then
+            echo "::error::$PLATFORM runtimeVersion mismatch: caller=$EXPECTED here=$LOCAL"
+            echo "::error::Ledger and embedded binary would disagree; OTAs would reach nobody."
+            npx expo-updates fingerprint:generate --platform "$PLATFORM" --debug > fp-debug.json || true
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: fingerprint-debug-${{ inputs.platform }}-${{ inputs.stage }}
+          path: fp-debug.json
+          if-no-files-found: ignore
+
+      # ── The bundle env. Keep in sync with the `ota` job in release.yaml. ──
+      - name: EAS Build (local)
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_PUBLIC_APP_STAGE: ${{ inputs.stage }}
+          EXPO_PUBLIC_WEBSOCKET_TRENDLY: ${{ inputs.stage == 'prod' && vars.WEBSOCKET_PROD_TRENDLY || vars.WEBSOCKET_DEV_TRENDLY }}
+          EXPO_PUBLIC_FIRESTORE_DATABASE_ID: ${{ inputs.stage == 'prod' && vars.FIRESTORE_DATABASE_PROD_ID || vars.FIRESTORE_DATABASE_DEV_ID }}
+          # PostHog has no environment dimension — its guidance is a separate
+          # PROJECT per environment, so the key IS the dev/prod separation.
+          EXPO_PUBLIC_POSTHOG_KEY: ${{ inputs.stage == 'prod' && vars.POSTHOG_KEY_PROD || vars.POSTHOG_KEY_DEV }}
+          EXPO_PUBLIC_POSTHOG_HOST: ${{ vars.POSTHOG_HOST }}
+          # One Sentry project, segmented by its first-class `environment`
+          # field (set from EXPO_PUBLIC_APP_STAGE) — so a single DSN. Not a
+          # secret: a client DSN ships inside the bundle either way.
+          EXPO_PUBLIC_SENTRY_DSN: ${{ vars.SENTRY_DSN_BRANDS }}
+          # Marketing pixel IDs — public identifiers, so variables not secrets.
+          # Bundle-only (MarketingPixels), so they do not affect the fingerprint.
+          EXPO_PUBLIC_META_PIXEL_ID: ${{ vars.META_PIXEL_ID }}
+          EXPO_PUBLIC_GOOGLE_ADS_ID: ${{ vars.GOOGLE_ADS_ID }}
+          EXPO_PUBLIC_LINKEDIN_PARTNER_ID: ${{ vars.LINKEDIN_PARTNER_ID }}
+          EXPO_PUBLIC_TWITTER_PIXEL_ID: ${{ vars.TWITTER_PIXEL_ID }}
+          EXPO_PUBLIC_CLARITY_PROJECT_ID: ${{ vars.CLARITY_PROJECT_ID }}
+          EXPO_PUBLIC_REVENUECAT_IOS_KEY: ${{ vars.REVENUECAT_IOS_KEY }}
+          EXPO_PUBLIC_REVENUECAT_ANDROID_KEY: ${{ vars.REVENUECAT_ANDROID_KEY }}
+        run: npm run build-${{ inputs.platform }}${{ inputs.stage == 'prod' && '' || '-dev' }}
+
+      - name: Submit to store
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          PLATFORM: ${{ inputs.platform }}
+          STAGE: ${{ inputs.stage }}
+        run: |
+          set -euo pipefail
+          # Script names are not symmetric across platforms, and package.json
+          # `scripts` is a fingerprint input — renaming them to line up would
+          # force a native rebuild, so map here instead.
+          if [ "$PLATFORM" = "ios" ]; then
+            if [ "$STAGE" = "prod" ]; then SCRIPT=submit-ios; else SCRIPT=submit-ios-dev; fi
+          else
+            if [ "$STAGE" = "prod" ]; then SCRIPT=submit-android-prod; else SCRIPT=submit-android; fi
+          fi
+          echo "running: npm run $SCRIPT"
+          npm run "$SCRIPT"
+
+      - name: Write fingerprint ledger
+        if: success()
+        env:
+          PLATFORM: ${{ inputs.platform }}
+          STAGE: ${{ inputs.stage }}
+          RTV: ${{ inputs.expected_runtime_version }}
+          CHANNEL: ${{ inputs.channel }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          TAG="ota-base-$PLATFORM-$STAGE"
+          MSG="$(jq -nc \
+            --arg rtv "$RTV" --arg sha "$GITHUB_SHA" --arg ch "$CHANNEL" \
+            --arg ver "$(jq -r '.expo.version' app.json)" \
+            --arg rel "$RELEASE_TAG" \
+            --arg run "$GITHUB_RUN_ID" --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{runtimeVersion:$rtv,commit:$sha,appVersion:$ver,channel:$ch,releaseTag:$rel,runId:$run,submittedAt:$at}')"
+          git config user.name  "trendly-ci"
+          git config user.email "ci@trendly.pro"
+          git tag -f -a "$TAG" -m "$MSG" "$GITHUB_SHA"
+          git push -f origin "refs/tags/$TAG"
+          echo "Ledger updated: \`$TAG\` -> \`$RTV\`" >> "$GITHUB_STEP_SUMMARY"
