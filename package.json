@@ -123,7 +123,6 @@
         "react-native-autocomplete-input": "^5.4.0",
         "react-native-branch": "^7.0.0",
         "react-native-enriched": "0.2.1",
-        "react-native-exception-handler": "^2.10.10",
         "react-native-gesture-handler": "~2.28.0",
         "react-native-get-random-values": "~1.11.0",
         "react-native-google-places-autocomplete": "^2.5.7",

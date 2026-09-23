@@ -37,6 +37,12 @@
             "supportsTablet": false,
             "bundleIdentifier": "pro.trendly.brands",
             "googleServicesFile": "./GoogleService-Info.plist",
+            "associatedDomains": [
+                "applinks:zgh4c.app.link",
+                "applinks:zgh4c-alternate.app.link",
+                "applinks:zgh4c.test-app.link",
+                "applinks:zgh4c-alternate.test-app.link"
+            ],
             "infoPlist": {
                 "ITSAppUsesNonExemptEncryption": false,
                 "CFBundleDisplayName": "Trendly AI",
@@ -52,6 +58,22 @@
             },
             "package": "pro.trendly.brands",
             "googleServicesFile": "./google-services.json",
+            "intentFilters": [
+                {
+                    "action": "VIEW",
+                    "autoVerify": true,
+                    "category": [
+                        "BROWSABLE",
+                        "DEFAULT"
+                    ],
+                    "data": [
+                        { "scheme": "https", "host": "zgh4c.app.link" },
+                        { "scheme": "https", "host": "zgh4c-alternate.app.link" },
+                        { "scheme": "https", "host": "zgh4c.test-app.link" },
+                        { "scheme": "https", "host": "zgh4c-alternate.test-app.link" }
+                    ]
+                }
+            ],
             "permissions": [
                 "NOTIFICATIONS",
                 "CAMERA",
