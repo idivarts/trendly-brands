@@ -21,10 +21,10 @@ const InboxScreen = () => {
                     <InboxModeToggle key="mode" mode={mode} onChange={setMode} />,
                 ]}
             />
-            <AppLayout
-                withWebPadding={false}
-                safeAreaEdges={["bottom", "left", "right"]}
-            >
+            {/* No "bottom" edge: the tab bar below already reserves the bottom
+                safe-area inset, so repeating it here leaves a dead band above
+                the bar. */}
+            <AppLayout withWebPadding={false} safeAreaEdges={["left", "right"]}>
                 <InboxView mode={mode} />
             </AppLayout>
         </AppLayout>
