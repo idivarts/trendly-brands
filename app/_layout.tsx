@@ -33,6 +33,7 @@ import {
     useThemeOverride
 } from "@/contexts";
 import UpdateProvider from "@/shared-libs/contexts/update-provider";
+import { AnalyticsProvider } from "@/contexts/analytics-context.provider";
 import MarketingPixels from "@/shared-libs/marketing/MarketingPixels";
 import { ConfirmationModalProvider } from "@/shared-uis/components/ConfirmationModal";
 import { GlobalErrorFallback } from "@/shared-uis/components/GlobalErrorFallback";
@@ -85,11 +86,13 @@ export default function RootLayout() {
             <MarketingPixels />
             <UpdateProvider force={true}>
                 <AuthContextProvider>
-                    <LocationContextProvider>
-                        <ThemeOverrideProvider>
-                            <RootLayoutStack />
-                        </ThemeOverrideProvider>
-                    </LocationContextProvider>
+                    <AnalyticsProvider>
+                        <LocationContextProvider>
+                            <ThemeOverrideProvider>
+                                <RootLayoutStack />
+                            </ThemeOverrideProvider>
+                        </LocationContextProvider>
+                    </AnalyticsProvider>
                 </AuthContextProvider>
             </UpdateProvider>
         </GestureHandlerRootView>

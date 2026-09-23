@@ -430,6 +430,7 @@ const ThreadView: React.FC<Props> = ({
                 Social Inbox is a paid feature); else the normal 24h-window composer. */}
             {inboxReadOnly ? (
                 <UpgradeInline
+                    feature="inbox_reply"
                     message="Replying is a Pro feature — upgrade to reply to comments & DMs."
                     // Real reply intent: nudge in place, and only fall back to
                     // the billing page when the nudge is suppressed.

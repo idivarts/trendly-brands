@@ -137,7 +137,9 @@
             ],
             "expo-tracking-transparency",
             "expo-audio",
-            "expo-video"
+            "expo-video",
+            "expo-localization",
+            "./plugins/with-branch.js"
         ],
         "experiments": {
             "typedRoutes": true,

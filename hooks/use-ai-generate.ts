@@ -1,3 +1,4 @@
+import { track } from "@/shared-libs/utils/analytics";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
@@ -63,6 +64,8 @@ export function useAIGenerate() {
     }) => {
         if (!brandId) return;
         setCaptionLoading(true);
+        track("ai_generation_requested", { kind: "caption", model: args.model });
+        const startedAt = Date.now();
         try {
             const res = await HttpWrapper.fetch(`/api/ai/content/caption`, {
                 method: "POST",
@@ -71,8 +74,25 @@ export function useAIGenerate() {
             });
             const data = await res.json();
             setCaptions((data.variants ?? []) as CaptionVariant[]);
+            track("ai_generation_completed", {
+                kind: "caption",
+                model: args.model,
+                duration_ms: Date.now() - startedAt,
+                success: true,
+            });
         } catch (e: any) {
-            if (e?.status === 402) promptUpgrade();
+            track("ai_generation_completed", {
+                kind: "caption",
+                model: args.model,
+                duration_ms: Date.now() - startedAt,
+                success: false,
+            });
+            // 402 is the backend's token/plan gate — the single clearest signal
+            // that a user wanted more than their plan allows.
+            if (e?.status === 402) {
+                track("entitlement_blocked", { reason: "tokens_exhausted", feature: "ai_caption" });
+                promptUpgrade();
+            }
         } finally {
             setCaptionLoading(false);
         }
@@ -102,6 +122,8 @@ export function useAIGenerate() {
     }) => {
         if (!brandId) return;
         setHashtagLoading(true);
+        track("ai_generation_requested", { kind: "hashtags", model: args.model });
+        const startedAt = Date.now();
         try {
             const res = await HttpWrapper.fetch(`/api/ai/content/hashtags`, {
                 method: "POST",
@@ -110,8 +132,25 @@ export function useAIGenerate() {
             });
             const data = await res.json();
             setHashtags((data.groups ?? []) as HashtagGroup[]);
+            track("ai_generation_completed", {
+                kind: "hashtags",
+                model: args.model,
+                duration_ms: Date.now() - startedAt,
+                success: true,
+            });
         } catch (e: any) {
-            if (e?.status === 402) promptUpgrade();
+            track("ai_generation_completed", {
+                kind: "hashtags",
+                model: args.model,
+                duration_ms: Date.now() - startedAt,
+                success: false,
+            });
+            // 402 is the backend's token/plan gate — the single clearest signal
+            // that a user wanted more than their plan allows.
+            if (e?.status === 402) {
+                track("entitlement_blocked", { reason: "tokens_exhausted", feature: "ai_hashtags" });
+                promptUpgrade();
+            }
         } finally {
             setHashtagLoading(false);
         }

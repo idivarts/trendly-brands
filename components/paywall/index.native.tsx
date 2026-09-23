@@ -4,6 +4,7 @@ import { useBrandContext } from '@/contexts/brand-context.provider'
 import { useOrganizationContext } from '@/contexts/organization-context.provider'
 import { useBreakpoints } from '@/hooks'
 import { ModelStatus } from '@/shared-libs/firestore/trendly-pro/models/status'
+import { track } from "@/shared-libs/utils/analytics";
 import Toaster from '@/shared-uis/components/toaster/Toaster'
 import Colors from '@/shared-uis/constants/Colors'
 import {
@@ -77,10 +78,21 @@ const PayWallComponent = () => {
 
     const handlePurchase = useCallback(async (pkg: IapPackage) => {
         setBusyProduct(pkg.productId)
+        track("checkout_started", { plan_key: pkg.planKey ?? pkg.productId, provider: "iap" })
         const res = await purchase(pkg)
         setBusyProduct(null)
         if (res.userCancelled) return
         if (res.success) {
+            // ⭐⭐ Primary conversion. The store is the source of truth for the
+            // money, so this fires on RevenueCat's confirmation, not on intent.
+            // No numeric value/currency: IapPackage only carries a localized
+            // priceString ("$34.00"), and parsing that is not worth the risk of
+            // wrong revenue numbers. The RevenueCat webhook is the source of
+            // truth for money, and the backend already consumes it.
+            track("subscription_started", {
+                plan_key: pkg.planKey ?? pkg.productId,
+                provider: "iap",
+            })
             Toaster.success('Purchase successful — unlocking your plan. This can take a minute.')
         } else {
             Toaster.error(res.error ?? 'Purchase failed. Please try again.')
@@ -91,7 +103,10 @@ const PayWallComponent = () => {
         setRestoring(true)
         const res = await restorePurchases()
         setRestoring(false)
-        if (res.success) Toaster.success('Purchases restored.')
+        if (res.success) {
+            track("subscription_restored", {})
+            Toaster.success('Purchases restored.')
+        }
         else if (res.error) Toaster.error(res.error)
     }, [])
 

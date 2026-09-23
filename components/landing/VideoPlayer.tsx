@@ -1,4 +1,4 @@
-import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
+import { track } from "@/shared-libs/utils/analytics";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { ResizeMode, Video } from "expo-av";
@@ -110,7 +110,7 @@ const VideoPlayer: React.FC<{ videoLink: string; thumbnail?: string }> = ({ vide
         <Pressable
             accessibilityRole="imagebutton"
             onPress={() => {
-                analyticsLogEvent("clicked_video", { video_link: videoLink });
+                track("landing_video_played", { video_link: videoLink });
                 setShowPlayer(true);
             }}
             onHoverIn={() => setVideoHovered(true)}

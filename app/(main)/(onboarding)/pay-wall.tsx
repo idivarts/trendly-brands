@@ -2,6 +2,7 @@ import PricingPage from '@/components/landing/pages/pricing-page'
 import PayWallComponent from '@/components/paywall'
 import { DEFAULT_MEMBER_LANDING_PAGE } from '@/constants/App'
 import { useOrganizationContext } from '@/contexts/organization-context.provider'
+import { track } from '@/shared-libs/utils/analytics'
 import { useMyNavigation } from '@/shared-libs/utils/router'
 import AppLayout from '@/layouts/app-layout'
 import React, { useEffect } from 'react'
@@ -10,6 +11,12 @@ import { Platform } from 'react-native'
 const PayWall = () => {
     const { billingGateStatus } = useOrganizationContext()
     const router = useMyNavigation()
+
+    // This screen is only ever reached by the billing gate, so the trigger is
+    // known without threading a param through resetAndNavigate.
+    useEffect(() => {
+        track("paywall_viewed", { trigger: "billing_gate" })
+    }, [])
 
     // /pay-wall is reached via resetAndNavigate, which clears the back stack —
     // nothing else routes the user out once they're unblocked (free plan,

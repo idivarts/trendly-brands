@@ -12,6 +12,8 @@ import {
     ContentStatus as FSContentStatus,
 } from "@/shared-libs/firestore/trendly-pro/models/contents";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import type { ContentSource } from "@/shared-constants/analytics-events";
+import { track } from "@/shared-libs/utils/analytics";
 import {
     addDoc,
     collection,
@@ -143,7 +145,9 @@ interface UseContentsReturn {
      */
     addContent: (
         item: Omit<CalendarItem, "id">,
-        extra?: Partial<ContentItem>
+        extra?: Partial<ContentItem>,
+        /** Which surface created this, for the activation funnel. */
+        source?: ContentSource
     ) => Promise<string | null>;
     /**
      * Partially update an existing content document.
@@ -202,7 +206,8 @@ export function useContents(): UseContentsReturn {
 
     const addContent = async (
         item: Omit<CalendarItem, "id">,
-        extra: Partial<ContentItem> = {}
+        extra: Partial<ContentItem> = {},
+        source: ContentSource = "manual"
     ): Promise<string | null> => {
         const brandId = selectedBrand?.id;
         const managerId = manager?.id;
@@ -211,6 +216,7 @@ export function useContents(): UseContentsReturn {
         const data = toIContent(item, managerId, extra);
         const contentsRef = collection(FirestoreDB, "brands", brandId, "contents");
         const docRef = await addDoc(contentsRef, data);
+        track("content_created", { source });
         return docRef.id;
     };
 

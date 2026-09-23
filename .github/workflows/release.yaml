@@ -40,6 +40,20 @@ concurrency:
 permissions:
   contents: write
 
+# Branch credentials are consumed by plugins/with-branch.js during config
+# evaluation, and that plugin's output (associatedDomains / intentFilters) is
+# part of the expo-updates fingerprint — verified: the same commit resolves two
+# different runtimeVersions with and without these set.
+#
+# So they are declared at WORKFLOW level, not per step: every runtimeversion
+# resolve AND every build must see identical values, or the ledger records a
+# version the binary does not have and OTAs reach nobody.
+env:
+  EXPO_PUBLIC_BRANCH_LIVE_KEY: ${{ vars.BRANCH_LIVE_KEY }}
+  EXPO_PUBLIC_BRANCH_TEST_KEY: ${{ vars.BRANCH_TEST_KEY }}
+  EXPO_PUBLIC_BRANCH_LIVE_DOMAIN: ${{ vars.BRANCH_LIVE_DOMAIN }}
+  EXPO_PUBLIC_BRANCH_TEST_DOMAIN: ${{ vars.BRANCH_TEST_DOMAIN }}
+
 jobs:
   decide:
     name: Decide OTA vs native
@@ -103,6 +117,13 @@ jobs:
 
       - name: Compute runtime versions
         id: fp
+        # EXPO_PUBLIC_APP_STAGE must be set here and match the build jobs: the
+        # Branch config plugin resolves live-vs-test (and therefore the link
+        # domains) from it, so resolving the fingerprint without it would bake a
+        # different runtimeVersion than the build produces — publishing OTAs at a
+        # version no installed binary has.
+        env:
+          EXPO_PUBLIC_APP_STAGE: ${{ steps.ctx.outputs.stage }}
         run: |
           set -euo pipefail
           for p in ios android; do
@@ -234,6 +255,9 @@ jobs:
 
       - name: Re-assert runtime versions before publishing
         env:
+          # Same stage as the decide job, or this check compares two different
+          # resolutions and passes while the real build diverges.
+          EXPO_PUBLIC_APP_STAGE: ${{ needs.decide.outputs.stage }}
           OTA_PLATFORM: ${{ needs.decide.outputs.ota_platform }}
           RTV_IOS: ${{ needs.decide.outputs.rtv_ios }}
           RTV_ANDROID: ${{ needs.decide.outputs.rtv_android }}
@@ -259,6 +283,21 @@ jobs:
           EXPO_PUBLIC_APP_STAGE: ${{ needs.decide.outputs.stage }}
           EXPO_PUBLIC_WEBSOCKET_TRENDLY: ${{ needs.decide.outputs.stage == 'prod' && vars.WEBSOCKET_PROD_TRENDLY || vars.WEBSOCKET_DEV_TRENDLY }}
           EXPO_PUBLIC_FIRESTORE_DATABASE_ID: ${{ needs.decide.outputs.stage == 'prod' && vars.FIRESTORE_DATABASE_PROD_ID || vars.FIRESTORE_DATABASE_DEV_ID }}
+          # PostHog has no environment dimension — its guidance is a separate
+          # PROJECT per environment, so the key IS the dev/prod separation.
+          EXPO_PUBLIC_POSTHOG_KEY: ${{ needs.decide.outputs.stage == 'prod' && vars.POSTHOG_KEY_PROD || vars.POSTHOG_KEY_DEV }}
+          EXPO_PUBLIC_POSTHOG_HOST: ${{ vars.POSTHOG_HOST }}
+          # One Sentry project, segmented by its first-class `environment`
+          # field (set from EXPO_PUBLIC_APP_STAGE) — so a single DSN. Not a
+          # secret: a client DSN ships inside the bundle either way.
+          EXPO_PUBLIC_SENTRY_DSN: ${{ vars.SENTRY_DSN_BRANDS }}
+          # Marketing pixel IDs — public identifiers, so variables not secrets.
+          # Bundle-only (MarketingPixels), so they do not affect the fingerprint.
+          EXPO_PUBLIC_META_PIXEL_ID: ${{ vars.META_PIXEL_ID }}
+          EXPO_PUBLIC_GOOGLE_ADS_ID: ${{ vars.GOOGLE_ADS_ID }}
+          EXPO_PUBLIC_LINKEDIN_PARTNER_ID: ${{ vars.LINKEDIN_PARTNER_ID }}
+          EXPO_PUBLIC_TWITTER_PIXEL_ID: ${{ vars.TWITTER_PIXEL_ID }}
+          EXPO_PUBLIC_CLARITY_PROJECT_ID: ${{ vars.CLARITY_PROJECT_ID }}
           EXPO_PUBLIC_REVENUECAT_IOS_KEY: ${{ vars.REVENUECAT_IOS_KEY }}
           EXPO_PUBLIC_REVENUECAT_ANDROID_KEY: ${{ vars.REVENUECAT_ANDROID_KEY }}
         run: |
@@ -353,6 +392,21 @@ jobs:
           EXPO_PUBLIC_APP_STAGE: ${{ needs.decide.outputs.stage }}
           EXPO_PUBLIC_WEBSOCKET_TRENDLY: ${{ needs.decide.outputs.stage == 'prod' && vars.WEBSOCKET_PROD_TRENDLY || vars.WEBSOCKET_DEV_TRENDLY }}
           EXPO_PUBLIC_FIRESTORE_DATABASE_ID: ${{ needs.decide.outputs.stage == 'prod' && vars.FIRESTORE_DATABASE_PROD_ID || vars.FIRESTORE_DATABASE_DEV_ID }}
+          # PostHog has no environment dimension — its guidance is a separate
+          # PROJECT per environment, so the key IS the dev/prod separation.
+          EXPO_PUBLIC_POSTHOG_KEY: ${{ needs.decide.outputs.stage == 'prod' && vars.POSTHOG_KEY_PROD || vars.POSTHOG_KEY_DEV }}
+          EXPO_PUBLIC_POSTHOG_HOST: ${{ vars.POSTHOG_HOST }}
+          # One Sentry project, segmented by its first-class `environment`
+          # field (set from EXPO_PUBLIC_APP_STAGE) — so a single DSN. Not a
+          # secret: a client DSN ships inside the bundle either way.
+          EXPO_PUBLIC_SENTRY_DSN: ${{ vars.SENTRY_DSN_BRANDS }}
+          # Marketing pixel IDs — public identifiers, so variables not secrets.
+          # Bundle-only (MarketingPixels), so they do not affect the fingerprint.
+          EXPO_PUBLIC_META_PIXEL_ID: ${{ vars.META_PIXEL_ID }}
+          EXPO_PUBLIC_GOOGLE_ADS_ID: ${{ vars.GOOGLE_ADS_ID }}
+          EXPO_PUBLIC_LINKEDIN_PARTNER_ID: ${{ vars.LINKEDIN_PARTNER_ID }}
+          EXPO_PUBLIC_TWITTER_PIXEL_ID: ${{ vars.TWITTER_PIXEL_ID }}
+          EXPO_PUBLIC_CLARITY_PROJECT_ID: ${{ vars.CLARITY_PROJECT_ID }}
           EXPO_PUBLIC_REVENUECAT_IOS_KEY: ${{ vars.REVENUECAT_IOS_KEY }}
           EXPO_PUBLIC_REVENUECAT_ANDROID_KEY: ${{ vars.REVENUECAT_ANDROID_KEY }}
         run: npm run ${{ needs.decide.outputs.stage == 'prod' && 'build-android' || 'build-android-dev' }}
@@ -449,6 +503,21 @@ jobs:
           EXPO_PUBLIC_APP_STAGE: ${{ needs.decide.outputs.stage }}
           EXPO_PUBLIC_WEBSOCKET_TRENDLY: ${{ needs.decide.outputs.stage == 'prod' && vars.WEBSOCKET_PROD_TRENDLY || vars.WEBSOCKET_DEV_TRENDLY }}
           EXPO_PUBLIC_FIRESTORE_DATABASE_ID: ${{ needs.decide.outputs.stage == 'prod' && vars.FIRESTORE_DATABASE_PROD_ID || vars.FIRESTORE_DATABASE_DEV_ID }}
+          # PostHog has no environment dimension — its guidance is a separate
+          # PROJECT per environment, so the key IS the dev/prod separation.
+          EXPO_PUBLIC_POSTHOG_KEY: ${{ needs.decide.outputs.stage == 'prod' && vars.POSTHOG_KEY_PROD || vars.POSTHOG_KEY_DEV }}
+          EXPO_PUBLIC_POSTHOG_HOST: ${{ vars.POSTHOG_HOST }}
+          # One Sentry project, segmented by its first-class `environment`
+          # field (set from EXPO_PUBLIC_APP_STAGE) — so a single DSN. Not a
+          # secret: a client DSN ships inside the bundle either way.
+          EXPO_PUBLIC_SENTRY_DSN: ${{ vars.SENTRY_DSN_BRANDS }}
+          # Marketing pixel IDs — public identifiers, so variables not secrets.
+          # Bundle-only (MarketingPixels), so they do not affect the fingerprint.
+          EXPO_PUBLIC_META_PIXEL_ID: ${{ vars.META_PIXEL_ID }}
+          EXPO_PUBLIC_GOOGLE_ADS_ID: ${{ vars.GOOGLE_ADS_ID }}
+          EXPO_PUBLIC_LINKEDIN_PARTNER_ID: ${{ vars.LINKEDIN_PARTNER_ID }}
+          EXPO_PUBLIC_TWITTER_PIXEL_ID: ${{ vars.TWITTER_PIXEL_ID }}
+          EXPO_PUBLIC_CLARITY_PROJECT_ID: ${{ vars.CLARITY_PROJECT_ID }}
           EXPO_PUBLIC_REVENUECAT_IOS_KEY: ${{ vars.REVENUECAT_IOS_KEY }}
           EXPO_PUBLIC_REVENUECAT_ANDROID_KEY: ${{ vars.REVENUECAT_ANDROID_KEY }}
         run: npm run ${{ needs.decide.outputs.stage == 'prod' && 'build-ios' || 'build-ios-dev' }}

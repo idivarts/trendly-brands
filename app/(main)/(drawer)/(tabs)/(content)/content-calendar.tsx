@@ -234,7 +234,7 @@ const ContentCalendarScreen = () => {
 
     const handleAddItem = useCallback(
         async (newItem: Omit<CalendarItem, "id">, extras: AddContentExtras) => {
-            await addContent(newItem, { platforms: extras.platforms });
+            await addContent(newItem, { platforms: extras.platforms }, "calendar");
         },
         [addContent]
     );

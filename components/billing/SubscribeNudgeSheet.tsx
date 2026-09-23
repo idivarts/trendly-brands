@@ -1,6 +1,7 @@
 import { NUDGE_COPY, NudgeTriggerKey } from "@/constants/SubscribeNudge";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
+import { track } from "@/shared-libs/utils/analytics";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { getOfferings, isIapConfigured, purchase } from "@/utils/iap/purchases";
 import { IapPackage } from "@/utils/iap/types";
@@ -79,10 +80,20 @@ const SubscribeNudgeSheet: React.FC<Props> = ({ trigger, onDismiss, onConverted 
             return;
         }
         setBusy(true);
+        track("checkout_started", {
+            plan_key: proPackage.planKey ?? proPackage.productId,
+            provider: "iap",
+        });
         const res = await purchase(proPackage);
         setBusy(false);
         if (res.userCancelled) return;
         if (res.success) {
+            // ⭐⭐ Primary conversion — the in-sheet upgrade is a second path to
+            // it, distinct from the full paywall.
+            track("subscription_started", {
+                plan_key: proPackage.planKey ?? proPackage.productId,
+                provider: "iap",
+            });
             Toaster.success("Purchase successful — unlocking your plan. This can take a minute.");
             onConverted();
         } else {

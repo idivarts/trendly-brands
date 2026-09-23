@@ -4,9 +4,10 @@ import { faLock } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { fs, lh } from "@/constants/Typography";
+import { track } from "@/shared-libs/utils/analytics";
 
 // Entitlement gates — capability locks (NOT consumption). Two presentations:
 //   • UpgradeInline  — a compact in-context upsell row (Inbox view-only, posting cap).
@@ -18,11 +19,33 @@ function goToBilling() {
     router.push("/billing");
 }
 
+/**
+ * Reports that a user hit a capability lock. Fired once per mount rather than
+ * per render, so a re-rendering screen doesn't inflate the count.
+ *
+ * `feature` is optional: these two components are presentational and are also
+ * used in places where the blocked capability has no single name. Callers that
+ * pass it get the event; callers that don't are unaffected.
+ */
+function useBlockedEvent(feature?: string, reason: string = "plan_locked") {
+    const reported = useRef(false);
+    useEffect(() => {
+        if (!feature || reported.current) return;
+        reported.current = true;
+        track("entitlement_blocked", { reason, feature });
+    }, [feature, reason]);
+}
+
 export const UpgradeInline: React.FC<{
     message: string;
     ctaLabel?: string;
     onPress?: () => void;
-}> = ({ message, ctaLabel = "Upgrade", onPress }) => {
+    /** Capability being gated, e.g. "inbox_reply". Enables the analytics event. */
+    feature?: string;
+    /** Backend gate reason, e.g. "tokens_exhausted". Defaults to a plan lock. */
+    reason?: string;
+}> = ({ message, ctaLabel = "Upgrade", onPress, feature, reason }) => {
+    useBlockedEvent(feature, reason);
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useStyles(colors);
@@ -49,7 +72,12 @@ export const LockedOverlay: React.FC<{
     subtitle?: string;
     ctaLabel?: string;
     children: React.ReactNode;
-}> = ({ title, subtitle, ctaLabel = "Upgrade to unlock", children }) => {
+    /** Capability being gated, e.g. "analytics". Enables the analytics event. */
+    feature?: string;
+    /** Backend gate reason, e.g. "tokens_exhausted". Defaults to a plan lock. */
+    reason?: string;
+}> = ({ title, subtitle, ctaLabel = "Upgrade to unlock", children, feature, reason }) => {
+    useBlockedEvent(feature, reason);
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
