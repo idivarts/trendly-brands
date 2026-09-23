@@ -1,16 +1,24 @@
 name: Mobile Release (OTA or Native)
 
-# Replaces android.yaml + ios.yaml. On every push to dev/master this decides,
-# per platform, whether the change is JS-only (-> publish an EAS Update) or
-# native-affecting (-> local EAS build + store submission).
+# On every push to dev/master this decides, per platform, whether the change is
+# JS-only (-> publish an EAS Update) or native-affecting.
+#
+# What happens on a native-affecting change differs by branch:
+#   dev    -> build + submit inline, here (fast iteration)
+#   master -> allocate a release tag (vX.Y.Z, vX.Y.Z-2, ...) and stop. Pushing
+#             that tag triggers native-release.yaml, which does the build.
+#
+# The master indirection exists so a native build is always pinned to a tag,
+# and so a tag can be cut by hand at any time to seal the current JS bundle
+# into a fresh binary — even when no native change is pending.
 #
 # The decision compares the expo-updates fingerprint of HEAD against the
 # fingerprint of the last natively-built-and-submitted commit, which is stored
 # in annotated git tags (the "ledger"):
 #   ota-base-ios-dev  ota-base-android-dev  ota-base-ios-prod  ota-base-android-prod
 #
-# Deliberately NO `tags:` trigger — the ledger pushes tags, and a tag trigger
-# here would make the workflow re-enter itself.
+# Deliberately NO `tags:` trigger — this workflow pushes both ledger and release
+# tags, and a tag trigger here would make it re-enter itself.
 
 on:
   push:
@@ -45,6 +53,7 @@ jobs:
       ios_native: ${{ steps.cmp.outputs.ios_native }}
       android_native: ${{ steps.cmp.outputs.android_native }}
       ota_platform: ${{ steps.cmp.outputs.ota_platform }}
+      release_tag_needed: ${{ steps.cmp.outputs.release_tag_needed }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -142,21 +151,51 @@ jobs:
           else                                                   OTA=none
           fi
 
+          # On master a native change does NOT build here — it allocates a release
+          # tag, and native-release.yaml builds from that tag. Skip the tag if an
+          # existing release tag already covers this exact fingerprint pair, so a
+          # second merge landing while a build is in flight can't double-tag.
+          TAG_NEEDED=false
+          if [ "$STAGE" = "prod" ] && { [ "$IOS_N" = true ] || [ "$AND_N" = true ]; }; then
+            TAG_NEEDED=true
+            # force_native means "cut a release regardless", so it skips this check.
+            if [ "$FORCE_NATIVE" != "true" ]; then
+              for t in $(git tag -l 'v*'); do
+                m="$(git for-each-ref --format='%(contents)' "refs/tags/$t" | head -n1)"
+                ti="$(jq -r '.iosRuntimeVersion // empty'     <<<"$m" 2>/dev/null || true)"
+                ta="$(jq -r '.androidRuntimeVersion // empty' <<<"$m" 2>/dev/null || true)"
+                if [ "$ti" = "$RTV_IOS" ] && [ "$ta" = "$RTV_ANDROID" ]; then
+                  echo "::notice::release tag $t already covers this fingerprint pair; not tagging again"
+                  TAG_NEEDED=false
+                  break
+                fi
+              done
+            fi
+          fi
+
           {
             echo "ios_native=$IOS_N"
             echo "android_native=$AND_N"
             echo "ota_platform=$OTA"
+            echo "release_tag_needed=$TAG_NEEDED"
           } >> "$GITHUB_OUTPUT"
+
+          if [ "$STAGE" = "prod" ]; then
+            native_action="tag for release (built by native-release.yaml)"
+          else
+            native_action="NATIVE build+submit"
+          fi
 
           {
             echo "## Release decision — stage \`$STAGE\`"
             echo ""
             echo "| platform | HEAD runtimeVersion | ledger runtimeVersion | action |"
             echo "|---|---|---|---|"
-            echo "| ios | \`$RTV_IOS\` | \`$(ledger_rtv ios)\` | $([ "$IOS_N" = true ] && echo 'NATIVE build+submit' || echo 'OTA') |"
-            echo "| android | \`$RTV_ANDROID\` | \`$(ledger_rtv android)\` | $([ "$AND_N" = true ] && echo 'NATIVE build+submit' || echo 'OTA') |"
+            echo "| ios | \`$RTV_IOS\` | \`$(ledger_rtv ios)\` | $([ "$IOS_N" = true ] && echo "$native_action" || echo 'OTA') |"
+            echo "| android | \`$RTV_ANDROID\` | \`$(ledger_rtv android)\` | $([ "$AND_N" = true ] && echo "$native_action" || echo 'OTA') |"
             echo ""
             echo "OTA platform scope: \`$OTA\`"
+            if [ "$STAGE" = "prod" ]; then echo "Release tag needed: \`$TAG_NEEDED\`"; fi
           } >> "$GITHUB_STEP_SUMMARY"
 
   ota:
@@ -265,7 +304,8 @@ jobs:
   android-native:
     name: Android native build + submit
     needs: decide
-    if: needs.decide.outputs.android_native == 'true'
+    # dev only: on master a native change is tagged instead, and native-release.yaml builds it.
+    if: needs.decide.outputs.android_native == 'true' && needs.decide.outputs.stage == 'dev'
     runs-on: ubuntu-latest
     environment: ${{ github.ref == 'refs/heads/master' && 'prod' || 'dev' }}
     steps:
@@ -345,7 +385,8 @@ jobs:
   ios-native:
     name: iOS native build + submit
     needs: decide
-    if: needs.decide.outputs.ios_native == 'true'
+    # dev only: on master a native change is tagged instead, and native-release.yaml builds it.
+    if: needs.decide.outputs.ios_native == 'true' && needs.decide.outputs.stage == 'dev'
     # App Store Connect requires iOS 26+ SDK (Xcode 26+); macos-latest lags.
     runs-on: macos-26
     environment: ${{ github.ref == 'refs/heads/master' && 'prod' || 'dev' }}
@@ -436,3 +477,61 @@ jobs:
           git tag -f -a "$TAG" -m "$MSG" "$GITHUB_SHA"
           git push -f origin "refs/tags/$TAG"
           echo "Ledger updated: \`$TAG\` -> \`$RTV\`" >> "$GITHUB_STEP_SUMMARY"
+
+  tag-release:
+    name: Allocate release tag
+    needs: decide
+    # master only. Creating the tag is the handoff: pushing it triggers
+    # native-release.yaml, which builds and submits both platforms.
+    if: needs.decide.outputs.stage == 'prod' && needs.decide.outputs.release_tag_needed == 'true'
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          ssh-key: ${{ secrets.GIT_SSH_KEY }}
+          fetch-depth: 0
+
+      - name: Create and push release tag
+        env:
+          RTV_IOS: ${{ needs.decide.outputs.rtv_ios }}
+          RTV_ANDROID: ${{ needs.decide.outputs.rtv_android }}
+        run: |
+          set -euo pipefail
+          git fetch --tags --force --quiet origin
+
+          BASE="v$(jq -r '.expo.version' app.json)"
+          if ! git rev-parse -q --verify "refs/tags/$BASE" >/dev/null; then
+            TAG="$BASE"
+          else
+            n=2
+            while git rev-parse -q --verify "refs/tags/$BASE-$n" >/dev/null; do n=$((n + 1)); done
+            TAG="$BASE-$n"
+          fi
+
+          # Fingerprints live in the tag message so `decide` can tell that a tag
+          # already covers this build and avoid double-tagging on a later merge.
+          MSG="$(jq -nc \
+            --arg ios "$RTV_IOS" --arg android "$RTV_ANDROID" \
+            --arg sha "$GITHUB_SHA" --arg ver "$(jq -r '.expo.version' app.json)" \
+            --arg run "$GITHUB_RUN_ID" --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{iosRuntimeVersion:$ios,androidRuntimeVersion:$android,commit:$sha,appVersion:$ver,runId:$run,createdAt:$at}')"
+
+          git config user.name  "trendly-ci"
+          git config user.email "ci@trendly.pro"
+          git tag -a "$TAG" -m "$MSG" "$GITHUB_SHA"
+          # No -f: a name collision here means the allocation raced, and failing
+          # loudly is better than clobbering someone else's release tag.
+          git push origin "refs/tags/$TAG"
+
+          {
+            echo "## Release tag created"
+            echo ""
+            echo "- tag: \`$TAG\`"
+            echo "- commit: \`${GITHUB_SHA:0:7}\`"
+            echo "- ios runtimeVersion: \`$RTV_IOS\`"
+            echo "- android runtimeVersion: \`$RTV_ANDROID\`"
+            echo ""
+            echo "\`native-release.yaml\` will build and submit both platforms from this tag."
+          } >> "$GITHUB_STEP_SUMMARY"

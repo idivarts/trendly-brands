@@ -286,3 +286,54 @@ npm run build-android # EAS production Android build → build/Trendly.aab
 npm run submit-ios    # Submit to App Store
 npm run submit-android-prod # Submit to Play Store
 ```
+
+---
+
+## Release Flow (OTA vs native)
+
+The app ships JS-only changes over the air via EAS Update. CI decides per
+platform by comparing the `expo-updates` fingerprint of HEAD against the
+fingerprint of the last commit that was built and submitted, stored in
+annotated **ledger tags**: `ota-base-{ios,android}-{dev,prod}`.
+
+| branch | JS-only change | native-affecting change |
+|---|---|---|
+| `dev` | OTA → channel `development` | builds + submits inline in `release.yaml` |
+| `master` | OTA → channel `production` | allocates a release tag; `native-release.yaml` builds it |
+
+**Release tags** are `v<appVersion>`, with a numeric suffix on collision
+(`v4.1.0`, `v4.1.0-2`, `v4.1.0-3`). Pushing one triggers `native-release.yaml`,
+which **always builds and submits both platforms** — it deliberately does not
+consult the ledger, because that is what makes manual tagging useful:
+
+> Cut a tag by hand at any commit to seal the current JS bundle into a fresh
+> store binary, even when nothing native changed.
+
+### What forces a native build
+
+Fingerprint inputs are **not** "app.json + package.json". Verified via
+`npx expo-updates runtimeversion:resolve --platform android`, they are:
+`expoConfig` (app.json incl. `version`), `packageJson:scripts` (**scripts only**,
+not dependencies), `eas.json`, `.gitignore`, `.easignore`, `patches/`,
+`plugins/*`, config-referenced assets (app icon, splash), the google-services
+files, and the autolinking configs.
+
+App JS, `components/`, `contexts/` and the three `shared-*` submodules are **not**
+inputs — so submodule bumps correctly ship over the air.
+
+⚠️ Editing the `scripts` block in `package.json` changes the fingerprint and
+forces a native build. Keep it stable; pass variable values via env instead.
+
+### Gotchas
+
+- `google-services.json` **and** `GoogleService-Info.plist` must both exist
+  wherever fingerprints are resolved for both platforms. A missing file silently
+  drops a hash source and shifts the runtimeVersion, producing OTAs that reach
+  nobody.
+- The `ota-publish` npm script mirrors the `export $(cat .env.local | xargs) &&`
+  prefix of the build scripts on purpose — the OTA bundle must bake in exactly
+  what the store build bakes in.
+- Rolling back: `eas update:republish` or `eas update:roll-back-to-embedded`.
+  **Never** move or delete ledger tags to roll back — a rollback publishes at the
+  same runtimeVersion, so the ledger stays valid, and touching it would force a
+  spurious native build.

@@ -6,6 +6,7 @@ import {
     useSidebarCollapsed,
 } from "@/components/drawer-layout/sidebar-collapsed-context";
 import { InboxUnreadProvider } from "@/contexts/inbox-unread-context.provider";
+import OTAUpdateGate from "@/contexts/ota-update-gate";
 import { useBreakpoints } from "@/hooks";
 import { BrandProtectedScreen } from "@/layouts/protected";
 import CustomDrawerWrapper from "@/shared-uis/components/CustomDrawer";
@@ -40,6 +41,7 @@ const DrawerLayoutInner = () => {
                 <RestoreConflictModal />
                 <Stack screenOptions={{ headerShown: false }} />
             </CustomDrawerWrapper>
+            <OTAUpdateGate />
         </BrandProtectedScreen>
     );
 };
