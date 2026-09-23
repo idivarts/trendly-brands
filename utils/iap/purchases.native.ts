@@ -27,10 +27,15 @@ export const isIapSupported = Platform.OS === "ios" || Platform.OS === "android"
 // is false in those builds, so this branch never applies there.
 const TEST_STORE_API_KEY = "test_bdbNJhLEhiGNOnKxbNaMDpvUhyi";
 
+// Both platform keys are inlined by Babel at bundle time so a single OTA bundle
+// serves iOS and Android; a per-platform EXPO_PUBLIC_REVENUECAT_KEY cannot work
+// because one `eas update` run publishes both platforms from one bundle pass.
 const apiKey = (): string | undefined => {
     if (Platform.OS === "web") return undefined;
     if (__DEV__) return TEST_STORE_API_KEY;
-    return process.env.EXPO_PUBLIC_REVENUECAT_KEY;
+    return Platform.OS === "ios"
+        ? process.env.EXPO_PUBLIC_REVENUECAT_IOS_KEY
+        : process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_KEY;
 };
 
 export const isIapConfigured = (): boolean => isIapSupported && !!apiKey();

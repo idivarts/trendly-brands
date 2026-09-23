@@ -17,9 +17,14 @@
         "build-ios": "export $(cat .env.local | xargs) &&  eas build --platform ios --profile production --local --output build/Trendly.ipa --non-interactive",
         "build-android": "export $(cat .env.local | xargs) && eas build --platform android --profile production --local --output build/Trendly.aab --non-interactive",
         "build-android-apk": "export $(cat .env.local | xargs) && eas build --platform android --profile production-apk --local --output build/Trendly.apk",
+        "build-ios-dev": "export $(cat .env.local | xargs) &&  eas build --platform ios --profile production-dev --local --output build/Trendly.ipa --non-interactive",
+        "build-android-dev": "export $(cat .env.local | xargs) && eas build --platform android --profile production-dev --local --output build/Trendly.aab --non-interactive",
         "submit-ios": "eas submit -p ios --path build/Trendly.ipa --non-interactive",
+        "submit-ios-dev": "eas submit -p ios --path build/Trendly.ipa --profile development --non-interactive",
         "submit-android": "eas submit -p android --path build/Trendly.aab --profile development --non-interactive",
         "submit-android-prod": "eas submit -p android --path build/Trendly.aab --profile production --non-interactive",
+        "ota-publish": "export $(cat .env.local | xargs) && eas update --channel \"$OTA_CHANNEL\" --platform \"${OTA_PLATFORM:-all}\" --message \"$OTA_MESSAGE\" --non-interactive --json > ota-result.json",
+        "ota-rollback-embedded": "eas update:roll-back-to-embedded --channel \"$OTA_CHANNEL\" --platform \"${OTA_PLATFORM:-all}\" --non-interactive",
         "postinstall": "node react-native-web-fix.js && patch-package"
     },
     "jest": {
@@ -93,6 +98,7 @@
         "expo-status-bar": "~3.0.9",
         "expo-system-ui": "~6.0.9",
         "expo-tracking-transparency": "~6.0.8",
+        "expo-updates": "~29.0.20",
         "expo-video": "~3.0.15",
         "expo-video-thumbnails": "~10.0.8",
         "expo-web-browser": "~15.0.10",

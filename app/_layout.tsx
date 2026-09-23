@@ -20,6 +20,7 @@ import "react-native-reanimated";
 
 import DownloadApp from "@/components/download";
 import { useColorScheme } from "@/components/theme/useColorScheme";
+import { OTAUpdateGate } from "@/contexts/ota-update-gate";
 import { DEFAULT_MEMBER_LANDING_PAGE } from "@/constants/App";
 import CustomPaperTheme from "@/constants/Themes/Theme";
 import {
@@ -149,6 +150,7 @@ const RootLayoutStack = () => {
                                         <Stack.Screen name="+not-found" />
                                     </Stack>
                                     <Toast config={toastConfig} />
+                                    <OTAUpdateGate />
                                 </NicheProvider>
                             </BottomSheetModalProvider>
                         </ConfirmationModalProvider>
