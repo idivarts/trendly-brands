@@ -20,6 +20,19 @@ export const createPostHogSink = (): AnalyticsSink | null => {
             // Install / open / update events come free and are the backbone of
             // any retention curve.
             captureAppLifecycleEvents: true,
+
+            // Master switch for mobile session replay, NOT a replay setting.
+            // Unlike posthog-js — where replay is on unless you pass
+            // disable_session_recording — the React Native SDK defaults this to
+            // false, and it is read once at setup. Leaving it off means the
+            // "Record user sessions" toggle in the PostHog project settings has
+            // no effect on device, however it is configured.
+            //
+            // Everything that actually shapes replay — whether to record at
+            // all, sampling rate, linked flags, event triggers, masking rules —
+            // stays in the dashboard. Deliberately no sessionReplayConfig here,
+            // so nothing is pinned client-side.
+            enableSessionReplay: true,
         });
     } catch (error) {
         console.warn("[posthog] native init failed, continuing without it", error);
