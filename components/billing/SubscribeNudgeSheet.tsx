@@ -88,12 +88,8 @@ const SubscribeNudgeSheet: React.FC<Props> = ({ trigger, onDismiss, onConverted 
         setBusy(false);
         if (res.userCancelled) return;
         if (res.success) {
-            // ⭐⭐ Primary conversion — the in-sheet upgrade is a second path to
-            // it, distinct from the full paywall.
-            track("subscription_started", {
-                plan_key: proPackage.planKey ?? proPackage.productId,
-                provider: "iap",
-            });
+            // subscription_started comes from SubscriptionTransitionWatcher —
+            // see the note in components/paywall/index.native.tsx.
             Toaster.success("Purchase successful — unlocking your plan. This can take a minute.");
             onConverted();
         } else {
