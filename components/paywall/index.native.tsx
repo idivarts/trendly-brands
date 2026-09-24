@@ -85,14 +85,11 @@ const PayWallComponent = () => {
         if (res.success) {
             // ⭐⭐ Primary conversion. The store is the source of truth for the
             // money, so this fires on RevenueCat's confirmation, not on intent.
-            // No numeric value/currency: IapPackage only carries a localized
-            // priceString ("$34.00"), and parsing that is not worth the risk of
-            // wrong revenue numbers. The RevenueCat webhook is the source of
-            // truth for money, and the backend already consumes it.
-            track("subscription_started", {
-                plan_key: pkg.planKey ?? pkg.productId,
-                provider: "iap",
-            })
+            // subscription_started is NOT fired here. It comes from the org's
+            // plan transition (SubscriptionTransitionWatcher), which is the only
+            // place that sees a confirmed purchase on every platform and
+            // provider — a store "success" here is still pending server-side
+            // entitlement, and firing in both places would double-count.
             Toaster.success('Purchase successful — unlocking your plan. This can take a minute.')
         } else {
             Toaster.error(res.error ?? 'Purchase failed. Please try again.')

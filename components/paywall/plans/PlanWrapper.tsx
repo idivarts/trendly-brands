@@ -1,4 +1,5 @@
 //  import pricingPage from "@/app/(landing)/pricing-page";
+import { track } from "@/shared-libs/utils/analytics";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useOrganizationContext } from "@/contexts/organization-context.provider";
@@ -139,6 +140,11 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                 Toaster.error("Admin Data not provided for the subscription")
                 return
             }
+
+            // Intent only. The purchase itself is confirmed by a Razorpay
+            // webhook the browser never sees, so subscription_started is
+            // emitted from the org's plan transition instead.
+            track("checkout_started", { plan_key: planKey, provider: "razorpay" });
 
             setModalVisible(true);
             setModalState("loading");

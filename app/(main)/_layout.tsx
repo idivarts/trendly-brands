@@ -1,6 +1,6 @@
 import { ChatContextProvider, CloudMessagingContextProvider, CollaborationContextProvider, ContractContextProvider, FirebaseStorageContextProvider, NotificationContextProvider, useAuthContext } from "@/contexts";
 import { BrandContextProvider } from "@/contexts/brand-context.provider";
-import { AnalyticsOrgSync } from "@/contexts/analytics-context.provider";
+import { AnalyticsOrgSync, SubscriptionTransitionWatcher } from "@/contexts/analytics-context.provider";
 import { OrganizationProvider } from "@/contexts/organization-context.provider";
 import { AIConfigProvider } from "@/contexts/ai-config-context.provider";
 import { BrandSocialContextProvider, useBrandSocialContext } from "@/contexts/brand-social-context.provider";
@@ -100,6 +100,8 @@ const MainLayout = () => {
                             <OrganizationProvider>
                                 {/* Renders nothing — keeps org/brand/plan on every analytics event. */}
                                 <AnalyticsOrgSync />
+                                {/* Renders nothing — emits subscription_started / _cancelled. */}
+                                <SubscriptionTransitionWatcher />
                                 <AIConfigProvider>
                                 <SubscribeNudgeProvider>
                                 <BrandSocialContextProvider>
