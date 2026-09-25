@@ -46,8 +46,9 @@
             "infoPlist": {
                 "ITSAppUsesNonExemptEncryption": false,
                 "CFBundleDisplayName": "Trendly AI",
-                "NSUserNotificationUsageDescription": "Trendly would like to send you notifications about new collaborations, updates, and important activity related to your account.",
-                "NSUserTrackingUsageDescription": "Trendly uses your data to improve app performance, enhance user experience, and resolve issues more effectively"
+                "NSPhotoLibraryAddUsageDescription": "Trendly saves content you create to your photo library, such as a post image you designed in Trendly that you want to keep on your device.",
+                "NSUserNotificationUsageDescription": "Trendly would like to send you notifications about your scheduled posts, publishing results, and important activity on your account.",
+                "NSUserTrackingUsageDescription": "Trendly uses this to measure which ads and links led to app installs, such as attributing your install to the campaign you tapped."
             },
             "appleTeamId": "8UTA9QW6TV"
         },
@@ -134,15 +135,23 @@
             [
                 "expo-camera",
                 {
-                    "cameraPermission": "Trendly requires access to your camera to take and upload photos or videos for your profile and collaboration campaigns.",
-                    "microphonePermission": "Trendly requires access to your microphone to send audio messages and to create content for your profile and collaborations.",
+                    "cameraPermission": "Trendly uses your camera so you can shoot photos and videos in the app for your posts, such as recording a product clip to publish as an Instagram Reel.",
+                    "microphonePermission": "Trendly uses your microphone to record sound with videos you shoot in the app and voiceovers for your posts, such as narrating a product video before you schedule it.",
                     "recordAudioAndroid": true
+                }
+            ],
+            [
+                "expo-image-picker",
+                {
+                    "photosPermission": "Trendly uses your photo library so you can pick your own photos and videos for the posts you create, such as adding a product photo to an Instagram post you are scheduling.",
+                    "cameraPermission": "Trendly uses your camera so you can shoot photos and videos in the app for your posts, such as recording a product clip to publish as an Instagram Reel.",
+                    "microphonePermission": "Trendly uses your microphone to record sound with videos you shoot in the app and voiceovers for your posts, such as narrating a product video before you schedule it."
                 }
             ],
             [
                 "expo-av",
                 {
-                    "microphonePermission": "Trendly requires access to your microphone to send audio messages and to create content for your profile and collaborations."
+                    "microphonePermission": "Trendly uses your microphone to record sound with videos you shoot in the app and voiceovers for your posts, such as narrating a product video before you schedule it."
                 }
             ],
             [
@@ -154,7 +163,9 @@
             [
                 "expo-location",
                 {
-                    "locationAlwaysAndWhenInUsePermission": "Trendly requires access to your location to create collaboration which are localized."
+                    "locationWhenInUsePermission": "Trendly uses your location only when you create an on-site campaign, to center the map on where you are, such as placing a campaign at your store address.",
+                    "locationAlwaysPermission": false,
+                    "locationAlwaysAndWhenInUsePermission": false
                 }
             ],
             "expo-tracking-transparency",
