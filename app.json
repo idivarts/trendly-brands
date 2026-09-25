@@ -46,8 +46,9 @@
             "infoPlist": {
                 "ITSAppUsesNonExemptEncryption": false,
                 "CFBundleDisplayName": "Trendly AI",
-                "NSUserNotificationUsageDescription": "Trendly would like to send you notifications about new collaborations, updates, and important activity related to your account.",
-                "NSUserTrackingUsageDescription": "Trendly uses your data to improve app performance, enhance user experience, and resolve issues more effectively"
+                "NSPhotoLibraryAddUsageDescription": "Trendly needs permission to add to your photo library so it can save content you create in the app. For example, you can download a post image you designed in Trendly and keep it on your device to re-use elsewhere.",
+                "NSUserNotificationUsageDescription": "Trendly would like to send you notifications about your scheduled posts, publishing results, and important activity on your account.",
+                "NSUserTrackingUsageDescription": "Trendly uses this to measure which ads and referral links led to app installs and sign-ups, so we can improve how we reach new users. For example, if you install Trendly after tapping one of our ads, this lets us attribute that install to the right campaign."
             },
             "appleTeamId": "8UTA9QW6TV"
         },
@@ -134,15 +135,23 @@
             [
                 "expo-camera",
                 {
-                    "cameraPermission": "Trendly requires access to your camera to take and upload photos or videos for your profile and collaboration campaigns.",
-                    "microphonePermission": "Trendly requires access to your microphone to send audio messages and to create content for your profile and collaborations.",
+                    "cameraPermission": "Trendly needs access to your camera so you can capture photos and videos inside the app to use in your social media posts. For example, you can record a short product clip and publish it as an Instagram Reel from Trendly.",
+                    "microphonePermission": "Trendly needs access to your microphone to record audio together with videos you capture in the app, and to record voiceovers for your posts. For example, you can narrate a product video before scheduling it to your social accounts.",
                     "recordAudioAndroid": true
+                }
+            ],
+            [
+                "expo-image-picker",
+                {
+                    "photosPermission": "Trendly needs access to your photo library so you can pick your own photos and videos to use in the social media posts you create. For example, you can select a product photo from your library and attach it to an Instagram post you are scheduling in Trendly.",
+                    "cameraPermission": "Trendly needs access to your camera so you can capture photos and videos inside the app to use in your social media posts. For example, you can record a short product clip and publish it as an Instagram Reel from Trendly.",
+                    "microphonePermission": "Trendly needs access to your microphone to record audio together with videos you capture in the app, and to record voiceovers for your posts. For example, you can narrate a product video before scheduling it to your social accounts."
                 }
             ],
             [
                 "expo-av",
                 {
-                    "microphonePermission": "Trendly requires access to your microphone to send audio messages and to create content for your profile and collaborations."
+                    "microphonePermission": "Trendly needs access to your microphone to record audio together with videos you capture in the app, and to record voiceovers for your posts. For example, you can narrate a product video before scheduling it to your social accounts."
                 }
             ],
             [
@@ -154,7 +163,9 @@
             [
                 "expo-location",
                 {
-                    "locationAlwaysAndWhenInUsePermission": "Trendly requires access to your location to create collaboration which are localized."
+                    "locationWhenInUsePermission": "Trendly needs access to your location only when you create an on-site campaign, so it can center the map on where you are. For example, when you set a campaign at your store, Trendly places it on the map at your current location so creators see the correct address.",
+                    "locationAlwaysPermission": false,
+                    "locationAlwaysAndWhenInUsePermission": false
                 }
             ],
             "expo-tracking-transparency",
