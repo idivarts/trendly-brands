@@ -1,7 +1,7 @@
 import type { AnalyticsSuperProperties } from "@/shared-constants/analytics-events";
+import { setPendingDeepLink } from "@/utils/deep-link-intent";
 import { Console } from "@/shared-libs/utils/console";
 import Constants from "expo-constants";
-import { router } from "expo-router";
 import branch from "react-native-branch";
 
 /**
@@ -81,17 +81,17 @@ export const initBranch = async (
                 channel: p["~channel"],
             });
 
-            // Deferred deep link: route only for in-app paths, and never to a
-            // URL supplied by the link itself — a Branch link is attacker-
-            // controllable, so it may choose a screen but not an origin.
+            // Deferred deep link: record where the app should go, but do NOT
+            // navigate from here. This callback can fire before the router has
+            // mounted and before auth has settled, so navigating directly races
+            // the boot gate in app/_layout.tsx and loses the destination — see
+            // utils/deep-link-intent.ts. The gate replays it when it is safe to.
+            //
+            // The path is only ever a screen, never an origin: a Branch link is
+            // attacker-controllable, so setPendingDeepLink rejects anything that
+            // is not an in-app path.
             const path = p.$deeplink_path;
-            if (path && path.startsWith("/") && !path.startsWith("//")) {
-                try {
-                    router.push(path as never);
-                } catch (e) {
-                    Console.error(e, "Branch deep link routing");
-                }
-            }
+            if (path) setPendingDeepLink(path);
         });
     } catch (error) {
         Console.error(error, "Branch init");
