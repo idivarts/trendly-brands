@@ -1,6 +1,7 @@
 import { hasValue, OBSERVABILITY } from "@/shared-constants/marketing";
 import type { AnalyticsSink } from "@/shared-libs/utils/analytics";
 import posthog from "posthog-js";
+import { toPostHogContext } from "./posthog-context";
 
 /**
  * PostHog sink — web build (posthog-js).
@@ -40,6 +41,11 @@ export const createPostHogSink = (): AnalyticsSink | null => {
         name: "posthog",
         track: (event, props) => posthog.capture(event, props),
         identify: (userId, traits) => posthog.identify(userId, traits),
+        // $screen_name is redundant here — posthog-js attaches $current_url and
+        // $pathname itself — but the rest is not: registering org, plan and
+        // campaign means autocapture clicks and $exception carry them too,
+        // and those never pass through track().
+        setContext: (props) => posthog.register(toPostHogContext(props)),
         reset: () => posthog.reset(),
     };
 };

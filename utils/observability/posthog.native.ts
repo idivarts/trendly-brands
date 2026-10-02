@@ -1,6 +1,7 @@
 import { hasValue, OBSERVABILITY } from "@/shared-constants/marketing";
 import type { AnalyticsSink } from "@/shared-libs/utils/analytics";
 import PostHog from "posthog-react-native";
+import { toPostHogContext } from "./posthog-context";
 
 /**
  * PostHog sink — native build (posthog-react-native).
@@ -33,6 +34,12 @@ export const createPostHogSink = (): AnalyticsSink | null => {
             // stays in the dashboard. Deliberately no sessionReplayConfig here,
             // so nothing is pinned client-side.
             enableSessionReplay: true,
+
+            // Parity with the web sink: only bill person profiles for users
+            // who actually signed up. Left unset, the native default differs
+            // from posthog-js's configured behaviour, so the same anonymous
+            // visitor would be counted differently depending on platform.
+            personProfiles: "identified_only",
         });
     } catch (error) {
         console.warn("[posthog] native init failed, continuing without it", error);
@@ -46,6 +53,14 @@ export const createPostHogSink = (): AnalyticsSink | null => {
         },
         identify: (userId, traits) => {
             client.identify(userId, traits);
+        },
+        // Super-properties, so the context reaches the events this sink never
+        // sees: $exception, the captureAppLifecycleEvents above, and session
+        // replay. register() persists them, and client.reset() below clears
+        // them, which is what keeps one user's screen and plan off the next
+        // user's events on a shared device.
+        setContext: (props) => {
+            client.register(toPostHogContext(props));
         },
         reset: () => {
             client.reset();

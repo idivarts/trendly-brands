@@ -119,6 +119,12 @@ export const AnalyticsProvider = ({ children }: PropsWithChildren) => {
     // Screen views.
     useEffect(() => {
         if (!pathname) return;
+        // Context before the event, so the screen is attached to this event and
+        // to every event after it — including the ones the SDKs raise
+        // themselves ($exception, app lifecycle, session replay), which never
+        // pass through track(). `screen_viewed` keeps its own `path` param: it
+        // is the cross-platform contract the dashboards already read.
+        setSuperProperties({ screen: pathname });
         track("screen_viewed", { path: pathname });
     }, [pathname]);
 
