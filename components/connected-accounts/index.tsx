@@ -1,3 +1,4 @@
+import { track } from "@/shared-libs/utils/analytics";
 import { Text } from "@/components/theme/Themed";
 import { SOCIAL_PLATFORMS, SocialPlatform } from "@/constants/Socials";
 import { useBrandContext } from "@/contexts/brand-context.provider";
@@ -51,13 +52,16 @@ const ConnectedAccounts: React.FC = () => {
         [socialAccounts]
     );
 
-    const handleDisconnect = async (socialId: string) => {
+    const handleDisconnect = async (socialId: string, platform: string) => {
         if (!brandId) return;
         try {
             await HttpWrapper.fetch(
                 `/api/v2/brands/${brandId}/socials/${socialId}`,
                 { method: "DELETE" }
             );
+            // A brand that disconnects its socials stops publishing and is
+            // most of the way to churning; nothing else in the taxonomy shows it.
+            track("social_disconnected", { platform });
             Toaster.success("Social account disconnected");
             refreshSocials();
         } catch {
@@ -71,7 +75,7 @@ const ConnectedAccounts: React.FC = () => {
             title: "Disconnect account?",
             description: `This removes @${account.username} (${meta?.label ?? account.platform}) from your Trendly profile. You can reconnect it any time.`,
             confirmText: "Disconnect",
-            confirmAction: () => handleDisconnect(account.id),
+            confirmAction: () => handleDisconnect(account.id, account.platform),
         });
     };
 

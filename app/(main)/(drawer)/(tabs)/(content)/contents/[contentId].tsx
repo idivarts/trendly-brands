@@ -238,6 +238,25 @@ const CreateContentScreen = () => {
         const live = seedItem?.status as ContentStatus | undefined;
         if (!live || live === status) return;
         if (PUBLISH_PIPELINE_STATUSES.includes(live)) {
+            // ⭐ Activation, reported on the REAL outcome. The publish request
+            // only queues the job, so firing at the button would have counted
+            // every attempt as a success — including ones that later failed.
+            // "publishing" is the in-flight state, so only terminal ones count.
+            if (live === "posted" || live === "partially_failed" || live === "failed") {
+                const results = seedItem?.publishResults ?? [];
+                const failed = results
+                    .filter((r) => r.status === "failed")
+                    .map((r) => r.platform);
+                track("content_published", {
+                    platforms: results.length
+                        ? results.map((r) => r.platform)
+                        : destinations.map((d) => d.platform),
+                    mode: "now",
+                    success: live === "posted",
+                    failed_platforms: failed.length ? failed : undefined,
+                    failure_reason: live === "failed" ? "all_destinations_failed" : undefined,
+                });
+            }
             setStatus(live);
             skipDirtyRef.current = true;
             setDirty(false);
@@ -688,20 +707,24 @@ const CreateContentScreen = () => {
             setShowPublishModal(false);
             // ⭐ Activation. Emitted only after a confirmed success, for the same
             // reason markAhaMoment is — a failed publish must not look like one.
-            const platforms = destinations.map((d) => d.platform);
-            if (mode === "now") {
-                track("content_published", { platforms, mode: "now", success: true });
-            } else {
-                track("content_scheduled", { platforms });
+            // Only the scheduled case is complete at this point. A "now"
+            // publish is merely QUEUED here — its content_published is emitted
+            // by the pipeline-status effect above, once the worker reports the
+            // real per-destination outcome.
+            if (mode === "scheduled") {
+                track("content_scheduled", { platforms: destinations.map((d) => d.platform) });
             }
             // Aha-moment: the user has shipped their first post. Marked after a
             // confirmed success so a failed publish never counts.
             markAhaMoment("post_scheduled");
         } catch (e) {
+            // The request itself failed, so nothing was queued and the pipeline
+            // listener will never report an outcome — record the failure here.
             track("content_published", {
                 platforms: destinations.map((d) => d.platform),
                 mode,
                 success: false,
+                failure_reason: "request_failed",
             });
             // Surface via console for now; a toast is added in the Phase 6 polish.
             console.warn("Publish/schedule error:", e);

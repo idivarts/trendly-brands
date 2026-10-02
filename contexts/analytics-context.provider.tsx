@@ -17,6 +17,7 @@ import {
 import { APP_STAGE } from "@/shared-libs/utils/environment";
 import { firebaseSink } from "@/shared-libs/utils/analytics/sinks/firebase";
 import { metaSink } from "@/shared-libs/utils/analytics/sinks/meta";
+import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import Constants from "expo-constants";
 import { usePathname } from "expo-router";
 import { PropsWithChildren, useEffect, useRef } from "react";
@@ -153,6 +154,72 @@ export const AnalyticsOrgSync = () => {
         selectedOrgWallet?.topupBalance,
         selectedOrgWallet?.monthlyAllotment,
     ]);
+
+    return null;
+};
+
+/**
+ * Emits subscription_started / subscription_cancelled by watching the org's
+ * plan change.
+ *
+ * Why here and not at the checkout buttons: on web the user leaves for a
+ * Razorpay payment link and the subscription is confirmed by a WEBHOOK — the
+ * browser may never come back, so no client-side call at the button can know
+ * the payment succeeded. Ads drive to web signup, so a purchase event that only
+ * fired for native IAP would miss the traffic it exists to measure.
+ *
+ * Watching the org's planKey instead catches every provider and platform from
+ * one place. It is deduped against the last plan we persisted for this org, so
+ * a reload or a second device cannot double-count; and a first observation
+ * records silently, so existing paid orgs are not reported as fresh
+ * conversions when this ships.
+ *
+ * Trade-off: it fires when we OBSERVE the change, which may be later than the
+ * payment. Server-side emission from the Razorpay/RevenueCat webhook is the
+ * authoritative fix and should replace this — see the backend CAPI ticket.
+ */
+const PLAN_SEEN_PREFIX = "plan_seen_";
+
+export const SubscriptionTransitionWatcher = () => {
+    const { selectedOrganization, selectedOrgBilling } = useOrganizationContext();
+
+    useEffect(() => {
+        const orgId = selectedOrganization?.id;
+        const planKey = selectedOrgBilling?.planKey;
+        if (!orgId || !planKey) return;
+
+        let cancelled = false;
+        const key = `${PLAN_SEEN_PREFIX}${orgId}`;
+
+        PersistentStorage.get(key)
+            .then((previous) => {
+                if (cancelled || previous === planKey) return;
+
+                // No previous record: adopt the current plan silently rather
+                // than reporting an org that was already paying as a new sale.
+                if (previous) {
+                    const wasPaid = previous !== "free";
+                    const isPaid = planKey !== "free";
+                    const provider =
+                        selectedOrgBilling?.provider === "revenuecat" ? "iap" : "razorpay";
+
+                    if (!wasPaid && isPaid) {
+                        track("subscription_started", { plan_key: planKey, provider });
+                    } else if (wasPaid && !isPaid) {
+                        track("subscription_cancelled", { plan_key: previous });
+                    }
+                }
+
+                return PersistentStorage.set(key, planKey);
+            })
+            .catch(() => {
+                // Blocked storage — skip rather than risk a duplicate conversion.
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [selectedOrganization?.id, selectedOrgBilling?.planKey, selectedOrgBilling?.provider]);
 
     return null;
 };

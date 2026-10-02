@@ -1,3 +1,4 @@
+import { track } from "@/shared-libs/utils/analytics";
 import { faArrowsRotate, faComments } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -95,6 +96,7 @@ const InboxView: React.FC<InboxViewProps> = ({ mode }) => {
     }, [xl, selected, filtered]);
 
     const handleSelect = (c: InboxConversation) => {
+        track("inbox_thread_opened", { channel: (c as any).channel });
         setSelectedId(c.id);
         setShowDetails(false);
         if (conversationUnreadCount(c) > 0) markRead(c.id);

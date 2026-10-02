@@ -226,6 +226,11 @@ export const SubscribeNudgeProvider: React.FC<PropsWithChildren> = ({ children }
             if (!managerId || !s) return;
             const alreadyMarked =
                 kind === "content_created" ? s.hasCreatedFirstContent : s.hasScheduledFirstPost;
+
+            // Report activation itself, not just the nudge. This is fired on the
+            // first of EACH kind regardless of whether a nudge shows, so the
+            // activation metric and the in-app nudge can never disagree.
+            if (!alreadyMarked) track("activation_reached", { kind });
             // Fire on the FIRST aha-moment of either kind only.
             const willShow = !alreadyMarked && !s.ahaMomentNudgeShown && canNudge();
 

@@ -1,3 +1,4 @@
+import { track } from "@/shared-libs/utils/analytics";
 import { faClock, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -46,6 +47,9 @@ const MessageComposer: React.FC<Props> = ({
         setSending(true);
         try {
             await onSend(value);
+            // Inbox reply is gated by the inbox_reply entitlement, so usage
+            // here tells us whether the paid capability is actually used.
+            track("inbox_reply_sent", {});
         } finally {
             setSending(false);
         }
