@@ -6,6 +6,7 @@ import {
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import {
+    Href,
     Stack,
     useLocalSearchParams,
     usePathname,
@@ -38,6 +39,10 @@ import MarketingPixels from "@/shared-libs/marketing/MarketingPixels";
 import { ConfirmationModalProvider } from "@/shared-uis/components/ConfirmationModal";
 import { GlobalErrorFallback } from "@/shared-uis/components/GlobalErrorFallback";
 import { toastConfig } from "@/shared-uis/components/toaster/Toaster";
+import {
+    consumePendingDeepLink,
+    usePendingDeepLink,
+} from "@/utils/deep-link-intent";
 import { resetAndNavigate } from "@/utils/router";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { Provider } from "react-native-paper";
@@ -107,6 +112,7 @@ const RootLayoutStack = () => {
     const segments = useSegments();
     const { isLoading, session, manager } = useAuthContext();
     const { themeOverride, setThemeOverride } = useThemeOverride();
+    const pendingDeepLink = usePendingDeepLink();
 
     const appTheme = themeOverride ?? manager?.settings?.theme ?? colorScheme;
     const navigationTheme = appTheme === "dark" ? DarkTheme : DefaultTheme;
@@ -120,19 +126,42 @@ const RootLayoutStack = () => {
     useEffect(() => {
         const inAuthGroup = segments[0] === "(auth)";
         const inMainGroup = segments[0] === "(main)";
+        const inOnboardingGroup = segments[1] === "(onboarding)";
 
         if (isLoading) return;
 
-        if (session && (inAuthGroup || pathname === "/")) {
-            // On boot up, session exist and user is in auth group or /, redirect to collaborations
-            resetAndNavigate(DEFAULT_MEMBER_LANDING_PAGE);
-        } else if (!session && (inMainGroup || pathname === "/")) {
+        if (!session) {
             // On boot up, session doesn't exist and user is in main group or /, redirect to pre-signin
             // resetAndNavigate("/pre-signin");
-            resetAndNavigate("/lets-start");
+            if (inMainGroup || pathname === "/") {
+                resetAndNavigate("/lets-start");
+            }
+            // A parked deep link is deliberately NOT consumed here: this is the
+            // deferred-deep-link case (tap ad → install → first open), so it has
+            // to survive the trip through sign-in and be replayed below.
+            return;
+        }
+
+        // Onboarding owns its own navigation — brand creation, then the paywall.
+        // A deep link must not cut in front of that; it stays parked until the
+        // user reaches the app proper, and is honoured on the next run.
+        if (inOnboardingGroup) return;
+
+        // A destination Branch resolved outranks the default landing page, and
+        // is replayed from here rather than from the Branch callback so it can
+        // never race this gate or fire before the router has mounted.
+        if (pendingDeepLink) {
+            consumePendingDeepLink();
+            resetAndNavigate(pendingDeepLink as Href);
+            return;
+        }
+
+        if (inAuthGroup || pathname === "/") {
+            // On boot up, session exist and user is in auth group or /, redirect to collaborations
+            resetAndNavigate(DEFAULT_MEMBER_LANDING_PAGE);
         }
         // Redirect to respective screen
-    }, [session, isLoading, pathname]);
+    }, [session, isLoading, pathname, pendingDeepLink]);
 
     return (
         <ThemeProvider value={navigationTheme}>
