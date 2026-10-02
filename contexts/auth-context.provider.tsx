@@ -2,7 +2,9 @@ import { INITIAL_MANAGER_DATA } from "@/constants/Manager";
 import { useStorageState } from "@/hooks";
 import { IManagers } from "@/shared-libs/firestore/trendly-pro/models/managers";
 import { Console } from "@/shared-libs/utils/console";
-import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
+import type { AuthMethod } from "@/shared-constants/analytics-events";
+import { track } from "@/shared-libs/utils/analytics";
+import { getStoredAttribution, hasAttribution } from "@/utils/attribution";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
@@ -70,6 +72,18 @@ const AuthContext = createContext<AuthContextProps>({
 
 export const useAuthContext = () => useContext(AuthContext);
 
+/**
+ * Which credential the user actually authenticated with. Firebase reports this
+ * as a provider id ("google.com"), which is not what an analytics funnel wants
+ * to be grouped by.
+ */
+const authMethodOf = (credential: UserCredential): AuthMethod => {
+    const providerId = credential.user?.providerData?.[0]?.providerId;
+    if (providerId === "google.com") return "google";
+    if (providerId === "apple.com") return "apple";
+    return "email";
+};
+
 export const isWorkEmail = (email: string): boolean => {
     // For now made it so that all the emails are allowed to register
     return true
@@ -130,11 +144,9 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
             },
         });
 
-        analyticsLogEvent("signed_in", {
-            id: managerCredential.user.uid,
-            name: managerCredential.user.displayName,
-            email: managerCredential.user.email,
-        });
+        // Identity itself is set by AnalyticsProvider once `manager` resolves,
+        // so this event only needs to say HOW they got in.
+        track("login_completed", { method: authMethodOf(managerCredential) });
 
         console.log("Came before going to Explore influencer");
 
@@ -145,6 +157,23 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
 
     const firebaseSignUp = (manager: UserCredential) => {
         setSession(manager.user.uid);
+
+        // ⭐ The acquisition conversion. Fired here rather than in signIn
+        // because this is the only path that creates a NEW account, so it
+        // cannot double-count a returning user.
+        getStoredAttribution()
+            .then((attribution) => {
+                track("signup_completed", {
+                    method: authMethodOf(manager),
+                    has_attribution: hasAttribution(attribution),
+                });
+            })
+            .catch(() => {
+                track("signup_completed", {
+                    method: authMethodOf(manager),
+                    has_attribution: false,
+                });
+            });
 
         HttpWrapper.fetch("/api/v2/chat/auth", {
             method: "POST",
@@ -260,10 +289,7 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
 
         try {
             await signOut(AuthApp);
-            analyticsLogEvent("signed_out", {
-                id: manager?.id,
-                email: manager?.email,
-            });
+            track("logout", {});
             Toaster.success("Signed Out Successfully!");
         } catch (error) {
             Console.error(error, "Error signing out");

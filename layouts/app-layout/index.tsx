@@ -1,5 +1,6 @@
+import { BottomTabBarHeightContext } from "@react-navigation/bottom-tabs";
 import { StatusBar as ExpoStatusBar } from "expo-status-bar";
-import React, { PropsWithChildren, useMemo } from "react";
+import React, { PropsWithChildren, useContext, useMemo } from "react";
 import { Platform, StatusBar, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -23,7 +24,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({
     const theme = useTheme();
     const isAndroid = useMemo(() => Platform.OS === "android", []);
     const { xl } = useBreakpoints()
-    const edges = safeAreaEdges ?? ["right", "bottom", "left"];
+    // A bottom tab bar is drawn below this screen and already reserves
+    // insets.bottom itself, so insetting the screen again stacks a second copy
+    // of the same inset (34pt on a home-indicator iPhone, the nav-bar height on
+    // edge-to-edge Android) as dead space right above the bar. Only the default
+    // edges are adjusted — a screen that asks for specific edges gets exactly
+    // those, since it may be one that hides the tab bar (e.g. the strategy
+    // editor) and therefore does own the bottom inset.
+    const tabBarHeight = useContext(BottomTabBarHeightContext) ?? 0;
+    const defaultEdges: AppLayoutProps["safeAreaEdges"] =
+        tabBarHeight > 0 ? ["right", "left"] : ["right", "bottom", "left"];
+    const edges = safeAreaEdges ?? defaultEdges;
     const colors = Colors(theme);
     return (
         <SafeAreaView

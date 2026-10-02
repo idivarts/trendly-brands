@@ -1,3 +1,4 @@
+import { track } from "@/shared-libs/utils/analytics";
 import { Focus, focusesToPromptString } from "@/types/focus";
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import { useBrandContext } from "@/contexts/brand-context.provider";
@@ -560,6 +561,17 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
             liveContent?: LiveContent
         ): Promise<boolean> => {
             if (!brandId || !manager?.id) return false;
+
+            // The main AI loop, and the product's core differentiator. Without
+            // this we can see that content got created but not that the chat
+            // is what created it, nor which model did the work.
+            track("ai_chat_message_sent", {
+                module,
+                model,
+                has_focus: !!focus?.length,
+                has_images: !!images?.length,
+            });
+
             let convId = activeThreadId;
             if (!convId) {
                 convId = await createThread();

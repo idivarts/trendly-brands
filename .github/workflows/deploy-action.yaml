@@ -49,6 +49,21 @@ jobs:
         EXPO_PUBLIC_APP_STAGE: ${{ env.STAGE }}
         EXPO_PUBLIC_WEBSOCKET_TRENDLY: ${{ env.STAGE == 'prod' && vars.WEBSOCKET_PROD_TRENDLY || vars.WEBSOCKET_DEV_TRENDLY }}
         EXPO_PUBLIC_FIRESTORE_DATABASE_ID: ${{ env.STAGE == 'prod' && vars.FIRESTORE_DATABASE_PROD_ID || vars.FIRESTORE_DATABASE_DEV_ID }}
+        # PostHog has no environment dimension — its guidance is a separate
+        # PROJECT per environment, so the key IS the dev/prod separation.
+        EXPO_PUBLIC_POSTHOG_KEY: ${{ env.STAGE == 'prod' && vars.POSTHOG_KEY_PROD || vars.POSTHOG_KEY_DEV }}
+        EXPO_PUBLIC_POSTHOG_HOST: ${{ vars.POSTHOG_HOST }}
+        # One Sentry project, segmented by its first-class `environment`
+        # field (set from EXPO_PUBLIC_APP_STAGE) — so a single DSN. Not a
+        # secret: a client DSN ships inside the bundle either way.
+        EXPO_PUBLIC_SENTRY_DSN: ${{ vars.SENTRY_DSN_BRANDS }}
+        # Marketing pixel IDs — public identifiers, so variables not secrets.
+        # Bundle-only (MarketingPixels), so they do not affect the fingerprint.
+        EXPO_PUBLIC_META_PIXEL_ID: ${{ vars.META_PIXEL_ID }}
+        EXPO_PUBLIC_GOOGLE_ADS_ID: ${{ vars.GOOGLE_ADS_ID }}
+        EXPO_PUBLIC_LINKEDIN_PARTNER_ID: ${{ vars.LINKEDIN_PARTNER_ID }}
+        EXPO_PUBLIC_TWITTER_PIXEL_ID: ${{ vars.TWITTER_PIXEL_ID }}
+        EXPO_PUBLIC_CLARITY_PROJECT_ID: ${{ vars.CLARITY_PROJECT_ID }}
       run: npm run build
 
     - name: Deploy with Serverless

@@ -6,6 +6,7 @@ import {
     StrategyStatus,
 } from "@/shared-libs/firestore/trendly-pro/models/strategies";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { track } from "@/shared-libs/utils/analytics";
 import {
     addDoc,
     arrayUnion,
@@ -264,6 +265,7 @@ export function useStrategies(): UseStrategiesReturn {
             const data = toIStrategy(title, markdownContent, managerId);
             const strategiesRef = collection(FirestoreDB, "brands", brandId, "strategies");
             const docRef = await addDoc(strategiesRef, data);
+            track("strategy_created", {});
             return docRef.id;
         },
         [selectedBrand?.id, manager?.id]
@@ -315,6 +317,7 @@ export function useStrategies(): UseStrategiesReturn {
 
             const strategiesRef = collection(FirestoreDB, "brands", brandId, "strategies");
             const docRef = await addDoc(strategiesRef, copy);
+            track("strategy_created", {});
             return docRef.id;
         },
         [selectedBrand?.id, manager?.id]

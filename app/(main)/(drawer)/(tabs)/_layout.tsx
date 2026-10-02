@@ -16,15 +16,27 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+// Icon + label band. The bar is this plus its vertical padding, so on a device
+// with no system inset it still measures the original 70.
+const BAR_CONTENT_HEIGHT = 58;
+const BAR_TOP_PADDING = 6;
+const BAR_BOTTOM_PADDING = 6;
+
 const TabLayout = () => {
     const { xl } = useBreakpoints();
     const theme = useTheme();
     const { unreadConversations } = useInboxUnread();
-    // Android is edge-to-edge (targetSdk 35), so the system nav bar paints over
-    // the app. React Navigation only adds insets.bottom to the tab bar when
-    // tabBarStyle has no numeric `height` — and any `paddingVertical` here would
-    // overwrite the paddingBottom it applies. So we fold the inset in ourselves.
+    // The tab bar sits flush against the bottom of the window on both platforms
+    // (Android is edge-to-edge under targetSdk 35; iOS has the home indicator),
+    // so it has to reserve insets.bottom itself. React Navigation would do that,
+    // but only when tabBarStyle carries no numeric `height` — and a
+    // paddingBottom here overwrites the one it applies. So we fold it in.
+    //
+    // The inset REPLACES the bar's own 6pt breathing room, it does not stack on
+    // top of it: BAR_CONTENT_HEIGHT + TOP_PADDING + 6 is the full bar on a
+    // device with no inset, and the inset only ever substitutes for that last 6.
     const insets = useSafeAreaInsets();
+    const bottomPadding = Math.max(insets.bottom, BAR_BOTTOM_PADDING);
 
     const menuTabButton = () => <ProfileIcon />;
 
@@ -40,9 +52,9 @@ const TabLayout = () => {
                 tabBarStyle: {
                     display: xl ? "none" : "flex",
                     paddingHorizontal: 12,
-                    paddingTop: 6,
-                    paddingBottom: insets.bottom + 6,
-                    height: 70 + insets.bottom,
+                    paddingTop: BAR_TOP_PADDING,
+                    paddingBottom: bottomPadding,
+                    height: BAR_CONTENT_HEIGHT + BAR_TOP_PADDING + bottomPadding,
                     borderTopWidth: 1,
                     borderTopColor: Colors(theme).border,
                     shadowColor: "#000",

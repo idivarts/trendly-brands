@@ -30,6 +30,34 @@ export function formatTokens(n: number): string {
 }
 
 /**
+ * Derives token pressure from a wallet. Exported as a pure function so callers
+ * outside the React tree (the analytics provider, which reports token_state as
+ * a super-property) use the SAME thresholds instead of re-deriving them — a
+ * second copy of these rules would silently drift from what the UI shows.
+ */
+export function resolveTokenStatus(
+    w: { balance?: number; topupBalance?: number; monthlyAllotment?: number; periodResetAt?: number } | undefined
+): TokenStatus {
+    if (!w) {
+        return { state: "none", balance: 0, allotment: 0, topup: 0, total: 0, pctLeft: 1, periodResetAt: 0 };
+    }
+    const allotment = Math.max(w.monthlyAllotment || 0, 0);
+    const balance = Math.max(w.balance || 0, 0);
+    const topup = Math.max(w.topupBalance || 0, 0);
+    const total = balance + topup;
+    const pctLeft = allotment > 0 ? Math.min(Math.max(balance / allotment, 0), 1) : total > 0 ? 1 : 0;
+
+    let state: TokenState;
+    if (total <= 0) state = "exhausted";
+    else if (topup > 0) state = "healthy"; // bought headroom → don't nag on the monthly bar
+    else if (pctLeft <= 0.05) state = "critical";
+    else if (pctLeft <= 0.2) state = "low";
+    else state = "healthy";
+
+    return { state, balance, allotment, topup, total, pctLeft, periodResetAt: w.periodResetAt || 0 };
+}
+
+/**
  * useEntitlements is the single frontend read-point for org plan capabilities +
  * AI-token pressure. It wraps the org context (selectedOrgWallet /
  * selectedOrgEntitlements / isOrgLocked) and computes the token state so the
@@ -43,26 +71,10 @@ export function useEntitlements() {
         isOrgLocked,
     } = useOrganizationContext();
 
-    const tokens = useMemo<TokenStatus>(() => {
-        const w = selectedOrgWallet;
-        if (!w) {
-            return { state: "none", balance: 0, allotment: 0, topup: 0, total: 0, pctLeft: 1, periodResetAt: 0 };
-        }
-        const allotment = Math.max(w.monthlyAllotment || 0, 0);
-        const balance = Math.max(w.balance || 0, 0);
-        const topup = Math.max(w.topupBalance || 0, 0);
-        const total = balance + topup;
-        const pctLeft = allotment > 0 ? Math.min(Math.max(balance / allotment, 0), 1) : total > 0 ? 1 : 0;
-
-        let state: TokenState;
-        if (total <= 0) state = "exhausted";
-        else if (topup > 0) state = "healthy"; // bought headroom → don't nag on the monthly bar
-        else if (pctLeft <= 0.05) state = "critical";
-        else if (pctLeft <= 0.2) state = "low";
-        else state = "healthy";
-
-        return { state, balance, allotment, topup, total, pctLeft, periodResetAt: w.periodResetAt || 0 };
-    }, [selectedOrgWallet]);
+    const tokens = useMemo<TokenStatus>(
+        () => resolveTokenStatus(selectedOrgWallet),
+        [selectedOrgWallet]
+    );
 
     return {
         wallet: selectedOrgWallet,

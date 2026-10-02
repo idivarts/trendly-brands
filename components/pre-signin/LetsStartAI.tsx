@@ -3,7 +3,7 @@ import AuthCard from "@/components/pre-signin/AuthCard";
 import IntroSplash from "@/components/pre-signin/IntroSplash";
 import AppLayout from "@/layouts/app-layout";
 import { CREATORS_FE_URL } from "@/shared-constants/app";
-import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
+import { track } from "@/shared-libs/utils/analytics";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import useBreakpoints from "@/shared-libs/utils/use-breakpoints";
 import Colors from "@/shared-uis/constants/Colors";
@@ -102,7 +102,7 @@ const LetsStartAI: React.FC = () => {
             // Stash the intent so we can personalize once they're in.
             PersistentStorage.set("pending_brand_prompt", intent.trim()).catch(() => { });
         }
-        analyticsLogEvent("lets_start_intent", { hasPrompt: !!intent?.trim() });
+        track("lets_start_intent", { has_prompt: !!intent?.trim() });
         showAuth();
     };
 

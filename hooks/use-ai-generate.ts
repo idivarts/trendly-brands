@@ -1,3 +1,4 @@
+import { track } from "@/shared-libs/utils/analytics";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
@@ -63,6 +64,8 @@ export function useAIGenerate() {
     }) => {
         if (!brandId) return;
         setCaptionLoading(true);
+        track("ai_generation_requested", { kind: "caption", model: args.model });
+        const startedAt = Date.now();
         try {
             const res = await HttpWrapper.fetch(`/api/ai/content/caption`, {
                 method: "POST",
@@ -71,8 +74,25 @@ export function useAIGenerate() {
             });
             const data = await res.json();
             setCaptions((data.variants ?? []) as CaptionVariant[]);
+            track("ai_generation_completed", {
+                kind: "caption",
+                model: args.model,
+                duration_ms: Date.now() - startedAt,
+                success: true,
+            });
         } catch (e: any) {
-            if (e?.status === 402) promptUpgrade();
+            track("ai_generation_completed", {
+                kind: "caption",
+                model: args.model,
+                duration_ms: Date.now() - startedAt,
+                success: false,
+            });
+            // 402 is the backend's token/plan gate — the single clearest signal
+            // that a user wanted more than their plan allows.
+            if (e?.status === 402) {
+                track("entitlement_blocked", { reason: "tokens_exhausted", feature: "ai_caption" });
+                promptUpgrade();
+            }
         } finally {
             setCaptionLoading(false);
         }
@@ -102,6 +122,8 @@ export function useAIGenerate() {
     }) => {
         if (!brandId) return;
         setHashtagLoading(true);
+        track("ai_generation_requested", { kind: "hashtags", model: args.model });
+        const startedAt = Date.now();
         try {
             const res = await HttpWrapper.fetch(`/api/ai/content/hashtags`, {
                 method: "POST",
@@ -110,8 +132,25 @@ export function useAIGenerate() {
             });
             const data = await res.json();
             setHashtags((data.groups ?? []) as HashtagGroup[]);
+            track("ai_generation_completed", {
+                kind: "hashtags",
+                model: args.model,
+                duration_ms: Date.now() - startedAt,
+                success: true,
+            });
         } catch (e: any) {
-            if (e?.status === 402) promptUpgrade();
+            track("ai_generation_completed", {
+                kind: "hashtags",
+                model: args.model,
+                duration_ms: Date.now() - startedAt,
+                success: false,
+            });
+            // 402 is the backend's token/plan gate — the single clearest signal
+            // that a user wanted more than their plan allows.
+            if (e?.status === 402) {
+                track("entitlement_blocked", { reason: "tokens_exhausted", feature: "ai_hashtags" });
+                promptUpgrade();
+            }
         } finally {
             setHashtagLoading(false);
         }
@@ -121,6 +160,8 @@ export function useAIGenerate() {
     const [script, setScript] = useState("");
     const [scriptStreaming, setScriptStreaming] = useState(false);
     const scriptActiveRef = useRef(false);
+    /** Start of the current WS generation, for ai_generation_completed duration. */
+    const streamStartedAtRef = useRef(0);
     const scriptAccumRef = useRef("");
 
     // ── Images (streamed via WS) ─────────────
@@ -138,6 +179,11 @@ export function useAIGenerate() {
             if (scriptActiveRef.current && msg.type === "done") {
                 scriptActiveRef.current = false;
                 setScriptStreaming(false);
+                track("ai_generation_completed", {
+                    kind: "script",
+                    duration_ms: Date.now() - streamStartedAtRef.current,
+                    success: true,
+                });
                 return;
             }
             if (imagesActiveRef.current && msg.type === "image") {
@@ -147,21 +193,36 @@ export function useAIGenerate() {
             if (imagesActiveRef.current && msg.type === "done") {
                 imagesActiveRef.current = false;
                 setImagesStreaming(false);
+                track("ai_generation_completed", {
+                    kind: "image",
+                    duration_ms: Date.now() - streamStartedAtRef.current,
+                    success: true,
+                });
                 return;
             }
             if (msg.type === "upgrade_required") {
+                const kind = scriptActiveRef.current ? "script" : "image";
                 scriptActiveRef.current = false;
                 imagesActiveRef.current = false;
                 setScriptStreaming(false);
                 setImagesStreaming(false);
+                // The websocket equivalent of the HTTP 402 gate — same signal,
+                // different transport, so it must be reported the same way.
+                track("entitlement_blocked", {
+                    reason: msg.reason || "tokens_exhausted",
+                    feature: `ai_${kind}`,
+                });
+                track("ai_generation_completed", { kind, success: false });
                 promptUpgrade(msg.reason);
                 return;
             }
             if (msg.type === "error") {
+                const kind = scriptActiveRef.current ? "script" : "image";
                 scriptActiveRef.current = false;
                 imagesActiveRef.current = false;
                 setScriptStreaming(false);
                 setImagesStreaming(false);
+                track("ai_generation_completed", { kind, success: false });
             }
         });
         return remove;
@@ -188,6 +249,8 @@ export function useAIGenerate() {
         setScript("");
         setScriptStreaming(true);
         scriptActiveRef.current = true;
+        streamStartedAtRef.current = Date.now();
+        track("ai_generation_requested", { kind: "script", model: args.model });
         await aiWS.send({
             type: "content_gen",
             task: "script",
@@ -232,6 +295,8 @@ export function useAIGenerate() {
         setImages([]);
         setImagesStreaming(true);
         imagesActiveRef.current = true;
+        streamStartedAtRef.current = Date.now();
+        track("ai_generation_requested", { kind: "image", model: args.model });
         await aiWS.send({
             type: "content_gen",
             task: "image",

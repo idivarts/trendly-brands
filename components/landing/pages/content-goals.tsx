@@ -5,7 +5,7 @@ import Stepper from "@/components/landing/Stepper";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { ExplainerConfig, useMyGrowthBook } from "@/contexts/growthbook-context-provider";
 import AppLayout from "@/layouts/app-layout";
-import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
+import { track } from "@/shared-libs/utils/analytics";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import useBreakpoints from "@/shared-libs/utils/use-breakpoints";
 import Colors from "@/shared-uis/constants/Colors";
@@ -88,8 +88,8 @@ export default function ContentGoalsPage() {
         try {
             setSubmitting(true);
 
-            analyticsLogEvent("content_goals", {
-                contentTypes: selectedTypes,
+            track("content_goals_selected", {
+                content_types: selectedTypes,
                 volume,
             })
 

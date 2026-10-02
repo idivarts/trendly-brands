@@ -1,0 +1,81 @@
+name: Native Release (from tag)
+
+# Builds and submits BOTH platforms from a release tag (vX.Y.Z, vX.Y.Z-2, ...).
+#
+# Two ways a tag gets here:
+#   1. release.yaml allocates one automatically when a master merge changes the
+#      native fingerprint.
+#   2. You cut one by hand, at any commit, to seal the current JS bundle into a
+#      fresh store binary — even when nothing native changed.
+#
+# Because of (2) this NEVER consults the fingerprint ledger to decide whether to
+# build: a manual seal tag has fingerprints that already match the ledger, so a
+# fingerprint check would build nothing and silently defeat the whole point.
+# A tag always means "build and ship both platforms".
+#
+# Release tags are always treated as production (channel `production`, profile
+# `production`, prod submit targets).
+#
+# The actual build lives in native-build.yaml, shared with release.yaml's dev
+# path — this file only supplies the parameters.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  # Per-tag, and never cancelled — a cancel mid-`eas submit` is worse than a wait.
+  group: native-release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  resolve:
+    uses: ./.github/workflows/resolve-runtime.yaml
+    with:
+      stage: prod
+    secrets: inherit
+
+  android-native:
+    name: Android
+    needs: resolve
+    uses: ./.github/workflows/native-build.yaml
+    with:
+      platform: android
+      stage: prod
+      channel: production
+      expected_runtime_version: ${{ needs.resolve.outputs.rtv_android }}
+      release_tag: ${{ github.ref_name }}
+    secrets: inherit
+
+  ios-native:
+    name: iOS
+    needs: resolve
+    uses: ./.github/workflows/native-build.yaml
+    with:
+      platform: ios
+      stage: prod
+      channel: production
+      expected_runtime_version: ${{ needs.resolve.outputs.rtv_ios }}
+      release_tag: ${{ github.ref_name }}
+    secrets: inherit
+
+  summary:
+    name: Summarize
+    needs: [resolve, android-native, ios-native]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          {
+            echo "## Native release from tag \`${GITHUB_REF#refs/tags/}\`"
+            echo ""
+            echo "- commit: \`${GITHUB_SHA:0:7}\`"
+            echo "- ios runtimeVersion: \`${{ needs.resolve.outputs.rtv_ios }}\`"
+            echo "- android runtimeVersion: \`${{ needs.resolve.outputs.rtv_android }}\`"
+            echo "- android: \`${{ needs.android-native.result }}\`"
+            echo "- ios: \`${{ needs.ios-native.result }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

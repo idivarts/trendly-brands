@@ -6,7 +6,7 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { ExplainerConfig, useMyGrowthBook } from "@/contexts/growthbook-context-provider";
 import AppLayout from "@/layouts/app-layout";
 import { LANDING_BRAND_INDUSTRIES } from "@/shared-constants/preferences/brand-industry";
-import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
+import { track } from "@/shared-libs/utils/analytics";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import useBreakpoints from "@/shared-libs/utils/use-breakpoints";
 import React, { useMemo, useState } from "react";
@@ -61,8 +61,10 @@ export default function BrandDetailPage() {
         try {
             setSubmitting(true);
 
-            analyticsLogEvent("update_brand_profile", {
-                about, website, selectedIndustries
+            track("brand_profile_updated", {
+                has_about: !!about?.trim(),
+                has_website: !!website?.trim(),
+                industry_count: selectedIndustries?.length ?? 0,
             })
 
             await updateBrand(selectedBrand.id, {

@@ -2,6 +2,7 @@
 // straight from Firestore; mutations go through HttpWrapper, which attaches the
 // Firebase bearer token automatically.
 
+import { track } from "@/shared-libs/utils/analytics";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { TeamPrivileges } from "@/constants/Access";
@@ -87,6 +88,10 @@ export const inviteMember = async (
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ brandId, ...payload }),
     });
+    // Seats are the expansion-revenue lever, and inviting a colleague is the
+    // clearest signal a customer is serious. Tracked in the API module rather
+    // than at the buttons so every caller is covered.
+    track("team_member_invited", {});
 };
 
 export const updateMemberAccess = async (
@@ -99,8 +104,10 @@ export const updateMemberAccess = async (
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
     });
+    track("team_member_access_updated", {});
 };
 
 export const removeMember = async (brandId: string, managerId: string): Promise<void> => {
     await HttpWrapper.fetch(`/api/v2/brands/${brandId}/members/${managerId}`, { method: "DELETE" });
+    track("team_member_removed", {});
 };

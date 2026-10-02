@@ -329,6 +329,7 @@ const AnalyticsScreen = () => {
             <PageHeader title="Reporting & Analytics" />
             {analyticsLocked ? (
                 <LockedOverlay
+                    feature="analytics"
                     title="Analytics is a Pro feature"
                     subtitle="Upgrade to unlock follower, reach, engagement & audience insights across your connected socials."
                 >

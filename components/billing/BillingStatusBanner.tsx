@@ -2,6 +2,7 @@ import { useBrandContext } from '@/contexts/brand-context.provider'
 import { useOrganizationContext } from '@/contexts/organization-context.provider'
 import { useEntitlements } from '@/hooks/use-entitlements'
 import { ModelStatus } from '@/shared-libs/firestore/trendly-pro/models/status'
+import { track } from "@/shared-libs/utils/analytics";
 import Toaster from '@/shared-uis/components/toaster/Toaster'
 import Colors from '@/shared-uis/constants/Colors'
 import { isIapSupported, restorePurchases } from '@/utils/iap/purchases'
@@ -66,7 +67,10 @@ const BillingStatusBanner: React.FC = () => {
         setRestoring(true)
         const res = await restorePurchases()
         setRestoring(false)
-        if (res.success) Toaster.success('Purchases restored — this can take a minute to reflect.')
+        if (res.success) {
+            track("subscription_restored", {})
+            Toaster.success('Purchases restored — this can take a minute to reflect.')
+        }
         else if (res.error) Toaster.error(res.error)
     }
 

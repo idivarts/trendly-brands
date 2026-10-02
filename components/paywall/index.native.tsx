@@ -4,6 +4,7 @@ import { useBrandContext } from '@/contexts/brand-context.provider'
 import { useOrganizationContext } from '@/contexts/organization-context.provider'
 import { useBreakpoints } from '@/hooks'
 import { ModelStatus } from '@/shared-libs/firestore/trendly-pro/models/status'
+import { track } from "@/shared-libs/utils/analytics";
 import Toaster from '@/shared-uis/components/toaster/Toaster'
 import Colors from '@/shared-uis/constants/Colors'
 import {
@@ -77,10 +78,18 @@ const PayWallComponent = () => {
 
     const handlePurchase = useCallback(async (pkg: IapPackage) => {
         setBusyProduct(pkg.productId)
+        track("checkout_started", { plan_key: pkg.planKey ?? pkg.productId, provider: "iap" })
         const res = await purchase(pkg)
         setBusyProduct(null)
         if (res.userCancelled) return
         if (res.success) {
+            // ⭐⭐ Primary conversion. The store is the source of truth for the
+            // money, so this fires on RevenueCat's confirmation, not on intent.
+            // subscription_started is NOT fired here. It comes from the org's
+            // plan transition (SubscriptionTransitionWatcher), which is the only
+            // place that sees a confirmed purchase on every platform and
+            // provider — a store "success" here is still pending server-side
+            // entitlement, and firing in both places would double-count.
             Toaster.success('Purchase successful — unlocking your plan. This can take a minute.')
         } else {
             Toaster.error(res.error ?? 'Purchase failed. Please try again.')
@@ -91,7 +100,10 @@ const PayWallComponent = () => {
         setRestoring(true)
         const res = await restorePurchases()
         setRestoring(false)
-        if (res.success) Toaster.success('Purchases restored.')
+        if (res.success) {
+            track("subscription_restored", {})
+            Toaster.success('Purchases restored.')
+        }
         else if (res.error) Toaster.error(res.error)
     }, [])
 

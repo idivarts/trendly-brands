@@ -24,7 +24,7 @@ import { useAuthContext } from "@/contexts/auth-context.provider";
 import { useMyGrowthBook } from "@/contexts/growthbook-context-provider";
 import { useOrganizationContext } from "@/contexts/organization-context.provider";
 import { useEntitlements } from "@/hooks/use-entitlements";
-import { analyticsLogEvent } from "@/shared-libs/utils/firebase/analytics";
+import { track } from "@/shared-libs/utils/analytics";
 import {
     getNudgeState,
     NudgeState,
@@ -113,13 +113,9 @@ export const SubscribeNudgeProvider: React.FC<PropsWithChildren> = ({ children }
 
     const logNudge = useCallback(
         (action: NudgeAnalyticsAction, trigger: NudgeTriggerKey) => {
-            analyticsLogEvent(NUDGE_ANALYTICS_EVENT, {
-                action,
-                trigger,
-                plan_key: planKey,
-                platform: Platform.OS,
-                token_state: tokens.state,
-            });
+            // plan_key / platform / token_state now ride on every event as
+            // super-properties, so they are no longer repeated here.
+            track("subscribe_nudge", { action, trigger });
         },
         [planKey, tokens.state]
     );
@@ -230,6 +226,11 @@ export const SubscribeNudgeProvider: React.FC<PropsWithChildren> = ({ children }
             if (!managerId || !s) return;
             const alreadyMarked =
                 kind === "content_created" ? s.hasCreatedFirstContent : s.hasScheduledFirstPost;
+
+            // Report activation itself, not just the nudge. This is fired on the
+            // first of EACH kind regardless of whether a nudge shows, so the
+            // activation metric and the in-app nudge can never disagree.
+            if (!alreadyMarked) track("activation_reached", { kind });
             // Fire on the FIRST aha-moment of either kind only.
             const willShow = !alreadyMarked && !s.ahaMomentNudgeShown && canNudge();
 
