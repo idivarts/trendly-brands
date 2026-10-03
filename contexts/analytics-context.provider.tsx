@@ -2,7 +2,7 @@ import { useAuthContext } from "@/contexts/auth-context.provider";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useOrganizationContext } from "@/contexts/organization-context.provider";
 import { captureAttribution, toSuperProperties } from "@/utils/attribution";
-import { initBranch } from "@/utils/observability/branch";
+import { createBranchSink, initBranch } from "@/utils/observability/branch";
 import { createPostHogSink } from "@/utils/observability/posthog";
 import { clearSentryUser, initSentry, setSentryUser } from "@/utils/observability/sentry";
 import { resolveTokenStatus } from "@/hooks/use-entitlements";
@@ -55,6 +55,18 @@ const bootstrap = () => {
     // PostHog — the only product-analytics sink that works on native.
     const posthog = createPostHogSink();
     if (posthog) registerSink(posthog);
+
+    // Branch — the NATIVE conversion path to the ad networks, and the mirror
+    // image of the two sinks above: Firebase and Meta both no-op off web, so
+    // without this an install-driven signup reported nothing anywhere.
+    //
+    // It matters more than a third analytics vendor: Branch is what Meta reads
+    // for app campaigns. Reporting only installs (which is all Branch had
+    // before conversion events) lets Meta optimise for people who install and
+    // stop, instead of people who register and subscribe. Null on web and on
+    // any build without a Branch key for this stage.
+    const branchSink = createBranchSink();
+    if (branchSink) registerSink(branchSink);
 
     setSuperProperties({
         environment: APP_STAGE,
@@ -210,7 +222,21 @@ export const SubscriptionTransitionWatcher = () => {
                         selectedOrgBilling?.provider === "revenuecat" ? "iap" : "razorpay";
 
                     if (!wasPaid && isPaid) {
-                        track("subscription_started", { plan_key: planKey, provider });
+                        // A live trial is reported as a trial start, not a
+                        // purchase. The ad networks model the two differently
+                        // and Branch sends them as different standard events
+                        // (StartTrial vs Subscribe), so collapsing them would
+                        // have an unconverted trial bid against as revenue.
+                        const isTrial = !!(
+                            selectedOrgBilling?.isOnTrial &&
+                            (selectedOrgBilling?.trialEnds || 0) >= Date.now()
+                        );
+
+                        track("subscription_started", {
+                            plan_key: planKey,
+                            provider,
+                            is_trial: isTrial,
+                        });
                     } else if (wasPaid && !isPaid) {
                         track("subscription_cancelled", { plan_key: previous });
                     }
@@ -225,6 +251,10 @@ export const SubscriptionTransitionWatcher = () => {
         return () => {
             cancelled = true;
         };
+        // isOnTrial/trialEnds are deliberately NOT dependencies: they are read
+        // only at the moment a plan transition is detected, and adding them
+        // would re-run this effect when a trial merely expires — a no-op that
+        // still costs a storage read per org.
     }, [selectedOrganization?.id, selectedOrgBilling?.planKey, selectedOrgBilling?.provider]);
 
     return null;
