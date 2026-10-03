@@ -27,6 +27,7 @@ import {
     faPenRuler,
     faPlus,
     faShareNodes,
+    faThumbtack,
     faUsers,
     faWandMagicSparkles,
 } from "@fortawesome/free-solid-svg-icons";
@@ -36,6 +37,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+    Animated,
+    Easing,
     Linking,
     Platform,
     Pressable,
@@ -51,6 +54,16 @@ import { InfluencerLedGrowth, InfluencerLedGrowthSubDrawer } from "./influencer-
 
 // ─── Width constants (kept in sync with _layout.tsx) ───────────────────────
 const COLLAPSED_WIDTH = 56;
+const EXPANDED_WIDTH = 280;
+
+// ─── Floating hover panel timings ──────────────────────────────────────────
+// Short grace periods so brushing past the rail on the way elsewhere doesn't
+// flash the panel open, and crossing the seam between rail and panel doesn't
+// snap it shut.
+const HOVER_OPEN_DELAY = 110;
+const HOVER_CLOSE_DELAY = 180;
+const FLOAT_IN_DURATION = 200;
+const FLOAT_OUT_DURATION = 150;
 
 // ─── Menu item factories ────────────────────────────────────────────────────
 
@@ -175,7 +188,14 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
     const { manager } = useAuthContext();
     const { xl } = useBreakpoints();
     const sidebarCollapsedCtx = useSidebarCollapsed();
-    const { isCollapsed, toggle } = sidebarCollapsedCtx;
+    const {
+        isCollapsed,
+        toggle,
+        isFloating,
+        openFloating,
+        closeFloating,
+        pinFloating,
+    } = sidebarCollapsedCtx;
 
     const planKey = selectedOrgBilling?.planKey || "";
     const hasMultipleBrands = brands.length > 1;
@@ -204,6 +224,129 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
     const [isOrgHovered, setIsOrgHovered] = useState(false);
 
     const showCreditsSystem = false;
+
+    // ─── Floating hover panel ───────────────────────────────────────────────
+    // While the rail is collapsed, hovering it reveals the full expanded menu
+    // as a panel laid *over* the page — the drawer column keeps its 56px width
+    // so the main content never reflows. Moving the pointer off the panel
+    // closes it again.
+    //
+    // `isCollapsed` only ever flips via an explicit toggle, so the collapsed
+    // rail stays mounted underneath and the panel can animate both ways
+    // without the page showing through the seam.
+    const floatWidth = useRef(new Animated.Value(COLLAPSED_WIDTH)).current;
+    const floatOpacity = useRef(new Animated.Value(0)).current;
+    // Kept mounted through the closing animation, then unmounted.
+    const [floatMounted, setFloatMounted] = useState(false);
+    // Clip the (fixed-width) panel contents while the surface is still growing
+    // so the reveal wipes cleanly; afterwards let dropdowns overflow again.
+    const [floatSettled, setFloatSettled] = useState(false);
+
+    // The panel is a child of the same wrapper these handlers sit on, so
+    // dropdowns anchored inside it (brand switcher, org menu) keep the pointer
+    // "inside" and never trip the auto-close.
+    const hoverOpenTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const hoverCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const clearHoverTimer = (ref: React.MutableRefObject<ReturnType<typeof setTimeout> | null>) => {
+        if (ref.current) {
+            clearTimeout(ref.current);
+            ref.current = null;
+        }
+    };
+
+    const handleRailHoverIn = useCallback(() => {
+        clearHoverTimer(hoverCloseTimer);
+        if (isFloating) return;
+        clearHoverTimer(hoverOpenTimer);
+        hoverOpenTimer.current = setTimeout(() => {
+            hoverOpenTimer.current = null;
+            openFloating();
+        }, HOVER_OPEN_DELAY);
+    }, [isFloating, openFloating]);
+
+    const handleRailHoverOut = useCallback(() => {
+        clearHoverTimer(hoverOpenTimer);
+        clearHoverTimer(hoverCloseTimer);
+        hoverCloseTimer.current = setTimeout(() => {
+            hoverCloseTimer.current = null;
+            closeFloating();
+        }, HOVER_CLOSE_DELAY);
+    }, [closeFloating]);
+
+    useEffect(
+        () => () => {
+            clearHoverTimer(hoverOpenTimer);
+            clearHoverTimer(hoverCloseTimer);
+        },
+        []
+    );
+
+    // Only the collapsed rail hosts the panel; the copy rendered *inside* it
+    // (see the collapsed branch below) sees `isCollapsed === false` and must
+    // not spawn another one.
+    const hostsFloatingPanel = isCollapsed;
+
+    useEffect(() => {
+        if (!hostsFloatingPanel) {
+            setFloatMounted(false);
+            setFloatSettled(false);
+            floatWidth.setValue(COLLAPSED_WIDTH);
+            floatOpacity.setValue(0);
+            return;
+        }
+
+        if (isFloating) {
+            setFloatMounted(true);
+            setFloatSettled(false);
+            // Layout prop (`width`) in play → every value here must stay on the
+            // JS driver.
+            const animation = Animated.parallel([
+                Animated.timing(floatWidth, {
+                    toValue: EXPANDED_WIDTH,
+                    duration: FLOAT_IN_DURATION,
+                    easing: Easing.out(Easing.cubic),
+                    useNativeDriver: false,
+                }),
+                Animated.timing(floatOpacity, {
+                    toValue: 1,
+                    duration: FLOAT_IN_DURATION * 0.7,
+                    useNativeDriver: false,
+                }),
+            ]);
+            animation.start(({ finished }) => {
+                if (finished) setFloatSettled(true);
+            });
+            return () => animation.stop();
+        }
+
+        if (!floatMounted) return;
+        setFloatSettled(false);
+        const animation = Animated.parallel([
+            Animated.timing(floatWidth, {
+                toValue: COLLAPSED_WIDTH,
+                duration: FLOAT_OUT_DURATION,
+                easing: Easing.in(Easing.cubic),
+                useNativeDriver: false,
+            }),
+            Animated.timing(floatOpacity, {
+                toValue: 0,
+                duration: FLOAT_OUT_DURATION,
+                useNativeDriver: false,
+            }),
+        ]);
+        animation.start(({ finished }) => {
+            if (finished) setFloatMounted(false);
+        });
+        return () => animation.stop();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isFloating, hostsFloatingPanel]);
+
+    // `onMouseEnter`/`onMouseLeave` are forwarded by react-native-web; this
+    // component only renders at the `xl` (desktop web) breakpoint.
+    const hoverProps = (Platform.OS === "web"
+        ? { onMouseEnter: handleRailHoverIn, onMouseLeave: handleRailHoverOut }
+        : {}) as any;
 
     // DOM ref to the brand-switcher container (header + dropdown live inside it).
     // Used for the web outside-click dismissal below.
@@ -398,18 +541,24 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
     // ─── Toggle button (bare Pressable, positioned by caller) ──────────────
     const toggleButtonBare = (
         <Pressable
-            onPress={toggle}
+            onPress={isFloating ? pinFloating : toggle}
             onHoverIn={() => setToggleHovered(true)}
             onHoverOut={() => setToggleHovered(false)}
             style={[
                 styles.toggleButton,
                 toggleHovered && styles.toggleButtonHover,
             ]}
-            accessibilityLabel={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            accessibilityLabel={
+                isFloating
+                    ? "Keep sidebar expanded"
+                    : isCollapsed
+                        ? "Expand sidebar"
+                        : "Collapse sidebar"
+            }
             accessibilityRole="button"
         >
             <FontAwesomeIcon
-                icon={isCollapsed ? faChevronRight : faChevronLeft}
+                icon={isFloating ? faThumbtack : isCollapsed ? faChevronRight : faChevronLeft}
                 size={12}
                 color={(colors as any).drawerTextMuted ?? colors.textSecondary}
             />
@@ -439,7 +588,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
 
         return (
             <DrawerColorsContext.Provider value={drawerColors}>
-                <RNView style={styles.collapsedWrapper}>
+                <RNView style={styles.collapsedWrapper} {...hoverProps}>
                     <View style={[styles.root, styles.rootCollapsed]}>
                         {/* Gradient accent top line */}
                         <LinearGradient
@@ -584,6 +733,33 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                     Only one renders at a time based on subDrawerKind. */}
                     <InfluencerLedGrowthSubDrawer />
                     <AdminPortalSubDrawer />
+
+                    {/* Floating hover panel — the same drawer forced into its
+                    expanded layout and laid over the page content. It reserves
+                    no layout width, so the main content keeps the rail's 56px
+                    gutter while this is open. The copy below sees
+                    `isCollapsed: false`, takes the expanded branch, and so
+                    never renders a panel of its own. */}
+                    {floatMounted && (
+                        <Animated.View
+                            style={[
+                                styles.floatingPanel,
+                                {
+                                    width: floatWidth,
+                                    opacity: floatOpacity,
+                                    overflow: floatSettled ? "visible" : "hidden",
+                                },
+                            ]}
+                        >
+                            <SidebarCollapsedContext.Provider
+                                value={{ ...sidebarCollapsedCtx, isCollapsed: false }}
+                            >
+                                <RNView style={styles.floatingPanelInner}>
+                                    <DrawerMenuContentWeb />
+                                </RNView>
+                            </SidebarCollapsedContext.Provider>
+                        </Animated.View>
+                    )}
                 </RNView>
             </DrawerColorsContext.Provider>
         );
@@ -1039,6 +1215,37 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
         collapsedWrapper: {
             flex: 1,
             flexDirection: "row",
+            backgroundColor: "transparent",
+        },
+        // ── Floating hover panel (collapsed rail only) ─────────────────────
+        // Overlays the rail and the page beside it without taking layout
+        // width; `width` is animated, so it is set inline by the caller.
+        floatingPanel: {
+            position: "absolute",
+            left: 0,
+            top: 0,
+            bottom: 0,
+            backgroundColor: sidebarSurfaceBg,
+            zIndex: 1000,
+            elevation: 24,
+            // Cast toward the page content this panel sits over.
+            shadowColor: "#000",
+            shadowOffset: { width: 10, height: 0 },
+            shadowRadius: 28,
+            shadowOpacity: theme.dark ? 0.45 : 0.16,
+            ...Platform.select({
+                web: {
+                    boxShadow: theme.dark
+                        ? "10px 0 36px rgba(0,0,0,0.45)"
+                        : "10px 0 36px rgba(5, 68, 99, 0.16)",
+                } as any,
+            }),
+        },
+        // Full expanded width regardless of the animating surface, so the menu
+        // is revealed rather than reflowed as the panel grows.
+        floatingPanelInner: {
+            flex: 1,
+            width: EXPANDED_WIDTH,
             backgroundColor: "transparent",
         },
         accentLine: {
