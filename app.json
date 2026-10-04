@@ -2,7 +2,7 @@
     "expo": {
         "name": "Trendly - AI Social Planner",
         "slug": "trendly-brands",
-        "version": "4.1.0",
+        "version": "4.2.0",
         "orientation": "portrait",
         "icon": "./assets/images/branding/app-icon.png",
         "scheme": "trendly-brands",
@@ -38,6 +38,7 @@
             "bundleIdentifier": "pro.trendly.brands",
             "googleServicesFile": "./GoogleService-Info.plist",
             "associatedDomains": [
+                "applinks:share.trendly.now",
                 "applinks:zgh4c.app.link",
                 "applinks:zgh4c-alternate.app.link",
                 "applinks:zgh4c.test-app.link",
@@ -68,6 +69,7 @@
                         "DEFAULT"
                     ],
                     "data": [
+                        { "scheme": "https", "host": "share.trendly.now" },
                         { "scheme": "https", "host": "zgh4c.app.link" },
                         { "scheme": "https", "host": "zgh4c-alternate.app.link" },
                         { "scheme": "https", "host": "zgh4c.test-app.link" },

@@ -29,16 +29,28 @@
  * Branch's link domains, as declared in `ios.associatedDomains` /
  * `android.intentFilters` in app.json:
  *
- *     zgh4c.app.link            zgh4c-alternate.app.link        (live)
+ *     share.trendly.now                                         (live, custom)
+ *     zgh4c.app.link            zgh4c-alternate.app.link        (live, default)
  *     zgh4c.test-app.link       zgh4c-alternate.test-app.link   (test)
  *
- * Matched on the registrable suffix rather than the four exact hosts so the
- * `-alternate` domains, the live/test split, and any future Branch subdomain
- * are all covered without this file having to track app.json. The leading
- * `(^|\.)` anchor is what keeps an unrelated host like `myapp.link` from
- * matching on a bare suffix comparison.
+ * The Branch-owned domains are matched on the registrable suffix rather than the
+ * four exact hosts so the `-alternate` domains, the live/test split, and any
+ * future Branch subdomain are all covered without this file having to track
+ * app.json. The leading `(^|\.)` anchor is what keeps an unrelated host like
+ * `myapp.link` from matching on a bare suffix comparison.
  */
-const BRANCH_LINK_HOST = /(^|\.)(app\.link|test-app\.link)$/i;
+const BRANCH_LINK_SUFFIX = /(^|\.)(app\.link|test-app\.link)$/i;
+
+/**
+ * Branch custom link domains, matched EXACTLY.
+ *
+ * A custom domain is a CNAME onto Branch, so its links carry the same opaque
+ * link IDs and need the same treatment as an `app.link` URL. It cannot be
+ * suffix-matched: Trendly serves plenty of unrelated hosts under `trendly.now`
+ * (`be.`, `brands.`, the marketing site), and routing those to `/` would
+ * swallow real in-app https routes.
+ */
+const BRANCH_CUSTOM_HOSTS = new Set(["share.trendly.now"]);
 
 /**
  * True when `value` is an absolute URL pointing at a Branch link domain.
@@ -53,7 +65,9 @@ const isBranchLink = (value: string): boolean => {
 
     // Strip userinfo (`user@host`) and any port before comparing the host.
     const host = (match[1].split("@").pop() ?? "").split(":")[0];
-    return BRANCH_LINK_HOST.test(host);
+    return (
+        BRANCH_CUSTOM_HOSTS.has(host.toLowerCase()) || BRANCH_LINK_SUFFIX.test(host)
+    );
 };
 
 /**
