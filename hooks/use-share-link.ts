@@ -4,11 +4,14 @@ import {
     IShareLink,
     ShareType,
 } from "@/shared-libs/firestore/trendly-pro/models/share-links";
+import { Console } from "@/shared-libs/utils/console";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
+import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import * as Crypto from "expo-crypto";
 import {
     doc,
     DocumentReference,
+    getDoc,
     onSnapshot,
     setDoc,
     updateDoc,
@@ -29,8 +32,21 @@ interface ShareLinkState {
     enabled: boolean;
     /** The current share token (present once shared at least once). */
     token: string | null;
-    /** Full public URL, or null if never shared. */
+    /** Full public web URL, or null if never shared. */
     shareUrl: string | null;
+    /**
+     * Branch deep link for this share — opens the app when installed, falls back
+     * to `shareUrl` in a browser, and survives an install (deferred deep link).
+     * Null until it has been minted; `preferredUrl` is what UI should show.
+     */
+    deepLink: string | null;
+    /**
+     * The URL to actually hand out: the deep link when there is one, else the web
+     * URL. Non-null whenever the link is enabled.
+     */
+    preferredUrl: string | null;
+    /** True while the deep link is being fetched/minted. */
+    deepLinkLoading: boolean;
     /** True while the initial source-of-truth doc is loading. */
     loading: boolean;
     /** True while an enable/disable mutation is in flight. */
@@ -38,6 +54,9 @@ interface ShareLinkState {
     enable: () => Promise<string | null>;
     disable: () => Promise<void>;
 }
+
+/** The plain web URL for a token — always valid, on every platform. */
+const shareUrlFor = (token: string): string => `${BRANDS_FE_URL}/share/${token}`;
 
 /**
  * Generate an unguessable, URL-safe share token (128 hex chars ≈ 256 bits).
@@ -79,6 +98,8 @@ export const useShareLink = (target: ShareTarget): ShareLinkState => {
     const [token, setToken] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [mutating, setMutating] = useState(false);
+    const [deepLink, setDeepLink] = useState<string | null>(null);
+    const [deepLinkLoading, setDeepLinkLoading] = useState(false);
 
     const ref = useMemo(() => sourceRef(target), [
         target.type,
@@ -112,6 +133,64 @@ export const useShareLink = (target: ShareTarget): ShareLinkState => {
         );
         return () => unsub();
     }, [ref, target.type]);
+
+    /**
+     * Resolve the Branch deep link for the live token.
+     *
+     * Reads `shareLinks/{token}.deepLink` first and only asks the backend to mint
+     * one when it is absent, so the common case (an already-shared resource) is a
+     * single doc read with no request. The backend side is idempotent too — it
+     * caches onto the same field — so a race here costs at most one extra call.
+     *
+     * Failure is never surfaced: the web URL already works everywhere, and a
+     * missing deep link only means the share sheet shows that instead.
+     */
+    useEffect(() => {
+        // Clearing on every target change is what stops the previous resource's
+        // URL from lingering on screen while the new one is fetched.
+        setDeepLink(null);
+
+        if (!enabled || !token || !target.brandId) return;
+
+        // `cancelled` guards the late-response case: switching between two shared
+        // items faster than the request completes would otherwise show the first
+        // item's link against the second item.
+        let cancelled = false;
+        const brandId = target.brandId;
+
+        const resolve = async () => {
+            setDeepLinkLoading(true);
+            try {
+                const snap = await getDoc(doc(FirestoreDB, "shareLinks", token));
+                if (cancelled) return;
+                const cached = (snap.data() as IShareLink | undefined)?.deepLink;
+                if (cached) {
+                    setDeepLink(cached);
+                    return;
+                }
+
+                const res = await HttpWrapper.fetch(
+                    `/api/v2/brands/${brandId}/share-links/${token}/deep-link`,
+                    { method: "POST" }
+                );
+                // `deepLink` tells us whether `url` is a Branch link or the plain
+                // web fallback the backend returns when Branch is unconfigured for
+                // the stage or unreachable.
+                const body = (await res.json()) as { url?: string; deepLink?: boolean };
+                if (cancelled) return;
+                setDeepLink(body?.deepLink && body.url ? body.url : null);
+            } catch (error) {
+                if (!cancelled) Console.error(error, "useShareLink: deep link");
+            } finally {
+                if (!cancelled) setDeepLinkLoading(false);
+            }
+        };
+        void resolve();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [enabled, token, target.brandId]);
 
     const writeShareLinkDoc = useCallback(
         async (shareToken: string, isEnabled: boolean) => {
@@ -189,7 +268,20 @@ export const useShareLink = (target: ShareTarget): ShareLinkState => {
         }
     }, [ref, token, target.type, writeShareLinkDoc]);
 
-    const shareUrl = token ? `${BRANDS_FE_URL}/share/${token}` : null;
+    const shareUrl = token ? shareUrlFor(token) : null;
 
-    return { enabled, token, shareUrl, loading, mutating, enable, disable };
+    return {
+        enabled,
+        token,
+        shareUrl,
+        deepLink,
+        // The deep link is strictly better when present (opens the app, survives
+        // an install); the web URL is the fallback, not a second-class option.
+        preferredUrl: deepLink ?? shareUrl,
+        deepLinkLoading,
+        loading,
+        mutating,
+        enable,
+        disable,
+    };
 };
