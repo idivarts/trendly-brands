@@ -15,17 +15,20 @@ const {
  * ── Scope: keys only. Domains live in app.json ──────────────────────────────
  * This plugin used to add `associatedDomains` / `intentFilters` too, resolved
  * per stage. That broke `eas credentials`: EAS syncs Apple capabilities FROM
- * the resolved Expo config, and the domains came from EXPO_PUBLIC_BRANCH_*
- * which is only set in CI. Run locally, the config had no associated domains,
- * so EAS treated that as authoritative and reported
+ * the resolved Expo config, and the domains came from a pair of now-deleted
+ * EXPO_PUBLIC_BRANCH_*_DOMAIN vars that were only set in CI. Run locally, the
+ * config had no associated domains, so EAS treated that as authoritative and
+ * reported
  *
  *     ✔ Synced capabilities: Disabled: Associated Domains
  *
  * silently turning the capability off on the App ID and breaking the next iOS
  * build. Anything EAS mirrors to Apple must therefore be environment-INDEPENDENT.
  *
- * So app.json now declares all four domains (live + test) unconditionally. That
- * is safe: the entitlement only says the app is CAPABLE of handling those
+ * So app.json now declares every domain (custom + live + test) unconditionally,
+ * and it is the ONLY place a Branch link domain is configured — there is no
+ * domain env var or Actions variable left in any repo. That is safe: the
+ * entitlement only says the app is CAPABLE of handling those
  * links, and link domains are public — they are readable in any app's
  * entitlements and in the AASA file Branch serves. Which Branch environment the
  * app actually talks to is decided by the key below, which is the only part
