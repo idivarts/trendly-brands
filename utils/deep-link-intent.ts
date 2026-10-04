@@ -45,6 +45,38 @@ const emit = (): void => {
 const isInAppPath = (path: string): boolean =>
     path.startsWith("/") && !path.startsWith("//");
 
+/**
+ * The `app/(public)/` routes, which render without a session.
+ *
+ * This matters for deep links specifically: the boot gate holds a parked
+ * destination until the user is signed in, which is right for the deferred
+ * -deep-link case it was built for (tap ad → install → sign up → land), but
+ * wrong for a public share link, whose recipient is usually not a Trendly user
+ * at all. Forcing them through sign-up to read a read-only page would defeat
+ * the share.
+ *
+ * Listed explicitly rather than inferred: being reachable without auth is a
+ * property of the screen, and a new public route should have to opt in here
+ * deliberately.
+ */
+const PUBLIC_PATH_PREFIXES = [
+    "/share/",
+    "/influencer/",
+    "/influencer-list",
+    "/influencer-images",
+    "/collaboration-application",
+];
+
+/**
+ * Whether this destination can be honoured with no session, so the boot gate
+ * can replay it instead of parking it behind sign-in.
+ */
+export const isPublicDeepLink = (path: string): boolean =>
+    isInAppPath(path) &&
+    PUBLIC_PATH_PREFIXES.some(
+        (prefix) => path === prefix || path.startsWith(prefix)
+    );
+
 /** Record where the app should go once it is in a position to go there. */
 export const setPendingDeepLink = (path: string): void => {
     if (!isInAppPath(path) || pending === path) return;

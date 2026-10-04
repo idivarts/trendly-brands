@@ -1,6 +1,7 @@
 import {
     consumePendingDeepLink,
     getPendingDeepLink,
+    isPublicDeepLink,
     setPendingDeepLink,
     subscribeToPendingDeepLink,
 } from "../deep-link-intent";
@@ -118,5 +119,43 @@ describe("notifications", () => {
         setPendingDeepLink("/contents/abc123");
 
         expect(listener).not.toHaveBeenCalled();
+    });
+});
+
+/**
+ * The boot gate replays a public destination with no session, and parks every
+ * other one behind sign-in. Getting this predicate wrong fails in one of two
+ * expensive ways: too narrow and a shared link sends its recipient to sign-up;
+ * too broad and an authenticated screen is navigated to with no session.
+ */
+describe("isPublicDeepLink", () => {
+    it.each([
+        "/share/abc123",
+        "/influencer/xyz",
+        "/influencer-list",
+        "/influencer-images",
+        "/collaboration-application",
+    ])("accepts the public route %s", (path) => {
+        expect(isPublicDeepLink(path)).toBe(true);
+    });
+
+    it.each([
+        "/contents/abc123",
+        "/content-calendar",
+        "/billing",
+        "/",
+    ])("rejects the authenticated route %s", (path) => {
+        expect(isPublicDeepLink(path)).toBe(false);
+    });
+
+    it("rejects an absolute URL even when it contains a public path", () => {
+        expect(isPublicDeepLink("https://evil.example/share/abc")).toBe(false);
+        expect(isPublicDeepLink("//evil.example/share/abc")).toBe(false);
+    });
+
+    it("does not accept a path that merely starts with a public segment", () => {
+        // "/sharent" must not pass on the strength of "/share" — the prefixes
+        // carry their trailing slash for exactly this reason.
+        expect(isPublicDeepLink("/sharent/abc")).toBe(false);
     });
 });

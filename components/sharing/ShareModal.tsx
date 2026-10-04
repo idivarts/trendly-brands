@@ -7,6 +7,8 @@ import {
     faGlobe,
     faLink,
     faLock,
+    faMobileScreen,
+    faShareNodes,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -15,7 +17,9 @@ import React, { useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Modal,
+    Platform,
     Pressable,
+    Share,
     StyleSheet,
     Switch,
     Text,
@@ -58,7 +62,16 @@ const ShareModal: React.FC<ShareModalProps> = ({ visible, target, title, onClose
     const insets = useSafeAreaInsets();
     const styles = useMemo(() => createStyles(colors, insets.top), [colors, insets.top]);
 
-    const { enabled, shareUrl, loading, mutating, enable, disable } = useShareLink(target);
+    const {
+        enabled,
+        deepLink,
+        preferredUrl,
+        deepLinkLoading,
+        loading,
+        mutating,
+        enable,
+        disable,
+    } = useShareLink(target);
     const [copied, setCopied] = useState(false);
 
     const label = LABELS[target.type];
@@ -78,14 +91,28 @@ const ShareModal: React.FC<ShareModalProps> = ({ visible, target, title, onClose
     };
 
     const handleCopy = async () => {
-        if (!shareUrl) return;
+        if (!preferredUrl) return;
         try {
-            await Clipboard.setStringAsync(shareUrl);
+            await Clipboard.setStringAsync(preferredUrl);
             setCopied(true);
             Toaster.success("Link copied to clipboard");
             setTimeout(() => setCopied(false), 3000);
         } catch {
             Toaster.error("Failed to copy link");
+        }
+    };
+
+    /**
+     * Hand the link to the OS share sheet. Native only: RN Web's Share falls back
+     * to navigator.share, which is absent on desktop browsers — there the Copy
+     * button is the share affordance.
+     */
+    const handleShare = async () => {
+        if (!preferredUrl) return;
+        try {
+            await Share.share({ message: `${title}\n${preferredUrl}`, url: preferredUrl });
+        } catch {
+            Toaster.error("Couldn't open the share sheet");
         }
     };
 
@@ -142,23 +169,56 @@ const ShareModal: React.FC<ShareModalProps> = ({ visible, target, title, onClose
                         </View>
 
                         {/* ── Link + copy ───────────────────────────────── */}
-                        {enabled && shareUrl && (
-                            <View style={styles.linkRow}>
-                                <Text style={styles.linkUrl} numberOfLines={1} ellipsizeMode="middle">
-                                    {shareUrl}
-                                </Text>
-                                <Pressable
-                                    style={({ pressed }) => [styles.copyBtn, pressed && styles.pressed]}
-                                    onPress={handleCopy}
-                                >
-                                    <FontAwesomeIcon
-                                        icon={copied ? faCheck : faCopy}
-                                        size={13}
-                                        color={colors.onPrimary}
-                                    />
-                                    <Text style={styles.copyBtnText}>{copied ? "Copied" : "Copy"}</Text>
-                                </Pressable>
-                            </View>
+                        {enabled && preferredUrl && (
+                            <>
+                                <View style={styles.linkRow}>
+                                    <Text style={styles.linkUrl} numberOfLines={1} ellipsizeMode="middle">
+                                        {preferredUrl}
+                                    </Text>
+                                    {deepLinkLoading && !deepLink ? (
+                                        <ActivityIndicator size="small" color={colors.primary} />
+                                    ) : null}
+                                    <Pressable
+                                        style={({ pressed }) => [styles.copyBtn, pressed && styles.pressed]}
+                                        onPress={handleCopy}
+                                    >
+                                        <FontAwesomeIcon
+                                            icon={copied ? faCheck : faCopy}
+                                            size={13}
+                                            color={colors.onPrimary}
+                                        />
+                                        <Text style={styles.copyBtnText}>{copied ? "Copied" : "Copy"}</Text>
+                                    </Pressable>
+                                </View>
+
+                                {Platform.OS !== "web" && (
+                                    <Pressable
+                                        style={({ pressed }) => [styles.shareBtn, pressed && styles.pressed]}
+                                        onPress={handleShare}
+                                    >
+                                        <FontAwesomeIcon
+                                            icon={faShareNodes}
+                                            size={13}
+                                            color={colors.primary}
+                                        />
+                                        <Text style={styles.shareBtnText}>Share via…</Text>
+                                    </Pressable>
+                                )}
+
+                                {deepLink && (
+                                    <View style={styles.deepLinkNote}>
+                                        <FontAwesomeIcon
+                                            icon={faMobileScreen}
+                                            size={12}
+                                            color={colors.textSecondary}
+                                        />
+                                        <Text style={styles.deepLinkNoteText}>
+                                            Opens in the Trendly app when it&apos;s installed, and in the
+                                            browser otherwise.
+                                        </Text>
+                                    </View>
+                                )}
+                            </>
                         )}
 
                         {enabled && (
@@ -304,6 +364,38 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
             fontSize: fs(13),
             fontWeight: "700",
             color: colors.onPrimary,
+        },
+        shareBtn: {
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            marginTop: 10,
+            paddingVertical: 11,
+            borderRadius: 10,
+            backgroundColor: colors.tag,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowRadius: 3,
+            shadowOpacity: 0.04,
+            elevation: 1,
+        },
+        shareBtnText: {
+            fontSize: fs(13),
+            fontWeight: "700",
+            color: colors.primary,
+        },
+        deepLinkNote: {
+            flexDirection: "row",
+            alignItems: "flex-start",
+            gap: 8,
+            marginTop: 10,
+        },
+        deepLinkNoteText: {
+            flex: 1,
+            fontSize: fs(12),
+            color: colors.textSecondary,
+            lineHeight: lh(17),
         },
         note: {
             fontSize: fs(12),

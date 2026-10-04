@@ -41,6 +41,7 @@ import { GlobalErrorFallback } from "@/shared-uis/components/GlobalErrorFallback
 import { toastConfig } from "@/shared-uis/components/toaster/Toaster";
 import {
     consumePendingDeepLink,
+    isPublicDeepLink,
     usePendingDeepLink,
 } from "@/utils/deep-link-intent";
 import { resetAndNavigate } from "@/utils/router";
@@ -131,14 +132,23 @@ const RootLayoutStack = () => {
         if (isLoading) return;
 
         if (!session) {
+            // A public destination (a shared strategy / calendar / content link)
+            // renders without a session, so honour it now. Parking it would send
+            // the recipient to sign-up instead — and the recipient of a share link
+            // is usually not a Trendly user at all.
+            if (pendingDeepLink && isPublicDeepLink(pendingDeepLink)) {
+                consumePendingDeepLink();
+                resetAndNavigate(pendingDeepLink as Href);
+                return;
+            }
             // On boot up, session doesn't exist and user is in main group or /, redirect to pre-signin
             // resetAndNavigate("/pre-signin");
             if (inMainGroup || pathname === "/") {
                 resetAndNavigate("/lets-start");
             }
-            // A parked deep link is deliberately NOT consumed here: this is the
-            // deferred-deep-link case (tap ad → install → first open), so it has
-            // to survive the trip through sign-in and be replayed below.
+            // Any other parked deep link is deliberately NOT consumed here: that
+            // is the deferred-deep-link case (tap ad → install → first open), so
+            // it has to survive the trip through sign-in and be replayed below.
             return;
         }
 
