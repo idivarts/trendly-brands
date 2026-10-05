@@ -154,6 +154,17 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
     // Portrait 9:16 frame for vertical formats; landscape 16:9 for `video`.
     const isStory = contentType === "story" || contentType === "reel";
     const isLandscape = contentType === "video";
+    /**
+     * The frame shape a feed card should use for this content type. A reel is
+     * portrait wherever it appears — it used to fall through to a square feed
+     * tile on every platform except the IG/FB story mock, and to landscape in the
+     * YouTube mock, neither of which is what the post will actually look like.
+     */
+    const feedShape: "tall" | "square" | "landscape" = isLandscape
+        ? "landscape"
+        : isStory
+            ? "tall"
+            : "square";
     const firstImage = effAttachments.find((a) => a.imageUrl)?.imageUrl;
     const isVideo = effAttachments.some((a) => a.type === "video" || a.type === "reel");
     const slideCount = effAttachments.length;
@@ -276,7 +287,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
         </View>
     );
 
-    const feedMedia = !isText ? mediaBox(isLandscape ? "landscape" : "square") : null;
+    const feedMedia = !isText ? mediaBox(feedShape) : null;
 
     // A caption/hashtags block — shared by the plain feed cards (FB / LinkedIn).
     const bodyBlock = (emphasize?: boolean) =>
@@ -481,7 +492,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
 
     const renderYouTube = () => (
         <View style={styles.postCard}>
-            {!isText ? mediaBox(isStory ? "tall" : "landscape") : null}
+            {!isText ? mediaBox(feedShape === "square" ? "landscape" : feedShape) : null}
             <View style={styles.ytBody}>
                 <Text style={styles.ytTitle} numberOfLines={2}>
                     {options.youtubeTitle || "Add a video title"}
