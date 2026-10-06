@@ -106,11 +106,31 @@ export function parseAspectRatio(ratio: string): [number, number] {
 }
 
 /**
+ * Whether a measured width/height ratio is one this content type accepts.
+ *
+ * Used to decide whether a preview may be laid out at the asset's REAL ratio.
+ * An asset outside the range is a mis-shaped asset, not a new target shape: a
+ * landscape clip on a Reel must still preview as 9:16 (letterboxed), because the
+ * box is telling the user what the platform will publish, and the ratio chip
+ * right next to it already says "9:16". Shaping the box to the bad asset instead
+ * produced a landscape container under a "9:16" label — the two contradicting
+ * each other, with no hint that anything was wrong.
+ *
+ * Types with no `aspectRange` (live/text have no media) accept anything.
+ */
+export function isAspectAccepted(type: ContentType, ratio?: number): boolean {
+    const spec = MEDIA_SPEC[type];
+    if (!spec.aspectRange || !ratio || !Number.isFinite(ratio) || ratio <= 0) return false;
+    return ratio >= spec.aspectRange.min && ratio <= spec.aspectRange.max;
+}
+
+/**
  * The width/height ratio a preview box should use for this content type, taken
  * from the canonical ratio. Previews must never be laid out at a fixed height —
  * that renders a 9:16 reel inside a landscape box. Where an asset's real
- * dimensions are known (a design revision, or a measured image/video) prefer
- * those; this is the fallback and the pre-measurement default.
+ * dimensions are known (a design revision, or a measured image/video) AND are
+ * within the accepted range, prefer those; this is the fallback, the
+ * pre-measurement default, and what an out-of-range asset falls back to.
  */
 export function previewAspect(type: ContentType): number {
     const spec = MEDIA_SPEC[type];

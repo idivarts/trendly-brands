@@ -1,7 +1,12 @@
 /**
- * MediaAssetPreview — one uploaded or rendered asset, laid out at its REAL
- * aspect ratio rather than inside a fixed-height box (which renders a 9:16 reel
- * letterboxed in a landscape frame).
+ * MediaAssetPreview — one uploaded or rendered asset, laid out by aspect ratio
+ * rather than inside a fixed-height box (which renders a 9:16 reel letterboxed
+ * in a landscape frame).
+ *
+ * The box takes the asset's REAL ratio when the content type accepts that ratio,
+ * and the type's canonical ratio otherwise — so a landscape clip sitting on a
+ * Reel still previews as 9:16 instead of reshaping the box to match the bad
+ * asset while the "9:16" chip beside it says otherwise.
  *
  * A module-level component on purpose: it measures the asset's dimensions in a
  * hook, so declaring it inside its parent's render would remount it — and throw
@@ -38,7 +43,11 @@ const MediaAssetPreview: React.FC<Props> = ({ attachment: a, contentType, maxHei
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useStyles(colors);
-    const { aspect, onVideoNaturalSize } = useMediaAspect(a, previewAspect(contentType));
+    const { aspect, onVideoNaturalSize } = useMediaAspect(
+        a,
+        previewAspect(contentType),
+        contentType
+    );
 
     const isVideo = isVideoAttachment(a);
     const vUrl = isVideo ? videoUrlOf(a) : null;
@@ -46,7 +55,18 @@ const MediaAssetPreview: React.FC<Props> = ({ attachment: a, contentType, maxHei
 
     return (
         <Pressable
-            style={[styles.box, { aspectRatio: aspect, maxHeight }]}
+            style={[
+                styles.box,
+                // `aspectRatio` alone does NOT survive a height cap: with
+                // `width: 100%` and only `maxHeight`, a 9:16 box renders as a
+                // full-width, 420-tall LANDSCAPE rectangle with the clip
+                // pillarboxed inside it — which is what made a Reel preview look
+                // landscape under a "9:16" chip. Capping the WIDTH at
+                // `maxHeight * aspect` keeps the box genuinely 9:16 and lets
+                // `alignSelf: center` centre the narrower portrait frame. Same
+                // derivation the design lane already uses (renderDesignCanvas).
+                { aspectRatio: aspect, maxHeight, maxWidth: maxHeight * aspect },
+            ]}
             onPress={canPreview && onPress ? () => onPress(a) : undefined}
             disabled={!canPreview || !onPress}
             accessibilityLabel={isVideo ? "Preview video full screen" : "Preview image full screen"}
