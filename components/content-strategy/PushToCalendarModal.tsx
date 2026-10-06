@@ -1,3 +1,4 @@
+import { withAlpha } from "@/utils/color";
 import DateField from "@/components/modals/DateField";
 import Colors from "@/shared-uis/constants/Colors";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
@@ -451,7 +452,7 @@ function createStyles(colors: ReturnType<typeof Colors>, safeAreaTop: number) {
             backgroundColor: colors.card,
         },
         radioSelected: {
-            backgroundColor: colors.onPrimary + "33",
+            backgroundColor: withAlpha(colors.onPrimary, 0.2),
         },
         actions: {
             flexDirection: "row",

@@ -13,6 +13,12 @@ import NoSocialsModal from "@/components/contents/detail/NoSocialsModal";
 import PostingSummary from "@/components/contents/detail/PostingSummary";
 import PreviewPanel from "@/components/contents/detail/PreviewPanel";
 import PublishModal from "@/components/contents/detail/PublishModal";
+import { PublishReadinessInput } from "@/components/contents/detail/publish-readiness";
+import { usePublishGate } from "@/components/contents/detail/use-publish-gate";
+import {
+    composeScheduledAt,
+    isScheduleInPast,
+} from "@/components/contents/detail/schedule-presets";
 import PublishStatusPanel from "@/components/contents/detail/PublishStatusPanel";
 import ScriptEditor from "@/components/contents/detail/ScriptEditor";
 import UnsavedChangesModal from "@/components/contents/detail/UnsavedChangesModal";
@@ -45,7 +51,7 @@ import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
 import { SOCIAL_PLATFORM_MAP } from "@/constants/Socials";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { useBrandSocialContext } from "@/contexts/brand-social-context.provider";
+import { socialAccountLabel, useBrandSocialContext } from "@/contexts/brand-social-context.provider";
 import { useSubscribeNudge } from "@/contexts/subscribe-nudge-context.provider";
 import { useEntitlements } from "@/hooks/use-entitlements";
 import { useBreakpoints } from "@/hooks";
@@ -154,6 +160,8 @@ const CreateContentScreen = () => {
     const { selectedBrand, hasCapability } = useBrandContext();
     const { maybeNudge, markAhaMoment } = useSubscribeNudge();
     const { tokens, maxPostsPerMonth } = useEntitlements();
+    // Pre-publish validation: scroll-to + highlight the field that blocks publishing.
+    const { scrollRef, onSectionLayout, highlighted, checkBeforePublish } = usePublishGate();
     const { openModal } = useConfirmationModel();
 
     // Resolve the live item from the real contents list first; fall back to
@@ -670,23 +678,31 @@ const CreateContentScreen = () => {
         if (!contentId || publishing || destinations.length === 0 || locked) return;
         const brandId = selectedBrand?.id;
         if (!brandId) return;
+
+        // Derive the precise publish epoch: "now" → current time; otherwise the
+        // selected date combined with the chosen HH:MM (via the same
+        // composeScheduledAt the modal's time controls use, so there is one
+        // definition of what "the scheduled moment" is).
+        let scheduledAt = Date.now();
+        if (mode === "scheduled") {
+            const at = composeScheduledAt(date, timeOfPosting);
+            // Last line of defence. The modal won't let you select a past time
+            // and the backend now rejects one, but a stale modal left open past
+            // its own slot could still get here — and this used to go out as an
+            // immediate, unconfirmed live publish.
+            if (isScheduleInPast(at)) {
+                Toaster.error(
+                    "That time has already passed",
+                    "Pick a later time, or choose Post now."
+                );
+                return;
+            }
+            scheduledAt = at.getTime();
+        }
+
         // Persist the chosen mode so the saved content reflects how it went out.
         if (mode !== scheduleMode) setScheduleMode(mode);
         setPublishing(true);
-
-        // Derive the precise publish epoch: "now" → current time; otherwise the
-        // selected date combined with the chosen HH:MM (defaulting to 09:00).
-        let scheduledAt = Date.now();
-        if (mode === "scheduled") {
-            const d = new Date(date);
-            if (/^\d{1,2}:\d{2}$/.test(timeOfPosting)) {
-                const [hh, mm] = timeOfPosting.split(":").map(Number);
-                d.setHours(hh, mm, 0, 0);
-            } else {
-                d.setHours(9, 0, 0, 0);
-            }
-            scheduledAt = d.getTime();
-        }
 
         try {
             // 1. Persist current state so the backend publishes the latest content.
@@ -768,14 +784,42 @@ const CreateContentScreen = () => {
         }
     }, [contentId, publishing, locked, destinations, platformOptions, scheduleMode, date, timeOfPosting, updateContent, saveVariations, selectedBrand?.id, title, idea, caption, hashtags, script, imagePrompt, attachments, markAhaMoment]);
 
-    // Guard the publish entry point: if the brand has no connected social
-    // accounts, surface a blocking modal that routes to Connected Accounts
-    // instead of opening the publish/schedule sheet.
+    // The content fields the publish-readiness rules look at. Shared by the
+    // pre-open gate here and the per-destination checks inside the modal.
+    const publishReadiness: PublishReadinessInput = useMemo(
+        () => ({ contentFormat: contentType, attachments, caption, title, hashtags }),
+        [contentType, attachments, caption, title, hashtags]
+    );
+
+    // Guard the publish entry point. Three gates, in order of how early they can
+    // be answered:
+    //   1. No connected accounts at all → route to Connected Accounts.
+    //   2. Required content fields still empty → DON'T open the modal; scroll to
+    //      the field and flash it. These are the same rules the backend enforces
+    //      at publish time, run early so the user isn't told minutes later by a
+    //      `partially_failed` status.
+    //   3. Plan posting cap → a non-blocking nudge.
     const handleOpenPublish = useCallback(() => {
         if (publishableAccounts.length === 0) {
             setShowNoSocialsModal(true);
             return;
         }
+        if (!checkBeforePublish(publishReadiness)) return;
+
+        // Nothing has been picked yet — the user already declared which
+        // platforms this content targets, and publishableAccounts is filtered to
+        // exactly those, so make the obvious choice for them instead of opening
+        // on an empty selection with a "select at least one account" scold.
+        if (destinations.length === 0) {
+            setDestinations(
+                publishableAccounts.map((a) => ({
+                    socialAccountId: a.id,
+                    platform: a.platform as SocialDestination["platform"],
+                    username: socialAccountLabel(a),
+                }))
+            );
+        }
+
         // High-intent: the content is finished and they're one tap from
         // shipping. Nudge when the plan caps posting (free plans only; -1 is
         // unlimited). Non-blocking — the publish sheet still opens.
@@ -783,7 +827,14 @@ const CreateContentScreen = () => {
             maybeNudge("publish_over_cap");
         }
         setShowPublishModal(true);
-    }, [publishableAccounts.length, maxPostsPerMonth, maybeNudge]);
+    }, [
+        publishableAccounts,
+        maxPostsPerMonth,
+        maybeNudge,
+        checkBeforePublish,
+        publishReadiness,
+        destinations.length,
+    ]);
 
     // Unschedule a scheduled post: cancels the backend Step Functions execution
     // and reverts status to "approved", which unlocks the editor again. Returns
@@ -1294,7 +1345,8 @@ const CreateContentScreen = () => {
             ? seedItem?.imageGeneration?.error || "Image generation failed. Please try again."
             : null;
 
-    const formattedDate = date.toLocaleDateString("en-IN", {
+    // Device locale, not a hardcoded "en-IN" — the app is not India-only.
+    const formattedDate = date.toLocaleDateString(undefined, {
         day: "2-digit",
         month: "short",
         year: "numeric",
@@ -1334,7 +1386,7 @@ const CreateContentScreen = () => {
                     accessibilityLabel="Publish or schedule"
                 >
                     <FontAwesomeIcon icon={faPaperPlane} size={13} color={colors.primary} />
-                    {xl && <Text style={styles.publishHeaderText}>Publish</Text>}
+                    {xl && <Text style={styles.publishHeaderText}>Publish or schedule</Text>}
                 </Pressable>
             ),
             // Save — hidden once locked (scheduled / posted)
@@ -1467,6 +1519,7 @@ const CreateContentScreen = () => {
                         </View>
                     ) : (
                     <ScrollView
+                        ref={scrollRef}
                         contentContainerStyle={styles.scroll}
                         showsVerticalScrollIndicator={false}
                         keyboardShouldPersistTaps="handled"
@@ -1606,8 +1659,14 @@ const CreateContentScreen = () => {
                             </View>
                         ) : null}
 
-                        {/* ── Content heading: title + type ────────────────────── */}
-                        <View style={styles.section}>
+                        {/* ── Content heading: title + type (holds MediaStage) ─── */}
+                        <View
+                            style={[
+                                styles.section,
+                                highlighted === "media" && styles.sectionHighlighted,
+                            ]}
+                            onLayout={onSectionLayout("media")}
+                        >
                             <View style={styles.contentHeading}>
                                 <Text style={styles.contentTitle} numberOfLines={2}>
                                     {title || "Untitled content"}
@@ -1671,7 +1730,13 @@ const CreateContentScreen = () => {
                         </View>
 
                         {/* ── Caption / Content ────────────────────────────────── */}
-                        <View style={styles.section}>
+                        <View
+                            style={[
+                                styles.section,
+                                highlighted === "caption" && styles.sectionHighlighted,
+                            ]}
+                            onLayout={onSectionLayout("caption")}
+                        >
                             <Text style={styles.sectionLabel}>
                                 {contentType === "text" ? "CONTENT" : "CAPTION"}
                             </Text>
@@ -2059,13 +2124,13 @@ const CreateContentScreen = () => {
                 onDestinationsChange={setDestinations}
                 platformOptions={platformOptions}
                 onPlatformOptionsChange={setPlatformOptions}
-                formattedDate={formattedDate}
                 dateValue={date}
                 onDateChange={setDate}
                 timeOfPosting={timeOfPosting}
                 onTimeChange={setTimeOfPosting}
                 onPublish={handlePublish}
                 publishing={publishing}
+                readiness={publishReadiness}
                 variationPlatforms={variationPlatforms}
                 hideOptionPlatforms={optionsHandledElsewhere}
             />
@@ -2109,6 +2174,16 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                 },
                 section: {
                     marginBottom: 20,
+                },
+                // Flashed on the section a failed publish gate points at. A
+                // coloured border is the sanctioned exception to the
+                // shadows-not-borders rule for validation state.
+                sectionHighlighted: {
+                    borderWidth: 1.5,
+                    borderColor: colors.errorBorder,
+                    borderRadius: 12,
+                    padding: 8,
+                    marginHorizontal: -8,
                 },
                 variationHint: {
                     fontSize: fs(11),
