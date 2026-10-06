@@ -3,6 +3,8 @@ import { CONTENT_TYPE_LABELS, ContentType } from "@/components/content-calendar/
 import ContentCommentsPanel from "@/components/contents/ContentCommentsPanel";
 import ContentActionsMenu from "@/components/contents/detail/ContentActionsMenu";
 import ContentInfoModal from "@/components/contents/detail/ContentInfoModal";
+import HandoffCard from "@/components/contents/detail/HandoffCard";
+import ScriptModal from "@/components/contents/detail/ScriptModal";
 import { MEDIA_SPEC } from "@/components/contents/detail/media-spec";
 import MediaStage from "@/components/contents/detail/MediaStage";
 import DesignStage from "@/components/contents/detail/design-stage/DesignStage";
@@ -68,7 +70,6 @@ import {
     faCheck,
     faCommentDots,
     faEye,
-    faHandshake,
     faLock,
     faMagicWandSparkles,
     faPaperPlane,
@@ -426,6 +427,11 @@ const CreateContentScreen = () => {
 
     const contentType = (seedItem?.type ?? paramType ?? "post") as ContentType;
     const isReel = contentType === "reel";
+    // Reel and landscape video are both "filmed" pieces: the script is an
+    // optional production document, so it moves off the page into a modal opened
+    // from the handoff card. `live` is script-only and keeps its inline editor.
+    const isFilmed = contentType === "reel" || contentType === "video";
+    const [scriptModalOpen, setScriptModalOpen] = useState(false);
     const isTextPost = contentType === "text";
     const mediaSpec = MEDIA_SPEC[contentType];
 
@@ -1643,14 +1649,13 @@ const CreateContentScreen = () => {
                                 />
                             )}
 
-                            {mediaSpec.hasScript && (
+                            {/* Inline only for `live`, where the script IS the
+                                content. Reel/video author it in ScriptModal,
+                                opened from the handoff card at the bottom. */}
+                            {mediaSpec.hasScript && !isFilmed && (
                                 <ScriptEditor
-                                    title={isReel ? "Reel Script" : "Script"}
-                                    subtitle={
-                                        isReel
-                                            ? "Optional — add a shot-by-shot script, or just upload your finished video above."
-                                            : "Outline the talking points and flow for your live session."
-                                    }
+                                    title="Script"
+                                    subtitle="Outline the talking points and flow for your live session."
                                     script={script}
                                     onScriptChange={setScript}
                                     aiPrompt={scriptAiPrompt}
@@ -1660,7 +1665,6 @@ const CreateContentScreen = () => {
                                     task="script"
                                     contentId={contentId}
                                     onSendToChat={handleSendToChat}
-                                    collapsible={isReel}
                                     readOnly={locked}
                                 />
                             )}
@@ -1821,37 +1825,24 @@ const CreateContentScreen = () => {
                             </View>
                         ) : null}
 
-                        {/* ── Reel Collab CTA ───────────────────────────────────── */}
-                        {isReel && (
+                        {/* ── Production & handoff (reel / video) ───────────────── */}
+                        {isFilmed && (
                             <View style={styles.section}>
-                                <View style={styles.collabBanner}>
-                                    <View style={styles.collabAccent} />
-                                    <View style={styles.collabBody}>
-                                        <Text style={styles.collabTitle}>
-                                            Want influencers to create this reel?
-                                        </Text>
-                                        <Text style={styles.collabSub}>
-                                            Post this reel as a collaboration requirement so creators can
-                                            discover it, apply, and bring your script to life.
-                                        </Text>
-                                        <Pressable
-                                            style={({ pressed }) => [
-                                                styles.collabBtn,
-                                                pressed && styles.btnPressed,
-                                            ]}
-                                            onPress={handleCreateCollab}
-                                        >
-                                            <FontAwesomeIcon
-                                                icon={faHandshake}
-                                                size={14}
-                                                color={colors.onPrimary}
-                                            />
-                                            <Text style={styles.collabBtnText}>
-                                                Create Collab Requirement
-                                            </Text>
-                                        </Pressable>
-                                    </View>
-                                </View>
+                                <Text style={styles.sectionLabel}>PRODUCTION &amp; HANDOFF</Text>
+                                <HandoffCard
+                                    isReel={isReel}
+                                    script={script}
+                                    onOpenScript={() => setScriptModalOpen(true)}
+                                    onShare={
+                                        selectedBrand?.id && contentId && hasCapability("manage_content")
+                                            ? () => setShowShareModal(true)
+                                            : undefined
+                                    }
+                                    onCreateCollab={
+                                        hasCapability("manage_content") ? handleCreateCollab : undefined
+                                    }
+                                    readOnly={locked}
+                                />
                             </View>
                         )}
                           </>
@@ -2018,6 +2009,26 @@ const CreateContentScreen = () => {
                     })
                 }
             />
+
+            {/* Script & timeline (reel/video). Writes the page's live `script`
+                state, so closing it is not a cancel — the page's Save and
+                unsaved-changes guard stay the single source of truth. */}
+            {isFilmed ? (
+                <ScriptModal
+                    visible={scriptModalOpen}
+                    onClose={() => setScriptModalOpen(false)}
+                    script={script}
+                    onScriptChange={setScript}
+                    aiPrompt={scriptAiPrompt}
+                    onAiPromptChange={setScriptAiPrompt}
+                    onEnhance={handleScriptAiEnhance}
+                    isGenerating={isGeneratingScript}
+                    task="script"
+                    contentId={contentId}
+                    onSendToChat={handleSendToChat}
+                    readOnly={locked}
+                />
+            ) : null}
 
             {selectedBrand?.id && contentId ? (
                 <ShareModal
@@ -2347,57 +2358,6 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     shadowRadius: 4,
                     shadowOpacity: 0.06,
                     elevation: 2,
-                },
-                collabBanner: {
-                    flexDirection: "row",
-                    backgroundColor: colors.card,
-                    borderRadius: 14,
-                    overflow: "hidden",
-                    shadowColor: colors.primary,
-                    shadowOffset: { width: 0, height: 3 },
-                    shadowRadius: 12,
-                    shadowOpacity: 0.1,
-                    elevation: 4,
-                },
-                collabAccent: {
-                    width: 4,
-                    backgroundColor: colors.primary,
-                },
-                collabBody: {
-                    flex: 1,
-                    padding: 16,
-                },
-                collabTitle: {
-                    fontSize: fs(15),
-                    fontWeight: "700",
-                    color: colors.text,
-                    marginBottom: 6,
-                },
-                collabSub: {
-                    fontSize: fs(13),
-                    color: colors.textSecondary,
-                    lineHeight: lh(19),
-                    marginBottom: 14,
-                },
-                collabBtn: {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    alignSelf: "flex-start",
-                    gap: 8,
-                    paddingHorizontal: 16,
-                    paddingVertical: 10,
-                    borderRadius: 10,
-                    backgroundColor: colors.primary,
-                    shadowColor: colors.primary,
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowRadius: 12,
-                    shadowOpacity: 0.35,
-                    elevation: 4,
-                },
-                collabBtnText: {
-                    fontSize: fs(13),
-                    fontWeight: "700",
-                    color: colors.onPrimary,
                 },
                 saveBtn: {
                     flexDirection: "row",
