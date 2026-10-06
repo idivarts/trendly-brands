@@ -6,6 +6,7 @@ import ContentInfoModal from "@/components/contents/detail/ContentInfoModal";
 import { MEDIA_SPEC } from "@/components/contents/detail/media-spec";
 import MediaStage from "@/components/contents/detail/MediaStage";
 import DesignStage from "@/components/contents/detail/design-stage/DesignStage";
+import { useDesignPreview } from "@/components/contents/detail/design-stage/use-design-preview";
 import NoSocialsModal from "@/components/contents/detail/NoSocialsModal";
 import PostingSummary from "@/components/contents/detail/PostingSummary";
 import PreviewPanel from "@/components/contents/detail/PreviewPanel";
@@ -30,7 +31,7 @@ import {
     isLockedStatus,
 } from "@/components/contents/types";
 import { useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapsed-context";
-import AIChatPanel from "@/components/shared/AIChatPanel";
+import AIChatPanel, { AIChatControls } from "@/components/shared/AIChatPanel";
 import { Focus, FocusArea } from "@/types/focus";
 import AIGeneratingHint from "@/components/shared/AIGeneratingHint";
 import { PanelComment } from "@/components/shared/CommentsPanel";
@@ -76,6 +77,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { deleteField } from "firebase/firestore";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
@@ -345,6 +347,14 @@ const CreateContentScreen = () => {
         setRightPanelMode("chat");
     }, []);
 
+    // The chat panel's header actions, lifted so the Design Studio's brief step
+    // can force a NEW conversation rather than appending the brief to whatever
+    // thread happened to be open.
+    const chatControlsRef = useRef<AIChatControls | null>(null);
+    const handleChatControls = useCallback((c: AIChatControls) => {
+        chatControlsRef.current = c;
+    }, []);
+
     // ── Media ↔ Design stage ────────────────────────────────────────────────
     // The centre column shows the MediaStage (home) by default; the DesignStage
     // takes it over when the user opens it or the AI generates a new design.
@@ -368,6 +378,19 @@ const CreateContentScreen = () => {
             setStage("design");
         }
     }, [seedItem, seedItem?.designRef?.revisionId]);
+
+    // Live HTML of the current design revision. The Media Stage previews it so a
+    // design the AI just wrote is visible BEFORE it is rendered — until then the
+    // content has a canvas but no attachments, which used to read as "no media".
+    const designPreview = useDesignPreview(contentId ?? null, seedItem?.designRef);
+
+    // The brief typed on the empty canvas: open a fresh AI thread, seed it with
+    // the brief as the first message, and let the normal chat flow take over.
+    const handleSubmitBrief = useCallback((brief: string) => {
+        chatControlsRef.current?.newChat();
+        setPendingChatMessage(brief);
+        setRightPanelMode("chat");
+    }, []);
 
     // "Send to AI" on a comment: attach a structured comment focus (inheriting
     // whatever the comment itself is anchored to — e.g. a design element) and
@@ -586,6 +609,12 @@ const CreateContentScreen = () => {
                 platformOptions,
                 platforms: targetPlatforms,
                 postingTimeStamp: date ? localDateToUtcMidnight(date) : undefined,
+                // Keep `source` honest: attachments that aren't a design render and
+                // weren't generated are the user's own upload. The design and
+                // generation lanes stamp themselves (Studio / backend).
+                ...(attachments.length > 0 && !seedItem?.designRef && seedItem?.source !== "ai-image"
+                    ? { source: "upload" as const }
+                    : {}),
             });
             // Flush all pending per-platform variation edits in the same save.
             await saveVariations();
@@ -599,7 +628,7 @@ const CreateContentScreen = () => {
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = setTimeout(() => setSaveState("idle"), 2000);
         return true;
-    }, [contentId, saveState, locked, updateContent, saveVariations, title, idea, status, caption, hashtags, timeOfPosting, script, imagePrompt, attachments, platformOptions, date, targetPlatforms]);
+    }, [contentId, saveState, locked, updateContent, saveVariations, title, idea, status, caption, hashtags, timeOfPosting, script, imagePrompt, attachments, platformOptions, date, targetPlatforms, seedItem?.designRef, seedItem?.source]);
 
     // ── Cmd/Ctrl+S keyboard shortcut to save (web) ───────────────────────────
     // Intercept the browser's native "save page" so the shortcut saves the
@@ -1105,7 +1134,7 @@ const CreateContentScreen = () => {
         [title, idea, contentType, targetPlatforms, caption, hashtags, script, attachments, buildAIVariations]
     );
 
-    const handleImageGenerate = useCallback((promptArg?: string, focusedSlideIndex?: number, model?: string) => {
+    const handleImageGenerate = useCallback((promptArg?: string, style?: string, focusedSlideIndex?: number, model?: string) => {
         const p = (promptArg ?? imagePrompt).trim();
         if (!p) return;
         if (tokens.state === "low" || tokens.state === "critical") {
@@ -1115,6 +1144,9 @@ const CreateContentScreen = () => {
         setIsGeneratingImage(true);
         generateImage({
             description: p,
+            style,
+            // The content type dictates the ratio — the user is never offered a
+            // choice that would fail this type's own upload validation.
             aspectRatio: MEDIA_SPEC[contentType].aspectRatios[0] ?? "1:1",
             count: 1,
             contextId: contentId,
@@ -1124,6 +1156,30 @@ const CreateContentScreen = () => {
             model,
         });
     }, [imagePrompt, contentType, contentId, generateImage, tokens.state, maybeNudge]);
+
+    // Clear the media back to the lane chooser.
+    //
+    // Both the design pointer AND the attachments have to go: a rendered design's
+    // attachments ARE the design, so dropping only `designRef` would leave an
+    // orphaned render that looks like an upload and can no longer be edited.
+    // The `designs` subcollection is deliberately left intact — the revisions stay
+    // recoverable from the Studio's "Restore previous design".
+    const handleClearMedia = useCallback(async () => {
+        if (!contentId || locked) return;
+        // Persisted below in the same breath, so this must not raise the dirty
+        // flag — otherwise leaving the page prompts about a change already saved.
+        skipDirtyRef.current = true;
+        setAttachments([]);
+        try {
+            await updateContent(contentId, {
+                attachments: [],
+                designRef: deleteField() as any,
+                source: deleteField() as any,
+            });
+        } catch (e) {
+            console.warn("Clear media error:", e);
+        }
+    }, [contentId, locked, updateContent]);
 
     // React to AI generation results streaming back from the backend.
 
@@ -1399,7 +1455,7 @@ const CreateContentScreen = () => {
                                 onAskAI={handleAskAI}
                                 onFocus={handleFocusElement}
                                 onClose={() => setStage("media")}
-                                onOpenChat={() => setRightPanelMode("chat")}
+                                onSubmitBrief={handleSubmitBrief}
                                 readOnly={locked}
                             />
                         </View>
@@ -1575,7 +1631,14 @@ const CreateContentScreen = () => {
                                     contentType={contentType}
                                     attachments={attachments}
                                     onAttachmentsChange={setAttachments}
+                                    source={seedItem?.source}
+                                    designRef={seedItem?.designRef}
+                                    designPreview={designPreview}
                                     onOpenDesign={() => setStage("design")}
+                                    onClearMedia={handleClearMedia}
+                                    imageGenerating={imageGenerating}
+                                    imageGenError={imageGenError}
+                                    onGenerateImage={handleImageGenerate}
                                     readOnly={locked}
                                 />
                             )}
@@ -1824,6 +1887,7 @@ const CreateContentScreen = () => {
                                     getLiveContent={getLiveChatContent}
                                     initialMessage={pendingChatMessage}
                                     onInitialMessageSent={() => setPendingChatMessage(undefined)}
+                                    onControlsChange={handleChatControls}
                                     isCompact
                                 />
                             }
@@ -1865,6 +1929,7 @@ const CreateContentScreen = () => {
                             getLiveContent={getLiveChatContent}
                             initialMessage={pendingChatMessage}
                             onInitialMessageSent={() => setPendingChatMessage(undefined)}
+                            onControlsChange={handleChatControls}
                             isCompact
                             onCollapse={() => setRightPanelMode("none")}
                             // Tab bar owns the bottom inset (don't double it), but this
