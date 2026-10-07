@@ -101,3 +101,39 @@ describe("destinationBlockMap", () => {
         expect(m.has("twitter")).toBe(false);
     });
 });
+
+describe("design render gating", () => {
+    const img: Attachment = { type: "image", imageUrl: "https://x/a.jpg" };
+    const i = { caption: "Hi", title: "T", hashtags: "", contentFormat: "post" as const };
+
+    it("blocks an unrendered design with design-specific copy", () => {
+        const g = contentPublishGates({ ...i, attachments: [], designRenderState: "never" });
+        expect(g).toHaveLength(1);
+        expect(g[0].section).toBe("media");
+        expect(g[0].message).toMatch(/render your design/i);
+        // Not the generic "add an image", which would send them to an upload
+        // button they don't need.
+        expect(g[0].message).not.toMatch(/add an image/i);
+    });
+
+    it("blocks a STALE design even though attachments exist", () => {
+        // The dangerous case: media checks would pass, and publishing would ship
+        // a render that doesn't match the canvas on screen.
+        expect(
+            contentPublishGates({ ...i, attachments: [img], designRenderState: undefined })
+        ).toEqual([]);
+        const g = contentPublishGates({ ...i, attachments: [img], designRenderState: "stale" });
+        expect(g).toHaveLength(1);
+        expect(g[0].message).toMatch(/re-render/i);
+    });
+
+    it("lets a current design through", () => {
+        expect(
+            contentPublishGates({ ...i, attachments: [img], designRenderState: "current" })
+        ).toEqual([]);
+    });
+
+    it("still applies the normal media rules when no design is involved", () => {
+        expect(contentPublishGates({ ...i, attachments: [] })[0].message).toMatch(/add an image/i);
+    });
+});

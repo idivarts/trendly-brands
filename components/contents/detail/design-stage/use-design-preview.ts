@@ -11,7 +11,11 @@
  * revision history to power Revert, which a preview has no use for.
  */
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { IContentDesignRef, IContentDesignRevision } from "@/shared-libs/firestore/trendly-pro/models/design";
+import {
+    DesignDocType,
+    IContentDesignRef,
+    IContentDesignRevision,
+} from "@/shared-libs/firestore/trendly-pro/models/design";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useEffect, useState } from "react";
@@ -21,6 +25,16 @@ export interface DesignPreview {
     width: number;
     height: number;
     slideCount: number;
+    /**
+     * Set once THIS revision has been rendered. The single signal that separates
+     * "a design exists" from "a publishable asset exists": `setRenders` writes it
+     * onto the revision doc, and `designRef.revisionId` points at the current
+     * one — so an empty `renderUrl` means what you're looking at has never been
+     * exported, even when the content still carries attachments from an earlier
+     * revision (i.e. a stale render that would publish the wrong version).
+     */
+    renderUrl?: string;
+    docType: DesignDocType;
 }
 
 export function useDesignPreview(
@@ -54,6 +68,8 @@ export function useDesignPreview(
                             width: d.width || 1080,
                             height: d.height || 1350,
                             slideCount: Math.max(d.slideCount ?? 1, 1),
+                            renderUrl: d.renderUrl,
+                            docType: d.docType ?? "image",
                         }
                         : null
                 );

@@ -25,7 +25,7 @@ import { fs, lh } from "@/constants/Typography";
 import { useBreakpoints } from "@/hooks";
 import { useAWSContext } from "@/shared-libs/contexts/aws-context.provider";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
-import { IContentDesignRef } from "@/shared-libs/firestore/trendly-pro/models/design";
+import { IContentAudio, IContentDesignRef } from "@/shared-libs/firestore/trendly-pro/models/design";
 import { pickMedia, pickMediaMulti, PickedAsset } from "@/shared-libs/utils/media-picker";
 import AssetPreviewModal from "@/shared-uis/components/carousel/asset-preview-modal";
 import Colors from "@/shared-uis/constants/Colors";
@@ -44,7 +44,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { ResizeMode, Video } from "expo-av";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Image,
@@ -63,12 +63,18 @@ import MediaAssetPreview from "./MediaAssetPreview";
 import MediaLaneCards from "./MediaLaneCards";
 import { clearLabelFor, MediaLane, MediaSource, resolveMediaLane } from "./media-lane";
 import { aspectError, MEDIA_SPEC, parseAspectRatio, previewAspect } from "./media-spec";
+import DesignRenderBar, { DesignRenderChip, DesignRenderState } from "./DesignRenderBar";
+import { useDesignRender } from "./design-stage/use-design-render";
+import { useDesignWriters } from "./design-stage/use-design-writers";
+import { DesignFrameHandle } from "./design-stage/bridge";
 
 /** Tallest a preview may get, so a 9:16 design doesn't push the page apart. */
 const MAX_PREVIEW_H = 420;
 
 interface MediaStageProps {
     contentType: ContentType;
+    /** Needed to persist a render straight from the stage. */
+    contentId?: string | null;
     attachments: Attachment[];
     onAttachmentsChange: (next: Attachment[]) => void;
     /** Authoritative lane record from the content doc. */
@@ -77,6 +83,8 @@ interface MediaStageProps {
     designRef?: IContentDesignRef;
     /** Live HTML of that revision, for previewing a canvas that isn't rendered yet. */
     designPreview?: DesignPreview | null;
+    /** Soundtrack/voiceover muxed into a video render. */
+    audio?: IContentAudio;
     /** Open the Design Studio — to start a design, or edit the existing one. */
     onOpenDesign: () => void;
     /** Clear the media (and the design pointer) back to the empty state. */
@@ -98,11 +106,13 @@ const isVideoAttachment = (a: Attachment) => a.type === "video" || a.type === "r
 
 const MediaStage: React.FC<MediaStageProps> = ({
     contentType,
+    contentId = null,
     attachments,
     onAttachmentsChange,
     source,
     designRef,
     designPreview,
+    audio,
     onOpenDesign,
     onClearMedia,
     imageGenerating = false,
@@ -125,8 +135,37 @@ const MediaStage: React.FC<MediaStageProps> = ({
     const [focusedSlide, setFocusedSlide] = useState<number | undefined>(undefined);
     // Measured width of the stage, needed to scale the design frame.
     const [stageWidth, setStageWidth] = useState(0);
+    // The preview frame, so the stage can drive a render itself rather than
+    // sending the user to the Studio to find the button.
+    const frameRef = useRef<DesignFrameHandle | null>(null);
 
     const hasMedia = attachments.length > 0;
+
+    /**
+     * Has the design on screen been turned into a publishable asset?
+     *
+     * `renderUrl` is written onto the REVISION when it is rendered, and
+     * `designRef.revisionId` points at the current one — so an empty renderUrl
+     * means this exact design has never been exported, even when the content
+     * still carries attachments captured from an earlier revision. That second
+     * case ("stale") is the one worth catching: it looks completely finished and
+     * would publish a version that doesn't match the canvas.
+     */
+    const designRenderState: DesignRenderState | null = useMemo(() => {
+        if (!designPreview) return null;
+        if (designPreview.renderUrl) return "current";
+        return hasMedia ? "stale" : "never";
+    }, [designPreview, hasMedia]);
+
+    const designWriters = useDesignWriters(contentId);
+    const designRender = useDesignRender({
+        isVideoDesign: designPreview?.docType === "video",
+        slideCount: designPreview?.slideCount ?? 1,
+        revisionId: designRef?.revisionId,
+        audio,
+        setRenders: designWriters.setRenders,
+        setVideoRender: designWriters.setVideoRender,
+    });
 
     // The lane the data says owns this media, and the one the user just picked
     // (before any media exists to prove it). Resolved always wins.
@@ -288,13 +327,14 @@ const MediaStage: React.FC<MediaStageProps> = ({
         return (
             <View style={styles.canvasWrap}>
                 <DesignFrame
+                    ref={frameRef}
                     html={preview.html}
                     width={preview.width}
                     height={preview.height}
                     displayWidth={displayWidth}
-                    onMessage={() => {
-                        /* read-only preview — the Studio owns interaction */
-                    }}
+                    // Interaction still belongs to the Studio; the stage only
+                    // listens for render traffic so it can drive a capture.
+                    onMessage={designRender.onFrameMessage}
                 />
                 {preview.slideCount > 1 ? (
                     <View style={styles.slideCountChip}>
@@ -474,6 +514,18 @@ const MediaStage: React.FC<MediaStageProps> = ({
         return (
             <>
                 {body}
+                {designRenderState ? (
+                    <DesignRenderBar
+                        state={designRenderState}
+                        label={designRender.label}
+                        capturing={designRender.capturing}
+                        progress={designRender.progress}
+                        error={designRender.error}
+                        onRender={() => designRender.startRender(frameRef.current)}
+                        onDismissError={designRender.clearError}
+                        readOnly={readOnly}
+                    />
+                ) : null}
                 {!readOnly
                     ? laneActions({ label: "Edit in Design Studio", icon: faPen, onPress: onOpenDesign })
                     : null}
@@ -591,11 +643,14 @@ const MediaStage: React.FC<MediaStageProps> = ({
         <View style={styles.card} onLayout={onStageLayout}>
             <View style={styles.headerRow}>
                 <Text style={styles.cardTitle}>{spec.kind === "video" ? "Video" : "Visuals"}</Text>
-                {spec.aspectLabel ? (
-                    <View style={styles.ratioChip}>
-                        <Text style={styles.ratioChipText}>{spec.aspectLabel}</Text>
-                    </View>
-                ) : null}
+                <View style={styles.headerChips}>
+                    {designRenderState ? <DesignRenderChip state={designRenderState} /> : null}
+                    {spec.aspectLabel ? (
+                        <View style={styles.ratioChip}>
+                            <Text style={styles.ratioChipText}>{spec.aspectLabel}</Text>
+                        </View>
+                    ) : null}
+                </View>
             </View>
 
             {renderBody()}
@@ -632,6 +687,11 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "space-between",
+        },
+        headerChips: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
         },
         cardTitle: {
             fontSize: fs(15),

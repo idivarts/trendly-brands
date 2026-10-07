@@ -15,16 +15,8 @@ import {
     IContentDesignRevision,
 } from "@/shared-libs/firestore/trendly-pro/models/design";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
-import {
-    addDoc,
-    collection,
-    doc,
-    limit,
-    onSnapshot,
-    orderBy,
-    query,
-    updateDoc,
-} from "firebase/firestore";
+import { collection, doc, limit, onSnapshot, orderBy, query } from "firebase/firestore";
+import { useDesignWriters } from "./use-design-writers";
 import { useEffect, useMemo, useState } from "react";
 
 type Revision = IContentDesignRevision & { id: string };
@@ -97,103 +89,25 @@ export function useContentDesign(
         return () => unsub();
     }, [brandId, contentId]);
 
-    const writers = useMemo(() => {
-        const contentDoc = () =>
-            brandId && contentId ? doc(FirestoreDB, "brands", brandId, "contents", contentId) : null;
+    const writers = useDesignWriters(contentId);
 
-        const pointContentAt = async (rev: {
-            id: string;
-            docType: DesignDocType;
-            width: number;
-            height: number;
-            slideCount: number;
-            renderUrl?: string;
-        }) => {
-            const cd = contentDoc();
-            if (!cd) return;
-            const ref: IContentDesignRef = {
-                revisionId: rev.id,
-                docType: rev.docType,
-                width: rev.width,
-                height: rev.height,
-                slideCount: rev.slideCount,
-                updatedAt: Date.now(),
-            };
-            // Firestore rejects `undefined`; only set renderUrl when the revision
-            // actually has a baked cover (a fresh/reverted revision has none yet).
-            if (rev.renderUrl !== undefined) ref.renderUrl = rev.renderUrl;
-            await updateDoc(cd, { designRef: ref, source: "ai", updatedAt: Date.now() });
-        };
-
-        const addRevision: UseContentDesignReturn["addRevision"] = async (
-            html,
-            width,
-            height,
-            slideCount,
-            docType,
-            origin,
-            parentId
-        ) => {
-            if (!brandId || !contentId) return null;
-            const col = collection(FirestoreDB, "brands", brandId, "contents", contentId, "designs");
-            const created = await addDoc(col, {
-                html,
-                width,
-                height,
-                slideCount,
-                docType,
-                origin,
-                parentRevisionId: parentId ?? null,
-                createdAt: Date.now(),
-            });
-            await pointContentAt({ id: created.id, docType, width, height, slideCount });
-            return created.id;
-        };
-
-        const setRenders: UseContentDesignReturn["setRenders"] = async (rid, renderUrls) => {
-            if (!brandId || !contentId || renderUrls.length === 0) return;
-            const cover = renderUrls[0];
-            await updateDoc(
-                doc(FirestoreDB, "brands", brandId, "contents", contentId, "designs", rid),
-                { renderUrl: cover }
-            );
-            const cd = contentDoc();
-            if (cd) {
-                // One attachment per slide (ordered) — the publish pipeline treats
-                // multiple image attachments as a carousel.
-                await updateDoc(cd, {
-                    "designRef.renderUrl": cover,
-                    attachments: renderUrls.map((u) => ({ type: "image", imageUrl: u })),
-                    updatedAt: Date.now(),
-                });
-            }
-        };
-
-        const setVideoRender: UseContentDesignReturn["setVideoRender"] = async (rid, videoUrl) => {
-            if (!brandId || !contentId) return;
-            await updateDoc(
-                doc(FirestoreDB, "brands", brandId, "contents", contentId, "designs", rid),
-                { renderUrl: videoUrl }
-            );
-            const cd = contentDoc();
-            if (cd) {
-                await updateDoc(cd, {
-                    "designRef.renderUrl": videoUrl,
-                    attachments: [{ type: "video", playUrl: videoUrl }],
-                    updatedAt: Date.now(),
-                });
-            }
-        };
-
-        const revertTo: UseContentDesignReturn["revertTo"] = async (rid) => {
-            // Re-point the content at an earlier revision (new current).
+    // Revert stays here: it is the one writer that needs the history listener.
+    const revertTo: UseContentDesignReturn["revertTo"] = useMemo(
+        () => async (rid) => {
             const target = history.find((h) => h.id === rid);
             if (!target) return;
-            await addRevision(target.html, target.width, target.height, target.slideCount, target.docType, "revert", rid);
-        };
+            await writers.addRevision(
+                target.html,
+                target.width,
+                target.height,
+                target.slideCount,
+                target.docType,
+                "revert",
+                rid
+            );
+        },
+        [history, writers]
+    );
 
-        return { addRevision, setRenders, setVideoRender, revertTo };
-    }, [brandId, contentId, history]);
-
-    return { revision, history, loading, ...writers };
+    return { revision, history, loading, ...writers, revertTo };
 }

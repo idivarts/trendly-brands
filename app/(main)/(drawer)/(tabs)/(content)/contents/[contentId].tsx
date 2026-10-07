@@ -786,9 +786,24 @@ const CreateContentScreen = () => {
 
     // The content fields the publish-readiness rules look at. Shared by the
     // pre-open gate here and the per-destination checks inside the modal.
+    // A design that hasn't been rendered (or was edited since) is not
+    // publishable, even when stale attachments make it look like it is.
+    const designRenderState = useMemo(() => {
+        if (!designPreview) return undefined;
+        if (designPreview.renderUrl) return "current" as const;
+        return attachments.length > 0 ? ("stale" as const) : ("never" as const);
+    }, [designPreview, attachments.length]);
+
     const publishReadiness: PublishReadinessInput = useMemo(
-        () => ({ contentFormat: contentType, attachments, caption, title, hashtags }),
-        [contentType, attachments, caption, title, hashtags]
+        () => ({
+            contentFormat: contentType,
+            attachments,
+            caption,
+            title,
+            hashtags,
+            designRenderState,
+        }),
+        [contentType, attachments, caption, title, hashtags, designRenderState]
     );
 
     // Guard the publish entry point. Three gates, in order of how early they can
@@ -1694,11 +1709,13 @@ const CreateContentScreen = () => {
                             {mediaSpec.kind !== "none" && (
                                 <MediaStage
                                     contentType={contentType}
+                                    contentId={contentId}
                                     attachments={attachments}
                                     onAttachmentsChange={setAttachments}
                                     source={seedItem?.source}
                                     designRef={seedItem?.designRef}
                                     designPreview={designPreview}
+                                    audio={seedItem?.audio}
                                     onOpenDesign={() => setStage("design")}
                                     onClearMedia={handleClearMedia}
                                     imageGenerating={imageGenerating}
