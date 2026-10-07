@@ -531,9 +531,6 @@ const MediaStage: React.FC<MediaStageProps> = ({
                     contentType={contentType}
                     maxHeight={half ? MAX_PREVIEW_H * 0.72 : MAX_PREVIEW_H}
                     onPress={openPreview}
-                    // Checking the output is a "watch it" question, not an
-                    // "open a modal first" question.
-                    playable
                 />
             );
 
