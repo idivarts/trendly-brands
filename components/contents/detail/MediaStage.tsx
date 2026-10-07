@@ -25,7 +25,7 @@ import { fs, lh } from "@/constants/Typography";
 import { useBreakpoints } from "@/hooks";
 import { useAWSContext } from "@/shared-libs/contexts/aws-context.provider";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
-import { IContentDesignRef } from "@/shared-libs/firestore/trendly-pro/models/design";
+import { IContentAudio, IContentDesignRef } from "@/shared-libs/firestore/trendly-pro/models/design";
 import { pickMedia, pickMediaMulti, PickedAsset } from "@/shared-libs/utils/media-picker";
 import AssetPreviewModal from "@/shared-uis/components/carousel/asset-preview-modal";
 import Colors from "@/shared-uis/constants/Colors";
@@ -44,7 +44,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { ResizeMode, Video } from "expo-av";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Image,
@@ -63,12 +63,18 @@ import MediaAssetPreview from "./MediaAssetPreview";
 import MediaLaneCards from "./MediaLaneCards";
 import { clearLabelFor, MediaLane, MediaSource, resolveMediaLane } from "./media-lane";
 import { aspectError, MEDIA_SPEC, parseAspectRatio, previewAspect } from "./media-spec";
+import DesignRenderBar, { DesignRenderChip, DesignRenderState } from "./DesignRenderBar";
+import { useDesignRender } from "./design-stage/use-design-render";
+import { useDesignWriters } from "./design-stage/use-design-writers";
+import { DesignFrameHandle } from "./design-stage/bridge";
 
 /** Tallest a preview may get, so a 9:16 design doesn't push the page apart. */
 const MAX_PREVIEW_H = 420;
 
 interface MediaStageProps {
     contentType: ContentType;
+    /** Needed to persist a render straight from the stage. */
+    contentId?: string | null;
     attachments: Attachment[];
     onAttachmentsChange: (next: Attachment[]) => void;
     /** Authoritative lane record from the content doc. */
@@ -77,6 +83,8 @@ interface MediaStageProps {
     designRef?: IContentDesignRef;
     /** Live HTML of that revision, for previewing a canvas that isn't rendered yet. */
     designPreview?: DesignPreview | null;
+    /** Soundtrack/voiceover muxed into a video render. */
+    audio?: IContentAudio;
     /** Open the Design Studio — to start a design, or edit the existing one. */
     onOpenDesign: () => void;
     /** Clear the media (and the design pointer) back to the empty state. */
@@ -98,11 +106,13 @@ const isVideoAttachment = (a: Attachment) => a.type === "video" || a.type === "r
 
 const MediaStage: React.FC<MediaStageProps> = ({
     contentType,
+    contentId = null,
     attachments,
     onAttachmentsChange,
     source,
     designRef,
     designPreview,
+    audio,
     onOpenDesign,
     onClearMedia,
     imageGenerating = false,
@@ -125,8 +135,44 @@ const MediaStage: React.FC<MediaStageProps> = ({
     const [focusedSlide, setFocusedSlide] = useState<number | undefined>(undefined);
     // Measured width of the stage, needed to scale the design frame.
     const [stageWidth, setStageWidth] = useState(0);
+    // The preview frame, so the stage can drive a render itself rather than
+    // sending the user to the Studio to find the button.
+    const frameRef = useRef<DesignFrameHandle | null>(null);
+    // Slide-strip scrolling. The strip is horizontally scrollable, which a
+    // trackpad handles and a plain mouse wheel does not — without arrows, every
+    // slide past the visible ones is simply unreachable with a mouse.
+    const stripRef = useRef<ScrollView | null>(null);
+    const [stripX, setStripX] = useState(0);
+    const [stripViewW, setStripViewW] = useState(0);
+    const [stripContentW, setStripContentW] = useState(0);
 
     const hasMedia = attachments.length > 0;
+
+    /**
+     * Has the design on screen been turned into a publishable asset?
+     *
+     * `renderUrl` is written onto the REVISION when it is rendered, and
+     * `designRef.revisionId` points at the current one — so an empty renderUrl
+     * means this exact design has never been exported, even when the content
+     * still carries attachments captured from an earlier revision. That second
+     * case ("stale") is the one worth catching: it looks completely finished and
+     * would publish a version that doesn't match the canvas.
+     */
+    const designRenderState: DesignRenderState | null = useMemo(() => {
+        if (!designPreview) return null;
+        if (designPreview.renderUrl) return "current";
+        return hasMedia ? "stale" : "never";
+    }, [designPreview, hasMedia]);
+
+    const designWriters = useDesignWriters(contentId);
+    const designRender = useDesignRender({
+        isVideoDesign: designPreview?.docType === "video",
+        slideCount: designPreview?.slideCount ?? 1,
+        revisionId: designRef?.revisionId,
+        audio,
+        setRenders: designWriters.setRenders,
+        setVideoRender: designWriters.setVideoRender,
+    });
 
     // The lane the data says owns this media, and the one the user just picked
     // (before any media exists to prove it). Resolved always wins.
@@ -279,23 +325,55 @@ const MediaStage: React.FC<MediaStageProps> = ({
      * un-rendered design visible outside the Studio; the frame scales the design
      * to the stage width, so the aspect ratio is exact by construction.
      */
-    const renderDesignCanvas = (preview: DesignPreview) => {
+    const renderDesignCanvas = (preview: DesignPreview, availableWidth?: number) => {
         const pad = 2;
-        const byWidth = Math.max(stageWidth - pad, 0);
+        const byWidth = Math.max((availableWidth ?? stageWidth) - pad, 0);
         const byHeight = preview.height > 0 ? (MAX_PREVIEW_H * preview.width) / preview.height : byWidth;
         const displayWidth = Math.min(byWidth || 320, byHeight);
         if (!(displayWidth > 0)) return null;
         return (
             <View style={styles.canvasWrap}>
-                <DesignFrame
-                    html={preview.html}
-                    width={preview.width}
-                    height={preview.height}
-                    displayWidth={displayWidth}
-                    onMessage={() => {
-                        /* read-only preview — the Studio owns interaction */
-                    }}
-                />
+                {/* The frame and its overlay share this box. The overlay must be
+                    positioned against the CANVAS, not against the centering
+                    wrapper: absoluteFillObject sets both left:0 and right:0, so
+                    adding a width pinned it to the wrapper's left edge and the
+                    badge landed in the gutter beside the design. Sizing the
+                    parent instead means the overlay just fills it. */}
+                <View style={[styles.canvasFrame, { width: displayWidth }]}>
+                    <DesignFrame
+                        ref={frameRef}
+                        html={preview.html}
+                        width={preview.width}
+                        height={preview.height}
+                        displayWidth={displayWidth}
+                        // Interaction still belongs to the Studio; the stage only
+                        // listens for render traffic so it can drive a capture.
+                        onMessage={designRender.onFrameMessage}
+                    />
+                    {/* The canvas is an iframe/WebView — it advertises nothing on
+                        its own, while the rendered video beside it has a play
+                        badge. This is its sibling: always visible (hover doesn't
+                        exist on touch), and it doubles as the Design Studio entry
+                        point, which was previously a small text button below the
+                        fold. Kept available when readOnly: looking at a design is
+                        not what the lock protects, and hiding it made the design
+                        of a published post permanently unviewable. */}
+                    <Pressable
+                        style={({ pressed, hovered }: any) => [
+                            styles.canvasOverlay,
+                            hovered && styles.canvasOverlayHovered,
+                            pressed && styles.canvasOverlayPressed,
+                        ]}
+                        onPress={onOpenDesign}
+                        accessibilityRole="button"
+                        accessibilityLabel={readOnly ? "View this design in Design Studio" : "Edit this design in Design Studio"}
+                    >
+                        <View style={styles.canvasBadge}>
+                            <FontAwesomeIcon icon={faPen} size={12} color={colors.onPrimary} />
+                            <Text style={styles.canvasBadgeText}>Design Studio</Text>
+                        </View>
+                    </Pressable>
+                </View>
                 {preview.slideCount > 1 ? (
                     <View style={styles.slideCountChip}>
                         <Text style={styles.slideCountText}>{preview.slideCount} slides</Text>
@@ -313,8 +391,30 @@ const MediaStage: React.FC<MediaStageProps> = ({
     const renderSlides = (editable: boolean) => {
         const tileAspect = previewAspect(contentType);
         const tileW = xl ? 150 : 128;
+        const step = tileW + 12; // tile + carousel gap
+        const canPrev = stripX > 2;
+        const canNext = stripContentW - stripViewW - stripX > 2;
+        const overflows = stripContentW > stripViewW + 2;
+        const scrollBy = (dir: -1 | 1) => {
+            const next = Math.max(
+                0,
+                Math.min(stripX + dir * step * 2, Math.max(stripContentW - stripViewW, 0))
+            );
+            stripRef.current?.scrollTo({ x: next, animated: true });
+        };
+
         return (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carousel}>
+            <View style={styles.stripWrap}>
+            <ScrollView
+                ref={stripRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.carousel}
+                scrollEventThrottle={16}
+                onScroll={(e) => setStripX(e.nativeEvent.contentOffset.x)}
+                onLayout={(e) => setStripViewW(e.nativeEvent.layout.width)}
+                onContentSizeChange={(w) => setStripContentW(w)}
+            >
                 {attachments.map((a, i) => {
                     const isVideo = isVideoAttachment(a);
                     const vUrl = isVideo ? videoUrlOf(a) : null;
@@ -420,24 +520,42 @@ const MediaStage: React.FC<MediaStageProps> = ({
                     );
                 })}
             </ScrollView>
+
+            {/* Arrows, not just scroll. A horizontal ScrollView is reachable with
+                a trackpad but NOT with a plain mouse wheel, so without these every
+                slide past the visible ones is unreachable for a large share of
+                desktop users. Shown only when the strip actually overflows, and
+                each side hides at its end so they never lie about what's there. */}
+            {overflows && canPrev ? (
+                <Pressable
+                    style={({ pressed }) => [styles.stripArrow, styles.stripArrowLeft, pressed && styles.pressed]}
+                    onPress={() => scrollBy(-1)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Previous slides"
+                >
+                    <FontAwesomeIcon icon={faChevronLeft} size={13} color={colors.text} />
+                </Pressable>
+            ) : null}
+            {overflows && canNext ? (
+                <Pressable
+                    style={({ pressed }) => [styles.stripArrow, styles.stripArrowRight, pressed && styles.pressed]}
+                    onPress={() => scrollBy(1)}
+                    accessibilityRole="button"
+                    accessibilityLabel="More slides"
+                >
+                    <FontAwesomeIcon icon={faChevronRight} size={13} color={colors.text} />
+                </Pressable>
+            ) : null}
+            </View>
         );
     };
 
     // ── Lane bodies ──────────────────────────────────────────────────────────
 
-    const laneActions = (primary?: { label: string; icon: typeof faPen; onPress: () => void }) => (
+    // Clear only. The design lane's primary action moved onto the canvas itself
+    // (see renderDesignCanvas) and the other lanes never had one here.
+    const laneActions = () => (
         <View style={styles.laneActionRow}>
-            {primary ? (
-                <Pressable
-                    style={({ pressed }) => [styles.laneBtn, pressed && styles.pressed]}
-                    onPress={primary.onPress}
-                    accessibilityRole="button"
-                    accessibilityLabel={primary.label}
-                >
-                    <FontAwesomeIcon icon={primary.icon} size={12} color={colors.primary} />
-                    <Text style={styles.laneBtnText}>{primary.label}</Text>
-                </Pressable>
-            ) : null}
             <Pressable
                 style={({ pressed }) => [styles.clearBtn, pressed && styles.pressed]}
                 onPress={handleClear}
@@ -453,30 +571,103 @@ const MediaStage: React.FC<MediaStageProps> = ({
     const renderDesignLane = () => {
         // Prefer the live canvas: it is correct before AND after a render, and it
         // is the only way to see a design that hasn't been exported yet.
-        const body = designPreview
-            ? renderDesignCanvas(designPreview)
-            : hasMedia
-                ? spec.multi
-                    ? renderSlides(false)
-                    : <MediaAssetPreview
-                        attachment={attachments[0]}
-                        contentType={contentType}
-                        maxHeight={MAX_PREVIEW_H}
-                        onPress={openPreview}
-                    />
-                : (
-                    <View style={styles.laneLoading}>
-                        <ActivityIndicator size="small" color={colors.textSecondary} />
-                        <Text style={styles.laneLoadingText}>Loading your design…</Text>
+
+        /** The exported asset — what actually gets published. */
+        // Keyed off what was ACTUALLY rendered, not spec.multi. A video design
+        // captured as slides produces several PNGs even on a reel (where
+        // spec.multi is false) — showing only attachments[0] there presents one
+        // slide as if it were the whole output, and if that slide happens to be
+        // a near-empty opening frame it reads as a blank box.
+        // MAX_PREVIEW_H in both columns, always. The design canvas derives its
+        // width as min(column, MAX_PREVIEW_H * aspect), so it always lands at
+        // MAX_PREVIEW_H tall for a portrait design; giving the rendered column a
+        // smaller cap made the two boxes different heights side by side, which
+        // reads as the render being cropped or wrong rather than as a layout
+        // choice. Same cap, same aspect, same height.
+        const renderedView = () =>
+            attachments.length > 1 ? (
+                renderSlides(false)
+            ) : (
+                <MediaAssetPreview
+                    attachment={attachments[0]}
+                    contentType={contentType}
+                    maxHeight={MAX_PREVIEW_H}
+                    onPress={openPreview}
+                />
+            );
+
+        // Once the design has been rendered, show BOTH: the canvas is what you
+        // edit, the asset is what ships. Previously the canvas won this ternary
+        // unconditionally, so the rendered output — the only thing that actually
+        // publishes — could never be seen, while a "Rendered" chip asserted it
+        // existed. Side by side also makes a mismatch self-evident.
+        const paired = designPreview && hasMedia && designRenderState === "current";
+
+        let body: React.ReactNode;
+        if (paired && designPreview) {
+            // A multi-slide render is a horizontal strip: it wants WIDTH, not a
+            // half column. Squeezed into one it showed ~3 of 7 tiles against a
+            // tall empty gap (the column is matched to the design's height), so
+            // the panel read as mostly blank. Stack instead and give the strip
+            // the whole stage.
+            const stripRender = attachments.length > 1;
+            const sideBySide = xl && !stripRender;
+            // Half the stage minus the gap, so each canvas scales to its column.
+            const halfWidth = Math.max((stageWidth - 14) / 2, 0);
+            const colStyle = sideBySide ? styles.pairCol : styles.pairColStacked;
+            const pair = (
+                <>
+                    <View style={colStyle}>
+                        <Text style={styles.pairLabel}>DESIGN</Text>
+                        {renderDesignCanvas(designPreview, sideBySide ? halfWidth : stageWidth)}
+                        <Text style={styles.pairCaption}>
+                            {designPreview.slideCount > 1
+                                ? `${designPreview.slideCount} slides · what you edit`
+                                : "What you edit"}
+                        </Text>
                     </View>
-                );
+                    <View style={colStyle}>
+                        <Text style={styles.pairLabel}>RENDERED</Text>
+                        {renderedView()}
+                        <Text style={styles.pairCaption}>What gets posted</Text>
+                    </View>
+                </>
+            );
+            // Side by side on desktop; stacked on a phone, where two columns
+            // would leave each one too narrow to judge.
+            body = <View style={sideBySide ? styles.pairRow : styles.pairStack}>{pair}</View>;
+        } else if (designPreview) {
+            body = renderDesignCanvas(designPreview);
+        } else if (hasMedia) {
+            body = renderedView();
+        } else {
+            body = (
+                <View style={styles.laneLoading}>
+                    <ActivityIndicator size="small" color={colors.textSecondary} />
+                    <Text style={styles.laneLoadingText}>Loading your design…</Text>
+                </View>
+            );
+        }
 
         return (
             <>
                 {body}
-                {!readOnly
-                    ? laneActions({ label: "Edit in Design Studio", icon: faPen, onPress: onOpenDesign })
-                    : null}
+                {designRenderState ? (
+                    <DesignRenderBar
+                        state={designRenderState}
+                        label={designRender.label}
+                        capturing={designRender.capturing}
+                        progress={designRender.progress}
+                        error={designRender.error}
+                        onRender={() => designRender.startRender(frameRef.current)}
+                        onDismissError={designRender.clearError}
+                        readOnly={readOnly}
+                    />
+                ) : null}
+                {/* No "Edit in Design Studio" here: the canvas badge above owns
+                    that now. Keeping both would reintroduce the clutter this was
+                    meant to remove. laneActions still carries Clear canvas. */}
+                {!readOnly ? laneActions() : null}
             </>
         );
     };
@@ -591,11 +782,14 @@ const MediaStage: React.FC<MediaStageProps> = ({
         <View style={styles.card} onLayout={onStageLayout}>
             <View style={styles.headerRow}>
                 <Text style={styles.cardTitle}>{spec.kind === "video" ? "Video" : "Visuals"}</Text>
-                {spec.aspectLabel ? (
-                    <View style={styles.ratioChip}>
-                        <Text style={styles.ratioChipText}>{spec.aspectLabel}</Text>
-                    </View>
-                ) : null}
+                <View style={styles.headerChips}>
+                    {designRenderState ? <DesignRenderChip state={designRenderState} /> : null}
+                    {spec.aspectLabel ? (
+                        <View style={styles.ratioChip}>
+                            <Text style={styles.ratioChipText}>{spec.aspectLabel}</Text>
+                        </View>
+                    ) : null}
+                </View>
             </View>
 
             {renderBody()}
@@ -632,6 +826,11 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "space-between",
+        },
+        headerChips: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
         },
         cardTitle: {
             fontSize: fs(15),
@@ -688,6 +887,70 @@ function useStyles(colors: ReturnType<typeof Colors>) {
         canvasWrap: {
             alignItems: "center",
         },
+        // Sized to the canvas and relatively positioned, so the overlay below
+        // fills the design rather than the full-width centering wrapper.
+        canvasFrame: {
+            position: "relative",
+            borderRadius: 10,
+            overflow: "hidden",
+        },
+        // Sits over the design frame. Dimmed by default so the design still
+        // reads, lifting on hover (web) / press.
+        canvasOverlay: {
+            ...StyleSheet.absoluteFillObject,
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: 10,
+        },
+        canvasOverlayHovered: {
+            backgroundColor: colors.backdrop,
+        },
+        canvasOverlayPressed: {
+            backgroundColor: colors.backdrop,
+            opacity: 0.85,
+        },
+        canvasBadge: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 7,
+            paddingHorizontal: 13,
+            paddingVertical: 9,
+            borderRadius: 22,
+            backgroundColor: colors.backdropStrong,
+        },
+        canvasBadgeText: {
+            fontSize: fs(12),
+            fontWeight: "700",
+            color: colors.onPrimary,
+        },
+        // Design | Rendered, once both exist.
+        pairRow: {
+            flexDirection: "row",
+            gap: 14,
+        },
+        pairCol: {
+            flex: 1,
+            minWidth: 0,
+        },
+        pairColStacked: {
+            width: "100%",
+        },
+        pairStack: {
+            gap: 18,
+        },
+        pairLabel: {
+            fontSize: fs(11),
+            fontWeight: "700",
+            letterSpacing: 0.4,
+            color: colors.textSecondary,
+            marginBottom: 6,
+        },
+        pairCaption: {
+            fontSize: fs(11),
+            color: colors.textSecondary,
+            textAlign: "center",
+            marginTop: 7,
+        },
         slideCountChip: {
             marginTop: 8,
             paddingHorizontal: 10,
@@ -704,6 +967,32 @@ function useStyles(colors: ReturnType<typeof Colors>) {
         carousel: {
             gap: 12,
             paddingVertical: 2,
+        },
+        stripWrap: {
+            position: "relative",
+            justifyContent: "center",
+        },
+        stripArrow: {
+            position: "absolute",
+            top: "50%",
+            marginTop: -18,
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.card,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowRadius: 8,
+            shadowOpacity: 0.18,
+            elevation: 4,
+        },
+        stripArrowLeft: {
+            left: 2,
+        },
+        stripArrowRight: {
+            right: 2,
         },
         slideCol: {
             alignItems: "center",

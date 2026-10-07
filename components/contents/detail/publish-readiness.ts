@@ -62,6 +62,15 @@ export interface PublishReadinessInput {
     caption: string;
     title: string;
     hashtags: string;
+    /**
+     * When the design lane owns this content: whether the design on screen has
+     * been rendered into publishable media. "stale" is the case worth gating —
+     * attachments DO exist (so the media checks below pass) but they were
+     * captured from an earlier revision, so publishing would ship a version that
+     * doesn't match what the user is looking at. Undefined when no design is
+     * involved. See DesignRenderBar.
+     */
+    designRenderState?: "never" | "stale" | "current";
 }
 
 /**
@@ -78,9 +87,29 @@ export function contentPublishGates({
     attachments,
     caption,
     hashtags,
+    designRenderState,
 }: PublishReadinessInput): PublishGate[] {
     const gates: PublishGate[] = [];
     const atts = attachments ?? [];
+
+    // A design is HTML until it is rendered. Check this BEFORE the media rules
+    // so the user gets the actionable message ("Render your design") instead of
+    // the generic one ("Add an image"), which would send them looking for an
+    // upload button they don't need.
+    if (designRenderState === "never") {
+        gates.push({
+            section: "media",
+            message: "Render your design before publishing.",
+        });
+        return gates;
+    }
+    if (designRenderState === "stale") {
+        gates.push({
+            section: "media",
+            message: "Re-render your design — it changed since the last render.",
+        });
+        return gates;
+    }
 
     switch (contentFormat) {
         case "post":

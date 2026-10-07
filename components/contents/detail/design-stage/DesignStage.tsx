@@ -55,6 +55,7 @@ import DesignFrame from "./DesignFrame";
 import SoundtrackPanel from "./SoundtrackPanel";
 import { useSoundtrackPlayer } from "./use-audio-player";
 import { useContentDesign } from "./use-content-design";
+import { useDesignRender } from "./use-design-render";
 import { fs, lh } from "@/constants/Typography";
 import { MEDIA_SPEC } from "../media-spec";
 
@@ -131,7 +132,6 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     const [selected, setSelected] = useState<Selected>(null);
     const [modalOpen, setModalOpen] = useState<null | "edit" | "comment">(null);
     const [modalText, setModalText] = useState("");
-    const [capturing, setCapturing] = useState(false);
     const [slide, setSlide] = useState(0);
     const [playing, setPlaying] = useState(false);
     const [curMs, setCurMs] = useState(0);
@@ -141,12 +141,9 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     // "time" messages from the frame) is overridden by this local fraction so the
     // fill + thumb track the finger with zero lag. null = not scrubbing.
     const [scrubFrac, setScrubFrac] = useState<number | null>(null);
-    const [videoNote, setVideoNote] = useState<string | null>(null);
-    // Render progress: { done, total } while capturing (total 0 = indeterminate
+    // (render progress / errors now live in useDesignRender)
     // "preparing" phase). Drives the on-canvas progress overlay + header %.
-    const [renderProg, setRenderProg] = useState<{ done: number; total: number } | null>(null);
     // Render failure surfaced on the canvas (gracious, dismissible, with retry).
-    const [renderError, setRenderError] = useState<{ message: string; retry: boolean } | null>(null);
     // Soundtrack starts collapsed — the user opens it on demand.
     const [musicOpen, setMusicOpen] = useState(false);
     // The brief typed on the empty canvas, before any design exists.
@@ -166,6 +163,22 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     const docType = revision?.docType ?? designRef?.docType ?? "image";
     const isVideoDesign = docType === "video";
     const slideCount = Math.max(revision?.slideCount ?? designRef?.slideCount ?? 1, 1);
+
+    // Capture → upload → save. Shared with the Media Stage's render action so
+    // there is one render pipeline, not two.
+    const render = useDesignRender({
+        isVideoDesign,
+        slideCount,
+        revisionId: revision?.id,
+        audio: props.audio,
+        setRenders,
+        setVideoRender,
+        onBeforeVideoCapture: () => {
+            frameRef.current?.pause();
+            void player.pause();
+            setPlaying(false);
+        },
+    });
     const hasDesign = !!html;
     // Fit the design into the measured canvas area, preserving aspect ratio AND
     // reserving room for the on-canvas controls (video scrubber / slide nav) so a
@@ -212,15 +225,16 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
 
     // Render-overlay derived values: a determinate fraction (null while the total
     // is still unknown) + a human label per render type.
-    const renderFrac =
-        renderProg && renderProg.total > 0 ? Math.min(renderProg.done / renderProg.total, 1) : null;
+    const capturing = render.capturing;
+    const renderError = render.error;
+    const renderFrac = render.progress != null ? Math.min(render.progress, 1) : null;
     const renderLabel = isVideoDesign
         ? renderFrac != null
             ? `Encoding video… ${Math.round(renderFrac * 100)}%`
             : "Preparing video…"
         : slideCount > 1
-            ? renderProg && renderProg.total > 0
-                ? `Rendering slide ${renderProg.done} of ${renderProg.total}`
+            ? renderFrac != null
+                ? `Rendering slides… ${Math.round(renderFrac * 100)}%`
                 : "Rendering slides…"
             : "Rendering image…";
 
@@ -274,104 +288,15 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
         } else if (msg.type === "ended") {
             setPlaying(false);
             void player.pause();
-        } else if (msg.type === "renderProgress") {
-            setRenderProg({ done: msg.frame, total: msg.total });
-        } else if (msg.type === "renderVideo") {
-            // Uploading the encoded MP4 — flip to an indeterminate "saving" state.
-            setRenderProg({ done: 0, total: 0 });
-            uploadVideo(msg.blob)
-                .then((url) => revision && setVideoRender(revision.id, url))
-                .then(() => {
-                    setVideoNote("Video saved.");
-                    Toaster.success("Video rendered", "Saved to your content.");
-                })
-                .catch(() =>
-                    setRenderError({
-                        message: "Your video rendered, but we couldn't save it. Check your connection and try again.",
-                        retry: true,
-                    })
-                )
-                .finally(() => {
-                    setCapturing(false);
-                    setRenderProg(null);
-                });
+        } else if (render.onFrameMessage(msg)) {
+            // Handled by use-design-render (progress / uploads / errors).
         } else if (msg.type === "tap") {
             setSelected({ id: msg.id, text: msg.text, editable: msg.editable, rect: msg.rect });
         } else if (msg.type === "deselect") {
             setSelected(null);
         } else if (msg.type === "html") {
             addRevision(msg.html, w, h, slideCount, docType, "text", revision?.id);
-        } else if (msg.type === "renderSlides") {
-            // Slides captured — now uploading them (indeterminate).
-            setRenderProg({ done: 0, total: 0 });
-            Promise.all(msg.dataUrls.map((d, i) => uploadPng(d, i)))
-                .then((urls) => revision && setRenders(revision.id, urls))
-                .then(() =>
-                    Toaster.success(slideCount > 1 ? "Slides rendered" : "Image rendered", "Saved to your content.")
-                )
-                .catch(() =>
-                    setRenderError({
-                        message: "Couldn't save the render. Check your connection and try again.",
-                        retry: true,
-                    })
-                )
-                .finally(() => {
-                    setCapturing(false);
-                    setRenderProg(null);
-                });
-        } else if (msg.type === "render") {
-            uploadPng(msg.dataUrl, 0)
-                .then((url) => revision && setRenders(revision.id, [url]))
-                .then(() => Toaster.success("Image rendered", "Saved to your content."))
-                .catch(() =>
-                    setRenderError({
-                        message: "Couldn't save the render. Check your connection and try again.",
-                        retry: true,
-                    })
-                )
-                .finally(() => {
-                    setCapturing(false);
-                    setRenderProg(null);
-                });
-        } else if (msg.type === "error") {
-            setCapturing(false);
-            setRenderProg(null);
-            // Surface the frame's actual reason (don't hard-code "browser may not
-            // support…" for every video failure — that masked a real encoder bug).
-            if (msg.message) console.warn("[design render] error:", msg.message);
-            const detail = msg.message ? ` (${msg.message})` : "";
-            setRenderError(
-                isVideoDesign
-                    ? {
-                          message: `Couldn't render the video.${detail} If this keeps happening, try Chrome on desktop.`,
-                          retry: true,
-                      }
-                    : { message: `Something went wrong while rendering.${detail} Please try again.`, retry: true }
-            );
         }
-    };
-
-    const uploadPng = async (dataUrl: string, index: number): Promise<string> => {
-        const rand = Math.random().toString(36).slice(2, 8);
-        const filename = `design_${Date.now()}_s${index}_${rand}.png`;
-        const res = await HttpWrapper.fetch(`/s3/v1/attachments?filename=${encodeURIComponent(filename)}`, {
-            method: "POST",
-        });
-        const { uploadUrl, attachmentUrl } = await res.json();
-        const blob = await (await fetch(dataUrl)).blob();
-        await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": "image/png" }, body: blob });
-        return attachmentUrl as string;
-    };
-
-    const uploadVideo = async (blob: Blob): Promise<string> => {
-        const rand = Math.random().toString(36).slice(2, 8);
-        const filename = `design_${Date.now()}_${rand}.mp4`;
-        const res = await HttpWrapper.fetch(`/s3/v1/attachments?filename=${encodeURIComponent(filename)}`, {
-            method: "POST",
-        });
-        const { uploadUrl, attachmentUrl } = await res.json();
-        await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": "video/mp4" }, body: blob });
-        return attachmentUrl as string;
     };
 
     const togglePlay = () => {
@@ -442,37 +367,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
 
     const saveRender = () => {
         if (!hasDesign) return;
-        setRenderError(null);
-        if (isVideoDesign) {
-            if (Platform.OS !== "web") {
-                setRenderError({ message: "Video export is available in the web app for now.", retry: false });
-                return;
-            }
-            frameRef.current?.pause();
-            void player.pause();
-            setPlaying(false);
-            setCapturing(true);
-            setRenderProg({ done: 0, total: 0 });
-            setVideoNote(null);
-            const a = props.audio;
-            // 15fps (not 24): the export rasterizes each frame with html2canvas at
-            // ~1s/frame regardless of resolution, so frame count is the only real
-            // lever on render time — 15fps ~halves it and stays smooth for these
-            // motion-graphic reels. (Real fix for long videos = server-side render.)
-            frameRef.current?.captureVideo(15, a
-                ? {
-                      musicUrl: a.musicUrl,
-                      voiceoverUrl: a.voiceoverUrl,
-                      musicVolume: a.musicVolume,
-                      voiceoverVolume: a.voiceoverVolume,
-                      duckMusic: a.duckMusic,
-                  }
-                : undefined);
-            return;
-        }
-        setCapturing(true);
-        setRenderProg({ done: 0, total: slideCount });
-        frameRef.current?.captureAll(slideCount);
+        render.startRender(frameRef.current);
     };
 
     const openEdit = () => {
@@ -550,7 +445,6 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
         }
     };
 
-    const renderTitle = isVideoDesign ? "Render video" : slideCount > 1 ? "Render slides" : "Render";
 
     return (
         <View style={styles.container}>
@@ -591,7 +485,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                                     <ActivityIndicator size="small" color={colors.onPrimary} />
                                 )
                             ) : (
-                                <Text style={styles.renderBtnText}>{renderTitle}</Text>
+                                <Text style={styles.renderBtnText}>{render.label}</Text>
                             )}
                         </Pressable>
                     ) : null}
@@ -778,7 +672,6 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                                     </Pressable>
                                 </View>
                             ) : null}
-                            {videoNote ? <Text style={styles.videoNote}>{videoNote}</Text> : null}
 
                             {/* Gracious render-failure card — calm, explains what
                                 happened, and offers a retry. */}
@@ -806,7 +699,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                                             ) : null}
                                             <Pressable
                                                 style={({ pressed }) => [styles.renderDismissBtn, pressed && styles.pressed]}
-                                                onPress={() => setRenderError(null)}
+                                                onPress={render.clearError}
                                             >
                                                 <Text style={styles.renderDismissText}>Dismiss</Text>
                                             </Pressable>
@@ -1211,7 +1104,6 @@ const useStyles = (colors: any) =>
                     elevation: 3,
                 },
                 time: { fontSize: fs(12), color: colors.textSecondary, minWidth: 64, textAlign: "right" },
-                videoNote: { fontSize: fs(12), color: colors.textSecondary },
 
                 // Empty canvas → brief step
                 emptyIcon: {
