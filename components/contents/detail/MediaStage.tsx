@@ -522,14 +522,20 @@ const MediaStage: React.FC<MediaStageProps> = ({
         // spec.multi is false) — showing only attachments[0] there presents one
         // slide as if it were the whole output, and if that slide happens to be
         // a near-empty opening frame it reads as a blank box.
-        const renderedView = (half?: boolean) =>
+        // MAX_PREVIEW_H in both columns, always. The design canvas derives its
+        // width as min(column, MAX_PREVIEW_H * aspect), so it always lands at
+        // MAX_PREVIEW_H tall for a portrait design; giving the rendered column a
+        // smaller cap made the two boxes different heights side by side, which
+        // reads as the render being cropped or wrong rather than as a layout
+        // choice. Same cap, same aspect, same height.
+        const renderedView = () =>
             attachments.length > 1 ? (
                 renderSlides(false)
             ) : (
                 <MediaAssetPreview
                     attachment={attachments[0]}
                     contentType={contentType}
-                    maxHeight={half ? MAX_PREVIEW_H * 0.72 : MAX_PREVIEW_H}
+                    maxHeight={MAX_PREVIEW_H}
                     onPress={openPreview}
                 />
             );
@@ -559,7 +565,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
                     </View>
                     <View style={colStyle}>
                         <Text style={styles.pairLabel}>RENDERED</Text>
-                        {renderedView(xl)}
+                        {renderedView()}
                         <Text style={styles.pairCaption}>What gets posted</Text>
                     </View>
                 </>
