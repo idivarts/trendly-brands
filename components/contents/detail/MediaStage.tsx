@@ -138,6 +138,13 @@ const MediaStage: React.FC<MediaStageProps> = ({
     // The preview frame, so the stage can drive a render itself rather than
     // sending the user to the Studio to find the button.
     const frameRef = useRef<DesignFrameHandle | null>(null);
+    // Slide-strip scrolling. The strip is horizontally scrollable, which a
+    // trackpad handles and a plain mouse wheel does not — without arrows, every
+    // slide past the visible ones is simply unreachable with a mouse.
+    const stripRef = useRef<ScrollView | null>(null);
+    const [stripX, setStripX] = useState(0);
+    const [stripViewW, setStripViewW] = useState(0);
+    const [stripContentW, setStripContentW] = useState(0);
 
     const hasMedia = attachments.length > 0;
 
@@ -384,8 +391,30 @@ const MediaStage: React.FC<MediaStageProps> = ({
     const renderSlides = (editable: boolean) => {
         const tileAspect = previewAspect(contentType);
         const tileW = xl ? 150 : 128;
+        const step = tileW + 12; // tile + carousel gap
+        const canPrev = stripX > 2;
+        const canNext = stripContentW - stripViewW - stripX > 2;
+        const overflows = stripContentW > stripViewW + 2;
+        const scrollBy = (dir: -1 | 1) => {
+            const next = Math.max(
+                0,
+                Math.min(stripX + dir * step * 2, Math.max(stripContentW - stripViewW, 0))
+            );
+            stripRef.current?.scrollTo({ x: next, animated: true });
+        };
+
         return (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carousel}>
+            <View style={styles.stripWrap}>
+            <ScrollView
+                ref={stripRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.carousel}
+                scrollEventThrottle={16}
+                onScroll={(e) => setStripX(e.nativeEvent.contentOffset.x)}
+                onLayout={(e) => setStripViewW(e.nativeEvent.layout.width)}
+                onContentSizeChange={(w) => setStripContentW(w)}
+            >
                 {attachments.map((a, i) => {
                     const isVideo = isVideoAttachment(a);
                     const vUrl = isVideo ? videoUrlOf(a) : null;
@@ -491,6 +520,33 @@ const MediaStage: React.FC<MediaStageProps> = ({
                     );
                 })}
             </ScrollView>
+
+            {/* Arrows, not just scroll. A horizontal ScrollView is reachable with
+                a trackpad but NOT with a plain mouse wheel, so without these every
+                slide past the visible ones is unreachable for a large share of
+                desktop users. Shown only when the strip actually overflows, and
+                each side hides at its end so they never lie about what's there. */}
+            {overflows && canPrev ? (
+                <Pressable
+                    style={({ pressed }) => [styles.stripArrow, styles.stripArrowLeft, pressed && styles.pressed]}
+                    onPress={() => scrollBy(-1)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Previous slides"
+                >
+                    <FontAwesomeIcon icon={faChevronLeft} size={13} color={colors.text} />
+                </Pressable>
+            ) : null}
+            {overflows && canNext ? (
+                <Pressable
+                    style={({ pressed }) => [styles.stripArrow, styles.stripArrowRight, pressed && styles.pressed]}
+                    onPress={() => scrollBy(1)}
+                    accessibilityRole="button"
+                    accessibilityLabel="More slides"
+                >
+                    <FontAwesomeIcon icon={faChevronRight} size={13} color={colors.text} />
+                </Pressable>
+            ) : null}
+            </View>
         );
     };
 
@@ -549,14 +605,21 @@ const MediaStage: React.FC<MediaStageProps> = ({
 
         let body: React.ReactNode;
         if (paired && designPreview) {
+            // A multi-slide render is a horizontal strip: it wants WIDTH, not a
+            // half column. Squeezed into one it showed ~3 of 7 tiles against a
+            // tall empty gap (the column is matched to the design's height), so
+            // the panel read as mostly blank. Stack instead and give the strip
+            // the whole stage.
+            const stripRender = attachments.length > 1;
+            const sideBySide = xl && !stripRender;
             // Half the stage minus the gap, so each canvas scales to its column.
             const halfWidth = Math.max((stageWidth - 14) / 2, 0);
-            const colStyle = xl ? styles.pairCol : styles.pairColStacked;
+            const colStyle = sideBySide ? styles.pairCol : styles.pairColStacked;
             const pair = (
                 <>
                     <View style={colStyle}>
                         <Text style={styles.pairLabel}>DESIGN</Text>
-                        {renderDesignCanvas(designPreview, xl ? halfWidth : stageWidth)}
+                        {renderDesignCanvas(designPreview, sideBySide ? halfWidth : stageWidth)}
                         <Text style={styles.pairCaption}>
                             {designPreview.slideCount > 1
                                 ? `${designPreview.slideCount} slides · what you edit`
@@ -572,7 +635,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
             );
             // Side by side on desktop; stacked on a phone, where two columns
             // would leave each one too narrow to judge.
-            body = <View style={xl ? styles.pairRow : styles.pairStack}>{pair}</View>;
+            body = <View style={sideBySide ? styles.pairRow : styles.pairStack}>{pair}</View>;
         } else if (designPreview) {
             body = renderDesignCanvas(designPreview);
         } else if (hasMedia) {
@@ -904,6 +967,32 @@ function useStyles(colors: ReturnType<typeof Colors>) {
         carousel: {
             gap: 12,
             paddingVertical: 2,
+        },
+        stripWrap: {
+            position: "relative",
+            justifyContent: "center",
+        },
+        stripArrow: {
+            position: "absolute",
+            top: "50%",
+            marginTop: -18,
+            width: 36,
+            height: 36,
+            borderRadius: 18,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.card,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 2 },
+            shadowRadius: 8,
+            shadowOpacity: 0.18,
+            elevation: 4,
+        },
+        stripArrowLeft: {
+            left: 2,
+        },
+        stripArrowRight: {
+            right: 2,
         },
         slideCol: {
             alignItems: "center",
