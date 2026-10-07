@@ -517,8 +517,13 @@ const MediaStage: React.FC<MediaStageProps> = ({
         // is the only way to see a design that hasn't been exported yet.
 
         /** The exported asset — what actually gets published. */
+        // Keyed off what was ACTUALLY rendered, not spec.multi. A video design
+        // captured as slides produces several PNGs even on a reel (where
+        // spec.multi is false) — showing only attachments[0] there presents one
+        // slide as if it were the whole output, and if that slide happens to be
+        // a near-empty opening frame it reads as a blank box.
         const renderedView = (half?: boolean) =>
-            spec.multi ? (
+            attachments.length > 1 ? (
                 renderSlides(false)
             ) : (
                 <MediaAssetPreview

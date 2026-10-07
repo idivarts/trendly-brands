@@ -15,14 +15,15 @@
 import { ContentType } from "@/components/content-calendar/types";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import Colors from "@/shared-uis/constants/Colors";
-import { faImage, faPlay } from "@fortawesome/free-solid-svg-icons";
+import { faImage, faPlay, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { ResizeMode, Video } from "expo-av";
-import React from "react";
-import { Image, Platform, Pressable, StyleSheet, View } from "react-native";
+import React, { useState } from "react";
+import { Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { previewAspect } from "./media-spec";
 import { useMediaAspect } from "./use-media-aspect";
+import { fs, lh } from "@/constants/Typography";
 
 const videoUrlOf = (a: Attachment): string | null =>
     Platform.OS === "ios"
@@ -68,6 +69,10 @@ const MediaAssetPreview: React.FC<Props> = ({
     // An inline-playable video owns its own taps (the transport controls), so the
     // box must not also swallow them to open the modal.
     const inlinePlay = playable && isVideo && !!vUrl;
+    // A render that fails to load must SAY so. Silently painting the empty box
+    // background is indistinguishable from "the render came out blank", and both
+    // read as "the feature is broken" with nothing to act on.
+    const [loadFailed, setLoadFailed] = useState(false);
 
     return (
         <Pressable
@@ -98,6 +103,7 @@ const MediaAssetPreview: React.FC<Props> = ({
                             isMuted
                             useNativeControls={inlinePlay}
                             onReadyForDisplay={(e: any) => onVideoNaturalSize(e?.naturalSize)}
+                            onError={() => setLoadFailed(true)}
                         />
                         {inlinePlay ? null : (
                             <View style={styles.playOverlay} pointerEvents="none">
@@ -113,12 +119,29 @@ const MediaAssetPreview: React.FC<Props> = ({
                     </View>
                 )
             ) : a.imageUrl ? (
-                <Image source={{ uri: a.imageUrl }} style={styles.fill} resizeMode="contain" />
+                <Image
+                    source={{ uri: a.imageUrl }}
+                    style={styles.fill}
+                    resizeMode="contain"
+                    onError={() => setLoadFailed(true)}
+                />
             ) : (
                 <View style={styles.fallback}>
                     <FontAwesomeIcon icon={faImage} size={22} color={colors.textSecondary} />
                 </View>
             )}
+            {loadFailed ? (
+                <View style={styles.failOverlay} pointerEvents="none">
+                    <FontAwesomeIcon
+                        icon={faTriangleExclamation}
+                        size={18}
+                        color={colors.errorBannerText}
+                    />
+                    <Text style={styles.failText}>
+                        This {isVideo ? "video" : "image"} couldn&apos;t load. Try rendering again.
+                    </Text>
+                </View>
+            ) : null}
         </Pressable>
     );
 };
@@ -143,6 +166,21 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             width: "100%",
             alignItems: "center",
             justifyContent: "center",
+        },
+        failOverlay: {
+            ...StyleSheet.absoluteFillObject,
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            paddingHorizontal: 16,
+            backgroundColor: colors.errorBannerBg,
+        },
+        failText: {
+            fontSize: fs(11),
+            fontWeight: "600",
+            color: colors.errorBannerText,
+            textAlign: "center",
+            lineHeight: lh(16),
         },
         playOverlay: {
             ...StyleSheet.absoluteFillObject,
