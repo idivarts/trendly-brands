@@ -318,9 +318,9 @@ const MediaStage: React.FC<MediaStageProps> = ({
      * un-rendered design visible outside the Studio; the frame scales the design
      * to the stage width, so the aspect ratio is exact by construction.
      */
-    const renderDesignCanvas = (preview: DesignPreview) => {
+    const renderDesignCanvas = (preview: DesignPreview, availableWidth?: number) => {
         const pad = 2;
-        const byWidth = Math.max(stageWidth - pad, 0);
+        const byWidth = Math.max((availableWidth ?? stageWidth) - pad, 0);
         const byHeight = preview.height > 0 ? (MAX_PREVIEW_H * preview.width) / preview.height : byWidth;
         const displayWidth = Math.min(byWidth || 320, byHeight);
         if (!(displayWidth > 0)) return null;
@@ -336,6 +336,30 @@ const MediaStage: React.FC<MediaStageProps> = ({
                     // listens for render traffic so it can drive a capture.
                     onMessage={designRender.onFrameMessage}
                 />
+                {/* The canvas is an iframe/WebView — it advertises nothing on its
+                    own, while the rendered video beside it has a play badge. This
+                    is its sibling: always visible (hover doesn't exist on touch),
+                    and it doubles as the Design Studio entry point, which was
+                    previously a small text button below the fold. Kept available
+                    when readOnly: looking at a design is not what the lock is
+                    protecting, and hiding it made the design of a published post
+                    permanently unviewable. */}
+                <Pressable
+                    style={({ pressed, hovered }: any) => [
+                        styles.canvasOverlay,
+                        { width: displayWidth },
+                        hovered && styles.canvasOverlayHovered,
+                        pressed && styles.canvasOverlayPressed,
+                    ]}
+                    onPress={onOpenDesign}
+                    accessibilityRole="button"
+                    accessibilityLabel={readOnly ? "View this design in Design Studio" : "Edit this design in Design Studio"}
+                >
+                    <View style={styles.canvasBadge}>
+                        <FontAwesomeIcon icon={faPen} size={12} color={colors.onPrimary} />
+                        <Text style={styles.canvasBadgeText}>Design Studio</Text>
+                    </View>
+                </Pressable>
                 {preview.slideCount > 1 ? (
                     <View style={styles.slideCountChip}>
                         <Text style={styles.slideCountText}>{preview.slideCount} slides</Text>
@@ -465,19 +489,10 @@ const MediaStage: React.FC<MediaStageProps> = ({
 
     // ── Lane bodies ──────────────────────────────────────────────────────────
 
-    const laneActions = (primary?: { label: string; icon: typeof faPen; onPress: () => void }) => (
+    // Clear only. The design lane's primary action moved onto the canvas itself
+    // (see renderDesignCanvas) and the other lanes never had one here.
+    const laneActions = () => (
         <View style={styles.laneActionRow}>
-            {primary ? (
-                <Pressable
-                    style={({ pressed }) => [styles.laneBtn, pressed && styles.pressed]}
-                    onPress={primary.onPress}
-                    accessibilityRole="button"
-                    accessibilityLabel={primary.label}
-                >
-                    <FontAwesomeIcon icon={primary.icon} size={12} color={colors.primary} />
-                    <Text style={styles.laneBtnText}>{primary.label}</Text>
-                </Pressable>
-            ) : null}
             <Pressable
                 style={({ pressed }) => [styles.clearBtn, pressed && styles.pressed]}
                 onPress={handleClear}
@@ -493,23 +508,68 @@ const MediaStage: React.FC<MediaStageProps> = ({
     const renderDesignLane = () => {
         // Prefer the live canvas: it is correct before AND after a render, and it
         // is the only way to see a design that hasn't been exported yet.
-        const body = designPreview
-            ? renderDesignCanvas(designPreview)
-            : hasMedia
-                ? spec.multi
-                    ? renderSlides(false)
-                    : <MediaAssetPreview
-                        attachment={attachments[0]}
-                        contentType={contentType}
-                        maxHeight={MAX_PREVIEW_H}
-                        onPress={openPreview}
-                    />
-                : (
-                    <View style={styles.laneLoading}>
-                        <ActivityIndicator size="small" color={colors.textSecondary} />
-                        <Text style={styles.laneLoadingText}>Loading your design…</Text>
+
+        /** The exported asset — what actually gets published. */
+        const renderedView = (half?: boolean) =>
+            spec.multi ? (
+                renderSlides(false)
+            ) : (
+                <MediaAssetPreview
+                    attachment={attachments[0]}
+                    contentType={contentType}
+                    maxHeight={half ? MAX_PREVIEW_H * 0.72 : MAX_PREVIEW_H}
+                    onPress={openPreview}
+                    // Checking the output is a "watch it" question, not an
+                    // "open a modal first" question.
+                    playable
+                />
+            );
+
+        // Once the design has been rendered, show BOTH: the canvas is what you
+        // edit, the asset is what ships. Previously the canvas won this ternary
+        // unconditionally, so the rendered output — the only thing that actually
+        // publishes — could never be seen, while a "Rendered" chip asserted it
+        // existed. Side by side also makes a mismatch self-evident.
+        const paired = designPreview && hasMedia && designRenderState === "current";
+
+        let body: React.ReactNode;
+        if (paired && designPreview) {
+            // Half the stage minus the gap, so each canvas scales to its column.
+            const halfWidth = Math.max((stageWidth - 14) / 2, 0);
+            const colStyle = xl ? styles.pairCol : styles.pairColStacked;
+            const pair = (
+                <>
+                    <View style={colStyle}>
+                        <Text style={styles.pairLabel}>DESIGN</Text>
+                        {renderDesignCanvas(designPreview, xl ? halfWidth : stageWidth)}
+                        <Text style={styles.pairCaption}>
+                            {designPreview.slideCount > 1
+                                ? `${designPreview.slideCount} slides · what you edit`
+                                : "What you edit"}
+                        </Text>
                     </View>
-                );
+                    <View style={colStyle}>
+                        <Text style={styles.pairLabel}>RENDERED</Text>
+                        {renderedView(xl)}
+                        <Text style={styles.pairCaption}>What gets posted</Text>
+                    </View>
+                </>
+            );
+            // Side by side on desktop; stacked on a phone, where two columns
+            // would leave each one too narrow to judge.
+            body = <View style={xl ? styles.pairRow : styles.pairStack}>{pair}</View>;
+        } else if (designPreview) {
+            body = renderDesignCanvas(designPreview);
+        } else if (hasMedia) {
+            body = renderedView();
+        } else {
+            body = (
+                <View style={styles.laneLoading}>
+                    <ActivityIndicator size="small" color={colors.textSecondary} />
+                    <Text style={styles.laneLoadingText}>Loading your design…</Text>
+                </View>
+            );
+        }
 
         return (
             <>
@@ -526,9 +586,10 @@ const MediaStage: React.FC<MediaStageProps> = ({
                         readOnly={readOnly}
                     />
                 ) : null}
-                {!readOnly
-                    ? laneActions({ label: "Edit in Design Studio", icon: faPen, onPress: onOpenDesign })
-                    : null}
+                {/* No "Edit in Design Studio" here: the canvas badge above owns
+                    that now. Keeping both would reintroduce the clutter this was
+                    meant to remove. laneActions still carries Clear canvas. */}
+                {!readOnly ? laneActions() : null}
             </>
         );
     };
@@ -747,6 +808,63 @@ function useStyles(colors: ReturnType<typeof Colors>) {
 
         canvasWrap: {
             alignItems: "center",
+        },
+        // Sits over the design frame. Dimmed by default so the design still
+        // reads, lifting on hover (web) / press.
+        canvasOverlay: {
+            ...StyleSheet.absoluteFillObject,
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: 10,
+        },
+        canvasOverlayHovered: {
+            backgroundColor: colors.backdrop,
+        },
+        canvasOverlayPressed: {
+            backgroundColor: colors.backdrop,
+            opacity: 0.85,
+        },
+        canvasBadge: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 7,
+            paddingHorizontal: 13,
+            paddingVertical: 9,
+            borderRadius: 22,
+            backgroundColor: colors.backdropStrong,
+        },
+        canvasBadgeText: {
+            fontSize: fs(12),
+            fontWeight: "700",
+            color: colors.onPrimary,
+        },
+        // Design | Rendered, once both exist.
+        pairRow: {
+            flexDirection: "row",
+            gap: 14,
+        },
+        pairCol: {
+            flex: 1,
+            minWidth: 0,
+        },
+        pairColStacked: {
+            width: "100%",
+        },
+        pairStack: {
+            gap: 18,
+        },
+        pairLabel: {
+            fontSize: fs(11),
+            fontWeight: "700",
+            letterSpacing: 0.4,
+            color: colors.textSecondary,
+            marginBottom: 6,
+        },
+        pairCaption: {
+            fontSize: fs(11),
+            color: colors.textSecondary,
+            textAlign: "center",
+            marginTop: 7,
         },
         slideCountChip: {
             marginTop: 8,

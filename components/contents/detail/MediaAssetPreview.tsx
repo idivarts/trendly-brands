@@ -37,9 +37,22 @@ interface Props {
     /** Tallest the box may get, so a portrait asset can't push the page apart. */
     maxHeight: number;
     onPress?: (a: Attachment) => void;
+    /**
+     * Play a video inline with its own transport controls instead of acting as a
+     * tap target that opens the full-screen preview. Used where the point of the
+     * preview is to CHECK the output — "is this the video that will go out?" is
+     * a question you answer by watching it, not by opening a modal first.
+     */
+    playable?: boolean;
 }
 
-const MediaAssetPreview: React.FC<Props> = ({ attachment: a, contentType, maxHeight, onPress }) => {
+const MediaAssetPreview: React.FC<Props> = ({
+    attachment: a,
+    contentType,
+    maxHeight,
+    onPress,
+    playable = false,
+}) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useStyles(colors);
@@ -52,6 +65,9 @@ const MediaAssetPreview: React.FC<Props> = ({ attachment: a, contentType, maxHei
     const isVideo = isVideoAttachment(a);
     const vUrl = isVideo ? videoUrlOf(a) : null;
     const canPreview = isVideo ? !!vUrl : !!a.imageUrl;
+    // An inline-playable video owns its own taps (the transport controls), so the
+    // box must not also swallow them to open the modal.
+    const inlinePlay = playable && isVideo && !!vUrl;
 
     return (
         <Pressable
@@ -67,8 +83,8 @@ const MediaAssetPreview: React.FC<Props> = ({ attachment: a, contentType, maxHei
                 // derivation the design lane already uses (renderDesignCanvas).
                 { aspectRatio: aspect, maxHeight, maxWidth: maxHeight * aspect },
             ]}
-            onPress={canPreview && onPress ? () => onPress(a) : undefined}
-            disabled={!canPreview || !onPress}
+            onPress={canPreview && onPress && !inlinePlay ? () => onPress(a) : undefined}
+            disabled={!canPreview || !onPress || inlinePlay}
             accessibilityLabel={isVideo ? "Preview video full screen" : "Preview image full screen"}
         >
             {isVideo ? (
@@ -80,14 +96,16 @@ const MediaAssetPreview: React.FC<Props> = ({ attachment: a, contentType, maxHei
                             resizeMode={ResizeMode.CONTAIN}
                             shouldPlay={false}
                             isMuted
-                            useNativeControls={false}
+                            useNativeControls={inlinePlay}
                             onReadyForDisplay={(e: any) => onVideoNaturalSize(e?.naturalSize)}
                         />
-                        <View style={styles.playOverlay} pointerEvents="none">
-                            <View style={styles.playBadge}>
-                                <FontAwesomeIcon icon={faPlay} size={18} color={colors.onPrimary} />
+                        {inlinePlay ? null : (
+                            <View style={styles.playOverlay} pointerEvents="none">
+                                <View style={styles.playBadge}>
+                                    <FontAwesomeIcon icon={faPlay} size={18} color={colors.onPrimary} />
+                                </View>
                             </View>
-                        </View>
+                        )}
                     </>
                 ) : (
                     <View style={styles.fallback}>
