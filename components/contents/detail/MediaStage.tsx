@@ -326,40 +326,47 @@ const MediaStage: React.FC<MediaStageProps> = ({
         if (!(displayWidth > 0)) return null;
         return (
             <View style={styles.canvasWrap}>
-                <DesignFrame
-                    ref={frameRef}
-                    html={preview.html}
-                    width={preview.width}
-                    height={preview.height}
-                    displayWidth={displayWidth}
-                    // Interaction still belongs to the Studio; the stage only
-                    // listens for render traffic so it can drive a capture.
-                    onMessage={designRender.onFrameMessage}
-                />
-                {/* The canvas is an iframe/WebView — it advertises nothing on its
-                    own, while the rendered video beside it has a play badge. This
-                    is its sibling: always visible (hover doesn't exist on touch),
-                    and it doubles as the Design Studio entry point, which was
-                    previously a small text button below the fold. Kept available
-                    when readOnly: looking at a design is not what the lock is
-                    protecting, and hiding it made the design of a published post
-                    permanently unviewable. */}
-                <Pressable
-                    style={({ pressed, hovered }: any) => [
-                        styles.canvasOverlay,
-                        { width: displayWidth },
-                        hovered && styles.canvasOverlayHovered,
-                        pressed && styles.canvasOverlayPressed,
-                    ]}
-                    onPress={onOpenDesign}
-                    accessibilityRole="button"
-                    accessibilityLabel={readOnly ? "View this design in Design Studio" : "Edit this design in Design Studio"}
-                >
-                    <View style={styles.canvasBadge}>
-                        <FontAwesomeIcon icon={faPen} size={12} color={colors.onPrimary} />
-                        <Text style={styles.canvasBadgeText}>Design Studio</Text>
-                    </View>
-                </Pressable>
+                {/* The frame and its overlay share this box. The overlay must be
+                    positioned against the CANVAS, not against the centering
+                    wrapper: absoluteFillObject sets both left:0 and right:0, so
+                    adding a width pinned it to the wrapper's left edge and the
+                    badge landed in the gutter beside the design. Sizing the
+                    parent instead means the overlay just fills it. */}
+                <View style={[styles.canvasFrame, { width: displayWidth }]}>
+                    <DesignFrame
+                        ref={frameRef}
+                        html={preview.html}
+                        width={preview.width}
+                        height={preview.height}
+                        displayWidth={displayWidth}
+                        // Interaction still belongs to the Studio; the stage only
+                        // listens for render traffic so it can drive a capture.
+                        onMessage={designRender.onFrameMessage}
+                    />
+                    {/* The canvas is an iframe/WebView — it advertises nothing on
+                        its own, while the rendered video beside it has a play
+                        badge. This is its sibling: always visible (hover doesn't
+                        exist on touch), and it doubles as the Design Studio entry
+                        point, which was previously a small text button below the
+                        fold. Kept available when readOnly: looking at a design is
+                        not what the lock protects, and hiding it made the design
+                        of a published post permanently unviewable. */}
+                    <Pressable
+                        style={({ pressed, hovered }: any) => [
+                            styles.canvasOverlay,
+                            hovered && styles.canvasOverlayHovered,
+                            pressed && styles.canvasOverlayPressed,
+                        ]}
+                        onPress={onOpenDesign}
+                        accessibilityRole="button"
+                        accessibilityLabel={readOnly ? "View this design in Design Studio" : "Edit this design in Design Studio"}
+                    >
+                        <View style={styles.canvasBadge}>
+                            <FontAwesomeIcon icon={faPen} size={12} color={colors.onPrimary} />
+                            <Text style={styles.canvasBadgeText}>Design Studio</Text>
+                        </View>
+                    </Pressable>
+                </View>
                 {preview.slideCount > 1 ? (
                     <View style={styles.slideCountChip}>
                         <Text style={styles.slideCountText}>{preview.slideCount} slides</Text>
@@ -808,6 +815,13 @@ function useStyles(colors: ReturnType<typeof Colors>) {
 
         canvasWrap: {
             alignItems: "center",
+        },
+        // Sized to the canvas and relatively positioned, so the overlay below
+        // fills the design rather than the full-width centering wrapper.
+        canvasFrame: {
+            position: "relative",
+            borderRadius: 10,
+            overflow: "hidden",
         },
         // Sits over the design frame. Dimmed by default so the design still
         // reads, lifting on hover (web) / press.
