@@ -1715,7 +1715,6 @@ const CreateContentScreen = () => {
                                     source={seedItem?.source}
                                     designRef={seedItem?.designRef}
                                     designPreview={designPreview}
-                                    audio={seedItem?.audio}
                                     onOpenDesign={() => setStage("design")}
                                     onClearMedia={handleClearMedia}
                                     imageGenerating={imageGenerating}

@@ -1,7 +1,10 @@
 /**
  * DesignFrame (native) — renders the design HTML in a react-native-webview and
- * bridges messages via ReactNativeWebView.postMessage / injectJavaScript. The
- * WebView IS the render surface, so the html2canvas capture matches the preview.
+ * bridges messages via ReactNativeWebView.postMessage / injectJavaScript.
+ *
+ * Preview only. The publishable PNG/MP4 comes from the server render worker,
+ * which loads the same saved HTML in real Chromium — so this frame no longer
+ * has to BE the render surface, and native is no longer locked out of video.
  */
 import React, { forwardRef, useImperativeHandle, useMemo, useRef } from "react";
 import { View } from "react-native";
@@ -24,13 +27,9 @@ const DesignFrameNative = forwardRef<DesignFrameHandle, DesignFrameProps>(
             setText: (id, text) => send({ type: "setText", id, text }),
             deselect: () => send({ type: "deselect" }),
             showSlide: (index, slideWidth) => send({ type: "showSlide", index, slideWidth }),
-            captureAll: (count) => send({ type: "captureSlides", count }),
             play: () => send({ type: "play" }),
             pause: () => send({ type: "pause" }),
             seek: (ms) => send({ type: "seek", ms }),
-            // WebCodecs isn't available in the native WebView — the bridge will
-            // report an error, which DesignStage surfaces.
-            captureVideo: (fps, audio) => send({ type: "captureVideo", fps, audio }),
         }));
 
         return (

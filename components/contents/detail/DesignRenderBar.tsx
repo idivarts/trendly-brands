@@ -74,7 +74,7 @@ const DesignRenderBar: React.FC<DesignRenderBarProps> = ({
                 <View style={styles.progressRow}>
                     <ActivityIndicator size="small" color={colors.primary} />
                     <Text style={styles.progressText}>
-                        {pct != null ? `Rendering… ${pct}%` : "Preparing…"}
+                        {pct != null ? `Rendering… ${pct}%` : "Queued…"}
                     </Text>
                 </View>
                 {pct != null ? (
@@ -83,7 +83,7 @@ const DesignRenderBar: React.FC<DesignRenderBarProps> = ({
                     </View>
                 ) : null}
                 <Text style={styles.progressHint}>
-                    Keep this tab open — the render happens on your device.
+                    Rendering on our servers — you can leave this page.
                 </Text>
             </View>
         );

@@ -13,6 +13,7 @@
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import {
     DesignDocType,
+    DesignRenderStatus,
     IContentDesignRef,
     IContentDesignRevision,
 } from "@/shared-libs/firestore/trendly-pro/models/design";
@@ -27,14 +28,25 @@ export interface DesignPreview {
     slideCount: number;
     /**
      * Set once THIS revision has been rendered. The single signal that separates
-     * "a design exists" from "a publishable asset exists": `setRenders` writes it
-     * onto the revision doc, and `designRef.revisionId` points at the current
-     * one — so an empty `renderUrl` means what you're looking at has never been
-     * exported, even when the content still carries attachments from an earlier
-     * revision (i.e. a stale render that would publish the wrong version).
+     * "a design exists" from "a publishable asset exists": the render worker
+     * writes it onto the revision doc, and `designRef.revisionId` points at the
+     * current one — so an empty `renderUrl` means what you're looking at has
+     * never been exported, even when the content still carries attachments from
+     * an earlier revision (i.e. a stale render that would publish the wrong
+     * version).
      */
     renderUrl?: string;
     docType: DesignDocType;
+    /**
+     * Server-render lifecycle. Absent on revisions created before rendering
+     * moved to the server, where a `renderUrl` alone still means "rendered" —
+     * so never treat a missing status as "not started" when a url exists.
+     */
+    renderStatus?: DesignRenderStatus;
+    /** 0..1 while the worker is capturing frames. */
+    renderProgress?: number;
+    /** Why the last render failed, phrased for the user. */
+    renderError?: string;
 }
 
 export function useDesignPreview(
@@ -70,6 +82,9 @@ export function useDesignPreview(
                             slideCount: Math.max(d.slideCount ?? 1, 1),
                             renderUrl: d.renderUrl,
                             docType: d.docType ?? "image",
+                            renderStatus: d.renderStatus,
+                            renderProgress: d.renderProgress,
+                            renderError: d.renderError,
                         }
                         : null
                 );
