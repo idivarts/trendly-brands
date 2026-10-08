@@ -1,13 +1,12 @@
 /**
- * use-design-writers — the client-side writers for a content's design, with no
- * subscriptions of its own.
+ * use-design-writers — the client-side writers for a content's design.
  *
- * Split out of use-content-design so a surface that only needs to SAVE a render
- * (the Media Stage) doesn't have to open the revision + history listeners that
- * only the Design Studio's preview and Revert actually use.
- *
- * `use-content-design` composes this, so there is still one implementation of
- * what "save a render" means.
+ * Only ONE thing is written from here now: a new HTML revision, which is what a
+ * deterministic text edit produces. Storing a render used to live here too
+ * (`setRenders` / `setVideoRender`); the render worker owns that, and
+ * firestore.rules blocks the client from the `render*` fields — `renderUrl` is
+ * what the publish gate trusts as "this design has been exported", so a client
+ * able to write it could mark an unrendered design publishable.
  */
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import {
@@ -30,11 +29,6 @@ export interface DesignWriters {
         origin: IContentDesignRevision["origin"],
         parentId?: string
     ) => Promise<string | null>;
-    /** Store the captured slide renders as the content's attachments (one per
-     *  slide, ordered) + cache the cover on the revision and designRef. */
-    setRenders: (revisionId: string, renderUrls: string[]) => Promise<void>;
-    /** Store the client-encoded MP4 as the content's single video attachment. */
-    setVideoRender: (revisionId: string, videoUrl: string) => Promise<void>;
 }
 
 export function useDesignWriters(contentId: string | null): DesignWriters {
@@ -94,41 +88,6 @@ export function useDesignWriters(contentId: string | null): DesignWriters {
             return created.id;
         };
 
-        const setRenders: DesignWriters["setRenders"] = async (rid, renderUrls) => {
-            if (!brandId || !contentId || renderUrls.length === 0) return;
-            const cover = renderUrls[0];
-            await updateDoc(
-                doc(FirestoreDB, "brands", brandId, "contents", contentId, "designs", rid),
-                { renderUrl: cover }
-            );
-            const cd = contentDoc();
-            if (cd) {
-                // One attachment per slide (ordered) — the publish pipeline treats
-                // multiple image attachments as a carousel.
-                await updateDoc(cd, {
-                    "designRef.renderUrl": cover,
-                    attachments: renderUrls.map((u) => ({ type: "image", imageUrl: u })),
-                    updatedAt: Date.now(),
-                });
-            }
-        };
-
-        const setVideoRender: DesignWriters["setVideoRender"] = async (rid, videoUrl) => {
-            if (!brandId || !contentId) return;
-            await updateDoc(
-                doc(FirestoreDB, "brands", brandId, "contents", contentId, "designs", rid),
-                { renderUrl: videoUrl }
-            );
-            const cd = contentDoc();
-            if (cd) {
-                await updateDoc(cd, {
-                    "designRef.renderUrl": videoUrl,
-                    attachments: [{ type: "video", playUrl: videoUrl }],
-                    updatedAt: Date.now(),
-                });
-            }
-        };
-
-        return { addRevision, setRenders, setVideoRender };
+        return { addRevision };
     }, [brandId, contentId]);
 }

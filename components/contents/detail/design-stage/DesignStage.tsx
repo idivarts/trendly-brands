@@ -100,7 +100,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     const { width, xl } = useBreakpoints();
     const styles = useStyles(colors);
 
-    const { revision, history, addRevision, setRenders, setVideoRender, revertTo } = useContentDesign(contentId, designRef);
+    const { revision, history, addRevision, revertTo } = useContentDesign(contentId, designRef);
     const { addComment } = useContentComments(contentId);
     // Video-synced audio: plays the music bed + voiceover in step with the video
     // preview so "play" reflects the final mix (music ducked under the voice).
@@ -164,20 +164,18 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     const isVideoDesign = docType === "video";
     const slideCount = Math.max(revision?.slideCount ?? designRef?.slideCount ?? 1, 1);
 
-    // Capture → upload → save. Shared with the Media Stage's render action so
-    // there is one render pipeline, not two.
+    // Ask the server to render. Shared with the Media Stage's render action so
+    // there is one render pipeline, not two. Nothing is paused first: the worker
+    // renders the SAVED HTML in its own browser, so whatever this preview is
+    // doing is irrelevant to the output.
     const render = useDesignRender({
+        contentId,
+        revisionId: revision?.id,
         isVideoDesign,
         slideCount,
-        revisionId: revision?.id,
-        audio: props.audio,
-        setRenders,
-        setVideoRender,
-        onBeforeVideoCapture: () => {
-            frameRef.current?.pause();
-            void player.pause();
-            setPlaying(false);
-        },
+        renderStatus: revision?.renderStatus,
+        renderProgress: revision?.renderProgress,
+        renderError: revision?.renderError,
     });
     const hasDesign = !!html;
     // Fit the design into the measured canvas area, preserving aspect ratio AND
@@ -230,7 +228,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     const renderFrac = render.progress != null ? Math.min(render.progress, 1) : null;
     const renderLabel = isVideoDesign
         ? renderFrac != null
-            ? `Encoding video… ${Math.round(renderFrac * 100)}%`
+            ? `Rendering video… ${Math.round(renderFrac * 100)}%`
             : "Preparing video…"
         : slideCount > 1
             ? renderFrac != null
@@ -288,8 +286,6 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
         } else if (msg.type === "ended") {
             setPlaying(false);
             void player.pause();
-        } else if (render.onFrameMessage(msg)) {
-            // Handled by use-design-render (progress / uploads / errors).
         } else if (msg.type === "tap") {
             setSelected({ id: msg.id, text: msg.text, editable: msg.editable, rect: msg.rect });
         } else if (msg.type === "deselect") {
@@ -367,7 +363,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
 
     const saveRender = () => {
         if (!hasDesign) return;
-        render.startRender(frameRef.current);
+        render.startRender();
     };
 
     const openEdit = () => {

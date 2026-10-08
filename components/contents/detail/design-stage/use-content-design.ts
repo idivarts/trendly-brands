@@ -2,11 +2,11 @@
  * use-content-design
  *
  * Subscribes to the CURRENT HTML design revision of a content
- * (brands/{brandId}/contents/{contentId}/designs/{revisionId}) and exposes
- * client-side writers. The designs subcollection is client-writable, so
- * deterministic text edits and the WebView-captured render are persisted
- * frontend-side with no backend round-trip; the AI also writes revisions via the
- * backend (Admin SDK). Revision history powers Revert.
+ * (brands/{brandId}/contents/{contentId}/designs/{revisionId}) and exposes the
+ * client-side writer. The designs subcollection is client-writable, so a
+ * deterministic text edit is persisted with no backend round-trip; the AI also
+ * writes revisions via the backend (Admin SDK), and the render worker owns
+ * every `render*` field. Revision history powers Revert.
  */
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import {
@@ -35,11 +35,6 @@ interface UseContentDesignReturn {
         origin: IContentDesignRevision["origin"],
         parentId?: string
     ) => Promise<string | null>;
-    /** Store the frontend-captured slide renders as the content's attachments
-     *  (one per slide, ordered) + cache the cover on the revision + designRef. */
-    setRenders: (revisionId: string, renderUrls: string[]) => Promise<void>;
-    /** Store the client-encoded MP4 as the content's single video attachment. */
-    setVideoRender: (revisionId: string, videoUrl: string) => Promise<void>;
     revertTo: (revisionId: string) => Promise<void>;
 }
 

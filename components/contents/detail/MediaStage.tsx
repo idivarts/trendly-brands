@@ -25,7 +25,7 @@ import { fs, lh } from "@/constants/Typography";
 import { useBreakpoints } from "@/hooks";
 import { useAWSContext } from "@/shared-libs/contexts/aws-context.provider";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
-import { IContentAudio, IContentDesignRef } from "@/shared-libs/firestore/trendly-pro/models/design";
+import { IContentDesignRef } from "@/shared-libs/firestore/trendly-pro/models/design";
 import { pickMedia, pickMediaMulti, PickedAsset } from "@/shared-libs/utils/media-picker";
 import AssetPreviewModal from "@/shared-uis/components/carousel/asset-preview-modal";
 import Colors from "@/shared-uis/constants/Colors";
@@ -65,7 +65,6 @@ import { clearLabelFor, MediaLane, MediaSource, resolveMediaLane } from "./media
 import { aspectError, MEDIA_SPEC, parseAspectRatio, previewAspect } from "./media-spec";
 import DesignRenderBar, { DesignRenderChip, DesignRenderState } from "./DesignRenderBar";
 import { useDesignRender } from "./design-stage/use-design-render";
-import { useDesignWriters } from "./design-stage/use-design-writers";
 import { DesignFrameHandle } from "./design-stage/bridge";
 
 /** Tallest a preview may get, so a 9:16 design doesn't push the page apart. */
@@ -83,8 +82,6 @@ interface MediaStageProps {
     designRef?: IContentDesignRef;
     /** Live HTML of that revision, for previewing a canvas that isn't rendered yet. */
     designPreview?: DesignPreview | null;
-    /** Soundtrack/voiceover muxed into a video render. */
-    audio?: IContentAudio;
     /** Open the Design Studio — to start a design, or edit the existing one. */
     onOpenDesign: () => void;
     /** Clear the media (and the design pointer) back to the empty state. */
@@ -112,7 +109,6 @@ const MediaStage: React.FC<MediaStageProps> = ({
     source,
     designRef,
     designPreview,
-    audio,
     onOpenDesign,
     onClearMedia,
     imageGenerating = false,
@@ -135,9 +131,6 @@ const MediaStage: React.FC<MediaStageProps> = ({
     const [focusedSlide, setFocusedSlide] = useState<number | undefined>(undefined);
     // Measured width of the stage, needed to scale the design frame.
     const [stageWidth, setStageWidth] = useState(0);
-    // The preview frame, so the stage can drive a render itself rather than
-    // sending the user to the Studio to find the button.
-    const frameRef = useRef<DesignFrameHandle | null>(null);
     // Slide-strip scrolling. The strip is horizontally scrollable, which a
     // trackpad handles and a plain mouse wheel does not — without arrows, every
     // slide past the visible ones is simply unreachable with a mouse.
@@ -164,14 +157,14 @@ const MediaStage: React.FC<MediaStageProps> = ({
         return hasMedia ? "stale" : "never";
     }, [designPreview, hasMedia]);
 
-    const designWriters = useDesignWriters(contentId);
     const designRender = useDesignRender({
+        contentId,
+        revisionId: designRef?.revisionId,
         isVideoDesign: designPreview?.docType === "video",
         slideCount: designPreview?.slideCount ?? 1,
-        revisionId: designRef?.revisionId,
-        audio,
-        setRenders: designWriters.setRenders,
-        setVideoRender: designWriters.setVideoRender,
+        renderStatus: designPreview?.renderStatus,
+        renderProgress: designPreview?.renderProgress,
+        renderError: designPreview?.renderError,
     });
 
     // The lane the data says owns this media, and the one the user just picked
@@ -341,14 +334,14 @@ const MediaStage: React.FC<MediaStageProps> = ({
                     parent instead means the overlay just fills it. */}
                 <View style={[styles.canvasFrame, { width: displayWidth }]}>
                     <DesignFrame
-                        ref={frameRef}
                         html={preview.html}
                         width={preview.width}
                         height={preview.height}
                         displayWidth={displayWidth}
-                        // Interaction still belongs to the Studio; the stage only
-                        // listens for render traffic so it can drive a capture.
-                        onMessage={designRender.onFrameMessage}
+                        // Interaction belongs to the Studio; here the frame is a
+                        // picture. Rendering is a server call, so the stage has
+                        // no reason to listen to the frame at all.
+                        onMessage={() => undefined}
                     />
                     {/* The canvas is an iframe/WebView — it advertises nothing on
                         its own, while the rendered video beside it has a play
@@ -448,7 +441,15 @@ const MediaStage: React.FC<MediaStageProps> = ({
                                         </View>
                                     )
                                 ) : a.imageUrl ? (
-                                    <Image source={{ uri: a.imageUrl }} style={styles.fill} resizeMode="cover" />
+                                    // Prefer the render worker's WebP thumbnail:
+                                    // these tiles are ~128px and the render is
+                                    // 1080px. Falls back for uploads and for
+                                    // anything rendered before thumbnails.
+                                    <Image
+                                        source={{ uri: a.thumbUrl ?? a.imageUrl }}
+                                        style={styles.fill}
+                                        resizeMode="cover"
+                                    />
                                 ) : (
                                     <View style={styles.mediaFallback}>
                                         <FontAwesomeIcon icon={faImage} size={18} color={colors.textSecondary} />
@@ -659,7 +660,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
                         capturing={designRender.capturing}
                         progress={designRender.progress}
                         error={designRender.error}
-                        onRender={() => designRender.startRender(frameRef.current)}
+                        onRender={designRender.startRender}
                         onDismissError={designRender.clearError}
                         readOnly={readOnly}
                     />
