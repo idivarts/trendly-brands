@@ -38,14 +38,36 @@ import {
 /**
  * The shared runtime, serialized into the frame.
  *
- * `Function.prototype.toString()` returns the source of each function as the
- * bundler emitted it, and every function in design-runtime is deliberately
- * self-contained (no imports, no module-scope references), so inlining them
- * like this is safe — and it is what guarantees the preview and the server
- * renderer execute identical code.
+ * `Function.prototype.toString()` returns the source as the BUNDLER emitted it,
+ * which is the whole subtlety here. Each one must be bound to its own name
+ * explicitly, because a minified build emits them as anonymous expressions
+ * assigned to the exports object:
+ *
+ *     _e.seekScene = function(e){ ... }
+ *
+ * so toString() hands back `function(e){ ... }`. Joined as bare statements that
+ * is a SyntaxError — a function declaration must have a name — and the error is
+ * at PARSE time, so it takes the entire injected script down with it: no
+ * __cmd, no message listener, no taps, no slide paging, and no clue in the
+ * frame as to why. It worked in a dev server (names preserved) and silently
+ * died in every minified build. `var <name> = <source>;` is correct for a named
+ * function, an anonymous one and an arrow alike.
+ *
+ * Every function in design-runtime is deliberately self-contained (no imports,
+ * no module-scope references), which is what makes inlining them safe at all,
+ * and is what guarantees the preview and the server renderer execute identical
+ * code.
  */
-const SHARED_RUNTIME = [measureDesign, sceneAt, seekScene, playSceneFrom, pauseScene]
-    .map((fn) => fn.toString())
+const RUNTIME_FNS: Record<string, (...args: any[]) => any> = {
+    measureDesign,
+    sceneAt,
+    seekScene,
+    playSceneFrom,
+    pauseScene,
+};
+
+const SHARED_RUNTIME = Object.keys(RUNTIME_FNS)
+    .map((name) => `var ${name} = ${RUNTIME_FNS[name].toString()};`)
     .join("\n");
 
 export const BRIDGE_SCRIPT = `
