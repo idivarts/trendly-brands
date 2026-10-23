@@ -255,6 +255,11 @@ jobs:
           EXPO_PUBLIC_REVENUECAT_ANDROID_KEY: ${{ vars.REVENUECAT_ANDROID_KEY }}
         run: |
           set -euo pipefail
+          # `ota-publish` begins with `export $(cat .env.local | xargs)`, and that
+          # export beats everything the `env:` block above just set. Drop the
+          # CI-owned keys from the decoded secret first, or the production channel
+          # receives a dev-configured bundle. See scripts/sanitize-env-local.sh.
+          ./scripts/sanitize-env-local.sh
           OTA_MESSAGE="${GITHUB_SHA:0:7} $(head -n1 <<<"${HEAD_COMMIT_MESSAGE:-manual dispatch}")"
           export OTA_MESSAGE
           npm run ota-publish

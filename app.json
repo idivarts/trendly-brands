@@ -174,7 +174,8 @@
             "expo-audio",
             "expo-video",
             "expo-localization",
-            "./plugins/with-branch.js"
+            "./plugins/with-branch.js",
+            "./plugins/with-stage.js"
         ],
         "experiments": {
             "typedRoutes": true,

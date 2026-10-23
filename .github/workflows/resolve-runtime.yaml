@@ -24,7 +24,13 @@ on:
         value: ${{ jobs.resolve.outputs.rtv_android }}
 
 # See native-build.yaml — a caller's workflow-level env does not reach a
-# reusable workflow, and these feed the fingerprint via plugins/with-branch.js.
+# reusable workflow, so these are re-declared rather than inherited.
+#
+# They do NOT feed the fingerprint: with-branch.js writes its key through a mod
+# (Info.plist / AndroidManifest), and mods are not hashed. Resolving with the
+# same credentials the build has still keeps this job and the build on one
+# config, but what actually separates dev from prod is EXPO_PUBLIC_APP_STAGE,
+# via plugins/with-stage.js.
 env:
   EXPO_PUBLIC_BRANCH_LIVE_KEY: ${{ vars.BRANCH_LIVE_KEY }}
   EXPO_PUBLIC_BRANCH_TEST_KEY: ${{ vars.BRANCH_TEST_KEY }}
@@ -68,16 +74,17 @@ jobs:
           # shifts the runtimeVersion — producing OTAs that reach nobody.
           for f in app.json eas.json .easignore .gitignore package.json \
                    google-services.json GoogleService-Info.plist \
-                   plugins/with-ios-fmt-xcode26-fix.js; do
+                   plugins/with-ios-fmt-xcode26-fix.js \
+                   plugins/with-stage.js; do
             [ -f "$f" ] || { echo "::error::missing fingerprint input: $f"; exit 1; }
           done
 
       - name: Compute runtime versions
         id: fp
-        # Must match the build jobs: the Branch config plugin resolves
-        # live-vs-test (and therefore the link domains) from this, so resolving
-        # without it would bake a different runtimeVersion than the build
-        # produces — publishing OTAs at a version no installed binary has.
+        # Must match the build jobs: plugins/with-stage.js puts this stage into
+        # the public config, so resolving without it would bake a different
+        # runtimeVersion than the build produces — publishing OTAs at a version
+        # no installed binary has.
         env:
           EXPO_PUBLIC_APP_STAGE: ${{ inputs.stage }}
         run: |
@@ -92,4 +99,33 @@ jobs:
             [ -n "$rtv" ] && [ "$rtv" != "null" ] || { echo "::error::empty runtimeVersion for $p"; exit 1; }
             echo "rtv_$p=$rtv" >> "$GITHUB_OUTPUT"
             echo "$p runtimeVersion = $rtv"
+          done
+
+      # The invariant that quietly broke once already, and the reason a dev
+      # update could install on a production binary: when nothing in the public
+      # config varies by stage, dev and prod resolve to the SAME fingerprint and
+      # the channel string is the only thing keeping them apart. Assert the two
+      # stages disagree, so that can never silently become true again.
+      - name: Assert dev and prod fingerprints differ
+        env:
+          STAGE: ${{ inputs.stage }}
+          RTV_IOS: ${{ steps.fp.outputs.rtv_ios }}
+          RTV_ANDROID: ${{ steps.fp.outputs.rtv_android }}
+        run: |
+          set -euo pipefail
+          [ "$STAGE" = "prod" ] && OTHER=dev || OTHER=prod
+          for p in ios android; do
+            case "$p" in
+              ios)     mine="$RTV_IOS" ;;
+              android) mine="$RTV_ANDROID" ;;
+            esac
+            theirs="$(EXPO_PUBLIC_APP_STAGE="$OTHER" \
+              npx expo-updates runtimeversion:resolve --platform "$p" | jq -r .runtimeVersion)"
+            if [ "$mine" = "$theirs" ]; then
+              echo "::error::$p resolves to $mine for BOTH $STAGE and $OTHER."
+              echo "::error::Stage separation is gone — a $OTHER update would install on a $STAGE binary."
+              echo "::error::Check that plugins/with-stage.js is still registered in app.json."
+              exit 1
+            fi
+            echo "$p: $STAGE=$mine  $OTHER=$theirs"
           done

@@ -64,7 +64,14 @@ jobs:
         EXPO_PUBLIC_LINKEDIN_PARTNER_ID: ${{ vars.LINKEDIN_PARTNER_ID }}
         EXPO_PUBLIC_TWITTER_PIXEL_ID: ${{ vars.TWITTER_PIXEL_ID }}
         EXPO_PUBLIC_CLARITY_PROJECT_ID: ${{ vars.CLARITY_PROJECT_ID }}
-      run: npm run build
+      run: |
+        set -euo pipefail
+        # Expo's own dotenv loader does not override an already-set variable, so
+        # the web build was never mis-staged the way the native ones were. Run
+        # the sanitizer anyway: it keeps every consumer of ENV_LOCAL_FILE on the
+        # same rule, and surfaces the same drift warning.
+        ./scripts/sanitize-env-local.sh
+        npm run build
 
     - name: Deploy with Serverless
       uses: serverless/github-action@v3.2
