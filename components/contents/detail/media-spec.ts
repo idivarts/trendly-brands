@@ -23,8 +23,6 @@ export interface MediaSpec {
      * aren't falsely rejected. Undefined ⇒ no aspect constraint.
      */
     aspectRange?: { min: number; max: number };
-    /** Whether AI image generation is offered for this type. */
-    canGenerate: boolean;
     /** Whether a (script) editor is shown for this type. */
     hasScript: boolean;
 }
@@ -46,7 +44,6 @@ export const MEDIA_SPEC: Record<ContentType, MediaSpec> = {
         aspectLabel: "9:16",
         aspectRatios: ["9:16"],
         aspectRange: PORTRAIT_9_16,
-        canGenerate: false, // reel videos are produced externally and uploaded
         hasScript: true,
     },
     video: {
@@ -58,7 +55,6 @@ export const MEDIA_SPEC: Record<ContentType, MediaSpec> = {
         aspectLabel: "landscape (16:9 recommended)",
         aspectRatios: ["16:9"],
         aspectRange: LANDSCAPE_VIDEO,
-        canGenerate: false, // produced externally and uploaded
         hasScript: true,
     },
     post: {
@@ -67,7 +63,6 @@ export const MEDIA_SPEC: Record<ContentType, MediaSpec> = {
         aspectLabel: "1:1 or 4:5",
         aspectRatios: ["1:1", "4:5"],
         aspectRange: SQUARE_TO_45,
-        canGenerate: true,
         hasScript: false,
     },
     carousel: {
@@ -76,7 +71,6 @@ export const MEDIA_SPEC: Record<ContentType, MediaSpec> = {
         aspectLabel: "1:1 or 4:5",
         aspectRatios: ["1:1", "4:5"],
         aspectRange: SQUARE_TO_45,
-        canGenerate: true,
         hasScript: false,
     },
     story: {
@@ -85,7 +79,6 @@ export const MEDIA_SPEC: Record<ContentType, MediaSpec> = {
         aspectLabel: "9:16",
         aspectRatios: ["9:16"],
         aspectRange: PORTRAIT_9_16,
-        canGenerate: true,
         hasScript: false,
     },
     live: {
@@ -93,7 +86,6 @@ export const MEDIA_SPEC: Record<ContentType, MediaSpec> = {
         multi: false,
         aspectLabel: "",
         aspectRatios: [],
-        canGenerate: false,
         hasScript: true,
     },
     text: {
@@ -103,7 +95,6 @@ export const MEDIA_SPEC: Record<ContentType, MediaSpec> = {
         multi: false,
         aspectLabel: "",
         aspectRatios: [],
-        canGenerate: false,
         hasScript: false,
     },
 };
@@ -112,6 +103,46 @@ export const MEDIA_SPEC: Record<ContentType, MediaSpec> = {
 export function parseAspectRatio(ratio: string): [number, number] {
     const [w, h] = ratio.split(":").map(Number);
     return [w, h];
+}
+
+/**
+ * Whether a measured width/height ratio is one this content type accepts.
+ *
+ * Used to decide whether a preview may be laid out at the asset's REAL ratio.
+ * An asset outside the range is a mis-shaped asset, not a new target shape: a
+ * landscape clip on a Reel must still preview as 9:16 (letterboxed), because the
+ * box is telling the user what the platform will publish, and the ratio chip
+ * right next to it already says "9:16". Shaping the box to the bad asset instead
+ * produced a landscape container under a "9:16" label — the two contradicting
+ * each other, with no hint that anything was wrong.
+ *
+ * Types with no `aspectRange` (live/text have no media) accept anything.
+ */
+export function isAspectAccepted(type: ContentType, ratio?: number): boolean {
+    const spec = MEDIA_SPEC[type];
+    if (!spec.aspectRange || !ratio || !Number.isFinite(ratio) || ratio <= 0) return false;
+    return ratio >= spec.aspectRange.min && ratio <= spec.aspectRange.max;
+}
+
+/**
+ * The width/height ratio a preview box should use for this content type, taken
+ * from the canonical ratio. Previews must never be laid out at a fixed height —
+ * that renders a 9:16 reel inside a landscape box. Where an asset's real
+ * dimensions are known (a design revision, or a measured image/video) AND are
+ * within the accepted range, prefer those; this is the fallback, the
+ * pre-measurement default, and what an out-of-range asset falls back to.
+ */
+export function previewAspect(type: ContentType): number {
+    const spec = MEDIA_SPEC[type];
+    const ratio = spec.aspectRatios[0];
+    if (!ratio) return 1;
+    const [w, h] = parseAspectRatio(ratio);
+    return h > 0 ? w / h : 1;
+}
+
+/** True when the type is portrait enough that its preview needs a height cap. */
+export function isPortrait(type: ContentType): boolean {
+    return previewAspect(type) < 1;
 }
 
 /** Closest common label for a measured ratio, for friendly error messages. */

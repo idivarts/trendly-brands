@@ -344,6 +344,16 @@ files, and the autolinking configs.
 App JS, `components/`, `contexts/` and the three `shared-*` submodules are **not**
 inputs — so submodule bumps correctly ship over the air.
 
+`EXPO_PUBLIC_APP_STAGE` **is** an input, via `plugins/with-stage.js`, which puts
+it on `extra.appStage`. That is deliberate: **dev and prod must never resolve to
+the same runtimeVersion.** They used to, and the channel string baked into the
+binary was then the only thing keeping a dev update off a production device —
+one build promoted from the Play internal track, or a dev TestFlight build sent
+to review, and production starts following `development`. `resolve-runtime.yaml`
+asserts the two stages disagree on every run. Only a config-plugin **mod**
+(Info.plist / AndroidManifest, as in `with-branch.js`) escapes the hash; anything
+written to the public config does not.
+
 ⚠️ Editing the `scripts` block in `package.json` changes the fingerprint and
 forces a native build. Keep it stable; pass variable values via env instead.
 
@@ -355,7 +365,18 @@ forces a native build. Keep it stable; pass variable values via env instead.
   nobody.
 - The `ota-publish` npm script mirrors the `export $(cat .env.local | xargs) &&`
   prefix of the build scripts on purpose — the OTA bundle must bake in exactly
-  what the store build bakes in.
+  what the store build bakes in. ⚠️ But `export` **beats the inherited value**,
+  so whatever `ENV_LOCAL_FILE` carries wins over the workflow's `env:` block.
+  That is how prod builds and prod OTAs came to ship as stage `dev` — dev
+  Firestore database, dev websocket, Branch TEST keys — with nothing failing,
+  because binary and bundle were wrong identically. Every step that runs one of
+  those npm scripts now calls `scripts/sanitize-env-local.sh` first, which drops
+  from `.env.local` any `EXPO_PUBLIC_*` key the step's own `env:` block declares.
+  **Adding a new CI-owned `EXPO_PUBLIC_*` var needs no change there** — the
+  script reads the live environment rather than a hardcoded list. The
+  `ENV_LOCAL_FILE` secret should still stop carrying `EXPO_PUBLIC_APP_STAGE`,
+  `EXPO_PUBLIC_WEBSOCKET_TRENDLY` and `EXPO_PUBLIC_FIRESTORE_DATABASE_ID`; until
+  it does, every run warns.
 - Rolling back: `eas update:republish` or `eas update:roll-back-to-embedded`.
   **Never** move or delete ledger tags to roll back — a rollback publishes at the
   same runtimeVersion, so the ledger stays valid, and touching it would force a

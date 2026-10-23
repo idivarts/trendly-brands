@@ -1,7 +1,9 @@
 /**
  * DesignFrame (web) — renders the design HTML in an <iframe srcDoc> and bridges
- * messages via window.postMessage. The iframe IS the render surface, so the
- * html2canvas capture is pixel-identical to the preview.
+ * messages via window.postMessage.
+ *
+ * Preview only. The publishable PNG/MP4 comes from the server render worker,
+ * which loads the same saved HTML in real Chromium.
  */
 import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import { View } from "react-native";
@@ -22,20 +24,13 @@ const DesignFrameWeb = forwardRef<DesignFrameHandle, DesignFrameProps>(
             setText: (id, text) => post({ type: "setText", id, text }),
             deselect: () => post({ type: "deselect" }),
             showSlide: (index, slideWidth) => post({ type: "showSlide", index, slideWidth }),
-            captureAll: (count) => post({ type: "captureSlides", count }),
             play: () => post({ type: "play" }),
             pause: () => post({ type: "pause" }),
             seek: (ms) => post({ type: "seek", ms }),
-            captureVideo: (fps, audio) => post({ type: "captureVideo", fps, audio }),
         }));
 
         useEffect(() => {
             const handler = (e: MessageEvent) => {
-                // The MP4 result comes back as a structured-clone Blob, not JSON.
-                if (e.data && typeof e.data === "object" && (e.data as any).__frameBlob) {
-                    onMessage({ type: (e.data as any).type, blob: (e.data as any).blob } as FrameOutMsg);
-                    return;
-                }
                 if (typeof e.data !== "string") return;
                 try {
                     onMessage(JSON.parse(e.data) as FrameOutMsg);

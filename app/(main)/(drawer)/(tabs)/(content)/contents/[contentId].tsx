@@ -3,13 +3,22 @@ import { CONTENT_TYPE_LABELS, ContentType } from "@/components/content-calendar/
 import ContentCommentsPanel from "@/components/contents/ContentCommentsPanel";
 import ContentActionsMenu from "@/components/contents/detail/ContentActionsMenu";
 import ContentInfoModal from "@/components/contents/detail/ContentInfoModal";
+import HandoffCard from "@/components/contents/detail/HandoffCard";
+import ScriptModal from "@/components/contents/detail/ScriptModal";
 import { MEDIA_SPEC } from "@/components/contents/detail/media-spec";
 import MediaStage from "@/components/contents/detail/MediaStage";
 import DesignStage from "@/components/contents/detail/design-stage/DesignStage";
+import { useDesignPreview } from "@/components/contents/detail/design-stage/use-design-preview";
 import NoSocialsModal from "@/components/contents/detail/NoSocialsModal";
 import PostingSummary from "@/components/contents/detail/PostingSummary";
 import PreviewPanel from "@/components/contents/detail/PreviewPanel";
 import PublishModal from "@/components/contents/detail/PublishModal";
+import { PublishReadinessInput } from "@/components/contents/detail/publish-readiness";
+import { usePublishGate } from "@/components/contents/detail/use-publish-gate";
+import {
+    composeScheduledAt,
+    isScheduleInPast,
+} from "@/components/contents/detail/schedule-presets";
 import PublishStatusPanel from "@/components/contents/detail/PublishStatusPanel";
 import ScriptEditor from "@/components/contents/detail/ScriptEditor";
 import UnsavedChangesModal from "@/components/contents/detail/UnsavedChangesModal";
@@ -30,7 +39,7 @@ import {
     isLockedStatus,
 } from "@/components/contents/types";
 import { useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapsed-context";
-import AIChatPanel from "@/components/shared/AIChatPanel";
+import AIChatPanel, { AIChatControls } from "@/components/shared/AIChatPanel";
 import { Focus, FocusArea } from "@/types/focus";
 import AIGeneratingHint from "@/components/shared/AIGeneratingHint";
 import { PanelComment } from "@/components/shared/CommentsPanel";
@@ -42,7 +51,7 @@ import { View } from "@/components/theme/Themed";
 import PageHeader from "@/components/ui/page-header";
 import { SOCIAL_PLATFORM_MAP } from "@/constants/Socials";
 import { useBrandContext } from "@/contexts/brand-context.provider";
-import { useBrandSocialContext } from "@/contexts/brand-social-context.provider";
+import { socialAccountLabel, useBrandSocialContext } from "@/contexts/brand-social-context.provider";
 import { useSubscribeNudge } from "@/contexts/subscribe-nudge-context.provider";
 import { useEntitlements } from "@/hooks/use-entitlements";
 import { useBreakpoints } from "@/hooks";
@@ -67,7 +76,6 @@ import {
     faCheck,
     faCommentDots,
     faEye,
-    faHandshake,
     faLock,
     faMagicWandSparkles,
     faPaperPlane,
@@ -76,6 +84,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { deleteField } from "firebase/firestore";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
@@ -151,6 +160,8 @@ const CreateContentScreen = () => {
     const { selectedBrand, hasCapability } = useBrandContext();
     const { maybeNudge, markAhaMoment } = useSubscribeNudge();
     const { tokens, maxPostsPerMonth } = useEntitlements();
+    // Pre-publish validation: scroll-to + highlight the field that blocks publishing.
+    const { scrollRef, onSectionLayout, highlighted, checkBeforePublish } = usePublishGate();
     const { openModal } = useConfirmationModel();
 
     // Resolve the live item from the real contents list first; fall back to
@@ -345,6 +356,14 @@ const CreateContentScreen = () => {
         setRightPanelMode("chat");
     }, []);
 
+    // The chat panel's header actions, lifted so the Design Studio's brief step
+    // can force a NEW conversation rather than appending the brief to whatever
+    // thread happened to be open.
+    const chatControlsRef = useRef<AIChatControls | null>(null);
+    const handleChatControls = useCallback((c: AIChatControls) => {
+        chatControlsRef.current = c;
+    }, []);
+
     // ── Media ↔ Design stage ────────────────────────────────────────────────
     // The centre column shows the MediaStage (home) by default; the DesignStage
     // takes it over when the user opens it or the AI generates a new design.
@@ -368,6 +387,19 @@ const CreateContentScreen = () => {
             setStage("design");
         }
     }, [seedItem, seedItem?.designRef?.revisionId]);
+
+    // Live HTML of the current design revision. The Media Stage previews it so a
+    // design the AI just wrote is visible BEFORE it is rendered — until then the
+    // content has a canvas but no attachments, which used to read as "no media".
+    const designPreview = useDesignPreview(contentId ?? null, seedItem?.designRef);
+
+    // The brief typed on the empty canvas: open a fresh AI thread, seed it with
+    // the brief as the first message, and let the normal chat flow take over.
+    const handleSubmitBrief = useCallback((brief: string) => {
+        chatControlsRef.current?.newChat();
+        setPendingChatMessage(brief);
+        setRightPanelMode("chat");
+    }, []);
 
     // "Send to AI" on a comment: attach a structured comment focus (inheriting
     // whatever the comment itself is anchored to — e.g. a design element) and
@@ -403,6 +435,11 @@ const CreateContentScreen = () => {
 
     const contentType = (seedItem?.type ?? paramType ?? "post") as ContentType;
     const isReel = contentType === "reel";
+    // Reel and landscape video are both "filmed" pieces: the script is an
+    // optional production document, so it moves off the page into a modal opened
+    // from the handoff card. `live` is script-only and keeps its inline editor.
+    const isFilmed = contentType === "reel" || contentType === "video";
+    const [scriptModalOpen, setScriptModalOpen] = useState(false);
     const isTextPost = contentType === "text";
     const mediaSpec = MEDIA_SPEC[contentType];
 
@@ -586,6 +623,12 @@ const CreateContentScreen = () => {
                 platformOptions,
                 platforms: targetPlatforms,
                 postingTimeStamp: date ? localDateToUtcMidnight(date) : undefined,
+                // Keep `source` honest: attachments that aren't a design render and
+                // weren't generated are the user's own upload. The design and
+                // generation lanes stamp themselves (Studio / backend).
+                ...(attachments.length > 0 && !seedItem?.designRef && seedItem?.source !== "ai-image"
+                    ? { source: "upload" as const }
+                    : {}),
             });
             // Flush all pending per-platform variation edits in the same save.
             await saveVariations();
@@ -599,7 +642,7 @@ const CreateContentScreen = () => {
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         saveTimeoutRef.current = setTimeout(() => setSaveState("idle"), 2000);
         return true;
-    }, [contentId, saveState, locked, updateContent, saveVariations, title, idea, status, caption, hashtags, timeOfPosting, script, imagePrompt, attachments, platformOptions, date, targetPlatforms]);
+    }, [contentId, saveState, locked, updateContent, saveVariations, title, idea, status, caption, hashtags, timeOfPosting, script, imagePrompt, attachments, platformOptions, date, targetPlatforms, seedItem?.designRef, seedItem?.source]);
 
     // ── Cmd/Ctrl+S keyboard shortcut to save (web) ───────────────────────────
     // Intercept the browser's native "save page" so the shortcut saves the
@@ -635,23 +678,31 @@ const CreateContentScreen = () => {
         if (!contentId || publishing || destinations.length === 0 || locked) return;
         const brandId = selectedBrand?.id;
         if (!brandId) return;
+
+        // Derive the precise publish epoch: "now" → current time; otherwise the
+        // selected date combined with the chosen HH:MM (via the same
+        // composeScheduledAt the modal's time controls use, so there is one
+        // definition of what "the scheduled moment" is).
+        let scheduledAt = Date.now();
+        if (mode === "scheduled") {
+            const at = composeScheduledAt(date, timeOfPosting);
+            // Last line of defence. The modal won't let you select a past time
+            // and the backend now rejects one, but a stale modal left open past
+            // its own slot could still get here — and this used to go out as an
+            // immediate, unconfirmed live publish.
+            if (isScheduleInPast(at)) {
+                Toaster.error(
+                    "That time has already passed",
+                    "Pick a later time, or choose Post now."
+                );
+                return;
+            }
+            scheduledAt = at.getTime();
+        }
+
         // Persist the chosen mode so the saved content reflects how it went out.
         if (mode !== scheduleMode) setScheduleMode(mode);
         setPublishing(true);
-
-        // Derive the precise publish epoch: "now" → current time; otherwise the
-        // selected date combined with the chosen HH:MM (defaulting to 09:00).
-        let scheduledAt = Date.now();
-        if (mode === "scheduled") {
-            const d = new Date(date);
-            if (/^\d{1,2}:\d{2}$/.test(timeOfPosting)) {
-                const [hh, mm] = timeOfPosting.split(":").map(Number);
-                d.setHours(hh, mm, 0, 0);
-            } else {
-                d.setHours(9, 0, 0, 0);
-            }
-            scheduledAt = d.getTime();
-        }
 
         try {
             // 1. Persist current state so the backend publishes the latest content.
@@ -733,14 +784,57 @@ const CreateContentScreen = () => {
         }
     }, [contentId, publishing, locked, destinations, platformOptions, scheduleMode, date, timeOfPosting, updateContent, saveVariations, selectedBrand?.id, title, idea, caption, hashtags, script, imagePrompt, attachments, markAhaMoment]);
 
-    // Guard the publish entry point: if the brand has no connected social
-    // accounts, surface a blocking modal that routes to Connected Accounts
-    // instead of opening the publish/schedule sheet.
+    // The content fields the publish-readiness rules look at. Shared by the
+    // pre-open gate here and the per-destination checks inside the modal.
+    // A design that hasn't been rendered (or was edited since) is not
+    // publishable, even when stale attachments make it look like it is.
+    const designRenderState = useMemo(() => {
+        if (!designPreview) return undefined;
+        if (designPreview.renderUrl) return "current" as const;
+        return attachments.length > 0 ? ("stale" as const) : ("never" as const);
+    }, [designPreview, attachments.length]);
+
+    const publishReadiness: PublishReadinessInput = useMemo(
+        () => ({
+            contentFormat: contentType,
+            attachments,
+            caption,
+            title,
+            hashtags,
+            designRenderState,
+        }),
+        [contentType, attachments, caption, title, hashtags, designRenderState]
+    );
+
+    // Guard the publish entry point. Three gates, in order of how early they can
+    // be answered:
+    //   1. No connected accounts at all → route to Connected Accounts.
+    //   2. Required content fields still empty → DON'T open the modal; scroll to
+    //      the field and flash it. These are the same rules the backend enforces
+    //      at publish time, run early so the user isn't told minutes later by a
+    //      `partially_failed` status.
+    //   3. Plan posting cap → a non-blocking nudge.
     const handleOpenPublish = useCallback(() => {
         if (publishableAccounts.length === 0) {
             setShowNoSocialsModal(true);
             return;
         }
+        if (!checkBeforePublish(publishReadiness)) return;
+
+        // Nothing has been picked yet — the user already declared which
+        // platforms this content targets, and publishableAccounts is filtered to
+        // exactly those, so make the obvious choice for them instead of opening
+        // on an empty selection with a "select at least one account" scold.
+        if (destinations.length === 0) {
+            setDestinations(
+                publishableAccounts.map((a) => ({
+                    socialAccountId: a.id,
+                    platform: a.platform as SocialDestination["platform"],
+                    username: socialAccountLabel(a),
+                }))
+            );
+        }
+
         // High-intent: the content is finished and they're one tap from
         // shipping. Nudge when the plan caps posting (free plans only; -1 is
         // unlimited). Non-blocking — the publish sheet still opens.
@@ -748,7 +842,14 @@ const CreateContentScreen = () => {
             maybeNudge("publish_over_cap");
         }
         setShowPublishModal(true);
-    }, [publishableAccounts.length, maxPostsPerMonth, maybeNudge]);
+    }, [
+        publishableAccounts,
+        maxPostsPerMonth,
+        maybeNudge,
+        checkBeforePublish,
+        publishReadiness,
+        destinations.length,
+    ]);
 
     // Unschedule a scheduled post: cancels the backend Step Functions execution
     // and reverts status to "approved", which unlocks the editor again. Returns
@@ -1105,7 +1206,7 @@ const CreateContentScreen = () => {
         [title, idea, contentType, targetPlatforms, caption, hashtags, script, attachments, buildAIVariations]
     );
 
-    const handleImageGenerate = useCallback((promptArg?: string, focusedSlideIndex?: number, model?: string) => {
+    const handleImageGenerate = useCallback((promptArg?: string, style?: string, focusedSlideIndex?: number, model?: string) => {
         const p = (promptArg ?? imagePrompt).trim();
         if (!p) return;
         if (tokens.state === "low" || tokens.state === "critical") {
@@ -1115,6 +1216,9 @@ const CreateContentScreen = () => {
         setIsGeneratingImage(true);
         generateImage({
             description: p,
+            style,
+            // The content type dictates the ratio — the user is never offered a
+            // choice that would fail this type's own upload validation.
             aspectRatio: MEDIA_SPEC[contentType].aspectRatios[0] ?? "1:1",
             count: 1,
             contextId: contentId,
@@ -1124,6 +1228,30 @@ const CreateContentScreen = () => {
             model,
         });
     }, [imagePrompt, contentType, contentId, generateImage, tokens.state, maybeNudge]);
+
+    // Clear the media back to the lane chooser.
+    //
+    // Both the design pointer AND the attachments have to go: a rendered design's
+    // attachments ARE the design, so dropping only `designRef` would leave an
+    // orphaned render that looks like an upload and can no longer be edited.
+    // The `designs` subcollection is deliberately left intact — the revisions stay
+    // recoverable from the Studio's "Restore previous design".
+    const handleClearMedia = useCallback(async () => {
+        if (!contentId || locked) return;
+        // Persisted below in the same breath, so this must not raise the dirty
+        // flag — otherwise leaving the page prompts about a change already saved.
+        skipDirtyRef.current = true;
+        setAttachments([]);
+        try {
+            await updateContent(contentId, {
+                attachments: [],
+                designRef: deleteField() as any,
+                source: deleteField() as any,
+            });
+        } catch (e) {
+            console.warn("Clear media error:", e);
+        }
+    }, [contentId, locked, updateContent]);
 
     // React to AI generation results streaming back from the backend.
 
@@ -1232,7 +1360,8 @@ const CreateContentScreen = () => {
             ? seedItem?.imageGeneration?.error || "Image generation failed. Please try again."
             : null;
 
-    const formattedDate = date.toLocaleDateString("en-IN", {
+    // Device locale, not a hardcoded "en-IN" — the app is not India-only.
+    const formattedDate = date.toLocaleDateString(undefined, {
         day: "2-digit",
         month: "short",
         year: "numeric",
@@ -1272,7 +1401,7 @@ const CreateContentScreen = () => {
                     accessibilityLabel="Publish or schedule"
                 >
                     <FontAwesomeIcon icon={faPaperPlane} size={13} color={colors.primary} />
-                    {xl && <Text style={styles.publishHeaderText}>Publish</Text>}
+                    {xl && <Text style={styles.publishHeaderText}>Publish or schedule</Text>}
                 </Pressable>
             ),
             // Save — hidden once locked (scheduled / posted)
@@ -1399,12 +1528,13 @@ const CreateContentScreen = () => {
                                 onAskAI={handleAskAI}
                                 onFocus={handleFocusElement}
                                 onClose={() => setStage("media")}
-                                onOpenChat={() => setRightPanelMode("chat")}
+                                onSubmitBrief={handleSubmitBrief}
                                 readOnly={locked}
                             />
                         </View>
                     ) : (
                     <ScrollView
+                        ref={scrollRef}
                         contentContainerStyle={styles.scroll}
                         showsVerticalScrollIndicator={false}
                         keyboardShouldPersistTaps="handled"
@@ -1544,8 +1674,14 @@ const CreateContentScreen = () => {
                             </View>
                         ) : null}
 
-                        {/* ── Content heading: title + type ────────────────────── */}
-                        <View style={styles.section}>
+                        {/* ── Content heading: title + type (holds MediaStage) ─── */}
+                        <View
+                            style={[
+                                styles.section,
+                                highlighted === "media" && styles.sectionHighlighted,
+                            ]}
+                            onLayout={onSectionLayout("media")}
+                        >
                             <View style={styles.contentHeading}>
                                 <Text style={styles.contentTitle} numberOfLines={2}>
                                     {title || "Untitled content"}
@@ -1573,21 +1709,28 @@ const CreateContentScreen = () => {
                             {mediaSpec.kind !== "none" && (
                                 <MediaStage
                                     contentType={contentType}
+                                    contentId={contentId}
                                     attachments={attachments}
                                     onAttachmentsChange={setAttachments}
+                                    source={seedItem?.source}
+                                    designRef={seedItem?.designRef}
+                                    designPreview={designPreview}
                                     onOpenDesign={() => setStage("design")}
+                                    onClearMedia={handleClearMedia}
+                                    imageGenerating={imageGenerating}
+                                    imageGenError={imageGenError}
+                                    onGenerateImage={handleImageGenerate}
                                     readOnly={locked}
                                 />
                             )}
 
-                            {mediaSpec.hasScript && (
+                            {/* Inline only for `live`, where the script IS the
+                                content. Reel/video author it in ScriptModal,
+                                opened from the handoff card at the bottom. */}
+                            {mediaSpec.hasScript && !isFilmed && (
                                 <ScriptEditor
-                                    title={isReel ? "Reel Script" : "Script"}
-                                    subtitle={
-                                        isReel
-                                            ? "Optional — add a shot-by-shot script, or just upload your finished video above."
-                                            : "Outline the talking points and flow for your live session."
-                                    }
+                                    title="Script"
+                                    subtitle="Outline the talking points and flow for your live session."
                                     script={script}
                                     onScriptChange={setScript}
                                     aiPrompt={scriptAiPrompt}
@@ -1597,14 +1740,19 @@ const CreateContentScreen = () => {
                                     task="script"
                                     contentId={contentId}
                                     onSendToChat={handleSendToChat}
-                                    collapsible={isReel}
                                     readOnly={locked}
                                 />
                             )}
                         </View>
 
                         {/* ── Caption / Content ────────────────────────────────── */}
-                        <View style={styles.section}>
+                        <View
+                            style={[
+                                styles.section,
+                                highlighted === "caption" && styles.sectionHighlighted,
+                            ]}
+                            onLayout={onSectionLayout("caption")}
+                        >
                             <Text style={styles.sectionLabel}>
                                 {contentType === "text" ? "CONTENT" : "CAPTION"}
                             </Text>
@@ -1758,37 +1906,24 @@ const CreateContentScreen = () => {
                             </View>
                         ) : null}
 
-                        {/* ── Reel Collab CTA ───────────────────────────────────── */}
-                        {isReel && (
+                        {/* ── Production & handoff (reel / video) ───────────────── */}
+                        {isFilmed && (
                             <View style={styles.section}>
-                                <View style={styles.collabBanner}>
-                                    <View style={styles.collabAccent} />
-                                    <View style={styles.collabBody}>
-                                        <Text style={styles.collabTitle}>
-                                            Want influencers to create this reel?
-                                        </Text>
-                                        <Text style={styles.collabSub}>
-                                            Post this reel as a collaboration requirement so creators can
-                                            discover it, apply, and bring your script to life.
-                                        </Text>
-                                        <Pressable
-                                            style={({ pressed }) => [
-                                                styles.collabBtn,
-                                                pressed && styles.btnPressed,
-                                            ]}
-                                            onPress={handleCreateCollab}
-                                        >
-                                            <FontAwesomeIcon
-                                                icon={faHandshake}
-                                                size={14}
-                                                color={colors.onPrimary}
-                                            />
-                                            <Text style={styles.collabBtnText}>
-                                                Create Collab Requirement
-                                            </Text>
-                                        </Pressable>
-                                    </View>
-                                </View>
+                                <Text style={styles.sectionLabel}>PRODUCTION &amp; HANDOFF</Text>
+                                <HandoffCard
+                                    isReel={isReel}
+                                    script={script}
+                                    onOpenScript={() => setScriptModalOpen(true)}
+                                    onShare={
+                                        selectedBrand?.id && contentId && hasCapability("manage_content")
+                                            ? () => setShowShareModal(true)
+                                            : undefined
+                                    }
+                                    onCreateCollab={
+                                        hasCapability("manage_content") ? handleCreateCollab : undefined
+                                    }
+                                    readOnly={locked}
+                                />
                             </View>
                         )}
                           </>
@@ -1824,6 +1959,7 @@ const CreateContentScreen = () => {
                                     getLiveContent={getLiveChatContent}
                                     initialMessage={pendingChatMessage}
                                     onInitialMessageSent={() => setPendingChatMessage(undefined)}
+                                    onControlsChange={handleChatControls}
                                     isCompact
                                 />
                             }
@@ -1865,6 +2001,7 @@ const CreateContentScreen = () => {
                             getLiveContent={getLiveChatContent}
                             initialMessage={pendingChatMessage}
                             onInitialMessageSent={() => setPendingChatMessage(undefined)}
+                            onControlsChange={handleChatControls}
                             isCompact
                             onCollapse={() => setRightPanelMode("none")}
                             // Tab bar owns the bottom inset (don't double it), but this
@@ -1954,6 +2091,26 @@ const CreateContentScreen = () => {
                 }
             />
 
+            {/* Script & timeline (reel/video). Writes the page's live `script`
+                state, so closing it is not a cancel — the page's Save and
+                unsaved-changes guard stay the single source of truth. */}
+            {isFilmed ? (
+                <ScriptModal
+                    visible={scriptModalOpen}
+                    onClose={() => setScriptModalOpen(false)}
+                    script={script}
+                    onScriptChange={setScript}
+                    aiPrompt={scriptAiPrompt}
+                    onAiPromptChange={setScriptAiPrompt}
+                    onEnhance={handleScriptAiEnhance}
+                    isGenerating={isGeneratingScript}
+                    task="script"
+                    contentId={contentId}
+                    onSendToChat={handleSendToChat}
+                    readOnly={locked}
+                />
+            ) : null}
+
             {selectedBrand?.id && contentId ? (
                 <ShareModal
                     visible={showShareModal}
@@ -1983,13 +2140,13 @@ const CreateContentScreen = () => {
                 onDestinationsChange={setDestinations}
                 platformOptions={platformOptions}
                 onPlatformOptionsChange={setPlatformOptions}
-                formattedDate={formattedDate}
                 dateValue={date}
                 onDateChange={setDate}
                 timeOfPosting={timeOfPosting}
                 onTimeChange={setTimeOfPosting}
                 onPublish={handlePublish}
                 publishing={publishing}
+                readiness={publishReadiness}
                 variationPlatforms={variationPlatforms}
                 hideOptionPlatforms={optionsHandledElsewhere}
             />
@@ -2033,6 +2190,16 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                 },
                 section: {
                     marginBottom: 20,
+                },
+                // Flashed on the section a failed publish gate points at. A
+                // coloured border is the sanctioned exception to the
+                // shadows-not-borders rule for validation state.
+                sectionHighlighted: {
+                    borderWidth: 1.5,
+                    borderColor: colors.errorBorder,
+                    borderRadius: 12,
+                    padding: 8,
+                    marginHorizontal: -8,
                 },
                 variationHint: {
                     fontSize: fs(11),
@@ -2282,57 +2449,6 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     shadowRadius: 4,
                     shadowOpacity: 0.06,
                     elevation: 2,
-                },
-                collabBanner: {
-                    flexDirection: "row",
-                    backgroundColor: colors.card,
-                    borderRadius: 14,
-                    overflow: "hidden",
-                    shadowColor: colors.primary,
-                    shadowOffset: { width: 0, height: 3 },
-                    shadowRadius: 12,
-                    shadowOpacity: 0.1,
-                    elevation: 4,
-                },
-                collabAccent: {
-                    width: 4,
-                    backgroundColor: colors.primary,
-                },
-                collabBody: {
-                    flex: 1,
-                    padding: 16,
-                },
-                collabTitle: {
-                    fontSize: fs(15),
-                    fontWeight: "700",
-                    color: colors.text,
-                    marginBottom: 6,
-                },
-                collabSub: {
-                    fontSize: fs(13),
-                    color: colors.textSecondary,
-                    lineHeight: lh(19),
-                    marginBottom: 14,
-                },
-                collabBtn: {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    alignSelf: "flex-start",
-                    gap: 8,
-                    paddingHorizontal: 16,
-                    paddingVertical: 10,
-                    borderRadius: 10,
-                    backgroundColor: colors.primary,
-                    shadowColor: colors.primary,
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowRadius: 12,
-                    shadowOpacity: 0.35,
-                    elevation: 4,
-                },
-                collabBtnText: {
-                    fontSize: fs(13),
-                    fontWeight: "700",
-                    color: colors.onPrimary,
                 },
                 saveBtn: {
                     flexDirection: "row",

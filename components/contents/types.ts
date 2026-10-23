@@ -3,6 +3,9 @@ import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attach
 import { Platform } from "@/shared-libs/firestore/trendly-pro/constants/platform";
 import { IContentPublishResult, IImageGeneration, IPlatformOptions } from "@/shared-libs/firestore/trendly-pro/models/contents";
 import { IContentAudio, IContentDesignRef } from "@/shared-libs/firestore/trendly-pro/models/design";
+// Type-only: media-lane pulls in MEDIA_SPEC, which transitively imports this
+// file. `import type` is erased, so this adds no runtime import cycle.
+import type { MediaSource } from "./detail/media-lane";
 import { IContentVariation } from "@/shared-libs/firestore/trendly-pro/models/variations";
 import Colors from "@/shared-uis/constants/Colors";
 
@@ -108,8 +111,11 @@ export interface ContentItem extends CalendarItem {
     attachments?: Attachment[];
     /** Live state of a backend-driven AI image-generation job, if any. */
     imageGeneration?: IImageGeneration;
-    /** AI Studio: how the media was produced + the current design pointer + audio. */
-    source?: "ai" | "upload" | "canva";
+    /**
+     * AI Studio: how the media was produced + the current design pointer + audio.
+     * `source` is the authoritative media lane — see components/contents/detail/media-lane.
+     */
+    source?: MediaSource;
     designRef?: IContentDesignRef;
     audio?: IContentAudio;
     /** Target connected accounts for publish / schedule (Phase 4). */

@@ -44,8 +44,10 @@ permissions:
   contents: write
 
 # Branch credentials are consumed by plugins/with-branch.js during config
-# evaluation, and that plugin's output (associatedDomains / intentFilters) is
-# part of the expo-updates fingerprint.
+# evaluation, and have to be present or the binary ships without a Branch key.
+# They are NOT a fingerprint input any more — the plugin stopped setting
+# associatedDomains / intentFilters and now only writes a mod, which is not
+# hashed. Stage separation comes from plugins/with-stage.js instead.
 #
 # Workflow-level `env` in a CALLER does not propagate into a reusable workflow,
 # so this block must live here rather than being inherited.
@@ -103,9 +105,9 @@ jobs:
       # fingerprint the binary does not embed, permanently breaking OTA delivery
       # with no error anywhere.
       #
-      # EXPO_PUBLIC_APP_STAGE must be set here and match the build step — the
-      # Branch plugin resolves live-vs-test (and therefore the link domains)
-      # from it, and that feeds the fingerprint.
+      # EXPO_PUBLIC_APP_STAGE must be set here and match the build step —
+      # plugins/with-stage.js puts it into the public config, so it is now the
+      # one thing that makes a dev fingerprint differ from a prod one.
       - name: Assert runtime version matches caller
         env:
           EXPO_PUBLIC_APP_STAGE: ${{ inputs.stage }}
@@ -152,7 +154,14 @@ jobs:
           EXPO_PUBLIC_CLARITY_PROJECT_ID: ${{ vars.CLARITY_PROJECT_ID }}
           EXPO_PUBLIC_REVENUECAT_IOS_KEY: ${{ vars.REVENUECAT_IOS_KEY }}
           EXPO_PUBLIC_REVENUECAT_ANDROID_KEY: ${{ vars.REVENUECAT_ANDROID_KEY }}
-        run: npm run build-${{ inputs.platform }}${{ inputs.stage == 'prod' && '' || '-dev' }}
+        run: |
+          set -euo pipefail
+          # The build scripts begin with `export $(cat .env.local | xargs)`, and
+          # that export beats everything the `env:` block above just set. Drop
+          # the CI-owned keys from the decoded secret first, or a prod build
+          # silently ships as dev. See scripts/sanitize-env-local.sh.
+          ./scripts/sanitize-env-local.sh
+          npm run build-${{ inputs.platform }}${{ inputs.stage == 'prod' && '' || '-dev' }}
 
       - name: Submit to store
         env:

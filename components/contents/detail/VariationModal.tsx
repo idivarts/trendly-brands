@@ -1,3 +1,4 @@
+import { withAlpha } from "@/utils/color";
 /**
  * VariationModal — "duplicate to platform variation" picker.
  *
@@ -237,7 +238,7 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     backgroundColor: colors.card,
                 },
                 checkOn: {
-                    backgroundColor: colors.onPrimary + "33",
+                    backgroundColor: withAlpha(colors.onPrimary, 0.2),
                 },
                 footer: {
                     flexDirection: "row",

@@ -55,7 +55,9 @@ import DesignFrame from "./DesignFrame";
 import SoundtrackPanel from "./SoundtrackPanel";
 import { useSoundtrackPlayer } from "./use-audio-player";
 import { useContentDesign } from "./use-content-design";
+import { useDesignRender } from "./use-design-render";
 import { fs, lh } from "@/constants/Typography";
+import { MEDIA_SPEC } from "../media-spec";
 
 interface DesignStageProps {
     contentId: string;
@@ -73,8 +75,11 @@ interface DesignStageProps {
     onFocus: (focus: Focus) => void;
     /** Close the Design Stage and return to the MediaStage view. */
     onClose: () => void;
-    /** Open the AI chat (used by the empty state on mobile, where it's an overlay). */
-    onOpenChat: () => void;
+    /**
+     * Start a design from the user's brief: opens a NEW AI conversation with the
+     * brief as its first message. Called from the empty-canvas brief step.
+     */
+    onSubmitBrief: (brief: string) => void;
     readOnly?: boolean;
 }
 
@@ -89,13 +94,13 @@ const TB_GAP = 8;
 const TB_EDGE = 4;
 
 const DesignStage: React.FC<DesignStageProps> = (props) => {
-    const { contentId, brandId, designRef, isVideo, readOnly, onClose, onOpenChat } = props;
+    const { contentId, brandId, designRef, isVideo, readOnly, onClose, onSubmitBrief } = props;
     const theme = useTheme();
     const colors = Colors(theme);
     const { width, xl } = useBreakpoints();
     const styles = useStyles(colors);
 
-    const { revision, history, addRevision, setRenders, setVideoRender, revertTo } = useContentDesign(contentId, designRef);
+    const { revision, history, addRevision, revertTo } = useContentDesign(contentId, designRef);
     const { addComment } = useContentComments(contentId);
     // Video-synced audio: plays the music bed + voiceover in step with the video
     // preview so "play" reflects the final mix (music ducked under the voice).
@@ -127,7 +132,6 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     const [selected, setSelected] = useState<Selected>(null);
     const [modalOpen, setModalOpen] = useState<null | "edit" | "comment">(null);
     const [modalText, setModalText] = useState("");
-    const [capturing, setCapturing] = useState(false);
     const [slide, setSlide] = useState(0);
     const [playing, setPlaying] = useState(false);
     const [curMs, setCurMs] = useState(0);
@@ -137,14 +141,13 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     // "time" messages from the frame) is overridden by this local fraction so the
     // fill + thumb track the finger with zero lag. null = not scrubbing.
     const [scrubFrac, setScrubFrac] = useState<number | null>(null);
-    const [videoNote, setVideoNote] = useState<string | null>(null);
-    // Render progress: { done, total } while capturing (total 0 = indeterminate
+    // (render progress / errors now live in useDesignRender)
     // "preparing" phase). Drives the on-canvas progress overlay + header %.
-    const [renderProg, setRenderProg] = useState<{ done: number; total: number } | null>(null);
     // Render failure surfaced on the canvas (gracious, dismissible, with retry).
-    const [renderError, setRenderError] = useState<{ message: string; retry: boolean } | null>(null);
     // Soundtrack starts collapsed — the user opens it on demand.
     const [musicOpen, setMusicOpen] = useState(false);
+    // The brief typed on the empty canvas, before any design exists.
+    const [brief, setBrief] = useState("");
     // Header overflow (⋮) menu — currently just the Canva hand-off.
     const [menuOpen, setMenuOpen] = useState(false);
     // Revert is a strong action — confirm before rewinding to the last version.
@@ -160,6 +163,20 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     const docType = revision?.docType ?? designRef?.docType ?? "image";
     const isVideoDesign = docType === "video";
     const slideCount = Math.max(revision?.slideCount ?? designRef?.slideCount ?? 1, 1);
+
+    // Ask the server to render. Shared with the Media Stage's render action so
+    // there is one render pipeline, not two. Nothing is paused first: the worker
+    // renders the SAVED HTML in its own browser, so whatever this preview is
+    // doing is irrelevant to the output.
+    const render = useDesignRender({
+        contentId,
+        revisionId: revision?.id,
+        isVideoDesign,
+        slideCount,
+        renderStatus: revision?.renderStatus,
+        renderProgress: revision?.renderProgress,
+        renderError: revision?.renderError,
+    });
     const hasDesign = !!html;
     // Fit the design into the measured canvas area, preserving aspect ratio AND
     // reserving room for the on-canvas controls (video scrubber / slide nav) so a
@@ -173,6 +190,32 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     let displayWidth = Math.min(availW || width - 32, fitByHeight, MAX_CANVAS_W);
     if (!(displayWidth > 0)) displayWidth = Math.min(width - 32, 340);
     const displayHeight = w > 0 ? (displayWidth * h) / w : displayWidth;
+    // ── Brief step (empty canvas) ───────────────────────────────────────────
+    // Per-type copy, so the prompt asks for the thing actually being made. Keyed
+    // off the CONTENT TYPE, not the revision: on an empty canvas there is no
+    // revision, so slideCount would always read 1 and a carousel would be asked
+    // for a "design" rather than "slides".
+    const briefNoun = isVideo ? "video" : MEDIA_SPEC[props.contentType].multi ? "slides" : "design";
+    const briefSubtitle =
+        briefNoun === "video"
+            ? "Explain what you want in the video — the message, the mood, who it's for. The AI turns it into an editable design."
+            : briefNoun === "slides"
+                ? "Explain what you want across the slides — the message, the mood, who it's for. The AI turns it into an editable design."
+                : "Explain what you want in the design — the message, the mood, who it's for. The AI turns it into an editable design.";
+    const briefPlaceholder =
+        briefNoun === "video"
+            ? "e.g. A 15s launch teaser for our new cold brew — punchy, upbeat, ends on the bottle with the 20% off code"
+            : briefNoun === "slides"
+                ? "e.g. Five slides explaining why our cold brew is less acidic — one idea per slide, warm and friendly"
+                : "e.g. A bold announcement for our new cold brew launch, warm tones, big headline and the 20% off code";
+
+    const submitBrief = () => {
+        const text = brief.trim();
+        if (!text) return;
+        onSubmitBrief(text);
+        setBrief("");
+    };
+
     const progress = durMs > 0 ? Math.min(curMs / durMs, 1) : 0;
     // What the fill + thumb actually render: the live drag fraction while
     // scrubbing, otherwise the real playback progress.
@@ -180,15 +223,16 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
 
     // Render-overlay derived values: a determinate fraction (null while the total
     // is still unknown) + a human label per render type.
-    const renderFrac =
-        renderProg && renderProg.total > 0 ? Math.min(renderProg.done / renderProg.total, 1) : null;
+    const capturing = render.capturing;
+    const renderError = render.error;
+    const renderFrac = render.progress != null ? Math.min(render.progress, 1) : null;
     const renderLabel = isVideoDesign
         ? renderFrac != null
-            ? `Encoding video… ${Math.round(renderFrac * 100)}%`
+            ? `Rendering video… ${Math.round(renderFrac * 100)}%`
             : "Preparing video…"
         : slideCount > 1
-            ? renderProg && renderProg.total > 0
-                ? `Rendering slide ${renderProg.done} of ${renderProg.total}`
+            ? renderFrac != null
+                ? `Rendering slides… ${Math.round(renderFrac * 100)}%`
                 : "Rendering slides…"
             : "Rendering image…";
 
@@ -242,104 +286,13 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
         } else if (msg.type === "ended") {
             setPlaying(false);
             void player.pause();
-        } else if (msg.type === "renderProgress") {
-            setRenderProg({ done: msg.frame, total: msg.total });
-        } else if (msg.type === "renderVideo") {
-            // Uploading the encoded MP4 — flip to an indeterminate "saving" state.
-            setRenderProg({ done: 0, total: 0 });
-            uploadVideo(msg.blob)
-                .then((url) => revision && setVideoRender(revision.id, url))
-                .then(() => {
-                    setVideoNote("Video saved.");
-                    Toaster.success("Video rendered", "Saved to your content.");
-                })
-                .catch(() =>
-                    setRenderError({
-                        message: "Your video rendered, but we couldn't save it. Check your connection and try again.",
-                        retry: true,
-                    })
-                )
-                .finally(() => {
-                    setCapturing(false);
-                    setRenderProg(null);
-                });
         } else if (msg.type === "tap") {
             setSelected({ id: msg.id, text: msg.text, editable: msg.editable, rect: msg.rect });
         } else if (msg.type === "deselect") {
             setSelected(null);
         } else if (msg.type === "html") {
             addRevision(msg.html, w, h, slideCount, docType, "text", revision?.id);
-        } else if (msg.type === "renderSlides") {
-            // Slides captured — now uploading them (indeterminate).
-            setRenderProg({ done: 0, total: 0 });
-            Promise.all(msg.dataUrls.map((d, i) => uploadPng(d, i)))
-                .then((urls) => revision && setRenders(revision.id, urls))
-                .then(() =>
-                    Toaster.success(slideCount > 1 ? "Slides rendered" : "Image rendered", "Saved to your content.")
-                )
-                .catch(() =>
-                    setRenderError({
-                        message: "Couldn't save the render. Check your connection and try again.",
-                        retry: true,
-                    })
-                )
-                .finally(() => {
-                    setCapturing(false);
-                    setRenderProg(null);
-                });
-        } else if (msg.type === "render") {
-            uploadPng(msg.dataUrl, 0)
-                .then((url) => revision && setRenders(revision.id, [url]))
-                .then(() => Toaster.success("Image rendered", "Saved to your content."))
-                .catch(() =>
-                    setRenderError({
-                        message: "Couldn't save the render. Check your connection and try again.",
-                        retry: true,
-                    })
-                )
-                .finally(() => {
-                    setCapturing(false);
-                    setRenderProg(null);
-                });
-        } else if (msg.type === "error") {
-            setCapturing(false);
-            setRenderProg(null);
-            // Surface the frame's actual reason (don't hard-code "browser may not
-            // support…" for every video failure — that masked a real encoder bug).
-            if (msg.message) console.warn("[design render] error:", msg.message);
-            const detail = msg.message ? ` (${msg.message})` : "";
-            setRenderError(
-                isVideoDesign
-                    ? {
-                          message: `Couldn't render the video.${detail} If this keeps happening, try Chrome on desktop.`,
-                          retry: true,
-                      }
-                    : { message: `Something went wrong while rendering.${detail} Please try again.`, retry: true }
-            );
         }
-    };
-
-    const uploadPng = async (dataUrl: string, index: number): Promise<string> => {
-        const rand = Math.random().toString(36).slice(2, 8);
-        const filename = `design_${Date.now()}_s${index}_${rand}.png`;
-        const res = await HttpWrapper.fetch(`/s3/v1/attachments?filename=${encodeURIComponent(filename)}`, {
-            method: "POST",
-        });
-        const { uploadUrl, attachmentUrl } = await res.json();
-        const blob = await (await fetch(dataUrl)).blob();
-        await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": "image/png" }, body: blob });
-        return attachmentUrl as string;
-    };
-
-    const uploadVideo = async (blob: Blob): Promise<string> => {
-        const rand = Math.random().toString(36).slice(2, 8);
-        const filename = `design_${Date.now()}_${rand}.mp4`;
-        const res = await HttpWrapper.fetch(`/s3/v1/attachments?filename=${encodeURIComponent(filename)}`, {
-            method: "POST",
-        });
-        const { uploadUrl, attachmentUrl } = await res.json();
-        await fetch(uploadUrl, { method: "PUT", headers: { "Content-Type": "video/mp4" }, body: blob });
-        return attachmentUrl as string;
     };
 
     const togglePlay = () => {
@@ -410,37 +363,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
 
     const saveRender = () => {
         if (!hasDesign) return;
-        setRenderError(null);
-        if (isVideoDesign) {
-            if (Platform.OS !== "web") {
-                setRenderError({ message: "Video export is available in the web app for now.", retry: false });
-                return;
-            }
-            frameRef.current?.pause();
-            void player.pause();
-            setPlaying(false);
-            setCapturing(true);
-            setRenderProg({ done: 0, total: 0 });
-            setVideoNote(null);
-            const a = props.audio;
-            // 15fps (not 24): the export rasterizes each frame with html2canvas at
-            // ~1s/frame regardless of resolution, so frame count is the only real
-            // lever on render time — 15fps ~halves it and stays smooth for these
-            // motion-graphic reels. (Real fix for long videos = server-side render.)
-            frameRef.current?.captureVideo(15, a
-                ? {
-                      musicUrl: a.musicUrl,
-                      voiceoverUrl: a.voiceoverUrl,
-                      musicVolume: a.musicVolume,
-                      voiceoverVolume: a.voiceoverVolume,
-                      duckMusic: a.duckMusic,
-                  }
-                : undefined);
-            return;
-        }
-        setCapturing(true);
-        setRenderProg({ done: 0, total: slideCount });
-        frameRef.current?.captureAll(slideCount);
+        render.startRender();
     };
 
     const openEdit = () => {
@@ -518,7 +441,6 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
         }
     };
 
-    const renderTitle = isVideoDesign ? "Render video" : slideCount > 1 ? "Render slides" : "Render";
 
     return (
         <View style={styles.container}>
@@ -559,7 +481,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                                     <ActivityIndicator size="small" color={colors.onPrimary} />
                                 )
                             ) : (
-                                <Text style={styles.renderBtnText}>{renderTitle}</Text>
+                                <Text style={styles.renderBtnText}>{render.label}</Text>
                             )}
                         </Pressable>
                     ) : null}
@@ -746,7 +668,6 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                                     </Pressable>
                                 </View>
                             ) : null}
-                            {videoNote ? <Text style={styles.videoNote}>{videoNote}</Text> : null}
 
                             {/* Gracious render-failure card — calm, explains what
                                 happened, and offers a retry. */}
@@ -774,7 +695,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                                             ) : null}
                                             <Pressable
                                                 style={({ pressed }) => [styles.renderDismissBtn, pressed && styles.pressed]}
-                                                onPress={() => setRenderError(null)}
+                                                onPress={render.clearError}
                                             >
                                                 <Text style={styles.renderDismissText}>Dismiss</Text>
                                             </Pressable>
@@ -785,25 +706,64 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                         </View>
                     </ScrollView>
                 ) : (
-                    <View style={styles.empty}>
-                        <View style={styles.emptyIcon}>
-                            <FontAwesomeIcon icon={faWandMagicSparkles} size={26} color={colors.primary} />
-                        </View>
-                        <Text style={styles.emptyTitle}>Let's design this together</Text>
-                        <Text style={styles.emptySub}>
-                            {xl
-                                ? "Describe what you want in the AI chat on the right and I'll generate an editable design right here."
-                                : "Tell the AI what you want and I'll generate an editable design right here."}
-                        </Text>
-                        {!xl ? (
+                    /* No design yet — collect a brief instead of pointing at the
+                       chat. An empty canvas plus "describe it over there" gives
+                       the user nothing to act on; a prompt box does, and the
+                       brief becomes the first message of a fresh AI thread. */
+                    <ScrollView contentContainerStyle={styles.briefScroll} showsVerticalScrollIndicator={false}>
+                        <View style={styles.brief}>
+                            <View style={styles.emptyIcon}>
+                                <FontAwesomeIcon icon={faWandMagicSparkles} size={26} color={colors.primary} />
+                            </View>
+                            <Text style={styles.emptyTitle}>What should we make?</Text>
+                            <Text style={styles.emptySub}>{briefSubtitle}</Text>
+
+                            <TextInput
+                                style={styles.briefInput}
+                                value={brief}
+                                onChangeText={setBrief}
+                                placeholder={briefPlaceholder}
+                                placeholderTextColor={colors.textSecondary}
+                                multiline
+                                autoFocus={xl}
+                                editable={!readOnly}
+                            />
+
                             <Pressable
-                                style={({ pressed }) => [styles.emptyCta, pressed && styles.pressed]}
-                                onPress={onOpenChat}
+                                style={({ pressed }) => [
+                                    styles.briefCta,
+                                    !brief.trim() && styles.briefCtaDisabled,
+                                    pressed && styles.pressed,
+                                ]}
+                                onPress={submitBrief}
+                                disabled={!brief.trim() || readOnly}
+                                accessibilityRole="button"
+                                accessibilityLabel="Start designing"
                             >
-                                <Text style={styles.emptyCtaText}>Talk to the AI</Text>
+                                <FontAwesomeIcon icon={faWandMagicSparkles} size={14} color={colors.onPrimary} />
+                                <Text style={styles.briefCtaText}>Start designing</Text>
                             </Pressable>
-                        ) : null}
-                    </View>
+
+                            <Text style={styles.briefHint}>
+                                The AI picks it up from here — you can keep refining it in the chat.
+                            </Text>
+
+                            {/* A cleared canvas only drops the pointer, so earlier
+                                revisions are still there. Without this they would
+                                be unreachable, since Revert lives on the canvas. */}
+                            {!readOnly && history.length > 0 ? (
+                                <Pressable
+                                    style={({ pressed }) => [styles.restoreBtn, pressed && styles.pressed]}
+                                    onPress={() => revertTo(history[0].id)}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Restore the previous design"
+                                >
+                                    <FontAwesomeIcon icon={faClockRotateLeft} size={12} color={colors.textSecondary} />
+                                    <Text style={styles.restoreBtnText}>Restore previous design</Text>
+                                </Pressable>
+                            ) : null}
+                        </View>
+                    </ScrollView>
                 )}
             </View>
 
@@ -1140,16 +1100,8 @@ const useStyles = (colors: any) =>
                     elevation: 3,
                 },
                 time: { fontSize: fs(12), color: colors.textSecondary, minWidth: 64, textAlign: "right" },
-                videoNote: { fontSize: fs(12), color: colors.textSecondary },
 
-                // Empty state
-                empty: {
-                    flex: 1,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: 28,
-                    gap: 12,
-                },
+                // Empty canvas → brief step
                 emptyIcon: {
                     width: 64,
                     height: 64,
@@ -1166,11 +1118,46 @@ const useStyles = (colors: any) =>
                     textAlign: "center",
                     maxWidth: 320,
                 },
-                emptyCta: {
+
+                // Brief step — the empty-canvas prompt that starts a design.
+                briefScroll: {
+                    flexGrow: 1,
+                    justifyContent: "center",
+                },
+                brief: {
+                    alignItems: "center",
+                    alignSelf: "center",
+                    width: "100%",
+                    maxWidth: 560,
+                    padding: 28,
+                    gap: 12,
+                },
+                briefInput: {
+                    width: "100%",
+                    minHeight: 128,
                     marginTop: 4,
-                    paddingHorizontal: 18,
-                    paddingVertical: 11,
-                    borderRadius: 10,
+                    borderRadius: 14,
+                    // Background (not an outline) signals the field is editable.
+                    backgroundColor: colors.card,
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    fontSize: fs(14),
+                    lineHeight: lh(21),
+                    color: colors.text,
+                    textAlignVertical: "top",
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 3,
+                    shadowOpacity: 0.04,
+                    elevation: 1,
+                },
+                briefCta: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 9,
+                    paddingHorizontal: 20,
+                    paddingVertical: 12,
+                    borderRadius: 11,
                     backgroundColor: colors.primary,
                     shadowColor: colors.primary,
                     shadowOffset: { width: 0, height: 4 },
@@ -1178,7 +1165,34 @@ const useStyles = (colors: any) =>
                     shadowOpacity: 0.35,
                     elevation: 4,
                 },
-                emptyCtaText: { color: colors.onPrimary, fontSize: fs(14), fontWeight: "700" },
+                briefCtaDisabled: { opacity: 0.5 },
+                briefCtaText: { color: colors.onPrimary, fontSize: fs(14), fontWeight: "800" },
+                briefHint: {
+                    fontSize: fs(12),
+                    lineHeight: lh(17),
+                    color: colors.textSecondary,
+                    textAlign: "center",
+                },
+                restoreBtn: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    marginTop: 4,
+                    paddingHorizontal: 14,
+                    paddingVertical: 9,
+                    borderRadius: 10,
+                    backgroundColor: colors.card,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 3,
+                    shadowOpacity: 0.04,
+                    elevation: 1,
+                },
+                restoreBtnText: {
+                    fontSize: fs(13),
+                    fontWeight: "700",
+                    color: colors.textSecondary,
+                },
 
                 // Soundtrack collapsed trigger
                 musicTrigger: {
