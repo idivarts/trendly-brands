@@ -1,9 +1,10 @@
 import TextInput from "@/components/ui/text-input";
 import Colors from "@/shared-uis/constants/Colors";
+import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@react-navigation/native";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import type { TextInputProps } from "react-native-paper";
+import { TextInput as PaperTextInput, type TextInputProps } from "react-native-paper";
 
 type AuthTextFieldProps = Omit<TextInputProps, "label"> & {
     /** Shown as a persistent label above the field (not a floating label). */
@@ -24,11 +25,16 @@ type AuthTextFieldProps = Omit<TextInputProps, "label"> & {
  * unreadable to JS, so a value-driven floating label never lifts and ends up
  * overlapping the previewed text. A static label + native placeholder is
  * managed by the browser and never collides with autofill.
+ *
+ * A `secureTextEntry` field also gets an eye toggle so the typed password can be
+ * read back before submitting. The reveal state lives per field instance, so the
+ * two password fields on sign-up toggle independently of each other.
  */
-const AuthTextField: React.FC<AuthTextFieldProps> = ({ label, placeholder, style, locked, ...props }) => {
+const AuthTextField: React.FC<AuthTextFieldProps> = ({ label, placeholder, style, locked, secureTextEntry, ...props }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => makeStyles(colors), [colors]);
+    const [revealed, setRevealed] = useState(false);
 
     // Soft rest border in light mode (the default paper outline is a heavy
     // mid-grey); a visible-but-subtle border in dark mode where a light hairline
@@ -51,6 +57,25 @@ const AuthTextField: React.FC<AuthTextFieldProps> = ({ label, placeholder, style
                 outlineStyle={styles.outline}
                 style={[styles.input, locked && styles.inputLocked, style]}
                 {...props}
+                secureTextEntry={secureTextEntry && !revealed}
+                right={
+                    secureTextEntry ? (
+                        <PaperTextInput.Icon
+                            icon={({ size, color }) => (
+                                <Ionicons
+                                    name={revealed ? "eye-off-outline" : "eye-outline"}
+                                    size={size}
+                                    color={color}
+                                />
+                            )}
+                            color={colors.textSecondary}
+                            onPress={() => setRevealed((shown) => !shown)}
+                            accessibilityLabel={revealed ? "Hide password" : "Show password"}
+                        />
+                    ) : (
+                        props.right
+                    )
+                }
                 editable={locked ? false : props.editable}
             />
         </View>
