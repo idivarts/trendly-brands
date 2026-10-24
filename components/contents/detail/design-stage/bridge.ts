@@ -29,10 +29,10 @@
  */
 import {
     measureDesign,
-    pauseScene,
+    paintTransitionAt,
     playSceneFrom,
     sceneAt,
-    seekScene,
+    seekAt,
 } from "@/shared-libs/design/design-runtime";
 
 /**
@@ -61,9 +61,9 @@ import {
 const RUNTIME_FNS: Record<string, (...args: any[]) => any> = {
     measureDesign,
     sceneAt,
-    seekScene,
+    seekAt,
+    paintTransitionAt,
     playSceneFrom,
-    pauseScene,
 };
 
 const SHARED_RUNTIME = Object.keys(RUNTIME_FNS)
@@ -92,9 +92,16 @@ ${SHARED_RUNTIME}
 
   // ── Video playback ───────────────────────────────────────────────────────
   // A video design is N [data-slide] SCENES inside [data-carousel], each with a
-  // data-duration (ms). Only one is visible at a time; it plays its own CSS
-  // animations, then the player pages to the next. Measurement and seeking both
-  // come from the shared runtime.
+  // data-duration (ms) and optionally an entry transition. A scene with one
+  // STARTS EARLY and overlaps the scene before it, so during that window two
+  // scenes are on screen and the runtime composites them. Measurement, seeking
+  // and compositing all come from the shared runtime.
+  //
+  // Playback and scrubbing drive it differently, on purpose. Scrubbing calls
+  // seekAt, which pins every animation to the instant asked for. Playback lets
+  // the browser run the animations at wall-clock speed — pinning them per frame
+  // would stutter — and calls paintTransitionAt each frame to draw the overlap,
+  // which is the one thing CSS cannot express on its own.
   var vMeasure = null, vRaf = null, vStartWall = 0, vBaseMs = 0, vActive = -1;
   function perfNow(){ return (window.performance && performance.now) ? performance.now() : Date.now(); }
   function measure(){ if (!vMeasure) vMeasure = measureDesign(); return vMeasure; }
@@ -114,8 +121,14 @@ ${SHARED_RUNTIME}
       var idx = sceneAt(m.offsets, elapsed);
       if (idx !== vActive){
         vActive = idx;
+        // The incoming scene's own animations start here, at the MOMENT the
+        // overlap begins — so its entrance plays through the cross-fade rather
+        // than waiting for the previous scene to be gone.
         playSceneFrom({ index: idx, localMs: elapsed - m.offsets[idx] });
       }
+      // Every frame, not just on a scene change: the overlap is an interpolation
+      // and has to be redrawn continuously while it runs.
+      paintTransitionAt({ ms: elapsed });
       vReport(elapsed);
       vRaf = requestAnimationFrame(tick);
     }
@@ -127,7 +140,11 @@ ${SHARED_RUNTIME}
     vBaseMs = Math.min(elapsed, measure().total);
     vStartWall = 0;
     vStop();
-    if (vActive >= 0) pauseScene(vActive);
+    // seekAt rather than pauseScene(vActive): pausing only the active scene
+    // leaves the OUTGOING one still animating under a half-drawn cross-fade.
+    // Seeking to the instant we stopped at pins both and composites them, so a
+    // paused frame is the same pixels the renderer would export for that time.
+    if (vActive >= 0) seekAt({ ms: vBaseMs });
   }
 
   function seek(ms){
@@ -135,9 +152,8 @@ ${SHARED_RUNTIME}
     vStop(); vStartWall = 0;
     ms = Math.max(0, Math.min(ms, m.total));
     vBaseMs = ms;
-    var idx = sceneAt(m.offsets, ms);
-    vActive = idx;
-    seekScene({ index: idx, localMs: ms - m.offsets[idx] });
+    vActive = sceneAt(m.offsets, ms);
+    seekAt({ ms: ms });
     vReport(ms);
   }
 
