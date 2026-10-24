@@ -546,6 +546,14 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
                     router.push("/billing");
                 }
             } else if (msg.type === "error") {
+                // The backend sends a sentence it has already made safe to show
+                // (the raw provider body stays in CloudWatch). Dropping it was
+                // why every failure — a dead provider, a rate limit, an expired
+                // key — reached the user as the typing indicator simply
+                // stopping, with nothing to act on and nothing to report.
+                Toaster.error(
+                    msg.message || "Something went wrong talking to the AI. Please try again."
+                );
                 finishStreaming();
             }
         });
