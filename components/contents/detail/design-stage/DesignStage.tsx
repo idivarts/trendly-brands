@@ -49,6 +49,7 @@ import {
     View,
 } from "react-native";
 import { Menu } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DesignSystemNudge from "@/components/design-system/DesignSystemNudge";
 import { DesignFrameHandle, FrameOutMsg } from "./bridge";
 import DesignFrame from "./DesignFrame";
@@ -98,7 +99,10 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { width, xl } = useBreakpoints();
-    const styles = useStyles(colors);
+    // The stage is a full-bleed takeover: the page header that normally owns the
+    // top inset is hidden while it is open, so this header owns it instead.
+    const insets = useSafeAreaInsets();
+    const styles = useStyles(colors, insets.top);
 
     const { revision, history, addRevision, revertTo } = useContentDesign(contentId, designRef);
     const { addComment } = useContentComments(contentId);
@@ -888,7 +892,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     );
 };
 
-const useStyles = (colors: any) =>
+const useStyles = (colors: any, topInset: number) =>
     useMemo(
         () =>
             StyleSheet.create({
@@ -905,7 +909,8 @@ const useStyles = (colors: any) =>
                     alignItems: "center",
                     gap: 12,
                     paddingHorizontal: 14,
-                    paddingVertical: 12,
+                    paddingTop: 12 + topInset,
+                    paddingBottom: 12,
                     shadowColor: "#000",
                     shadowOffset: { width: 0, height: 3 },
                     shadowRadius: 8,
@@ -1278,7 +1283,7 @@ const useStyles = (colors: any) =>
                 primaryBtnText: { color: colors.onPrimary, fontSize: fs(14), fontWeight: "600" },
                 pressed: { opacity: 0.72 },
             }),
-        [colors]
+        [colors, topInset]
     );
 
 export default DesignStage;
