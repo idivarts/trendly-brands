@@ -19,6 +19,7 @@ import {
     TextInput,
     View
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@react-navigation/native";
 import Colors from "@/shared-uis/constants/Colors";
 import { ExplainerDynamic } from "../ExplainerDynamic";
@@ -109,7 +110,11 @@ export default function BrandDetailPage() {
     }
     explainerConfig.title = explainerConfig.title.replace("<BRAND_NAME>", selectedBrand?.name || "your brand")
 
-    const styles = useStyles(colors);
+    // This page renders LandingHeader instead of a PageHeader, and its AppLayout
+    // leaves the top edge out — so the page's own top padding has to clear the
+    // status bar.
+    const insets = useSafeAreaInsets();
+    const styles = useStyles(colors, insets.top);
 
     return (
         <AppLayout>
@@ -249,11 +254,11 @@ export default function BrandDetailPage() {
 }
 
 /* --------- Styles --------- */
-function useStyles(colors: ReturnType<typeof Colors>) {
+function useStyles(colors: ReturnType<typeof Colors>, topInset: number) {
     return StyleSheet.create({
     page: {
         paddingHorizontal: 24,
-        paddingTop: Platform.select({ web: 36, default: 24 }),
+        paddingTop: Platform.select({ web: 36, default: 24 })! + topInset,
         paddingBottom: 48,
         backgroundColor: colors.background,
         maxWidth: 1300,

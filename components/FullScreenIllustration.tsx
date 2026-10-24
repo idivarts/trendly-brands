@@ -19,6 +19,8 @@ import {
     View
 } from "react-native";
 
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 import { ExplainerConfig } from "@/contexts/growthbook-context-provider";
 import { ExplainerDynamic } from "./landing/ExplainerDynamic";
 import VideoPlayer from "./landing/VideoPlayer";
@@ -38,7 +40,11 @@ export default function FullInformationalIllustration(props: IIllustration) {
     const colors = Colors(theme);
     const { xl, width } = useBreakpoints();
     const isWide = xl || width >= 1000;
-    const styles = useMemo(() => makeStyles(colors), [colors]);
+    // Screens render this instead of their PageHeader (explore-influencers
+    // returns it early), and the AppLayout below leaves the top edge out — so
+    // the page's own top padding has to clear the status bar.
+    const insets = useSafeAreaInsets();
+    const styles = useMemo(() => makeStyles(colors, insets.top), [colors, insets.top]);
 
     // ---- Animations ----
     const leftFade = useRef(new Animated.Value(0)).current; // opacity for left column
@@ -142,11 +148,11 @@ export default function FullInformationalIllustration(props: IIllustration) {
     );
 }
 
-function makeStyles(colors: ReturnType<typeof Colors>) {
+function makeStyles(colors: ReturnType<typeof Colors>, topInset: number) {
     return StyleSheet.create({
         page: {
             paddingHorizontal: 24,
-            paddingTop: Platform.select({ web: 36, default: 24 }),
+            paddingTop: Platform.select({ web: 36, default: 24 })! + topInset,
             paddingBottom: 48,
             backgroundColor: colors.background,
             maxWidth: 1300,

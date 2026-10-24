@@ -178,10 +178,10 @@ const GROWTH_MENU_ITEMS = (theme: Theme): Tab[] => [
 interface DrawerMenuContentWebProps { }
 
 const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
-    const { bottom } = useSafeAreaInsets();
+    const { top, bottom } = useSafeAreaInsets();
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => createStyles(theme, bottom), [theme, bottom]);
+    const styles = useMemo(() => createStyles(theme, bottom, top), [theme, bottom, top]);
     // allBrands (incl. drafts) so the switcher/list matches the Organizations page.
     const { selectedBrand, allBrands: brands, setSelectedBrand, hasFeature, hasPrivilege } = useBrandContext();
     const { organizations, selectedOrgBilling } = useOrganizationContext();
@@ -1181,7 +1181,7 @@ const RenderBanner = (props: {
 
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
-const createStyles = (theme: Theme, bottom: number = 0) => {
+const createStyles = (theme: Theme, bottom: number = 0, topInset: number = 0) => {
     const colors = Colors(theme);
     const sidebarSurfaceBg = (colors as any).drawerBackground ?? colors.card;
     const sectionLabelColor =
@@ -1195,7 +1195,7 @@ const createStyles = (theme: Theme, bottom: number = 0) => {
         root: {
             flex: 1,
             overflow: "visible",
-            paddingTop: Platform.OS === "web" ? 8 : 64,
+            paddingTop: Platform.OS === "web" ? 8 : 8 + topInset,
             backgroundColor: sidebarSurfaceBg,
             shadowColor: colors.panelShadow,
             shadowOffset: { width: 0, height: 6 },

@@ -10,14 +10,20 @@ import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { StyleSheet } from "react-native";
 import { Searchbar } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import EmptyMessageState from "./empty-message-state";
 
 const ChannelListNative = () => {
     const [searchInput, setSearchInput] = useState("");
     const theme = useTheme();
     const styles = stylesFn(theme);
+    // This screen is rendered bare by the route — no PageHeader and no
+    // top-inset AppLayout above it — so the search row owns the status-bar inset.
+    const insets = useSafeAreaInsets();
+    const layoutStyles = useLayoutStyles(insets.top);
 
     const {
         manager: user,
@@ -57,18 +63,8 @@ const ChannelListNative = () => {
     };
 
     return (
-        <View
-            style={{
-                flex: 1,
-            }}
-        >
-            <View
-                style={{
-                    padding: 16,
-                    paddingTop: 16,
-                    flexDirection: "row",
-                }}
-            >
+        <View style={layoutStyles.root}>
+            <View style={layoutStyles.searchRow}>
                 <Searchbar
                     icon={() => (
                         <FontAwesomeIcon
@@ -101,5 +97,19 @@ const ChannelListNative = () => {
         </View>
     );
 };
+
+const useLayoutStyles = (topInset: number) =>
+    useMemo(
+        () =>
+            StyleSheet.create({
+                root: { flex: 1 },
+                searchRow: {
+                    padding: 16,
+                    paddingTop: 16 + topInset,
+                    flexDirection: "row",
+                },
+            }),
+        [topInset]
+    );
 
 export default ChannelListNative;
