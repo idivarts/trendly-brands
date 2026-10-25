@@ -7,7 +7,7 @@ import {
 } from "@/shared-libs/firestore/trendly-pro/models/organizations";
 import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
-import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { HttpError, HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useMyNavigation } from "@/shared-libs/utils/router";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { Organization } from "@/types/Organization";
@@ -141,15 +141,11 @@ const OrganizationContext = createContext<OrganizationContextProps>({
 
 export const useOrganizationContext = () => useContext(OrganizationContext);
 
-// Parse the backend's { error, message } body off a thrown Response.
+// Parse the backend's { error, message } body off a thrown HttpError, whose
+// `data` already holds it (null for a non-JSON body).
 const errorMessage = async (e: unknown, fallback: string): Promise<string> => {
-    if (e instanceof Response) {
-        try {
-            const body = await e.clone().json();
-            return body?.message || body?.error || fallback;
-        } catch {
-            /* non-JSON body */
-        }
+    if (e instanceof HttpError) {
+        return e.data?.message || e.data?.error || fallback;
     }
     return fallback;
 };

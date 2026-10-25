@@ -204,24 +204,9 @@ const useInvitedInfluencers = ({
                 console.warn("Failed to fetch invited influencers", e);
                 let message = "Failed to fetch invited members";
                 try {
-                    if (e instanceof Response) {
-                        const contentType = e.headers.get("content-type") || "";
-                        if (contentType.includes("application/json")) {
-                            const errBody = await e.json();
-                            message = errBody?.message || JSON.stringify(errBody) || message;
-                            console.debug("useInvitedInfluencers: server response", errBody);
-                        } else {
-                            const txt = await e.text();
-                            message = txt || message;
-                            console.debug("useInvitedInfluencers: server response text", txt);
-                        }
-                    } else if (e?.json) {
-                        const errBody = await e.json();
-                        message = errBody?.message || message;
-                        console.debug("useInvitedInfluencers: server response", errBody);
-                    } else if (e?.message) {
-                        message = e.message;
-                    }
+                    // Handles HttpError (body already read, JSON or not),
+                    // Errors and plain strings alike.
+                    message = (await HttpWrapper.extractErrorMessage(e)) || message;
                 } catch (_err) { }
                 Toaster.error(message);
             } finally {

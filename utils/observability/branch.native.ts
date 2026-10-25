@@ -89,6 +89,42 @@ const isBranchConfigured = (): boolean => {
 };
 
 /**
+ * Branch failures that are NOT bugs, and must not become Sentry exceptions.
+ *
+ * `branch.subscribe` reports the SDK's own init outcome, and on a real user
+ * population most of what it reports is the device's network, not our code:
+ *
+ *  - `-113` — "Failed network request … Failed to connect to api2.branch.io".
+ *    The user was offline or behind a captive portal when the app launched.
+ *  - `-120` — "Thread task timed out". Same thing on a slow connection.
+ *  - "Session initialization already happened" — a warm start. The Android
+ *    wiring calls `RNBranchModule.initSession` from `onStart()` (which is what
+ *    Branch's own setup prescribes, and what makes warm-start deep links work),
+ *    so returning to the foreground asks the SDK to init a session it already
+ *    has. Branch answers with this warning and keeps the existing session, which
+ *    is the correct outcome — rewiring `onStart` to avoid the warning would
+ *    break the warm-start path it exists for.
+ *
+ * Branch queues and retries these internally, so there is nothing for us to do
+ * and no user impact beyond attribution being best-effort, which it already is.
+ * Reporting them made Branch the single noisiest issue on the current release.
+ *
+ * Anything NOT matched here — a bad key, a malformed link, an SDK contract we
+ * got wrong — is still reported, because those are ours to fix.
+ */
+const isExpectedBranchError = (error: unknown): boolean => {
+    const message = typeof error === "string" ? error : (error as any)?.message ?? "";
+    if (!message) return false;
+    return (
+        message.includes("-113") ||
+        message.includes("-120") ||
+        /Session initialization already happened/i.test(message) ||
+        /Failed network request/i.test(message) ||
+        /Task exceeded timeout/i.test(message)
+    );
+};
+
+/**
  * Subscribe to Branch link opens. Returns an unsubscribe function.
  *
  * `onAttribution` is called only for real Branch link opens, so an ordinary
@@ -102,7 +138,13 @@ export const initBranch = async (
     try {
         return branch.subscribe(({ error, params }) => {
             if (error) {
-                Console.error(error, "Branch subscribe");
+                // Kept as a breadcrumb either way, so it is still visible as
+                // context on whatever error comes next.
+                if (isExpectedBranchError(error)) {
+                    Console.log("Branch subscribe (expected)", error);
+                } else {
+                    Console.error(error, "Branch subscribe");
+                }
                 return;
             }
 
