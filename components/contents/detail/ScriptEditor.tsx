@@ -12,6 +12,7 @@ import { useTheme } from "@react-navigation/native";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import ScriptEditorBody, { ScriptEditorBodyProps } from "./ScriptEditorBody";
+import SectionLabel from "./SectionLabel";
 
 interface ScriptEditorProps extends ScriptEditorBodyProps {
     title: string;
@@ -24,13 +25,18 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({ title, subtitle, ...body })
     const styles = useStyles(colors);
 
     return (
-        <View style={styles.card}>
-            <View style={styles.header}>
-                <Text style={styles.cardTitle}>{title}</Text>
-                <Text style={styles.cardSub}>{subtitle}</Text>
+        <>
+            {/* Names a region, like VIDEO and CAPTION around it — so it is a
+                section label above the card, not a bold title inside it. The
+                subtitle stays in the card as its opening line. */}
+            <SectionLabel>{title.toUpperCase()}</SectionLabel>
+            <View style={styles.card}>
+                <View style={styles.header}>
+                    <Text style={styles.cardSub}>{subtitle}</Text>
+                </View>
+                <ScriptEditorBody {...body} />
             </View>
-            <ScriptEditorBody {...body} />
-        </View>
+        </>
     );
 };
 
@@ -48,11 +54,6 @@ function useStyles(colors: ReturnType<typeof Colors>) {
         },
         header: {
             gap: 4,
-        },
-        cardTitle: {
-            fontSize: fs(15),
-            fontWeight: "700",
-            color: colors.text,
         },
         cardSub: {
             fontSize: fs(13),
