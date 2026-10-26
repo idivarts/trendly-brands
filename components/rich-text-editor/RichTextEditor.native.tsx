@@ -101,6 +101,12 @@ export interface StrategyEditorPanelProps {
      * caller-owned floating element (e.g. the mobile "Push to Calendar" CTA).
      */
     contentBottomInset?: number;
+    /**
+     * Minimum height of the writing surface. Defaults to 400 — right for a
+     * full-page document, far too tall for a short field that is one section
+     * among several. Keep in sync with the web editor's prop.
+     */
+    minHeight?: number;
 }
 
 const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
@@ -112,6 +118,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
     module: aiModule = "content",
     lock,
     contentBottomInset = 0,
+    minHeight,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -426,6 +433,7 @@ const StrategyEditorPanel: React.FC<StrategyEditorPanelProps> = ({
                             backgroundColor: colors.background,
                             borderColor: colors.outline,
                             color: colors.text,
+                            ...(minHeight != null ? { minHeight } : null),
                         }}
                     />
                 </ScrollView>
@@ -695,7 +703,7 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             width: "100%",
             maxWidth: 760,
             alignSelf: "center",
-            minHeight: 400,
+            minHeight: 400,  // overridden per-instance via the `minHeight` prop
             padding: 20,
             fontSize: fs(16),
             lineHeight: lh(26),

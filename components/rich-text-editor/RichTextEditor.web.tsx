@@ -106,6 +106,13 @@ export interface StrategyEditorPanelProps {
      * caller-owned floating element (e.g. the mobile "Push to Calendar" CTA).
      */
     contentBottomInset?: number;
+    /**
+     * Minimum height of the writing surface, in px. Defaults to 400 — right for
+     * a full-page document (a strategy), far too tall for a short field that is
+     * one section among several, where it renders as a wall of empty box
+     * pushing everything below it off the fold.
+     */
+    minHeight?: number;
 }
 
 export interface EditLockUI {
@@ -268,6 +275,7 @@ const EditorBody: React.FC<StrategyEditorPanelProps> = ({
     collaborative,
     lock,
     contentBottomInset = 0,
+    minHeight,
 }) => {
     const [editor] = useLexicalComposerContext();
     const theme = useTheme();
@@ -913,9 +921,17 @@ const EditorBody: React.FC<StrategyEditorPanelProps> = ({
                     contentEditable={
                         <ContentEditable
                             className="tl-content"
+                            // Inline, not in injectStyles: that writes ONE shared
+                            // stylesheet keyed by id, so a per-instance height
+                            // there would be whichever editor mounted last.
                             style={
-                                contentBottomInset > 0
-                                    ? ({ paddingBottom: 20 + contentBottomInset } as React.CSSProperties)
+                                contentBottomInset > 0 || minHeight != null
+                                    ? ({
+                                          ...(contentBottomInset > 0
+                                              ? { paddingBottom: 20 + contentBottomInset }
+                                              : null),
+                                          ...(minHeight != null ? { minHeight } : null),
+                                      } as React.CSSProperties)
                                     : undefined
                             }
                         />
