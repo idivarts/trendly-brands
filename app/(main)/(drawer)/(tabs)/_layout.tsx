@@ -195,6 +195,10 @@ const TabLayout = () => {
                 name="(content)/contents/archived"
                 options={{ tabBarItemStyle: { display: "none" }, headerShown: false }}
             />
+            <Tabs.Screen
+                name="(content)/contents/needs-attention"
+                options={{ tabBarItemStyle: { display: "none" }, headerShown: false }}
+            />
         </Tabs>
     );
 };
