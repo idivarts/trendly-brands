@@ -76,6 +76,12 @@ const ContentsScreen = () => {
     // of status.
     const terminalCounts = useMemo(
         () => ({
+            // failed + partially_failed. Both fell outside the board's lanes AND
+            // the terminal links, so a publish that broke left the content with
+            // nowhere to appear on this screen at all.
+            needsAttention: activeItems.filter(
+                (i) => i.status === "failed" || i.status === "partially_failed"
+            ).length,
             scheduled: activeItems.filter((i) => i.status === "scheduled").length,
             posted: activeItems.filter((i) => i.status === "posted").length,
             archived: items.filter((i) => i.isArchived).length,

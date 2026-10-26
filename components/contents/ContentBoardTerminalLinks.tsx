@@ -4,6 +4,7 @@ import {
     faCalendarCheck,
     faChevronRight,
     faPaperPlane,
+    faTriangleExclamation,
     IconDefinition,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
@@ -14,6 +15,8 @@ import { contentStatusColors } from "./types";
 import { fs } from "@/constants/Typography";
 
 export interface TerminalCounts {
+    /** failed + partially_failed — publishes that did not finish. */
+    needsAttention: number;
     scheduled: number;
     posted: number;
     archived: number;
@@ -52,6 +55,29 @@ const ContentBoardTerminalLinks: React.FC<ContentBoardTerminalLinksProps> = ({
     const styles = useStyles(colors);
 
     const links: LinkSpec[] = [
+        // Unlike its neighbours this one is CONDITIONAL, and it leads.
+        //
+        // Scheduled / Posted / Archived are informational — a standing count of
+        // where things went. A broken publish is the only thing on this screen
+        // that needs somebody to do something, so it goes first and carries the
+        // error tint.
+        //
+        // And it only exists when it is non-zero. A permanent "Needs attention
+        // 0" is a row of furniture for an exception that is almost never true;
+        // the row APPEARING is the signal. The others stay at zero because
+        // their counts are the information.
+        ...(counts.needsAttention > 0
+            ? [
+                  {
+                      key: "needsAttention" as const,
+                      label: "Needs attention",
+                      caption: "Failed or partly posted",
+                      path: "/contents/needs-attention",
+                      icon: faTriangleExclamation,
+                      tint: contentStatusColors("failed", colors),
+                  },
+              ]
+            : []),
         {
             key: "scheduled",
             label: "Scheduled",
