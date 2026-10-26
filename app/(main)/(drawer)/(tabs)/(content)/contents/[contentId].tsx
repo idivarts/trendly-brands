@@ -393,13 +393,53 @@ const CreateContentScreen = () => {
     // content has a canvas but no attachments, which used to read as "no media".
     const designPreview = useDesignPreview(contentId ?? null, seedItem?.designRef);
 
+    // ── Design Studio's three states ─────────────────────────────────────────
+    // 1. waiting for a brief  2. brief with the AI, no design yet  3. design up.
+    // State 2 is held here rather than in the stage because only this level can
+    // see both halves of it: the chat turn that is running and the content
+    // document the design actually lands on.
+    const [pendingBrief, setPendingBrief] = useState<string | null>(null);
+    const [chatBusy, setChatBusy] = useState(false);
+    // Whether the AI turn for the current brief has actually begun streaming.
+    const turnStartedRef = useRef(false);
+
     // The brief typed on the empty canvas: open a fresh AI thread, seed it with
     // the brief as the first message, and let the normal chat flow take over.
     const handleSubmitBrief = useCallback((brief: string) => {
+        turnStartedRef.current = false;
+        setPendingBrief(brief);
         chatControlsRef.current?.newChat();
         setPendingChatMessage(brief);
         setRightPanelMode("chat");
     }, []);
+
+    // The design landing is what ends state 2 — not the chat going quiet, since
+    // the AI renders and inspects its own work across several turns before the
+    // revision is written.
+    const designRevisionId = seedItem?.designRef?.revisionId;
+    useEffect(() => {
+        if (designRevisionId) setPendingBrief(null);
+    }, [designRevisionId]);
+
+    // A turn can also end WITHOUT producing a design — the AI asked a question,
+    // or the call failed. Without this the studio would spin forever on a chat
+    // that is already waiting for the user's reply.
+    //
+    // It waits for the turn to have STARTED before it will end on it stopping.
+    // Checking `!chatBusy` alone fires in the gap between submitting and the
+    // panel mounting its thread and sending, which is comfortably longer than
+    // any timeout worth having — the studio would drop straight back to the
+    // prompt a moment after the user left it.
+    useEffect(() => {
+        if (chatBusy) turnStartedRef.current = true;
+    }, [chatBusy]);
+    useEffect(() => {
+        if (!pendingBrief || chatBusy || designRevisionId || !turnStartedRef.current) return;
+        // A short grace after the stream ends: the design is written mid-turn, so
+        // its snapshot usually arrives first, but not always.
+        const t = setTimeout(() => setPendingBrief(null), 1500);
+        return () => clearTimeout(t);
+    }, [pendingBrief, chatBusy, designRevisionId]);
 
     // "Send to AI" on a comment: attach a structured comment focus (inheriting
     // whatever the comment itself is anchored to — e.g. a design element) and
@@ -1437,6 +1477,16 @@ const CreateContentScreen = () => {
     // The DesignStage's own ✕ brings the user (and this header) back.
     const designTakeover = stage === "design" && mediaSpec.kind !== "none";
 
+    // Entering the Studio with an empty canvas, the centre IS the composer — so
+    // the chat panel starts collapsed. Two prompt boxes side by side, each
+    // asking the same question, made the user choose which one was real. It
+    // opens by itself the moment a brief is sent (handleSubmitBrief), which is
+    // when the conversation becomes the thing worth watching.
+    const studioEmpty = designTakeover && !designRevisionId && !pendingBrief;
+    useEffect(() => {
+        if (studioEmpty) setRightPanelMode("none");
+    }, [studioEmpty]);
+
     return (
         <AppLayout>
             {!designTakeover ? (
@@ -1529,6 +1579,8 @@ const CreateContentScreen = () => {
                                 onFocus={handleFocusElement}
                                 onClose={() => setStage("media")}
                                 onSubmitBrief={handleSubmitBrief}
+                                generating={!!pendingBrief}
+                                pendingBrief={pendingBrief ?? undefined}
                                 readOnly={locked}
                             />
                         </View>
@@ -1960,6 +2012,7 @@ const CreateContentScreen = () => {
                                     initialMessage={pendingChatMessage}
                                     onInitialMessageSent={() => setPendingChatMessage(undefined)}
                                     onControlsChange={handleChatControls}
+                                    onBusyChange={setChatBusy}
                                     isCompact
                                 />
                             }
@@ -2002,6 +2055,7 @@ const CreateContentScreen = () => {
                             initialMessage={pendingChatMessage}
                             onInitialMessageSent={() => setPendingChatMessage(undefined)}
                             onControlsChange={handleChatControls}
+                            onBusyChange={setChatBusy}
                             isCompact
                             onCollapse={() => setRightPanelMode("none")}
                             // Tab bar owns the bottom inset (don't double it), but this
