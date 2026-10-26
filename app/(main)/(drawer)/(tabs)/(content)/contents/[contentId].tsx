@@ -4,6 +4,7 @@ import ContentCommentsPanel from "@/components/contents/ContentCommentsPanel";
 import ContentActionsMenu from "@/components/contents/detail/ContentActionsMenu";
 import ContentInfoModal from "@/components/contents/detail/ContentInfoModal";
 import HandoffCard from "@/components/contents/detail/HandoffCard";
+import SectionLabel from "@/components/contents/detail/SectionLabel";
 import ScriptModal from "@/components/contents/detail/ScriptModal";
 import { MEDIA_SPEC } from "@/components/contents/detail/media-spec";
 import MediaStage from "@/components/contents/detail/MediaStage";
@@ -1805,9 +1806,9 @@ const CreateContentScreen = () => {
                             ]}
                             onLayout={onSectionLayout("caption")}
                         >
-                            <Text style={styles.sectionLabel}>
+                            <SectionLabel>
                                 {contentType === "text" ? "CONTENT" : "CAPTION"}
-                            </Text>
+                            </SectionLabel>
                             <View style={styles.card}>
                                 <View style={styles.inputWithWand}>
                                     <TextInput
@@ -1882,7 +1883,7 @@ const CreateContentScreen = () => {
                         {/* ── Hashtags ──────────────────────────────────────────── */}
                         {showHashtags ? (
                         <View style={styles.section}>
-                            <Text style={styles.sectionLabel}>HASHTAGS</Text>
+                            <SectionLabel>HASHTAGS</SectionLabel>
                             <View style={styles.card}>
                                 <View style={styles.inputWithWand}>
                                     <TextInput
@@ -1961,7 +1962,7 @@ const CreateContentScreen = () => {
                         {/* ── Production & handoff (reel / video) ───────────────── */}
                         {isFilmed && (
                             <View style={styles.section}>
-                                <Text style={styles.sectionLabel}>PRODUCTION &amp; HANDOFF</Text>
+                                <SectionLabel>PRODUCTION &amp; HANDOFF</SectionLabel>
                                 <HandoffCard
                                     isReel={isReel}
                                     script={script}
@@ -2391,13 +2392,6 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     lineHeight: lh(20),
                     color: colors.textSecondary,
                     marginBottom: 4,
-                },
-                sectionLabel: {
-                    fontSize: fs(11),
-                    fontWeight: "700",
-                    letterSpacing: 1.1,
-                    color: colors.textSecondary,
-                    marginBottom: 8,
                 },
                 fieldMetaRow: {
                     flexDirection: "row",

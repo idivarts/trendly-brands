@@ -34,6 +34,7 @@ import { useTheme } from "@react-navigation/native";
 import React from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { fs, lh } from "@/constants/Typography";
+import SectionLabel from "./SectionLabel";
 
 interface Props {
     platform: Platform;
@@ -98,10 +99,10 @@ const VariationEditor: React.FC<Props> = ({
         } = {}
     ) => (
         <View style={styles.section}>
-            <View style={styles.fieldHead}>
-                <Text style={styles.sectionLabel}>{label}</Text>
-                {overridden ? (
-                    <View style={styles.headActions}>
+            <SectionLabel
+                right={
+                    overridden ? (
+                        <View style={styles.headActions}>
                         <View style={styles.badgeOverride}>
                             <Text style={styles.badgeOverrideText}>Overridden</Text>
                         </View>
@@ -116,13 +117,16 @@ const VariationEditor: React.FC<Props> = ({
                             <Text style={styles.resetText}>Reset to Generic</Text>
                         </Pressable>
                     </View>
-                ) : (
-                    <View style={styles.badgeInherit}>
-                        <FontAwesomeIcon icon={faLink} size={9} color={colors.textSecondary} />
-                        <Text style={styles.badgeInheritText}>Inherited</Text>
-                    </View>
-                )}
-            </View>
+                    ) : (
+                        <View style={styles.badgeInherit}>
+                            <FontAwesomeIcon icon={faLink} size={9} color={colors.textSecondary} />
+                            <Text style={styles.badgeInheritText}>Inherited</Text>
+                        </View>
+                    )
+                }
+            >
+                {label}
+            </SectionLabel>
             <View style={[styles.card, overridden && styles.cardOverridden]}>
                 {overridden ? <View style={styles.accentStripe} /> : null}
                 <TextInput
@@ -291,18 +295,6 @@ function useStyles(colors: ReturnType<typeof Colors>) {
         },
         section: {
             marginBottom: 20,
-        },
-        fieldHead: {
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 8,
-        },
-        sectionLabel: {
-            fontSize: fs(12),
-            fontWeight: "800",
-            color: colors.textSecondary,
-            letterSpacing: 0.5,
         },
         headActions: {
             flexDirection: "row",
