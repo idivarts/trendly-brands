@@ -130,6 +130,13 @@ interface AIChatPanelProps {
      * re-emits.
      */
     onControlsChange?: (controls: AIChatControls) => void;
+    /**
+     * Streaming on/off, lifted for callers that render their own waiting state
+     * elsewhere on the page — the Design Studio holds an empty canvas in a
+     * "generating" state and needs to know when the turn has ended without
+     * producing anything, so it does not wait forever.
+     */
+    onBusyChange?: (busy: boolean) => void;
 
     /**
      * Hero (empty-draft) state, shown when `scope="all"` and no conversation is
@@ -244,6 +251,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     heroTitle,
     heroSuggestions,
     onControlsChange,
+    onBusyChange,
     initialConversationId,
     initialMessage,
     onInitialMessageSent,
@@ -643,6 +651,11 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     useEffect(() => {
         onControlsChange?.({ toggleHistory: onToggleHistory, newChat: onNewChat, historyActive });
     }, [onControlsChange, onToggleHistory, onNewChat, historyActive]);
+
+    // Report streaming state to a parent that renders its own waiting UI.
+    useEffect(() => {
+        onBusyChange?.(isStreaming);
+    }, [isStreaming, onBusyChange]);
 
     // "Expand" — open the active conversation in the full Playground. Deep-links
     // with its id so the Playground opens it by default. Only meaningful from a
