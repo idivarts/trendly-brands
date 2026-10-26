@@ -408,6 +408,27 @@ const CreateContentScreen = () => {
 
     // The brief typed on the empty canvas: open a fresh AI thread, seed it with
     // the brief as the first message, and let the normal chat flow take over.
+    // Status and platforms write straight through, like the soundtrack already
+    // does. They are single-tap settings, not prose: tapping "Approved" and
+    // then having to find Save is a second step for a decision already made,
+    // and a tab switch in between would quietly lose it. Local state still
+    // updates so the control responds immediately.
+    const handleStatusChange = useCallback(
+        (next: ContentStatus) => {
+            setStatus(next);
+            if (contentId) updateContent(contentId, { status: next as any });
+        },
+        [contentId, updateContent]
+    );
+
+    const handlePlatformsChange = useCallback(
+        (next: ContentPlatform[]) => {
+            setTargetPlatforms(next);
+            if (contentId) updateContent(contentId, { platforms: next });
+        },
+        [contentId, updateContent]
+    );
+
     const handleSubmitBrief = useCallback((brief: string) => {
         turnStartedRef.current = false;
         setPendingBrief(brief);
@@ -1728,8 +1749,8 @@ const CreateContentScreen = () => {
                                 platforms={targetPlatforms}
                                 onChangeTitle={setTitle}
                                 onChangeIdea={setIdea}
-                                onChangeStatus={setStatus}
-                                onChangePlatforms={setTargetPlatforms}
+                                onChangeStatus={handleStatusChange}
+                                onChangePlatforms={handlePlatformsChange}
                                 readOnly={locked}
                                 contentPillars={seedItem?.contentPillars}
                                 strategyId={seedItem?.strategyId}
