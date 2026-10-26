@@ -133,14 +133,21 @@ const CreateContentScreen = () => {
         // Run strictly once on mount; never fight a later manual toggle.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-    const { contentId, title: paramTitle, idea: paramIdea, type: paramType, date: paramDate } =
-        useLocalSearchParams<{
-            contentId: string;
-            title?: string;
-            idea?: string;
-            type?: string;
-            date?: string;
-        }>();
+    const {
+        contentId,
+        title: paramTitle,
+        idea: paramIdea,
+        type: paramType,
+        date: paramDate,
+        tab: paramTab,
+    } = useLocalSearchParams<{
+        contentId: string;
+        title?: string;
+        idea?: string;
+        type?: string;
+        date?: string;
+        tab?: string;
+    }>();
     const styles = useStyles(colors, xl);
 
     const router = useRouter();
@@ -201,10 +208,6 @@ const CreateContentScreen = () => {
     // from the Content details modal; hydrated from the live item below.
     const [targetPlatforms, setTargetPlatforms] = useState(seedItem?.platforms ?? []);
     const [showInfoModal, setShowInfoModal] = useState(false);
-    // Active editor tab: "generic" (the shared base) or a platform variation.
-    // "Content" opens first, not Overview: the post is the job, the brief is a
-    // reference people go to deliberately.
-    const [activeTab, setActiveTab] = useState<VariationTab>("generic");
     const [showVariationModal, setShowVariationModal] = useState(false);
     const [showPublishModal, setShowPublishModal] = useState(false);
     const [showNoSocialsModal, setShowNoSocialsModal] = useState(false);
@@ -518,6 +521,40 @@ const CreateContentScreen = () => {
     // tab model — that single platform's options render inline on the main editor.
     const soloPlatform = targetPlatforms.length === 1 ? targetPlatforms[0] : null;
 
+    // Active editor tab: "generic" (the shared base) or a platform variation.
+    // ── The open tab lives in the URL ────────────────────────────────────────
+    // ?tab=overview | generic | <platform>. Not component state: a tab you
+    // cannot link to, reload into, or reach with the back button is a hidden
+    // mode, and half this page's surface was behind one.
+    //
+    // "Content" is the fallback, so a bare URL opens the post — the job people
+    // came for — rather than the brief.
+    //
+    // Validity is checked against the content's TARGET platforms, not against
+    // the variation documents that exist. Creating a variation writes to
+    // Firestore and selects the tab before the snapshot lands, so checking for
+    // the doc bounced the user straight back to Content; VariationEditor
+    // already renders an absent variation as fully inherited.
+    const activeTab = useMemo<VariationTab>(() => {
+        if (paramTab === "overview") return "overview";
+        if (
+            paramTab &&
+            paramTab !== "generic" &&
+            !soloPlatform &&
+            (targetPlatforms as string[]).includes(paramTab)
+        ) {
+            return paramTab as ContentPlatform;
+        }
+        return "generic";
+    }, [paramTab, targetPlatforms, soloPlatform]);
+
+    const setActiveTab = useCallback(
+        (tab: VariationTab) => {
+            router.setParams({ tab });
+        },
+        [router]
+    );
+
     // When the content targets exactly one platform, the generic editor IS that
     // platform's editor — so apply its caption limits / hashtag rules inline
     // (mirrors what the per-platform variation tab enforces). No solo platform →
@@ -538,12 +575,6 @@ const CreateContentScreen = () => {
         return ALL_PLATFORMS.filter((p) => present.has(p));
     }, [variations]);
 
-    // Single-platform content never uses tabs — keep the editor on the (inline)
-    // Generic body if a stale variation tab was selected.
-    useEffect(() => {
-        if (soloPlatform && activeTab !== "generic") setActiveTab("generic");
-    }, [soloPlatform, activeTab]);
-
     // Platforms whose per-platform options are edited OUTSIDE the publish modal —
     // a variation tab, or the solo platform's inline section — so ScheduleBar
     // hides its generic option fields for them.
@@ -558,14 +589,6 @@ const CreateContentScreen = () => {
         () => targetPlatforms.filter((p) => !variationByPlatform[p]),
         [targetPlatforms, variationByPlatform]
     );
-
-    // If the active variation tab's doc disappears (deleted, or its platform was
-    // removed), fall back to Generic so the editor never points at nothing.
-    useEffect(() => {
-        if (activeTab !== "generic" && !variationByPlatform[activeTab]) {
-            setActiveTab("generic");
-        }
-    }, [activeTab, variationByPlatform]);
 
     const handleCreateVariations = useCallback(
         (platforms: ContentPlatform[]) => {
@@ -1601,6 +1624,12 @@ const CreateContentScreen = () => {
                             hiding the bar would make the brief and the handoff
                             unreachable for exactly the simplest posts. */}
                         <View style={styles.section}>
+                            {/* No explanatory line under the strip. It described
+                                the mechanism ("add a tab… the shared default")
+                                rather than anything the reader wanted, and sat
+                                between the tabs and the content they switch —
+                                the one place nothing should interrupt. The "+"
+                                tab already says what it does. */}
                             <VariationTabs
                                 active={activeTab}
                                 variationPlatforms={variationPlatforms}
@@ -1608,15 +1637,6 @@ const CreateContentScreen = () => {
                                 onAddPress={() => setShowVariationModal(true)}
                                 canAdd={!locked && !soloPlatform && availableForVariation.length > 0}
                             />
-                            {activeTab === "generic" &&
-                            !soloPlatform &&
-                            variationPlatforms.length === 0 &&
-                            !locked ? (
-                                <Text style={styles.variationHint}>
-                                    Tailor the caption & options for a specific platform — add a
-                                    tab. The Content version is the shared default.
-                                </Text>
-                            ) : null}
                         </View>
 
                         {/* ── Lock banner: scheduled / posted content is read-only ── */}
@@ -2282,13 +2302,6 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     borderRadius: 12,
                     padding: 8,
                     marginHorizontal: -8,
-                },
-                variationHint: {
-                    fontSize: fs(11),
-                    color: colors.textSecondary,
-                    lineHeight: lh(16),
-                    marginTop: 10,
-                    paddingHorizontal: 2,
                 },
                 // ── Split layout ──────────────────────────────────────────────
                 splitContainer: {
