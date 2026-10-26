@@ -3,7 +3,7 @@
  *
  * A live session has no media: the script IS the content, so it stays on the
  * page, always open. Reel and video treat the script as an optional production
- * document and open it in ScriptModal from the handoff card instead, which keeps
+ * document and give it its own section on the Overview tab, which keeps
  * an optional field from occupying the space above the caption.
  */
 import { fs, lh } from "@/constants/Typography";

@@ -5,7 +5,7 @@
  * Extracted so one implementation can live in two chromes. A `live` content is
  * script-only, so its editor stays inline on the page (ScriptEditor); a reel or
  * video treats the script as a production document, so it gets the full width of
- * a modal (ScriptModal) instead of a cramped page column.
+ * the Overview tab's own section.
  */
 import AIModelSelector from "@/components/ai/AIModelSelector/AIModelSelector";
 import RichTextEditor from "@/components/rich-text-editor";
@@ -44,9 +44,6 @@ export interface ScriptEditorBodyProps {
     onSendToChat: (text: string) => void;
     /** When true the script is read-only (content is scheduled or posted). */
     readOnly?: boolean;
-    /** Let the editor fill the available height (modal) rather than sit at its
-     *  natural height (inline page card). */
-    fill?: boolean;
 }
 
 const ScriptEditorBody: React.FC<ScriptEditorBodyProps> = ({
@@ -60,7 +57,6 @@ const ScriptEditorBody: React.FC<ScriptEditorBodyProps> = ({
     contentId,
     onSendToChat,
     readOnly = false,
-    fill = false,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -80,7 +76,7 @@ const ScriptEditorBody: React.FC<ScriptEditorBodyProps> = ({
         <>
             {isGenerating ? (
                 <TextInput
-                    style={[styles.input, styles.editorWrap, fill && styles.editorFill]}
+                    style={[styles.input, styles.editorWrap]}
                     placeholder={"[Scene 1 - Hook]\nHey everyone...\n\n[Scene 2 - Main content]\n...\n\n[Scene 3 - CTA]\nFollow for more!"}
                     placeholderTextColor={colors.textSecondary}
                     value={script}
@@ -89,7 +85,7 @@ const ScriptEditorBody: React.FC<ScriptEditorBodyProps> = ({
                     textAlignVertical="top"
                 />
             ) : (
-                <View style={[styles.editorWrap, fill && styles.editorFill]}>
+                <View style={styles.editorWrap}>
                     <RichTextEditor
                         content={script}
                         onChange={onScriptChange}
@@ -220,10 +216,6 @@ function useStyles(colors: ReturnType<typeof Colors>) {
         editorWrap: {
             minHeight: 110,
             marginTop: 12,
-        },
-        editorFill: {
-            flex: 1,
-            minHeight: 240,
         },
         input: {
             backgroundColor: colors.tag,

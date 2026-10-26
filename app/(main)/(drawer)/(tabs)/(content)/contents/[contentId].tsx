@@ -5,7 +5,6 @@ import ContentActionsMenu from "@/components/contents/detail/ContentActionsMenu"
 import ContentBriefFields from "@/components/contents/detail/ContentBriefFields";
 import HandoffCard from "@/components/contents/detail/HandoffCard";
 import SectionLabel from "@/components/contents/detail/SectionLabel";
-import ScriptModal from "@/components/contents/detail/ScriptModal";
 import { MEDIA_SPEC } from "@/components/contents/detail/media-spec";
 import MediaStage from "@/components/contents/detail/MediaStage";
 import DesignStage from "@/components/contents/detail/design-stage/DesignStage";
@@ -483,7 +482,6 @@ const CreateContentScreen = () => {
     // optional production document, so it moves off the page into a modal opened
     // from the handoff card. `live` is script-only and keeps its inline editor.
     const isFilmed = contentType === "reel" || contentType === "video";
-    const [scriptModalOpen, setScriptModalOpen] = useState(false);
     const isTextPost = contentType === "text";
     const mediaSpec = MEDIA_SPEC[contentType];
 
@@ -2172,22 +2170,6 @@ const CreateContentScreen = () => {
             {/* Script & timeline (reel/video). Writes the page's live `script`
                 state, so closing it is not a cancel — the page's Save and
                 unsaved-changes guard stay the single source of truth. */}
-            {isFilmed ? (
-                <ScriptModal
-                    visible={scriptModalOpen}
-                    onClose={() => setScriptModalOpen(false)}
-                    script={script}
-                    onScriptChange={setScript}
-                    aiPrompt={scriptAiPrompt}
-                    onAiPromptChange={setScriptAiPrompt}
-                    onEnhance={handleScriptAiEnhance}
-                    isGenerating={isGeneratingScript}
-                    task="script"
-                    contentId={contentId}
-                    onSendToChat={handleSendToChat}
-                    readOnly={locked}
-                />
-            ) : null}
 
             {selectedBrand?.id && contentId ? (
                 <ShareModal
