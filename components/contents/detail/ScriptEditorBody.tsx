@@ -11,6 +11,7 @@ import AIModelSelector from "@/components/ai/AIModelSelector/AIModelSelector";
 import RichTextEditor from "@/components/rich-text-editor";
 import { fs, lh } from "@/constants/Typography";
 import { useAIConfig } from "@/contexts/ai-config-context.provider";
+import { useBreakpoints } from "@/hooks";
 import { withAlpha } from "@/utils/color";
 import Colors from "@/shared-uis/constants/Colors";
 import { faMagicWandSparkles } from "@fortawesome/free-solid-svg-icons";
@@ -24,6 +25,9 @@ import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
  * works — a length, a subject, a mood, an ending — which is the part people
  * stall on, not the typing.
  */
+/** ~2.5 lines at the editor's 26px line height, plus its 20px padding. */
+const SCRIPT_EDITOR_MIN_HEIGHT = 105;
+
 const AI_SCRIPT_EXAMPLES = [
     "A 20s reel explaining our best-selling product",
     "Punchy launch teaser, ends on a discount code",
@@ -60,7 +64,8 @@ const ScriptEditorBody: React.FC<ScriptEditorBodyProps> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useStyles(colors);
+    const { xl } = useBreakpoints();
+    const styles = useStyles(colors, xl);
 
     const { modelsForTask, resolveForTask } = useAIConfig();
     const taskModels = task ? modelsForTask(task) : [];
@@ -71,18 +76,6 @@ const ScriptEditorBody: React.FC<ScriptEditorBodyProps> = ({
     // something to edit, the editor leads. Order is the strongest statement of
     // what this surface is for, and it was making the wrong one.
     const hasScript = !!script && script.replace(/<[^>]*>/g, "").trim().length > 0;
-
-    // …but the ORDER is decided once, when the section mounts, and then held.
-    //
-    // Driving it from `hasScript` live meant the first character typed flipped
-    // it, which swapped two siblings, remounted the rich-text editor and threw
-    // away focus — you got one letter per tap. Even with that fixed it would be
-    // wrong: re-ordering the page under someone mid-sentence is its own bug.
-    //
-    // Copy and tint still follow `hasScript` live, because changing words in
-    // place costs nothing. Only the layout is frozen, and it re-evaluates next
-    // time the section mounts.
-    const [aiLeads] = useState(() => !hasScript);
 
     const editor = (
         <>
@@ -105,6 +98,11 @@ const ScriptEditorBody: React.FC<ScriptEditorBodyProps> = ({
                         strategyId={contentId}
                         module="content"
                         lock={readOnly ? { editable: false } : undefined}
+                        // ~2.5 lines. The editor's own default is 400px, which
+                        // is right for a full-page strategy document and a wall
+                        // of empty box for a section among several — it grows
+                        // with the content either way, this is only the floor.
+                        minHeight={SCRIPT_EDITOR_MIN_HEIGHT}
                     />
                 </View>
             )}
@@ -126,7 +124,7 @@ const ScriptEditorBody: React.FC<ScriptEditorBodyProps> = ({
                  * titled, offering examples to tap. Once a script exists it
                  * drops below and becomes "refine", because then the editor IS
                  * the subject and the AI is editing it. */
-                <View style={[styles.aiPanel, !aiLeads && styles.aiPanelAfter]}>
+                <View style={[styles.aiPanel, hasScript && styles.aiPanelQuiet]}>
                     <View style={styles.aiHead}>
                         <View style={styles.aiIcon}>
                             <FontAwesomeIcon
@@ -158,7 +156,7 @@ const ScriptEditorBody: React.FC<ScriptEditorBodyProps> = ({
                             placeholderTextColor={colors.textSecondary}
                             value={aiPrompt}
                             onChangeText={onAiPromptChange}
-                            multiline={aiLeads}
+                            multiline
                         />
                         <Pressable
                             style={({ pressed }) => [
@@ -217,16 +215,15 @@ const ScriptEditorBody: React.FC<ScriptEditorBodyProps> = ({
 
     return (
         <>
-            {aiLeads ? aiPanel : editor}
-            {aiLeads ? editor : aiPanel}
+            {editor}
+            {aiPanel}
         </>
     );
 };
 
-function useStyles(colors: ReturnType<typeof Colors>) {
+function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
     return StyleSheet.create({
         editorWrap: {
-            minHeight: 110,
             marginTop: 12,
         },
         input: {
@@ -247,18 +244,16 @@ function useStyles(colors: ReturnType<typeof Colors>) {
         // old row used the same grey as every input on the page, so the one
         // thing the product wants people to try looked like plumbing.
         aiPanel: {
-            marginBottom: 14,
+            marginTop: 14,
             padding: 14,
             borderRadius: 14,
             backgroundColor: withAlpha(colors.primary, 0.06),
             borderWidth: 1,
             borderColor: withAlpha(colors.primary, 0.22),
         },
-        // Below an existing script it is a refinement, not the headline, so it
-        // gives the weight back to the editor above it.
-        aiPanelAfter: {
-            marginTop: 14,
-            marginBottom: 0,
+        // With a script already written it is a refinement, not the headline,
+        // so it gives the weight back to the editor above it.
+        aiPanelQuiet: {
             backgroundColor: colors.tag,
             borderColor: "transparent",
         },
@@ -321,9 +316,14 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             fontWeight: "700",
             color: colors.textSecondary,
         },
+        // On a phone the label and the input cannot share a row — "Write the
+        // script" ate most of it and left a slot too narrow to read a brief in.
+        // The button drops to its own full-width line rather than shrinking to
+        // an icon: this is the feature's main call to action, and stripping its
+        // words on the surface that most needs them is the wrong trade.
         aiPromptRow: {
-            flexDirection: "row",
-            alignItems: "center",
+            flexDirection: xl ? "row" : "column",
+            alignItems: xl ? "center" : "stretch",
             gap: 10,
             marginTop: 12,
         },
@@ -333,6 +333,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
         aiSendBtn: {
             flexDirection: "row",
             alignItems: "center",
+            justifyContent: "center",
             gap: 8,
             paddingHorizontal: 16,
             paddingVertical: 12,
