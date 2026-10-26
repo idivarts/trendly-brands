@@ -2,7 +2,7 @@ import { track } from "@/shared-libs/utils/analytics";
 import { CONTENT_TYPE_LABELS, ContentType } from "@/components/content-calendar/types";
 import ContentCommentsPanel from "@/components/contents/ContentCommentsPanel";
 import ContentActionsMenu from "@/components/contents/detail/ContentActionsMenu";
-import ContentInfoModal from "@/components/contents/detail/ContentInfoModal";
+import ContentBriefFields from "@/components/contents/detail/ContentBriefFields";
 import HandoffCard from "@/components/contents/detail/HandoffCard";
 import SectionLabel from "@/components/contents/detail/SectionLabel";
 import ScriptModal from "@/components/contents/detail/ScriptModal";
@@ -69,7 +69,6 @@ import { variationSpecForPlatform } from "@/shared-libs/firestore/trendly-pro/co
 import { effectiveContentForPlatform, VariationOverridableField } from "@/shared-libs/firestore/trendly-pro/models/variations";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
-import ReadMore from "@/shared-uis/components/ReadMore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import {
@@ -207,7 +206,6 @@ const CreateContentScreen = () => {
     // The platforms this content is planned for (publishing intent). Editable
     // from the Content details modal; hydrated from the live item below.
     const [targetPlatforms, setTargetPlatforms] = useState(seedItem?.platforms ?? []);
-    const [showInfoModal, setShowInfoModal] = useState(false);
     const [showVariationModal, setShowVariationModal] = useState(false);
     const [showPublishModal, setShowPublishModal] = useState(false);
     const [showNoSocialsModal, setShowNoSocialsModal] = useState(false);
@@ -1445,7 +1443,7 @@ const CreateContentScreen = () => {
             // on !xl, where Publish + Save already fill the row).
             <ContentActionsMenu
                 key="menu"
-                onDetails={() => setShowInfoModal(true)}
+                onDetails={() => setActiveTab("overview")}
                 onShare={
                     selectedBrand?.id && contentId && hasCapability("manage_content")
                         ? () => setShowShareModal(true)
@@ -1534,9 +1532,9 @@ const CreateContentScreen = () => {
                                     { backgroundColor: statusColorSet.bg },
                                     pressed && styles.pressed,
                                 ]}
-                                onPress={() => setShowInfoModal(true)}
+                                onPress={() => setActiveTab("overview")}
                                 accessibilityRole="button"
-                                accessibilityLabel={`Status: ${CONTENT_STATUS_LABELS[status]}. Open content details`}
+                                accessibilityLabel={`Status: ${CONTENT_STATUS_LABELS[status]}. Open the Overview tab`}
                             >
                                 <Text style={[styles.statusBadgeText, { color: statusColorSet.fg }]}>
                                     {CONTENT_STATUS_LABELS[status]}
@@ -1716,31 +1714,40 @@ const CreateContentScreen = () => {
                             It used to sit above and between the fields people
                             actually edit, so the caption began three scrolls down,
                             past material nobody re-reads once the work starts. */}
+                        {/* The brief, edited in place. This was a read-only title,
+                            a type chip and a truncated idea — with the real fields
+                            behind a dialog you had to know to open. The reference
+                            material and the form that edits it are the same thing,
+                            so they are now one card at the top of the tab that
+                            exists for them. */}
                         <View style={styles.section}>
-                            <View style={styles.contentHeading}>
-                                <Text style={styles.contentTitle} numberOfLines={2}>
-                                    {title || "Untitled content"}
-                                </Text>
-                                <Pressable
-                                    style={({ pressed }) => [styles.typeTag, pressed && styles.pressed]}
-                                    onPress={() => setShowInfoModal(true)}
-                                    accessibilityRole="button"
-                                    accessibilityLabel={`${CONTENT_TYPE_LABELS[contentType]}. Open content details`}
-                                >
-                                    <Text style={styles.typeTagText}>
-                                        {CONTENT_TYPE_LABELS[contentType]}
-                                    </Text>
-                                </Pressable>
-                            </View>
-
-                            {idea ? (
-                                <ReadMore
-                                    text={idea}
-                                    lineCount={3}
-                                    style={styles.ideaText}
-                                />
-                            ) : null}
-
+                            <SectionLabel>BRIEF</SectionLabel>
+                            <ContentBriefFields
+                                title={title}
+                                idea={idea}
+                                status={status}
+                                contentType={contentType}
+                                platforms={targetPlatforms}
+                                onChangeTitle={setTitle}
+                                onChangeIdea={setIdea}
+                                onChangeStatus={setStatus}
+                                onChangePlatforms={setTargetPlatforms}
+                                readOnly={locked}
+                                contentPillars={seedItem?.contentPillars}
+                                strategyId={seedItem?.strategyId}
+                                strategyName={
+                                    seedItem?.strategyId
+                                        ? strategies.find((st) => st.id === seedItem.strategyId)?.title
+                                        : undefined
+                                }
+                                onOpenStrategy={(strategyId) =>
+                                    router.push({
+                                        pathname:
+                                            "/(main)/(drawer)/(tabs)/(content)/content-strategies/[strategyId]" as any,
+                                        params: { strategyId },
+                                    })
+                                }
+                            />
                         </View>
 
                         {/* ── Posting summary (only once configured) ──────────── */}
@@ -2161,34 +2168,6 @@ const CreateContentScreen = () => {
                 onGenerate={handleMagicGenerate}
             />
 
-            <ContentInfoModal
-                visible={showInfoModal}
-                title={title}
-                idea={idea}
-                status={status}
-                typeLabel={CONTENT_TYPE_LABELS[contentType]}
-                contentType={contentType}
-                platforms={targetPlatforms}
-                onChangeTitle={setTitle}
-                onChangeIdea={setIdea}
-                onChangeStatus={setStatus}
-                onChangePlatforms={setTargetPlatforms}
-                onClose={() => setShowInfoModal(false)}
-                readOnly={locked}
-                contentPillars={seedItem?.contentPillars}
-                strategyId={seedItem?.strategyId}
-                strategyName={
-                    seedItem?.strategyId
-                        ? strategies.find((s) => s.id === seedItem.strategyId)?.title
-                        : undefined
-                }
-                onOpenStrategy={(strategyId) =>
-                    router.push({
-                        pathname: "/(main)/(drawer)/(tabs)/(content)/content-strategies/[strategyId]" as any,
-                        params: { strategyId },
-                    })
-                }
-            />
 
             {/* Script & timeline (reel/video). Writes the page's live `script`
                 state, so closing it is not a cancel — the page's Save and
@@ -2412,24 +2391,6 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     color: colors.primary,
                 },
                 // ── In-page content heading (title + type tag) ───────────────
-                contentHeading: {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 10,
-                    marginBottom: 8,
-                },
-                contentTitle: {
-                    flexShrink: 1,
-                    fontSize: fs(18),
-                    fontWeight: "700",
-                    color: colors.text,
-                },
-                ideaText: {
-                    fontSize: fs(14),
-                    lineHeight: lh(20),
-                    color: colors.textSecondary,
-                    marginBottom: 4,
-                },
                 fieldMetaRow: {
                     flexDirection: "row",
                     alignItems: "center",
@@ -2473,17 +2434,6 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     color: colors.textSecondary,
                     lineHeight: lh(18),
                     marginBottom: 12,
-                },
-                typeTag: {
-                    paddingHorizontal: 12,
-                    paddingVertical: 4,
-                    borderRadius: 8,
-                    backgroundColor: colors.tag,
-                },
-                typeTagText: {
-                    fontSize: fs(13),
-                    fontWeight: "600",
-                    color: colors.textSecondary,
                 },
                 pressed: {
                     opacity: 0.72,
