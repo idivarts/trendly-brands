@@ -17,7 +17,7 @@
  * the user walking away: the worker keeps going either way.
  */
 import { useCallback, useMemo, useState } from "react";
-import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { HttpError, HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { DesignRenderStatus } from "@/shared-libs/firestore/trendly-pro/models/design";
 import { useBrandContext } from "@/contexts/brand-context.provider";
@@ -118,10 +118,10 @@ export function useDesignRender({
                     "You can leave this page — we'll finish it."
                 );
             })
-            // HttpWrapper THROWS the Response for any status >= 300, so every
+            // HttpWrapper THROWS an HttpError for any status >= 300, so every
             // non-2xx lands here rather than in the success branch.
             .catch(async (err: unknown) => {
-                if (err instanceof Response && err.status === 402) {
+                if (err instanceof HttpError && err.status === 402) {
                     // Out of tokens. Phrased as a limit, not a failure — the
                     // design is fine, the wallet is empty, and retrying it
                     // unchanged would only fail again.

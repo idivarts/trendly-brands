@@ -5,6 +5,7 @@ import { Console } from "@/shared-libs/utils/console";
 import type { AuthMethod } from "@/shared-constants/analytics-events";
 import { track } from "@/shared-libs/utils/analytics";
 import { getStoredAttribution, hasAttribution } from "@/utils/attribution";
+import { expectedAuthErrorMessage } from "@/utils/auth-errors";
 import { AuthApp } from "@/shared-libs/utils/firebase/auth";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
@@ -113,7 +114,14 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
                     };
                     setManager(managerData);
                 } else {
-                    Console.error("Manager not found");
+                    // A signed-in session with no managers/<uid> document. Real
+                    // and worth reporting, but it needs the uid to be
+                    // actionable — the bare string gave Sentry one
+                    // undiagnosable group for every affected account.
+                    Console.error(
+                        new Error(`Manager document missing for signed-in session ${session}`),
+                        "fetchManager"
+                    );
                 }
             });
 
@@ -228,6 +236,12 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
                 firebaseSignUp(managerCredential);
             }
         } catch (error) {
+            // A wrong password is the form working, not a fault to report.
+            const expected = expectedAuthErrorMessage(error);
+            if (expected) {
+                Toaster.error(expected);
+                return;
+            }
             Console.error(error, "Error signing in");
             Toaster.error("Error signing in. Please try again.");
         }
@@ -262,8 +276,18 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
             Toaster.success("Verification Email Sent!");
             return true;
         } catch (error: any) {
-            Console.error("Signup error:", error);
-            Toaster.error("Signup failed. Please try again.");
+            const expected = expectedAuthErrorMessage(error);
+            if (expected) {
+                Toaster.error(expected);
+                return false;
+            }
+            // Console.error's signature is (error, tag). These were the wrong
+            // way round, so Sentry recorded the literal string "Signup error:"
+            // as the exception and the real failure — the backend's /onboard/signup
+            // response — as a tag, which is why that issue said nothing.
+            Console.error(error, "Signup error");
+            const message = await HttpWrapper.extractErrorMessage(error).catch(() => null);
+            Toaster.error(message || "Signup failed. Please try again.");
             return false;
         }
     };

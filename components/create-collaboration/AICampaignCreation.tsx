@@ -110,11 +110,8 @@ export default function AICampaignCreation({ onSkip, onGenerated }: AICampaignCr
                 }),
             });
 
-            if (!response.ok) {
-                throw response;
-            }
-
-
+            // No `response.ok` check: HttpWrapper.fetch already throws an
+            // HttpError for any status >= 300, so reaching here means 2xx.
             const aiData = await response.json() as AIGeneratedCampaignData;
             Console.log("AI Generated Data:", aiData);
 
@@ -122,24 +119,13 @@ export default function AICampaignCreation({ onSkip, onGenerated }: AICampaignCr
             // Encode the data as a query parameter
             onGenerated?.(aiData);
         } catch (error: any) {
-            Console.error("Failed to generate campaign:");
-            Console.error(error);
+            // One report, with the error as the error and the context as the
+            // tag — Console.error's signature is (error, tag).
+            Console.error(error, "AI campaign generation");
 
-            // Try to extract error message from API response
-            let errorMessage = "Failed to generate campaign. Please try again.";
-
-            if (error && typeof error.json === 'function') {
-                try {
-                    const errorData = await error.json();
-                    Console.log("API Error Response:", errorData);
-                    errorMessage = errorData.message || errorData.error || errorMessage;
-                } catch (parseError) {
-                    Console.error("Failed to parse error response");
-                    Console.error(parseError);
-                }
-            } else if (error && error.message) {
-                errorMessage = error.message;
-            }
+            const errorMessage =
+                (await HttpWrapper.extractErrorMessage(error).catch(() => null)) ||
+                "Failed to generate campaign. Please try again.";
 
             Console.log("Displaying error to user:", errorMessage);
             Toaster.error(errorMessage);

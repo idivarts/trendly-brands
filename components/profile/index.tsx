@@ -106,7 +106,10 @@ const Profile = () => {
 
     useEffect(() => {
         if (!manager) {
-            Console.error("Manager object is null");
+            // Not an error: `manager` is populated by the Firestore onSnapshot
+            // in auth-context, so it is null on every first render of this
+            // screen until that resolves. The genuinely missing-document case
+            // is reported there, where the uid is in scope.
             return;
         }
         setName(manager.name || "");
