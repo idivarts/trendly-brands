@@ -26,7 +26,7 @@ import UnsavedChangesModal from "@/components/contents/detail/UnsavedChangesModa
 import PlatformOptionsSection from "@/components/contents/detail/platform-fields/PlatformOptionsSection";
 import VariationEditor from "@/components/contents/detail/VariationEditor";
 import VariationModal from "@/components/contents/detail/VariationModal";
-import VariationTabs, { VariationTab } from "@/components/contents/detail/VariationTabs";
+import VariationTabs, { EditableTab, VariationTab } from "@/components/contents/detail/VariationTabs";
 import { MOCK_CONTENT_ITEMS } from "@/components/contents/mock-data";
 import PostPerformance from "@/components/contents/PostPerformance";
 import {
@@ -202,6 +202,8 @@ const CreateContentScreen = () => {
     const [targetPlatforms, setTargetPlatforms] = useState(seedItem?.platforms ?? []);
     const [showInfoModal, setShowInfoModal] = useState(false);
     // Active editor tab: "generic" (the shared base) or a platform variation.
+    // "Content" opens first, not Overview: the post is the job, the brief is a
+    // reference people go to deliberately.
     const [activeTab, setActiveTab] = useState<VariationTab>("generic");
     const [showVariationModal, setShowVariationModal] = useState(false);
     const [showPublishModal, setShowPublishModal] = useState(false);
@@ -466,11 +468,11 @@ const CreateContentScreen = () => {
     // continues in the background — caption and hashtags can even generate
     // concurrently, and only the originating tab shows the spinner.
     const [magicTarget, setMagicTarget] = useState<"caption" | "hashtags" | null>(null);
-    const [magicPlatform, setMagicPlatform] = useState<VariationTab>("generic");
+    const [magicPlatform, setMagicPlatform] = useState<EditableTab>("generic");
     // Which editor a caption/hashtag generation is running for ("generic" | a
     // platform), or null when idle. Drives the per-tab spinner + result routing.
-    const [captionGenTarget, setCaptionGenTarget] = useState<VariationTab | null>(null);
-    const [hashtagGenTarget, setHashtagGenTarget] = useState<VariationTab | null>(null);
+    const [captionGenTarget, setCaptionGenTarget] = useState<EditableTab | null>(null);
+    const [hashtagGenTarget, setHashtagGenTarget] = useState<EditableTab | null>(null);
     const [isGeneratingScript, setIsGeneratingScript] = useState(false);
     const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
@@ -575,7 +577,7 @@ const CreateContentScreen = () => {
 
     const handleSetOverride = useCallback(
         (field: VariationOverridableField, value: string) => {
-            if (activeTab === "generic") return;
+            if (activeTab === "generic" || activeTab === "overview") return;
             setOverride(activeTab, field, value);
         },
         [activeTab, setOverride]
@@ -583,7 +585,7 @@ const CreateContentScreen = () => {
 
     const handleResetField = useCallback(
         (field: VariationOverridableField) => {
-            if (activeTab === "generic") return;
+            if (activeTab === "generic" || activeTab === "overview") return;
             resetField(activeTab, field);
         },
         [activeTab, resetField]
@@ -591,14 +593,14 @@ const CreateContentScreen = () => {
 
     const handleSetVariationOptions = useCallback(
         (patch: Partial<PlatformOptions>) => {
-            if (activeTab === "generic") return;
+            if (activeTab === "generic" || activeTab === "overview") return;
             setVariationPlatformOptions(activeTab, patch);
         },
         [activeTab, setVariationPlatformOptions]
     );
 
     const handleDeleteActiveVariation = useCallback(() => {
-        if (activeTab === "generic") return;
+        if (activeTab === "generic" || activeTab === "overview") return;
         const platform = activeTab;
         const label = SOCIAL_PLATFORM_MAP[platform]?.label ?? platform;
         openModal({
@@ -1592,26 +1594,30 @@ const CreateContentScreen = () => {
                         showsVerticalScrollIndicator={false}
                         keyboardShouldPersistTaps="handled"
                     >
-                        {/* ── Platform variation tabs (Generic + per-platform + ＋) ──
-                            Hidden when the content targets a single platform — that
-                            platform's fields render inline on the main editor. */}
-                        {!soloPlatform && (targetPlatforms.length > 1 || variationPlatforms.length > 0) ? (
-                            <View style={styles.section}>
-                                <VariationTabs
-                                    active={activeTab}
-                                    variationPlatforms={variationPlatforms}
-                                    onSelect={setActiveTab}
-                                    onAddPress={() => setShowVariationModal(true)}
-                                    canAdd={!locked && availableForVariation.length > 0}
-                                />
-                                {variationPlatforms.length === 0 && !locked ? (
-                                    <Text style={styles.variationHint}>
-                                        Tailor the caption & options for a specific platform — add a
-                                        tab. The Generic version is the shared default.
-                                    </Text>
-                                ) : null}
-                            </View>
-                        ) : null}
+                        {/* ── Tabs: Overview │ Content · platforms · ＋ ───────────
+                            Always shown now. The bar used to be hidden for
+                            single-platform content, which had no variations to
+                            switch between — but Overview is not a variation, and
+                            hiding the bar would make the brief and the handoff
+                            unreachable for exactly the simplest posts. */}
+                        <View style={styles.section}>
+                            <VariationTabs
+                                active={activeTab}
+                                variationPlatforms={variationPlatforms}
+                                onSelect={setActiveTab}
+                                onAddPress={() => setShowVariationModal(true)}
+                                canAdd={!locked && !soloPlatform && availableForVariation.length > 0}
+                            />
+                            {activeTab === "generic" &&
+                            !soloPlatform &&
+                            variationPlatforms.length === 0 &&
+                            !locked ? (
+                                <Text style={styles.variationHint}>
+                                    Tailor the caption & options for a specific platform — add a
+                                    tab. The Content version is the shared default.
+                                </Text>
+                            ) : null}
+                        </View>
 
                         {/* ── Lock banner: scheduled / posted content is read-only ── */}
                         {locked ? (
@@ -1665,27 +1671,9 @@ const CreateContentScreen = () => {
                             </View>
                         ) : null}
 
-                        {/* ── Generic tab body, OR a platform variation editor ── */}
-                        {activeTab !== "generic" ? (
-                            <View style={styles.section}>
-                                <VariationEditor
-                                    platform={activeTab}
-                                    variation={variationByPlatform[activeTab]}
-                                    genericCaption={caption}
-                                    genericHashtags={hashtags}
-                                    onSetOverride={handleSetOverride}
-                                    onResetField={handleResetField}
-                                    onSetPlatformOptions={handleSetVariationOptions}
-                                    onDelete={handleDeleteActiveVariation}
-                                    onGenerateCaption={() => { setMagicPlatform(activeTab); setMagicTarget("caption"); }}
-                                    onGenerateHashtags={() => { setMagicPlatform(activeTab); setMagicTarget("hashtags"); }}
-                                    captionGenerating={captionGenTarget === activeTab}
-                                    hashtagGenerating={hashtagGenTarget === activeTab}
-                                    disabled={locked}
-                                />
-                            </View>
-                        ) : (
-                          <>
+                        {/* Publish status sits OUTSIDE the tabs: it is a live banner
+                            about the whole content, and a publish in progress must not
+                            be hidden behind a tab nobody has open. */}
                         {/* ── Per-social publish status (live while publishing + after) ── */}
                         {seedItem?.publishResults && seedItem.publishResults.length > 0 ? (
                             <View style={styles.section}>
@@ -1699,6 +1687,41 @@ const CreateContentScreen = () => {
                                 />
                             </View>
                         ) : null}
+
+                        {/* ── Overview, a platform variation, or the post itself ── */}
+                        {activeTab === "overview" ? (
+                          <>
+                        {/* ── OVERVIEW: the brief, the plan, the handoff ──────────
+                            Everything ABOUT the post rather than the post itself.
+                            It used to sit above and between the fields people
+                            actually edit, so the caption began three scrolls down,
+                            past material nobody re-reads once the work starts. */}
+                        <View style={styles.section}>
+                            <View style={styles.contentHeading}>
+                                <Text style={styles.contentTitle} numberOfLines={2}>
+                                    {title || "Untitled content"}
+                                </Text>
+                                <Pressable
+                                    style={({ pressed }) => [styles.typeTag, pressed && styles.pressed]}
+                                    onPress={() => setShowInfoModal(true)}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`${CONTENT_TYPE_LABELS[contentType]}. Open content details`}
+                                >
+                                    <Text style={styles.typeTagText}>
+                                        {CONTENT_TYPE_LABELS[contentType]}
+                                    </Text>
+                                </Pressable>
+                            </View>
+
+                            {idea ? (
+                                <ReadMore
+                                    text={idea}
+                                    lineCount={3}
+                                    style={styles.ideaText}
+                                />
+                            ) : null}
+
+                        </View>
 
                         {/* ── Posting summary (only once configured) ──────────── */}
                         {destinations.length > 0 ? (
@@ -1727,7 +1750,74 @@ const CreateContentScreen = () => {
                             </View>
                         ) : null}
 
-                        {/* ── Content heading: title + type (holds MediaStage) ─── */}
+                        {/* ── Production & handoff (reel / video) ───────────────── */}
+                        {isFilmed && (
+                            <View style={styles.section}>
+                                <SectionLabel>PRODUCTION &amp; HANDOFF</SectionLabel>
+                                <HandoffCard
+                                    isReel={isReel}
+                                    script={script}
+                                    onOpenScript={() => setScriptModalOpen(true)}
+                                    onShare={
+                                        selectedBrand?.id && contentId && hasCapability("manage_content")
+                                            ? () => setShowShareModal(true)
+                                            : undefined
+                                    }
+                                    onCreateCollab={
+                                        hasCapability("manage_content") ? handleCreateCollab : undefined
+                                    }
+                                    readOnly={locked}
+                                />
+                            </View>
+                        )}
+                        {/* The script was inline only for `live`; everything else
+                            had to open a modal from the handoff card. Here it has
+                            room, so it is inline for anything scripted — the modal
+                            stays for the wide, focused pass. */}
+                        {mediaSpec.hasScript ? (
+                            <View style={styles.section}>
+                                <ScriptEditor
+                                    title="Script & timeline"
+                                    subtitle={
+                                        isFilmed
+                                            ? "Shot by shot. Ask the AI to draft it, then edit freely."
+                                            : "Outline the talking points and flow for your live session."
+                                    }
+                                    script={script}
+                                    onScriptChange={setScript}
+                                    aiPrompt={scriptAiPrompt}
+                                    onAiPromptChange={setScriptAiPrompt}
+                                    onEnhance={handleScriptAiEnhance}
+                                    isGenerating={isGeneratingScript}
+                                    task="script"
+                                    contentId={contentId}
+                                    onSendToChat={handleSendToChat}
+                                    readOnly={locked}
+                                />
+                            </View>
+                        ) : null}
+                          </>
+                        ) : activeTab !== "generic" ? (
+                            <View style={styles.section}>
+                                <VariationEditor
+                                    platform={activeTab}
+                                    variation={variationByPlatform[activeTab]}
+                                    genericCaption={caption}
+                                    genericHashtags={hashtags}
+                                    onSetOverride={handleSetOverride}
+                                    onResetField={handleResetField}
+                                    onSetPlatformOptions={handleSetVariationOptions}
+                                    onDelete={handleDeleteActiveVariation}
+                                    onGenerateCaption={() => { setMagicPlatform(activeTab); setMagicTarget("caption"); }}
+                                    onGenerateHashtags={() => { setMagicPlatform(activeTab); setMagicTarget("hashtags"); }}
+                                    captionGenerating={captionGenTarget === activeTab}
+                                    hashtagGenerating={hashtagGenTarget === activeTab}
+                                    disabled={locked}
+                                />
+                            </View>
+                        ) : (
+                          <>
+                        {/* ── CONTENT: the post itself, and nothing else ───────── */}
                         <View
                             style={[
                                 styles.section,
@@ -1735,30 +1825,6 @@ const CreateContentScreen = () => {
                             ]}
                             onLayout={onSectionLayout("media")}
                         >
-                            <View style={styles.contentHeading}>
-                                <Text style={styles.contentTitle} numberOfLines={2}>
-                                    {title || "Untitled content"}
-                                </Text>
-                                <Pressable
-                                    style={({ pressed }) => [styles.typeTag, pressed && styles.pressed]}
-                                    onPress={() => setShowInfoModal(true)}
-                                    accessibilityRole="button"
-                                    accessibilityLabel={`${CONTENT_TYPE_LABELS[contentType]}. Open content details`}
-                                >
-                                    <Text style={styles.typeTagText}>
-                                        {CONTENT_TYPE_LABELS[contentType]}
-                                    </Text>
-                                </Pressable>
-                            </View>
-
-                            {idea ? (
-                                <ReadMore
-                                    text={idea}
-                                    lineCount={1}
-                                    style={styles.ideaText}
-                                />
-                            ) : null}
-
                             {mediaSpec.kind !== "none" && (
                                 <MediaStage
                                     contentType={contentType}
@@ -1777,25 +1843,6 @@ const CreateContentScreen = () => {
                                 />
                             )}
 
-                            {/* Inline only for `live`, where the script IS the
-                                content. Reel/video author it in ScriptModal,
-                                opened from the handoff card at the bottom. */}
-                            {mediaSpec.hasScript && !isFilmed && (
-                                <ScriptEditor
-                                    title="Script"
-                                    subtitle="Outline the talking points and flow for your live session."
-                                    script={script}
-                                    onScriptChange={setScript}
-                                    aiPrompt={scriptAiPrompt}
-                                    onAiPromptChange={setScriptAiPrompt}
-                                    onEnhance={handleScriptAiEnhance}
-                                    isGenerating={isGeneratingScript}
-                                    task="script"
-                                    contentId={contentId}
-                                    onSendToChat={handleSendToChat}
-                                    readOnly={locked}
-                                />
-                            )}
                         </View>
 
                         {/* ── Caption / Content ────────────────────────────────── */}
@@ -1959,26 +2006,6 @@ const CreateContentScreen = () => {
                             </View>
                         ) : null}
 
-                        {/* ── Production & handoff (reel / video) ───────────────── */}
-                        {isFilmed && (
-                            <View style={styles.section}>
-                                <SectionLabel>PRODUCTION &amp; HANDOFF</SectionLabel>
-                                <HandoffCard
-                                    isReel={isReel}
-                                    script={script}
-                                    onOpenScript={() => setScriptModalOpen(true)}
-                                    onShare={
-                                        selectedBrand?.id && contentId && hasCapability("manage_content")
-                                            ? () => setShowShareModal(true)
-                                            : undefined
-                                    }
-                                    onCreateCollab={
-                                        hasCapability("manage_content") ? handleCreateCollab : undefined
-                                    }
-                                    readOnly={locked}
-                                />
-                            </View>
-                        )}
                           </>
                         )}
 
