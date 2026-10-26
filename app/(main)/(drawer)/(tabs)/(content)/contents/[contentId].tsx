@@ -413,20 +413,44 @@ const CreateContentScreen = () => {
     // then having to find Save is a second step for a decision already made,
     // and a tab switch in between would quietly lose it. Local state still
     // updates so the control responds immediately.
+    //
+    // Only for content that EXISTS in Firestore. `seedItem` falls back to
+    // MOCK_CONTENT_ITEMS, so it is truthy for a mock id and for a draft that
+    // has never been saved — and updateDoc on a document that is not there
+    // throws NOT_FOUND. updateContent does not catch, so the first version of
+    // this wrote nothing and said nothing. Unsaved content still saves the
+    // ordinary way: the dirty effect has already flagged it.
+    const isPersisted = useMemo(
+        () => !!contentId && items.some((i) => i.id === contentId),
+        [contentId, items]
+    );
+
+    const autoSave = useCallback(
+        (changes: Parameters<typeof updateContent>[1], what: string) => {
+            if (!contentId || !isPersisted) return;
+            Promise.resolve(updateContent(contentId, changes)).catch((e) => {
+                // Never silent again: the page keeps its dirty flag either way,
+                // so Save is still the backstop, but a failure belongs in the log.
+                console.warn(`auto-save ${what} failed`, e);
+            });
+        },
+        [contentId, isPersisted, updateContent]
+    );
+
     const handleStatusChange = useCallback(
         (next: ContentStatus) => {
             setStatus(next);
-            if (contentId) updateContent(contentId, { status: next as any });
+            autoSave({ status: next as any }, "status");
         },
-        [contentId, updateContent]
+        [autoSave]
     );
 
     const handlePlatformsChange = useCallback(
         (next: ContentPlatform[]) => {
             setTargetPlatforms(next);
-            if (contentId) updateContent(contentId, { platforms: next });
+            autoSave({ platforms: next }, "platforms");
         },
-        [contentId, updateContent]
+        [autoSave]
     );
 
     const handleSubmitBrief = useCallback((brief: string) => {
