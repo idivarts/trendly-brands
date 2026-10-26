@@ -129,7 +129,7 @@ const ScriptEditorBody: React.FC<ScriptEditorBodyProps> = ({
 function useStyles(colors: ReturnType<typeof Colors>) {
     return StyleSheet.create({
         editorWrap: {
-            minHeight: 180,
+            minHeight: 110,
             marginTop: 12,
         },
         editorFill: {
