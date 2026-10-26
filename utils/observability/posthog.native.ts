@@ -33,6 +33,14 @@ export const createPostHogSink = (): AnalyticsSink | null => {
             // all, sampling rate, linked flags, event triggers, masking rules —
             // stays in the dashboard. Deliberately no sessionReplayConfig here,
             // so nothing is pinned client-side.
+            //
+            // The flag alone is not enough: the recorder itself is native code
+            // in @posthog/react-native-plugin, an OPTIONAL peer dependency.
+            // posthog-react-native require()s it behind a try/catch and guards
+            // every replay call on the result, so with the package missing this
+            // flag no-ops in total silence — events keep flowing while replay
+            // produces nothing. Keep it in package.json, and remember a version
+            // bump of it needs a native rebuild, not just an OTA update.
             enableSessionReplay: true,
 
             // Parity with the web sink: only bill person profiles for users
