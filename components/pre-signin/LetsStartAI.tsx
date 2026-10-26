@@ -1,6 +1,5 @@
 import AmbientBackground from "@/components/pre-signin/AmbientBackground";
 import AuthCard from "@/components/pre-signin/AuthCard";
-import IntroSplash from "@/components/pre-signin/IntroSplash";
 import AppLayout from "@/layouts/app-layout";
 import { CREATORS_FE_URL } from "@/shared-constants/app";
 import { track } from "@/shared-libs/utils/analytics";
@@ -61,35 +60,8 @@ const LetsStartAI: React.FC = () => {
         });
     }, []);
 
-    const [showSplash, setShowSplash] = useState(true);
-    const [hydrated, setHydrated] = useState(false);
     const [prompt, setPrompt] = useState("");
     const [authOpen, setAuthOpen] = useState(false);
-
-    React.useEffect(() => {
-        let cancelled = false;
-        PersistentStorage.get("lets_start_intro_splash_seen")
-            .then((seen) => {
-                if (cancelled) return;
-                setShowSplash(!seen);
-            })
-            .catch(() => {
-                if (!cancelled) setShowSplash(true);
-            })
-            .finally(() => {
-                if (!cancelled) setHydrated(true);
-            });
-        return () => { cancelled = true; };
-    }, []);
-
-    const handleSplashComplete = async () => {
-        setShowSplash(false);
-        try {
-            await PersistentStorage.set("lets_start_intro_splash_seen", "true");
-        } catch {
-            // Non-fatal: splash stays hidden for this session regardless.
-        }
-    };
 
     const showAuth = () => {
         // Drop the keyboard first so the auth modal isn't half-covered by it.
@@ -113,9 +85,6 @@ const LetsStartAI: React.FC = () => {
             router.push("/wrong-app");
         }
     };
-
-    if (!hydrated) return null;
-    if (showSplash) return <IntroSplash onComplete={handleSplashComplete} />;
 
     return (
         <AppLayout withWebPadding={false}>
