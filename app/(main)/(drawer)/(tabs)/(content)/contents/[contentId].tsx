@@ -427,12 +427,20 @@ const CreateContentScreen = () => {
 
     const autoSave = useCallback(
         (changes: Parameters<typeof updateContent>[1], what: string) => {
-            if (!contentId || !isPersisted) return;
+            if (!contentId || !isPersisted) return false;
+            // The change is already on its way to Firestore, so the dirty effect
+            // about to run for it must not flag the page. Without this the
+            // header flipped to "Save" the moment you tapped a status — the
+            // value WAS stored, the page just said it was not, which is the
+            // same thing from where the user is sitting.
+            skipDirtyRef.current = true;
             Promise.resolve(updateContent(contentId, changes)).catch((e) => {
-                // Never silent again: the page keeps its dirty flag either way,
-                // so Save is still the backstop, but a failure belongs in the log.
+                // Never silent: a failure belongs in the log, and the page is
+                // marked dirty again so Save is still the backstop.
                 console.warn(`auto-save ${what} failed`, e);
+                setDirty(true);
             });
+            return true;
         },
         [contentId, isPersisted, updateContent]
     );
