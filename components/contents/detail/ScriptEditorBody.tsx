@@ -72,6 +72,18 @@ const ScriptEditorBody: React.FC<ScriptEditorBodyProps> = ({
     // what this surface is for, and it was making the wrong one.
     const hasScript = !!script && script.replace(/<[^>]*>/g, "").trim().length > 0;
 
+    // …but the ORDER is decided once, when the section mounts, and then held.
+    //
+    // Driving it from `hasScript` live meant the first character typed flipped
+    // it, which swapped two siblings, remounted the rich-text editor and threw
+    // away focus — you got one letter per tap. Even with that fixed it would be
+    // wrong: re-ordering the page under someone mid-sentence is its own bug.
+    //
+    // Copy and tint still follow `hasScript` live, because changing words in
+    // place costs nothing. Only the layout is frozen, and it re-evaluates next
+    // time the section mounts.
+    const [aiLeads] = useState(() => !hasScript);
+
     const editor = (
         <>
             {isGenerating ? (
@@ -114,7 +126,7 @@ const ScriptEditorBody: React.FC<ScriptEditorBodyProps> = ({
                  * titled, offering examples to tap. Once a script exists it
                  * drops below and becomes "refine", because then the editor IS
                  * the subject and the AI is editing it. */
-                <View style={[styles.aiPanel, hasScript && styles.aiPanelAfter]}>
+                <View style={[styles.aiPanel, !aiLeads && styles.aiPanelAfter]}>
                     <View style={styles.aiHead}>
                         <View style={styles.aiIcon}>
                             <FontAwesomeIcon
@@ -146,7 +158,7 @@ const ScriptEditorBody: React.FC<ScriptEditorBodyProps> = ({
                             placeholderTextColor={colors.textSecondary}
                             value={aiPrompt}
                             onChangeText={onAiPromptChange}
-                            multiline={!hasScript}
+                            multiline={aiLeads}
                         />
                         <Pressable
                             style={({ pressed }) => [
@@ -205,8 +217,8 @@ const ScriptEditorBody: React.FC<ScriptEditorBodyProps> = ({
 
     return (
         <>
-            {hasScript ? editor : aiPanel}
-            {hasScript ? aiPanel : editor}
+            {aiLeads ? aiPanel : editor}
+            {aiLeads ? editor : aiPanel}
         </>
     );
 };
