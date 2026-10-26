@@ -1770,26 +1770,6 @@ const CreateContentScreen = () => {
                             </View>
                         ) : null}
 
-                        {/* ── Production & handoff (reel / video) ───────────────── */}
-                        {isFilmed && (
-                            <View style={styles.section}>
-                                <SectionLabel>PRODUCTION &amp; HANDOFF</SectionLabel>
-                                <HandoffCard
-                                    isReel={isReel}
-                                    script={script}
-                                    onOpenScript={() => setScriptModalOpen(true)}
-                                    onShare={
-                                        selectedBrand?.id && contentId && hasCapability("manage_content")
-                                            ? () => setShowShareModal(true)
-                                            : undefined
-                                    }
-                                    onCreateCollab={
-                                        hasCapability("manage_content") ? handleCreateCollab : undefined
-                                    }
-                                    readOnly={locked}
-                                />
-                            </View>
-                        )}
                         {/* The script was inline only for `live`; everything else
                             had to open a modal from the handoff card. Here it has
                             room, so it is inline for anything scripted — the modal
@@ -1816,6 +1796,23 @@ const CreateContentScreen = () => {
                                 />
                             </View>
                         ) : null}
+                        {/* ── Production & handoff (reel / video) ───────────────── */}
+                        {isFilmed && (
+                            <View style={styles.section}>
+                                <SectionLabel>PRODUCTION &amp; HANDOFF</SectionLabel>
+                                <HandoffCard
+                                    isReel={isReel}
+                                    onShare={
+                                        selectedBrand?.id && contentId && hasCapability("manage_content")
+                                            ? () => setShowShareModal(true)
+                                            : undefined
+                                    }
+                                    onCreateCollab={
+                                        hasCapability("manage_content") ? handleCreateCollab : undefined
+                                    }
+                                />
+                            </View>
+                        )}
                           </>
                         ) : activeTab !== "generic" ? (
                             <View style={styles.section}>
