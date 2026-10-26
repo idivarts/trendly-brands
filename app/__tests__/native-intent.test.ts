@@ -24,8 +24,37 @@ describe("redirectSystemPath", () => {
         });
     });
 
+    /**
+     * When the OS does not claim the link (Android App Links unverified, or the
+     * tap happening in an in-app webview), the Branch page bounces into the app
+     * over the custom scheme instead — `intent://open?…#Intent;scheme=…` — and
+     * `open` is not a route.
+     */
+    describe("Branch's custom-scheme entry point is handed to Branch", () => {
+        it.each([
+            // Exactly what Android's intent:// fallback resolves to, params and all.
+            "trendly-brands://open?_branch_referrer=H4sIAAAAAAAAAwXBQQ&link_click_id=1643356066691905396",
+            // The no-param form, driven by the branch_intent intent extra.
+            "trendly-brands://open",
+            "trendly-brands://open/",
+            "trendly-brands://open#fragment",
+            // The scheme lives in app.json, so a rename must not switch this off.
+            "trendly://open?link_click_id=1",
+        ])("redirects %s to /", (url) => {
+            expect(swallowed(url)).toBe("/");
+        });
+    });
+
     describe("everything else passes through", () => {
         it.each([
+            // A link that DOES carry $android_deeplink_path arrives on the custom
+            // scheme as a real route, and must reach the router untouched.
+            "trendly-brands://share/tok123?link_click_id=1643356066691905396",
+            // `open` is an ordinary first path segment over http(s) — only the
+            // custom scheme's host is Branch's reserved target.
+            "https://brands.trendly.now/open",
+            // ...and only as the WHOLE host, not as a prefix of one.
+            "trendly-brands://opendoc/42",
             // Sibling hosts under trendly.now must NOT be swallowed — the
             // custom domain is matched exactly, never by suffix.
             "https://brands.trendly.now/share/abc123",
