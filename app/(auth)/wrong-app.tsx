@@ -12,11 +12,16 @@ import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
 import { Image, Linking, Platform, StyleSheet, View } from "react-native";
 import { Text } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const TrendlyScreen = () => {
     // const { socials } = useSocialContext();
     const theme = useTheme();
-    const styles = useStyles(theme);
+    // No PageHeader above the back button, and the layout below deliberately
+    // leaves the "top" edge out so the artwork can bleed — so the padding that
+    // keeps the back button clear of the status bar lives here.
+    const insets = useSafeAreaInsets();
+    const styles = useStyles(theme, insets.top);
     const isAndroid = Platform.OS === "android";
     const storeLabel = isAndroid ? "Play Store" : "App Store";
     const storeUrl = isAndroid ? CREATORS_PLAYSTORE_URL : CREATORS_APPSTORE_URL;
@@ -70,7 +75,7 @@ const TrendlyScreen = () => {
     );
 };
 
-const useStyles = (theme: ReturnType<typeof useTheme>) =>
+const useStyles = (theme: ReturnType<typeof useTheme>, topInset: number) =>
     StyleSheet.create({
         header: {
             flexDirection: "row",
@@ -85,6 +90,7 @@ const useStyles = (theme: ReturnType<typeof useTheme>) =>
             flex: 1,
             backgroundColor: Colors(theme).background,
             padding: 16,
+            paddingTop: 16 + topInset,
             justifyContent: "space-between",
         },
         centerContent: {

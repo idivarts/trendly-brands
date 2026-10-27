@@ -13,6 +13,8 @@
  */
 import { ContentType } from "@/components/content-calendar/types";
 import { useBreakpoints } from "@/hooks";
+import AIModelSelector from "@/components/ai/AIModelSelector/AIModelSelector";
+import { useAIModels } from "@/hooks/use-ai-models";
 import { Focus, FocusArea } from "@/types/focus";
 import { useContentComments } from "@/hooks/use-content-comments";
 import { IContentAudio, IContentDesignRef } from "@/shared-libs/firestore/trendly-pro/models/design";
@@ -49,6 +51,7 @@ import {
     View,
 } from "react-native";
 import { Menu } from "react-native-paper";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DesignSystemNudge from "@/components/design-system/DesignSystemNudge";
 import { DesignFrameHandle, FrameOutMsg } from "./bridge";
 import DesignFrame from "./DesignFrame";
@@ -80,6 +83,15 @@ interface DesignStageProps {
      * brief as its first message. Called from the empty-canvas brief step.
      */
     onSubmitBrief: (brief: string) => void;
+    /**
+     * A brief has been handed to the AI and no design exists yet — the middle
+     * of the studio's three states (waiting for a prompt → generating →
+     * design). Owned by the page, because only it can see both the chat turn
+     * and the content document the design lands on.
+     */
+    generating?: boolean;
+    /** The brief being worked on, echoed back while `generating`. */
+    pendingBrief?: string;
     readOnly?: boolean;
 }
 
@@ -95,10 +107,22 @@ const TB_EDGE = 4;
 
 const DesignStage: React.FC<DesignStageProps> = (props) => {
     const { contentId, brandId, designRef, isVideo, readOnly, onClose, onSubmitBrief } = props;
+    const { generating, pendingBrief } = props;
     const theme = useTheme();
     const colors = Colors(theme);
     const { width, xl } = useBreakpoints();
-    const styles = useStyles(colors);
+    // The stage is a full-bleed takeover: the page header that normally owns the
+    // top inset is hidden while it is open, so this header owns it instead.
+    const insets = useSafeAreaInsets();
+    const styles = useStyles(colors, insets.top);
+
+    // The brief composer runs the same lane the backend will: the design task.
+    // Shared selection with the chat composer, so a choice in either shows in both.
+    const {
+        models: designModels,
+        selectedModel: designModel,
+        setSelectedModel,
+    } = useAIModels("design");
 
     const { revision, history, addRevision, revertTo } = useContentDesign(contentId, designRef);
     const { addComment } = useContentComments(contentId);
@@ -711,6 +735,31 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                        the user nothing to act on; a prompt box does, and the
                        brief becomes the first message of a fresh AI thread. */
                     <ScrollView contentContainerStyle={styles.briefScroll} showsVerticalScrollIndicator={false}>
+                        {generating ? (
+                            /* State 2 — the brief is with the AI.
+                               The canvas used to go on showing an empty prompt box
+                               after submitting, so the one place the user had just
+                               acted gave no sign it had heard them, and the only
+                               feedback was in a panel they were not looking at.
+                               This holds their words and the work in the same spot
+                               they typed them. */
+                            <View style={styles.brief} accessibilityLiveRegion="polite">
+                                <ActivityIndicator size="large" color={colors.primary} />
+                                <Text style={[styles.emptyTitle, styles.generatingTitle]}>
+                                    Designing your {briefNoun}…
+                                </Text>
+                                <Text style={styles.emptySub}>
+                                    The AI is drafting it, then checking its own render. This takes a
+                                    moment — you can follow along in the chat.
+                                </Text>
+                                {pendingBrief ? (
+                                    <View style={styles.pendingBrief}>
+                                        <Text style={styles.pendingBriefLabel}>Your brief</Text>
+                                        <Text style={styles.pendingBriefText}>{pendingBrief}</Text>
+                                    </View>
+                                ) : null}
+                            </View>
+                        ) : (
                         <View style={styles.brief}>
                             <View style={styles.emptyIcon}>
                                 <FontAwesomeIcon icon={faWandMagicSparkles} size={26} color={colors.primary} />
@@ -729,20 +778,34 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                                 editable={!readOnly}
                             />
 
-                            <Pressable
-                                style={({ pressed }) => [
-                                    styles.briefCta,
-                                    !brief.trim() && styles.briefCtaDisabled,
-                                    pressed && styles.pressed,
-                                ]}
-                                onPress={submitBrief}
-                                disabled={!brief.trim() || readOnly}
-                                accessibilityRole="button"
-                                accessibilityLabel="Start designing"
-                            >
-                                <FontAwesomeIcon icon={faWandMagicSparkles} size={14} color={colors.onPrimary} />
-                                <Text style={styles.briefCtaText}>Start designing</Text>
-                            </Pressable>
+                            {/* The model belongs with the prompt that uses it. This
+                                is the primary composer while no design exists, and
+                                it was the only one WITHOUT a picker — the chat
+                                composer beside it had one, which read as the chat
+                                being the real input. Same shared selection, so
+                                choosing here changes it there too. */}
+                            <View style={styles.briefActions}>
+                                <AIModelSelector
+                                    models={designModels}
+                                    selectedModel={designModel}
+                                    onSelect={setSelectedModel}
+                                    compact
+                                />
+                                <Pressable
+                                    style={({ pressed }) => [
+                                        styles.briefCta,
+                                        !brief.trim() && styles.briefCtaDisabled,
+                                        pressed && styles.pressed,
+                                    ]}
+                                    onPress={submitBrief}
+                                    disabled={!brief.trim() || readOnly}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Start designing"
+                                >
+                                    <FontAwesomeIcon icon={faWandMagicSparkles} size={14} color={colors.onPrimary} />
+                                    <Text style={styles.briefCtaText}>Start designing</Text>
+                                </Pressable>
+                            </View>
 
                             <Text style={styles.briefHint}>
                                 The AI picks it up from here — you can keep refining it in the chat.
@@ -763,6 +826,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                                 </Pressable>
                             ) : null}
                         </View>
+                        )}
                     </ScrollView>
                 )}
             </View>
@@ -888,7 +952,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     );
 };
 
-const useStyles = (colors: any) =>
+const useStyles = (colors: any, topInset: number) =>
     useMemo(
         () =>
             StyleSheet.create({
@@ -905,7 +969,8 @@ const useStyles = (colors: any) =>
                     alignItems: "center",
                     gap: 12,
                     paddingHorizontal: 14,
-                    paddingVertical: 12,
+                    paddingTop: 12 + topInset,
+                    paddingBottom: 12,
                     shadowColor: "#000",
                     shadowOffset: { width: 0, height: 3 },
                     shadowRadius: 8,
@@ -1151,6 +1216,44 @@ const useStyles = (colors: any) =>
                     shadowOpacity: 0.04,
                     elevation: 1,
                 },
+                // The picker and the CTA share a row: the model is part of the
+                // decision being made here, not a separate setting elsewhere.
+                briefActions: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexWrap: "wrap",
+                    gap: 12,
+                    marginTop: 16,
+                },
+                generatingTitle: {
+                    marginTop: 20,
+                },
+                // The user's own words, held where they typed them, so the wait
+                // shows what is being worked on rather than a bare spinner.
+                pendingBrief: {
+                    marginTop: 24,
+                    maxWidth: 520,
+                    width: "100%",
+                    borderRadius: 12,
+                    paddingHorizontal: 16,
+                    paddingVertical: 14,
+                    backgroundColor: colors.tag,
+                },
+                pendingBriefLabel: {
+                    fontSize: fs(11),
+                    lineHeight: lh(15),
+                    fontWeight: "700",
+                    letterSpacing: 0.6,
+                    textTransform: "uppercase",
+                    color: colors.textSecondary,
+                    marginBottom: 6,
+                },
+                pendingBriefText: {
+                    fontSize: fs(14),
+                    lineHeight: lh(21),
+                    color: colors.text,
+                },
                 briefCta: {
                     flexDirection: "row",
                     alignItems: "center",
@@ -1278,7 +1381,7 @@ const useStyles = (colors: any) =>
                 primaryBtnText: { color: colors.onPrimary, fontSize: fs(14), fontWeight: "600" },
                 pressed: { opacity: 0.72 },
             }),
-        [colors]
+        [colors, topInset]
     );
 
 export default DesignStage;

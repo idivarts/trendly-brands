@@ -7,7 +7,7 @@ import { useMyNavigation } from "@/shared-libs/utils/router";
 import useBreakpoints from "@/shared-libs/utils/use-breakpoints";
 import { useGoogleLogin } from "@/utils/use-google-login";
 import { UserCredential } from "firebase/auth";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import {
     Animated,
@@ -20,6 +20,7 @@ import {
     Text,
     View
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import OfferCard from "@/components/landing/OfferCard";
 import { ExplainerConfig, useMyGrowthBook } from "@/contexts/growthbook-context-provider";
@@ -34,6 +35,11 @@ const VIDEO_THUMB =
 
 
 export default function TrendlyHero() {
+    // This page renders LandingHeader instead of a PageHeader, and its AppLayout
+    // leaves the top edge out — so the page's own top padding has to clear the
+    // status bar.
+    const insets = useSafeAreaInsets();
+    const insetStyles = usePageInsetStyles(insets.top);
     const router = useMyNavigation()
     const { setSession } = useAuthContext()
     const { features, discountEndTime } = useMyGrowthBook()
@@ -114,7 +120,7 @@ export default function TrendlyHero() {
     return (
         <AppLayout>
             <ScrollView
-                contentContainerStyle={styles.page}
+                contentContainerStyle={[styles.page, insetStyles.pageTop]}
                 bounces={false}
                 showsVerticalScrollIndicator={false}
             >
@@ -186,10 +192,20 @@ const BLUE_DARK = "#1A3B5C";
 const BLUE_LIGHT = "#6C91BA";
 const TEXT = "#243A53";
 
+const usePageInsetStyles = (topInset: number) =>
+    useMemo(
+        () =>
+            StyleSheet.create({
+                pageTop: {
+                    paddingTop: Platform.select({ web: 36, default: 24 })! + topInset,
+                },
+            }),
+        [topInset]
+    );
+
 const styles = StyleSheet.create({
     page: {
         paddingHorizontal: 24,
-        paddingTop: Platform.select({ web: 36, default: 24 }),
         paddingBottom: 48,
         backgroundColor: "#FFFFFF",
         maxWidth: 1300,

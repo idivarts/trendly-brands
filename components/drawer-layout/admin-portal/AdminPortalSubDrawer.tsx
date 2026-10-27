@@ -9,6 +9,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Theme, useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo } from "react";
 import { Platform, Pressable, ScrollView, StyleSheet } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DrawerMenuItem from "../DrawerMenuItem";
 import { ADMIN_PORTAL_SEGMENTS } from "./menu-items";
 
@@ -23,7 +24,10 @@ export const SUB_DRAWER_WIDTH = 248;
 const AdminPortalSubDrawer: React.FC = () => {
     const theme = useTheme();
     const colors = Colors(theme);
-    const styles = useMemo(() => createStyles(theme), [theme]);
+    // The panel runs the full height of the screen, so its own top padding is
+    // what keeps the first row clear of the status bar.
+    const { top } = useSafeAreaInsets();
+    const styles = useMemo(() => createStyles(theme, top), [theme, top]);
     const sidebarCtx = useSidebarCollapsed();
     const { subDrawerKind, closeSubDrawer } = sidebarCtx;
     const isOpen = subDrawerKind === "admin";
@@ -84,7 +88,7 @@ const AdminPortalSubDrawer: React.FC = () => {
     );
 };
 
-const createStyles = (theme: Theme) => {
+const createStyles = (theme: Theme, topInset: number) => {
     const colors = Colors(theme);
     const sidebarSurfaceBg = (colors as any).drawerBackground ?? colors.card;
     const sectionLabelColor =
@@ -101,7 +105,7 @@ const createStyles = (theme: Theme) => {
             flexShrink: 0,
             flexBasis: SUB_DRAWER_WIDTH,
             backgroundColor: sidebarSurfaceBg,
-            paddingTop: Platform.OS === "web" ? 12 : 64,
+            paddingTop: Platform.OS === "web" ? 12 : 12 + topInset,
             shadowColor: "#000",
             shadowOffset: { width: 8, height: 0 },
             shadowRadius: 18,

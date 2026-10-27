@@ -6,7 +6,7 @@ import MarkdownMessage from "@/components/shared/MarkdownMessage";
 import { getAIChatStarter } from "@/constants/AIChatStarters";
 import { useBreakpoints } from "@/hooks";
 import { Focus } from "@/types/focus";
-import { AIControl, AIModule, LiveContent, useAIChat } from "@/hooks/use-ai-chat";
+import { AIControl, AIModule, LiveContent, taskForModule, useAIChat } from "@/hooks/use-ai-chat";
 import { useAIModels } from "@/hooks/use-ai-models";
 import { useEntitlements } from "@/hooks/use-entitlements";
 import { useAWSContext } from "@/shared-libs/contexts/aws-context.provider";
@@ -130,6 +130,13 @@ interface AIChatPanelProps {
      * re-emits.
      */
     onControlsChange?: (controls: AIChatControls) => void;
+    /**
+     * Streaming on/off, lifted for callers that render their own waiting state
+     * elsewhere on the page — the Design Studio holds an empty canvas in a
+     * "generating" state and needs to know when the turn has ended without
+     * producing anything, so it does not wait forever.
+     */
+    onBusyChange?: (busy: boolean) => void;
 
     /**
      * Hero (empty-draft) state, shown when `scope="all"` and no conversation is
@@ -244,6 +251,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     heroTitle,
     heroSuggestions,
     onControlsChange,
+    onBusyChange,
     initialConversationId,
     initialMessage,
     onInitialMessageSent,
@@ -348,7 +356,15 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         onOnboardingComplete,
     });
 
-    const { models, selectedModel, setSelectedModel } = useAIModels();
+    // Which task's models to offer. The OPEN CONVERSATION decides it, not this
+    // panel's own module: the Playground (module "general") lists every thread
+    // across modules, so continuing a content thread there must still offer the
+    // design models — the backend reads the module off the conversation
+    // document, not off what the panel thinks it is. Falls back to the panel's
+    // module for a chat that does not exist yet.
+    const activeModule =
+        threads.find((t) => t.id === activeThreadId)?.module ?? module;
+    const { models, selectedModel, setSelectedModel } = useAIModels(taskForModule(activeModule));
 
     // Org AI-token pressure. When exhausted, the composer is replaced by an
     // in-context block (Upgrade / Add top-up) — we do NOT navigate away.
@@ -635,6 +651,11 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     useEffect(() => {
         onControlsChange?.({ toggleHistory: onToggleHistory, newChat: onNewChat, historyActive });
     }, [onControlsChange, onToggleHistory, onNewChat, historyActive]);
+
+    // Report streaming state to a parent that renders its own waiting UI.
+    useEffect(() => {
+        onBusyChange?.(isStreaming);
+    }, [isStreaming, onBusyChange]);
 
     // "Expand" — open the active conversation in the full Playground. Deep-links
     // with its id so the Playground opens it by default. Only meaningful from a

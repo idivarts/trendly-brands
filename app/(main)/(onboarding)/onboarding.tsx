@@ -28,6 +28,7 @@ import {
     TextInput,
     View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // ── Validation (mirrors the existing onboarding form) ────────────────────────
 // The country dial code is captured separately by PhoneNumberInput, so here we
@@ -104,7 +105,10 @@ const OnboardingFlow = () => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
-    const styles = useStyles(colors, xl);
+    // This screen has no PageHeader, and its AppLayout does not inset the top —
+    // without this the progress bar sits entirely behind the status bar.
+    const insets = useSafeAreaInsets();
+    const styles = useStyles(colors, xl, insets.top);
     const router = useMyNavigation();
     // When started from an Organization page, create the brand under that org.
     const { orgId } = useLocalSearchParams<{ orgId?: string }>();
@@ -524,9 +528,9 @@ const OnboardingFlow = () => {
     );
 };
 
-function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
+function useStyles(colors: ReturnType<typeof Colors>, xl: boolean, topInset: number) {
     return StyleSheet.create({
-        container: { flex: 1, backgroundColor: colors.background },
+        container: { flex: 1, backgroundColor: colors.background, paddingTop: topInset },
         fill: { flex: 1 },
         progressTrack: {
             height: 5,

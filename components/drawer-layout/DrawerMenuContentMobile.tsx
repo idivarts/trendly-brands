@@ -19,7 +19,7 @@ interface DrawerMenuContentMobileProps { }
 
 const DrawerMenuContentMobile: React.FC<DrawerMenuContentMobileProps> = () => {
     const router = useRouter();
-    const { bottom } = useSafeAreaInsets();
+    const { top, bottom } = useSafeAreaInsets();
     const theme = useTheme();
     const { brands, selectedBrand, setSelectedBrand } = useBrandContext();
     const { manager } = useAuthContext();
@@ -47,7 +47,7 @@ const DrawerMenuContentMobile: React.FC<DrawerMenuContentMobileProps> = () => {
         <View
             style={{
                 flex: 1,
-                paddingTop: Platform.OS === "web" ? 8 : 64,
+                paddingTop: Platform.OS === "web" ? 8 : 8 + top,
                 backgroundColor: Colors(theme).background,
             }}
         >

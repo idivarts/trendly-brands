@@ -11,6 +11,7 @@ import {
     StyleSheet,
     View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { IconButton, Text } from "react-native-paper";
 import RightPanelDiscover from "./RightPanelDiscover";
 
@@ -43,9 +44,12 @@ const AdvancedFilterOverlay: React.FC<AdvancedFilterOverlayProps> = ({
     const translateXAnim = useRef(new Animated.Value(panelOffset)).current;
     const backdropOpacity = useRef(new Animated.Value(0)).current;
 
+    // Full-height panel pinned to the top of the screen, so on mobile its header
+    // has to clear the status bar itself.
+    const insets = useSafeAreaInsets();
     const styles = useMemo(
-        () => createStyles(colors, isMobile),
-        [colors, isMobile]
+        () => createStyles(colors, isMobile, insets.top),
+        [colors, isMobile, insets.top]
     );
 
     useEffect(() => {
@@ -148,7 +152,8 @@ const AdvancedFilterOverlay: React.FC<AdvancedFilterOverlayProps> = ({
 
 const createStyles = (
     colors: ReturnType<typeof Colors>,
-    isMobile: boolean
+    isMobile: boolean,
+    topInset: number
 ) =>
     StyleSheet.create({
         overlay: {
@@ -192,7 +197,7 @@ const createStyles = (
             justifyContent: "space-between",
             paddingHorizontal: 8,
             paddingVertical: 8,
-            paddingTop: Platform.OS === "ios" ? 48 : 16,
+            paddingTop: 8 + topInset,
             borderBottomWidth: 1,
             borderBottomColor: colors.outline,
             backgroundColor: colors.card,

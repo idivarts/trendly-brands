@@ -10,10 +10,16 @@ import { Platform } from "react-native";
 const TOUR_PREFIXES = ["guide-tour-", "discover-guide-tour-"];
 const DISCOVER_SURVEY_PREFIXES = ["survey-completed-"];
 
+// `typeof localStorage === "undefined"` does NOT make this safe: that
+// expression evaluates the same property getter, which throws SecurityError
+// when the browser blocks site data for the document. Only try/catch does.
 async function getAllKeys(): Promise<string[]> {
     if (Platform.OS === "web") {
-        if (typeof localStorage === "undefined") return [];
-        return Object.keys(localStorage);
+        try {
+            return Object.keys(globalThis.localStorage);
+        } catch {
+            return [];
+        }
     }
     return [...(await AsyncStorage.getAllKeys())];
 }
@@ -21,7 +27,11 @@ async function getAllKeys(): Promise<string[]> {
 async function removeKeys(keys: string[]): Promise<void> {
     if (keys.length === 0) return;
     if (Platform.OS === "web") {
-        keys.forEach((k) => localStorage.removeItem(k));
+        try {
+            keys.forEach((k) => globalThis.localStorage.removeItem(k));
+        } catch {
+            // Nothing persisted, so nothing to clear.
+        }
     } else {
         await AsyncStorage.multiRemove(keys);
     }

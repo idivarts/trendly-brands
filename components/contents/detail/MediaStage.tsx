@@ -22,6 +22,7 @@
  */
 import { ContentType } from "@/components/content-calendar/types";
 import { fs, lh } from "@/constants/Typography";
+import SectionLabel from "@/components/contents/detail/SectionLabel";
 import { useBreakpoints } from "@/hooks";
 import { useAWSContext } from "@/shared-libs/contexts/aws-context.provider";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
@@ -780,33 +781,42 @@ const MediaStage: React.FC<MediaStageProps> = ({
     };
 
     return (
-        <View style={styles.card} onLayout={onStageLayout}>
-            <View style={styles.headerRow}>
-                <Text style={styles.cardTitle}>{spec.kind === "video" ? "Video" : "Visuals"}</Text>
-                <View style={styles.headerChips}>
-                    {designRenderState ? <DesignRenderChip state={designRenderState} /> : null}
-                    {spec.aspectLabel ? (
-                        <View style={styles.ratioChip}>
-                            <Text style={styles.ratioChipText}>{spec.aspectLabel}</Text>
-                        </View>
-                    ) : null}
-                </View>
+        <>
+            {/* The heading names a REGION of the editor, exactly like CAPTION and
+                HASHTAGS below it, so it is a section label outside the card —
+                not a bold title inside one, which made a peer read as a
+                different kind of thing. The chips ride with it: the ratio and
+                the render status describe the section, not its contents. */}
+            <SectionLabel
+                right={
+                    <>
+                        {designRenderState ? <DesignRenderChip state={designRenderState} /> : null}
+                        {spec.aspectLabel ? (
+                            <View style={styles.ratioChip}>
+                                <Text style={styles.ratioChipText}>{spec.aspectLabel}</Text>
+                            </View>
+                        ) : null}
+                    </>
+                }
+            >
+                {spec.kind === "video" ? "VIDEO" : "VISUALS"}
+            </SectionLabel>
+            <View style={styles.card} onLayout={onStageLayout}>
+                {renderBody()}
+
+                {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+                {previewOpen ? (
+                    <AssetPreviewModal
+                        previewImage={previewOpen}
+                        previewImageUrl={previewImageUrl}
+                        previewVideoUrl={previewVideoUrl}
+                        setPreviewImage={setPreviewOpen}
+                        theme={theme}
+                    />
+                ) : null}
             </View>
-
-            {renderBody()}
-
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-            {previewOpen ? (
-                <AssetPreviewModal
-                    previewImage={previewOpen}
-                    previewImageUrl={previewImageUrl}
-                    previewVideoUrl={previewVideoUrl}
-                    setPreviewImage={setPreviewOpen}
-                    theme={theme}
-                />
-            ) : null}
-        </View>
+        </>
     );
 };
 
@@ -822,21 +832,6 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             shadowRadius: 8,
             shadowOpacity: 0.07,
             elevation: 3,
-        },
-        headerRow: {
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "space-between",
-        },
-        headerChips: {
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 6,
-        },
-        cardTitle: {
-            fontSize: fs(15),
-            fontWeight: "700",
-            color: colors.text,
         },
         ratioChip: {
             paddingHorizontal: 10,

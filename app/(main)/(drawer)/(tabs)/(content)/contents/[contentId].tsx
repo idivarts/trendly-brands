@@ -2,9 +2,9 @@ import { track } from "@/shared-libs/utils/analytics";
 import { CONTENT_TYPE_LABELS, ContentType } from "@/components/content-calendar/types";
 import ContentCommentsPanel from "@/components/contents/ContentCommentsPanel";
 import ContentActionsMenu from "@/components/contents/detail/ContentActionsMenu";
-import ContentInfoModal from "@/components/contents/detail/ContentInfoModal";
+import ContentBriefFields from "@/components/contents/detail/ContentBriefFields";
 import HandoffCard from "@/components/contents/detail/HandoffCard";
-import ScriptModal from "@/components/contents/detail/ScriptModal";
+import SectionLabel from "@/components/contents/detail/SectionLabel";
 import { MEDIA_SPEC } from "@/components/contents/detail/media-spec";
 import MediaStage from "@/components/contents/detail/MediaStage";
 import DesignStage from "@/components/contents/detail/design-stage/DesignStage";
@@ -25,7 +25,7 @@ import UnsavedChangesModal from "@/components/contents/detail/UnsavedChangesModa
 import PlatformOptionsSection from "@/components/contents/detail/platform-fields/PlatformOptionsSection";
 import VariationEditor from "@/components/contents/detail/VariationEditor";
 import VariationModal from "@/components/contents/detail/VariationModal";
-import VariationTabs, { VariationTab } from "@/components/contents/detail/VariationTabs";
+import VariationTabs, { EditableTab, VariationTab } from "@/components/contents/detail/VariationTabs";
 import { MOCK_CONTENT_ITEMS } from "@/components/contents/mock-data";
 import PostPerformance from "@/components/contents/PostPerformance";
 import {
@@ -68,7 +68,6 @@ import { variationSpecForPlatform } from "@/shared-libs/firestore/trendly-pro/co
 import { effectiveContentForPlatform, VariationOverridableField } from "@/shared-libs/firestore/trendly-pro/models/variations";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
-import ReadMore from "@/shared-uis/components/ReadMore";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import {
@@ -132,14 +131,21 @@ const CreateContentScreen = () => {
         // Run strictly once on mount; never fight a later manual toggle.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-    const { contentId, title: paramTitle, idea: paramIdea, type: paramType, date: paramDate } =
-        useLocalSearchParams<{
-            contentId: string;
-            title?: string;
-            idea?: string;
-            type?: string;
-            date?: string;
-        }>();
+    const {
+        contentId,
+        title: paramTitle,
+        idea: paramIdea,
+        type: paramType,
+        date: paramDate,
+        tab: paramTab,
+    } = useLocalSearchParams<{
+        contentId: string;
+        title?: string;
+        idea?: string;
+        type?: string;
+        date?: string;
+        tab?: string;
+    }>();
     const styles = useStyles(colors, xl);
 
     const router = useRouter();
@@ -199,9 +205,6 @@ const CreateContentScreen = () => {
     // The platforms this content is planned for (publishing intent). Editable
     // from the Content details modal; hydrated from the live item below.
     const [targetPlatforms, setTargetPlatforms] = useState(seedItem?.platforms ?? []);
-    const [showInfoModal, setShowInfoModal] = useState(false);
-    // Active editor tab: "generic" (the shared base) or a platform variation.
-    const [activeTab, setActiveTab] = useState<VariationTab>("generic");
     const [showVariationModal, setShowVariationModal] = useState(false);
     const [showPublishModal, setShowPublishModal] = useState(false);
     const [showNoSocialsModal, setShowNoSocialsModal] = useState(false);
@@ -393,13 +396,106 @@ const CreateContentScreen = () => {
     // content has a canvas but no attachments, which used to read as "no media".
     const designPreview = useDesignPreview(contentId ?? null, seedItem?.designRef);
 
+    // ── Design Studio's three states ─────────────────────────────────────────
+    // 1. waiting for a brief  2. brief with the AI, no design yet  3. design up.
+    // State 2 is held here rather than in the stage because only this level can
+    // see both halves of it: the chat turn that is running and the content
+    // document the design actually lands on.
+    const [pendingBrief, setPendingBrief] = useState<string | null>(null);
+    const [chatBusy, setChatBusy] = useState(false);
+    // Whether the AI turn for the current brief has actually begun streaming.
+    const turnStartedRef = useRef(false);
+
     // The brief typed on the empty canvas: open a fresh AI thread, seed it with
     // the brief as the first message, and let the normal chat flow take over.
+    // Status and platforms write straight through, like the soundtrack already
+    // does. They are single-tap settings, not prose: tapping "Approved" and
+    // then having to find Save is a second step for a decision already made,
+    // and a tab switch in between would quietly lose it. Local state still
+    // updates so the control responds immediately.
+    //
+    // Only for content that EXISTS in Firestore. `seedItem` falls back to
+    // MOCK_CONTENT_ITEMS, so it is truthy for a mock id and for a draft that
+    // has never been saved — and updateDoc on a document that is not there
+    // throws NOT_FOUND. updateContent does not catch, so the first version of
+    // this wrote nothing and said nothing. Unsaved content still saves the
+    // ordinary way: the dirty effect has already flagged it.
+    const isPersisted = useMemo(
+        () => !!contentId && items.some((i) => i.id === contentId),
+        [contentId, items]
+    );
+
+    const autoSave = useCallback(
+        (changes: Parameters<typeof updateContent>[1], what: string) => {
+            if (!contentId || !isPersisted) return false;
+            // The change is already on its way to Firestore, so the dirty effect
+            // about to run for it must not flag the page. Without this the
+            // header flipped to "Save" the moment you tapped a status — the
+            // value WAS stored, the page just said it was not, which is the
+            // same thing from where the user is sitting.
+            skipDirtyRef.current = true;
+            Promise.resolve(updateContent(contentId, changes)).catch((e) => {
+                // Never silent: a failure belongs in the log, and the page is
+                // marked dirty again so Save is still the backstop.
+                console.warn(`auto-save ${what} failed`, e);
+                setDirty(true);
+            });
+            return true;
+        },
+        [contentId, isPersisted, updateContent]
+    );
+
+    const handleStatusChange = useCallback(
+        (next: ContentStatus) => {
+            setStatus(next);
+            autoSave({ status: next as any }, "status");
+        },
+        [autoSave]
+    );
+
+    const handlePlatformsChange = useCallback(
+        (next: ContentPlatform[]) => {
+            setTargetPlatforms(next);
+            autoSave({ platforms: next }, "platforms");
+        },
+        [autoSave]
+    );
+
     const handleSubmitBrief = useCallback((brief: string) => {
+        turnStartedRef.current = false;
+        setPendingBrief(brief);
         chatControlsRef.current?.newChat();
         setPendingChatMessage(brief);
         setRightPanelMode("chat");
     }, []);
+
+    // The design landing is what ends state 2 — not the chat going quiet, since
+    // the AI renders and inspects its own work across several turns before the
+    // revision is written.
+    const designRevisionId = seedItem?.designRef?.revisionId;
+    useEffect(() => {
+        if (designRevisionId) setPendingBrief(null);
+    }, [designRevisionId]);
+
+    // A turn can also end WITHOUT producing a design — the AI asked a question,
+    // or the call failed. Without this the studio would spin forever on a chat
+    // that is already waiting for the user's reply.
+    //
+    // It waits for the turn to have STARTED before it will end on it stopping.
+    // Checking `!chatBusy` alone fires in the gap between submitting and the
+    // panel mounting its thread and sending, which is comfortably longer than
+    // any timeout worth having — the studio would drop straight back to the
+    // prompt a moment after the user left it.
+    useEffect(() => {
+        if (chatBusy) turnStartedRef.current = true;
+    }, [chatBusy]);
+    useEffect(() => {
+        if (!pendingBrief || chatBusy || designRevisionId || !turnStartedRef.current) return;
+        // A short grace after the stream ends: the design is written mid-turn, so
+        // its snapshot usually arrives first, but not always.
+        const t = setTimeout(() => setPendingBrief(null), 1500);
+        return () => clearTimeout(t);
+    }, [pendingBrief, chatBusy, designRevisionId]);
 
     // "Send to AI" on a comment: attach a structured comment focus (inheriting
     // whatever the comment itself is anchored to — e.g. a design element) and
@@ -425,11 +521,11 @@ const CreateContentScreen = () => {
     // continues in the background — caption and hashtags can even generate
     // concurrently, and only the originating tab shows the spinner.
     const [magicTarget, setMagicTarget] = useState<"caption" | "hashtags" | null>(null);
-    const [magicPlatform, setMagicPlatform] = useState<VariationTab>("generic");
+    const [magicPlatform, setMagicPlatform] = useState<EditableTab>("generic");
     // Which editor a caption/hashtag generation is running for ("generic" | a
     // platform), or null when idle. Drives the per-tab spinner + result routing.
-    const [captionGenTarget, setCaptionGenTarget] = useState<VariationTab | null>(null);
-    const [hashtagGenTarget, setHashtagGenTarget] = useState<VariationTab | null>(null);
+    const [captionGenTarget, setCaptionGenTarget] = useState<EditableTab | null>(null);
+    const [hashtagGenTarget, setHashtagGenTarget] = useState<EditableTab | null>(null);
     const [isGeneratingScript, setIsGeneratingScript] = useState(false);
     const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
@@ -439,7 +535,6 @@ const CreateContentScreen = () => {
     // optional production document, so it moves off the page into a modal opened
     // from the handoff card. `live` is script-only and keeps its inline editor.
     const isFilmed = contentType === "reel" || contentType === "video";
-    const [scriptModalOpen, setScriptModalOpen] = useState(false);
     const isTextPost = contentType === "text";
     const mediaSpec = MEDIA_SPEC[contentType];
 
@@ -475,6 +570,40 @@ const CreateContentScreen = () => {
     // tab model — that single platform's options render inline on the main editor.
     const soloPlatform = targetPlatforms.length === 1 ? targetPlatforms[0] : null;
 
+    // Active editor tab: "generic" (the shared base) or a platform variation.
+    // ── The open tab lives in the URL ────────────────────────────────────────
+    // ?tab=overview | generic | <platform>. Not component state: a tab you
+    // cannot link to, reload into, or reach with the back button is a hidden
+    // mode, and half this page's surface was behind one.
+    //
+    // "Content" is the fallback, so a bare URL opens the post — the job people
+    // came for — rather than the brief.
+    //
+    // Validity is checked against the content's TARGET platforms, not against
+    // the variation documents that exist. Creating a variation writes to
+    // Firestore and selects the tab before the snapshot lands, so checking for
+    // the doc bounced the user straight back to Content; VariationEditor
+    // already renders an absent variation as fully inherited.
+    const activeTab = useMemo<VariationTab>(() => {
+        if (paramTab === "overview") return "overview";
+        if (
+            paramTab &&
+            paramTab !== "generic" &&
+            !soloPlatform &&
+            (targetPlatforms as string[]).includes(paramTab)
+        ) {
+            return paramTab as ContentPlatform;
+        }
+        return "generic";
+    }, [paramTab, targetPlatforms, soloPlatform]);
+
+    const setActiveTab = useCallback(
+        (tab: VariationTab) => {
+            router.setParams({ tab });
+        },
+        [router]
+    );
+
     // When the content targets exactly one platform, the generic editor IS that
     // platform's editor — so apply its caption limits / hashtag rules inline
     // (mirrors what the per-platform variation tab enforces). No solo platform →
@@ -495,12 +624,6 @@ const CreateContentScreen = () => {
         return ALL_PLATFORMS.filter((p) => present.has(p));
     }, [variations]);
 
-    // Single-platform content never uses tabs — keep the editor on the (inline)
-    // Generic body if a stale variation tab was selected.
-    useEffect(() => {
-        if (soloPlatform && activeTab !== "generic") setActiveTab("generic");
-    }, [soloPlatform, activeTab]);
-
     // Platforms whose per-platform options are edited OUTSIDE the publish modal —
     // a variation tab, or the solo platform's inline section — so ScheduleBar
     // hides its generic option fields for them.
@@ -516,14 +639,6 @@ const CreateContentScreen = () => {
         [targetPlatforms, variationByPlatform]
     );
 
-    // If the active variation tab's doc disappears (deleted, or its platform was
-    // removed), fall back to Generic so the editor never points at nothing.
-    useEffect(() => {
-        if (activeTab !== "generic" && !variationByPlatform[activeTab]) {
-            setActiveTab("generic");
-        }
-    }, [activeTab, variationByPlatform]);
-
     const handleCreateVariations = useCallback(
         (platforms: ContentPlatform[]) => {
             createVariations(platforms, { platformOptions });
@@ -534,7 +649,7 @@ const CreateContentScreen = () => {
 
     const handleSetOverride = useCallback(
         (field: VariationOverridableField, value: string) => {
-            if (activeTab === "generic") return;
+            if (activeTab === "generic" || activeTab === "overview") return;
             setOverride(activeTab, field, value);
         },
         [activeTab, setOverride]
@@ -542,7 +657,7 @@ const CreateContentScreen = () => {
 
     const handleResetField = useCallback(
         (field: VariationOverridableField) => {
-            if (activeTab === "generic") return;
+            if (activeTab === "generic" || activeTab === "overview") return;
             resetField(activeTab, field);
         },
         [activeTab, resetField]
@@ -550,14 +665,14 @@ const CreateContentScreen = () => {
 
     const handleSetVariationOptions = useCallback(
         (patch: Partial<PlatformOptions>) => {
-            if (activeTab === "generic") return;
+            if (activeTab === "generic" || activeTab === "overview") return;
             setVariationPlatformOptions(activeTab, patch);
         },
         [activeTab, setVariationPlatformOptions]
     );
 
     const handleDeleteActiveVariation = useCallback(() => {
-        if (activeTab === "generic") return;
+        if (activeTab === "generic" || activeTab === "overview") return;
         const platform = activeTab;
         const label = SOCIAL_PLATFORM_MAP[platform]?.label ?? platform;
         openModal({
@@ -1379,7 +1494,7 @@ const CreateContentScreen = () => {
             // on !xl, where Publish + Save already fill the row).
             <ContentActionsMenu
                 key="menu"
-                onDetails={() => setShowInfoModal(true)}
+                onDetails={() => setActiveTab("overview")}
                 onShare={
                     selectedBrand?.id && contentId && hasCapability("manage_content")
                         ? () => setShowShareModal(true)
@@ -1437,6 +1552,16 @@ const CreateContentScreen = () => {
     // The DesignStage's own ✕ brings the user (and this header) back.
     const designTakeover = stage === "design" && mediaSpec.kind !== "none";
 
+    // Entering the Studio with an empty canvas, the centre IS the composer — so
+    // the chat panel starts collapsed. Two prompt boxes side by side, each
+    // asking the same question, made the user choose which one was real. It
+    // opens by itself the moment a brief is sent (handleSubmitBrief), which is
+    // when the conversation becomes the thing worth watching.
+    const studioEmpty = designTakeover && !designRevisionId && !pendingBrief;
+    useEffect(() => {
+        if (studioEmpty) setRightPanelMode("none");
+    }, [studioEmpty]);
+
     return (
         <AppLayout>
             {!designTakeover ? (
@@ -1458,9 +1583,9 @@ const CreateContentScreen = () => {
                                     { backgroundColor: statusColorSet.bg },
                                     pressed && styles.pressed,
                                 ]}
-                                onPress={() => setShowInfoModal(true)}
+                                onPress={() => setActiveTab("overview")}
                                 accessibilityRole="button"
-                                accessibilityLabel={`Status: ${CONTENT_STATUS_LABELS[status]}. Open content details`}
+                                accessibilityLabel={`Status: ${CONTENT_STATUS_LABELS[status]}. Open the Overview tab`}
                             >
                                 <Text style={[styles.statusBadgeText, { color: statusColorSet.fg }]}>
                                     {CONTENT_STATUS_LABELS[status]}
@@ -1529,6 +1654,8 @@ const CreateContentScreen = () => {
                                 onFocus={handleFocusElement}
                                 onClose={() => setStage("media")}
                                 onSubmitBrief={handleSubmitBrief}
+                                generating={!!pendingBrief}
+                                pendingBrief={pendingBrief ?? undefined}
                                 readOnly={locked}
                             />
                         </View>
@@ -1539,26 +1666,27 @@ const CreateContentScreen = () => {
                         showsVerticalScrollIndicator={false}
                         keyboardShouldPersistTaps="handled"
                     >
-                        {/* ── Platform variation tabs (Generic + per-platform + ＋) ──
-                            Hidden when the content targets a single platform — that
-                            platform's fields render inline on the main editor. */}
-                        {!soloPlatform && (targetPlatforms.length > 1 || variationPlatforms.length > 0) ? (
-                            <View style={styles.section}>
-                                <VariationTabs
-                                    active={activeTab}
-                                    variationPlatforms={variationPlatforms}
-                                    onSelect={setActiveTab}
-                                    onAddPress={() => setShowVariationModal(true)}
-                                    canAdd={!locked && availableForVariation.length > 0}
-                                />
-                                {variationPlatforms.length === 0 && !locked ? (
-                                    <Text style={styles.variationHint}>
-                                        Tailor the caption & options for a specific platform — add a
-                                        tab. The Generic version is the shared default.
-                                    </Text>
-                                ) : null}
-                            </View>
-                        ) : null}
+                        {/* ── Tabs: Overview │ Content · platforms · ＋ ───────────
+                            Always shown now. The bar used to be hidden for
+                            single-platform content, which had no variations to
+                            switch between — but Overview is not a variation, and
+                            hiding the bar would make the brief and the handoff
+                            unreachable for exactly the simplest posts. */}
+                        <View style={styles.section}>
+                            {/* No explanatory line under the strip. It described
+                                the mechanism ("add a tab… the shared default")
+                                rather than anything the reader wanted, and sat
+                                between the tabs and the content they switch —
+                                the one place nothing should interrupt. The "+"
+                                tab already says what it does. */}
+                            <VariationTabs
+                                active={activeTab}
+                                variationPlatforms={variationPlatforms}
+                                onSelect={setActiveTab}
+                                onAddPress={() => setShowVariationModal(true)}
+                                canAdd={!locked && !soloPlatform && availableForVariation.length > 0}
+                            />
+                        </View>
 
                         {/* ── Lock banner: scheduled / posted content is read-only ── */}
                         {locked ? (
@@ -1612,27 +1740,9 @@ const CreateContentScreen = () => {
                             </View>
                         ) : null}
 
-                        {/* ── Generic tab body, OR a platform variation editor ── */}
-                        {activeTab !== "generic" ? (
-                            <View style={styles.section}>
-                                <VariationEditor
-                                    platform={activeTab}
-                                    variation={variationByPlatform[activeTab]}
-                                    genericCaption={caption}
-                                    genericHashtags={hashtags}
-                                    onSetOverride={handleSetOverride}
-                                    onResetField={handleResetField}
-                                    onSetPlatformOptions={handleSetVariationOptions}
-                                    onDelete={handleDeleteActiveVariation}
-                                    onGenerateCaption={() => { setMagicPlatform(activeTab); setMagicTarget("caption"); }}
-                                    onGenerateHashtags={() => { setMagicPlatform(activeTab); setMagicTarget("hashtags"); }}
-                                    captionGenerating={captionGenTarget === activeTab}
-                                    hashtagGenerating={hashtagGenTarget === activeTab}
-                                    disabled={locked}
-                                />
-                            </View>
-                        ) : (
-                          <>
+                        {/* Publish status sits OUTSIDE the tabs: it is a live banner
+                            about the whole content, and a publish in progress must not
+                            be hidden behind a tab nobody has open. */}
                         {/* ── Per-social publish status (live while publishing + after) ── */}
                         {seedItem?.publishResults && seedItem.publishResults.length > 0 ? (
                             <View style={styles.section}>
@@ -1646,6 +1756,50 @@ const CreateContentScreen = () => {
                                 />
                             </View>
                         ) : null}
+
+                        {/* ── Overview, a platform variation, or the post itself ── */}
+                        {activeTab === "overview" ? (
+                          <>
+                        {/* ── OVERVIEW: the brief, the plan, the handoff ──────────
+                            Everything ABOUT the post rather than the post itself.
+                            It used to sit above and between the fields people
+                            actually edit, so the caption began three scrolls down,
+                            past material nobody re-reads once the work starts. */}
+                        {/* The brief, edited in place. This was a read-only title,
+                            a type chip and a truncated idea — with the real fields
+                            behind a dialog you had to know to open. The reference
+                            material and the form that edits it are the same thing,
+                            so they are now one card at the top of the tab that
+                            exists for them. */}
+                        <View style={styles.section}>
+                            <SectionLabel>BRIEF</SectionLabel>
+                            <ContentBriefFields
+                                title={title}
+                                idea={idea}
+                                status={status}
+                                contentType={contentType}
+                                platforms={targetPlatforms}
+                                onChangeTitle={setTitle}
+                                onChangeIdea={setIdea}
+                                onChangeStatus={handleStatusChange}
+                                onChangePlatforms={handlePlatformsChange}
+                                readOnly={locked}
+                                contentPillars={seedItem?.contentPillars}
+                                strategyId={seedItem?.strategyId}
+                                strategyName={
+                                    seedItem?.strategyId
+                                        ? strategies.find((st) => st.id === seedItem.strategyId)?.title
+                                        : undefined
+                                }
+                                onOpenStrategy={(strategyId) =>
+                                    router.push({
+                                        pathname:
+                                            "/(main)/(drawer)/(tabs)/(content)/content-strategies/[strategyId]" as any,
+                                        params: { strategyId },
+                                    })
+                                }
+                            />
+                        </View>
 
                         {/* ── Posting summary (only once configured) ──────────── */}
                         {destinations.length > 0 ? (
@@ -1674,7 +1828,71 @@ const CreateContentScreen = () => {
                             </View>
                         ) : null}
 
-                        {/* ── Content heading: title + type (holds MediaStage) ─── */}
+                        {/* The script was inline only for `live`; everything else
+                            had to open a modal from the handoff card. Here it has
+                            room, so it is inline for anything scripted — the modal
+                            stays for the wide, focused pass. */}
+                        {mediaSpec.hasScript ? (
+                            <View style={styles.section}>
+                                <ScriptEditor
+                                    title="Script & timeline"
+                                    subtitle={
+                                        isFilmed
+                                            ? "Shot by shot. Ask the AI to draft it, then edit freely."
+                                            : "Outline the talking points and flow for your live session."
+                                    }
+                                    script={script}
+                                    onScriptChange={setScript}
+                                    aiPrompt={scriptAiPrompt}
+                                    onAiPromptChange={setScriptAiPrompt}
+                                    onEnhance={handleScriptAiEnhance}
+                                    isGenerating={isGeneratingScript}
+                                    task="script"
+                                    contentId={contentId}
+                                    onSendToChat={handleSendToChat}
+                                    readOnly={locked}
+                                />
+                            </View>
+                        ) : null}
+                        {/* ── Production & handoff (reel / video) ───────────────── */}
+                        {isFilmed && (
+                            <View style={styles.section}>
+                                <SectionLabel>PRODUCTION &amp; HANDOFF</SectionLabel>
+                                <HandoffCard
+                                    isReel={isReel}
+                                    onShare={
+                                        selectedBrand?.id && contentId && hasCapability("manage_content")
+                                            ? () => setShowShareModal(true)
+                                            : undefined
+                                    }
+                                    onCreateCollab={
+                                        hasCapability("manage_content") ? handleCreateCollab : undefined
+                                    }
+                                />
+                            </View>
+                        )}
+                          </>
+                        ) : activeTab !== "generic" ? (
+                            <View style={styles.section}>
+                                <VariationEditor
+                                    platform={activeTab}
+                                    variation={variationByPlatform[activeTab]}
+                                    genericCaption={caption}
+                                    genericHashtags={hashtags}
+                                    onSetOverride={handleSetOverride}
+                                    onResetField={handleResetField}
+                                    onSetPlatformOptions={handleSetVariationOptions}
+                                    onDelete={handleDeleteActiveVariation}
+                                    onGenerateCaption={() => { setMagicPlatform(activeTab); setMagicTarget("caption"); }}
+                                    onGenerateHashtags={() => { setMagicPlatform(activeTab); setMagicTarget("hashtags"); }}
+                                    captionGenerating={captionGenTarget === activeTab}
+                                    hashtagGenerating={hashtagGenTarget === activeTab}
+                                    disabled={locked}
+                                />
+                            </View>
+                        ) : (
+                          <>
+                        {/* ── CONTENT: the post itself, and nothing else ───────── */}
                         <View
                             style={[
                                 styles.section,
@@ -1682,30 +1900,6 @@ const CreateContentScreen = () => {
                             ]}
                             onLayout={onSectionLayout("media")}
                         >
-                            <View style={styles.contentHeading}>
-                                <Text style={styles.contentTitle} numberOfLines={2}>
-                                    {title || "Untitled content"}
-                                </Text>
-                                <Pressable
-                                    style={({ pressed }) => [styles.typeTag, pressed && styles.pressed]}
-                                    onPress={() => setShowInfoModal(true)}
-                                    accessibilityRole="button"
-                                    accessibilityLabel={`${CONTENT_TYPE_LABELS[contentType]}. Open content details`}
-                                >
-                                    <Text style={styles.typeTagText}>
-                                        {CONTENT_TYPE_LABELS[contentType]}
-                                    </Text>
-                                </Pressable>
-                            </View>
-
-                            {idea ? (
-                                <ReadMore
-                                    text={idea}
-                                    lineCount={1}
-                                    style={styles.ideaText}
-                                />
-                            ) : null}
-
                             {mediaSpec.kind !== "none" && (
                                 <MediaStage
                                     contentType={contentType}
@@ -1724,25 +1918,6 @@ const CreateContentScreen = () => {
                                 />
                             )}
 
-                            {/* Inline only for `live`, where the script IS the
-                                content. Reel/video author it in ScriptModal,
-                                opened from the handoff card at the bottom. */}
-                            {mediaSpec.hasScript && !isFilmed && (
-                                <ScriptEditor
-                                    title="Script"
-                                    subtitle="Outline the talking points and flow for your live session."
-                                    script={script}
-                                    onScriptChange={setScript}
-                                    aiPrompt={scriptAiPrompt}
-                                    onAiPromptChange={setScriptAiPrompt}
-                                    onEnhance={handleScriptAiEnhance}
-                                    isGenerating={isGeneratingScript}
-                                    task="script"
-                                    contentId={contentId}
-                                    onSendToChat={handleSendToChat}
-                                    readOnly={locked}
-                                />
-                            )}
                         </View>
 
                         {/* ── Caption / Content ────────────────────────────────── */}
@@ -1753,9 +1928,9 @@ const CreateContentScreen = () => {
                             ]}
                             onLayout={onSectionLayout("caption")}
                         >
-                            <Text style={styles.sectionLabel}>
+                            <SectionLabel>
                                 {contentType === "text" ? "CONTENT" : "CAPTION"}
-                            </Text>
+                            </SectionLabel>
                             <View style={styles.card}>
                                 <View style={styles.inputWithWand}>
                                     <TextInput
@@ -1830,7 +2005,7 @@ const CreateContentScreen = () => {
                         {/* ── Hashtags ──────────────────────────────────────────── */}
                         {showHashtags ? (
                         <View style={styles.section}>
-                            <Text style={styles.sectionLabel}>HASHTAGS</Text>
+                            <SectionLabel>HASHTAGS</SectionLabel>
                             <View style={styles.card}>
                                 <View style={styles.inputWithWand}>
                                     <TextInput
@@ -1906,26 +2081,6 @@ const CreateContentScreen = () => {
                             </View>
                         ) : null}
 
-                        {/* ── Production & handoff (reel / video) ───────────────── */}
-                        {isFilmed && (
-                            <View style={styles.section}>
-                                <Text style={styles.sectionLabel}>PRODUCTION &amp; HANDOFF</Text>
-                                <HandoffCard
-                                    isReel={isReel}
-                                    script={script}
-                                    onOpenScript={() => setScriptModalOpen(true)}
-                                    onShare={
-                                        selectedBrand?.id && contentId && hasCapability("manage_content")
-                                            ? () => setShowShareModal(true)
-                                            : undefined
-                                    }
-                                    onCreateCollab={
-                                        hasCapability("manage_content") ? handleCreateCollab : undefined
-                                    }
-                                    readOnly={locked}
-                                />
-                            </View>
-                        )}
                           </>
                         )}
 
@@ -1960,6 +2115,7 @@ const CreateContentScreen = () => {
                                     initialMessage={pendingChatMessage}
                                     onInitialMessageSent={() => setPendingChatMessage(undefined)}
                                     onControlsChange={handleChatControls}
+                                    onBusyChange={setChatBusy}
                                     isCompact
                                 />
                             }
@@ -2002,6 +2158,7 @@ const CreateContentScreen = () => {
                             initialMessage={pendingChatMessage}
                             onInitialMessageSent={() => setPendingChatMessage(undefined)}
                             onControlsChange={handleChatControls}
+                            onBusyChange={setChatBusy}
                             isCompact
                             onCollapse={() => setRightPanelMode("none")}
                             // Tab bar owns the bottom inset (don't double it), but this
@@ -2062,54 +2219,10 @@ const CreateContentScreen = () => {
                 onGenerate={handleMagicGenerate}
             />
 
-            <ContentInfoModal
-                visible={showInfoModal}
-                title={title}
-                idea={idea}
-                status={status}
-                typeLabel={CONTENT_TYPE_LABELS[contentType]}
-                contentType={contentType}
-                platforms={targetPlatforms}
-                onChangeTitle={setTitle}
-                onChangeIdea={setIdea}
-                onChangeStatus={setStatus}
-                onChangePlatforms={setTargetPlatforms}
-                onClose={() => setShowInfoModal(false)}
-                readOnly={locked}
-                contentPillars={seedItem?.contentPillars}
-                strategyId={seedItem?.strategyId}
-                strategyName={
-                    seedItem?.strategyId
-                        ? strategies.find((s) => s.id === seedItem.strategyId)?.title
-                        : undefined
-                }
-                onOpenStrategy={(strategyId) =>
-                    router.push({
-                        pathname: "/(main)/(drawer)/(tabs)/(content)/content-strategies/[strategyId]" as any,
-                        params: { strategyId },
-                    })
-                }
-            />
 
             {/* Script & timeline (reel/video). Writes the page's live `script`
                 state, so closing it is not a cancel — the page's Save and
                 unsaved-changes guard stay the single source of truth. */}
-            {isFilmed ? (
-                <ScriptModal
-                    visible={scriptModalOpen}
-                    onClose={() => setScriptModalOpen(false)}
-                    script={script}
-                    onScriptChange={setScript}
-                    aiPrompt={scriptAiPrompt}
-                    onAiPromptChange={setScriptAiPrompt}
-                    onEnhance={handleScriptAiEnhance}
-                    isGenerating={isGeneratingScript}
-                    task="script"
-                    contentId={contentId}
-                    onSendToChat={handleSendToChat}
-                    readOnly={locked}
-                />
-            ) : null}
 
             {selectedBrand?.id && contentId ? (
                 <ShareModal
@@ -2200,13 +2313,6 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     borderRadius: 12,
                     padding: 8,
                     marginHorizontal: -8,
-                },
-                variationHint: {
-                    fontSize: fs(11),
-                    color: colors.textSecondary,
-                    lineHeight: lh(16),
-                    marginTop: 10,
-                    paddingHorizontal: 2,
                 },
                 // ── Split layout ──────────────────────────────────────────────
                 splitContainer: {
@@ -2320,31 +2426,6 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     color: colors.primary,
                 },
                 // ── In-page content heading (title + type tag) ───────────────
-                contentHeading: {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 10,
-                    marginBottom: 8,
-                },
-                contentTitle: {
-                    flexShrink: 1,
-                    fontSize: fs(18),
-                    fontWeight: "700",
-                    color: colors.text,
-                },
-                ideaText: {
-                    fontSize: fs(14),
-                    lineHeight: lh(20),
-                    color: colors.textSecondary,
-                    marginBottom: 4,
-                },
-                sectionLabel: {
-                    fontSize: fs(11),
-                    fontWeight: "700",
-                    letterSpacing: 1.1,
-                    color: colors.textSecondary,
-                    marginBottom: 8,
-                },
                 fieldMetaRow: {
                     flexDirection: "row",
                     alignItems: "center",
@@ -2388,17 +2469,6 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     color: colors.textSecondary,
                     lineHeight: lh(18),
                     marginBottom: 12,
-                },
-                typeTag: {
-                    paddingHorizontal: 12,
-                    paddingVertical: 4,
-                    borderRadius: 8,
-                    backgroundColor: colors.tag,
-                },
-                typeTagText: {
-                    fontSize: fs(13),
-                    fontWeight: "600",
-                    color: colors.textSecondary,
                 },
                 pressed: {
                     opacity: 0.72,

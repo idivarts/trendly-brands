@@ -3,7 +3,7 @@ import AuthNavLink from "@/components/auth/AuthNavLink";
 import AuthPageLayout, { authLayoutStyles } from "@/components/auth/AuthPageLayout";
 import AuthTextField from "@/components/auth/AuthTextField";
 import Button from "@/components/ui/button";
-import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { HttpError, HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -43,18 +43,12 @@ const ForgotPasswordScreen = () => {
             Toaster.success("Password reset email sent successfully");
             router.replace("/(auth)/login");
         } catch (error) {
-            if (error instanceof Response) {
-                let message = `Request failed (${error.status})`;
-
-                try {
-                    const data = await error.json();
-                    if (data?.message) {
-                        message = data.message;
-                    }
-                } catch {
-                    // ignore JSON parsing errors
-                }
-
+            if (error instanceof HttpError) {
+                // The body was already read and parsed when the error was
+                // built, so this cannot fail on a non-JSON error page.
+                const message =
+                    (await HttpWrapper.extractErrorMessage(error)) ??
+                    `Request failed (${error.status})`;
                 Toaster.error(message);
             } else {
                 Toaster.error("Something went wrong. Please try again.");

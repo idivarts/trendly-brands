@@ -90,6 +90,16 @@ interface AIConfigContextType {
     tasks: Record<string, string[]>;
     /** Persisted chat model selection (falls back to the chat default). */
     selectedModel: string;
+    /**
+     * The stored preference, unresolved.
+     *
+     * `selectedModel` above is already resolved against the CHAT task, which
+     * makes it the wrong input for a surface backed by another one: a model
+     * allowed for that task but not for chat would be dropped here and the
+     * user's choice would silently not stick. Surfaces that resolve for
+     * themselves (the design-backed content chat) start from this instead.
+     */
+    rawSelectedModel: string;
     setSelectedModel: (id: string) => void;
     isUnlocked: (modelId: string) => boolean;
     /** Ordered allowed models for a task, each with its `unlocked` flag. */
@@ -228,6 +238,7 @@ export const AIConfigProvider = ({ children }: { children: ReactNode }) => {
         models,
         tasks,
         selectedModel,
+        rawSelectedModel: persistedModel,
         setSelectedModel,
         isUnlocked,
         modelsForTask,
@@ -248,6 +259,7 @@ export const useAIConfig = (): AIConfigContextType => {
             models: [],
             tasks: {},
             selectedModel: "",
+            rawSelectedModel: "",
             setSelectedModel: () => {},
             isUnlocked: () => false,
             modelsForTask: () => [],

@@ -22,3 +22,51 @@ index 777403d..70fe1e4 100644
        </intent-filter>
      </receiver>
  
+diff --git a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/tokens/PushTokenModule.kt b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/tokens/PushTokenModule.kt
+index 578c720..9bd9f1d 100644
+--- a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/tokens/PushTokenModule.kt
++++ b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/tokens/PushTokenModule.kt
+@@ -20,12 +20,38 @@ class PushTokenModule : Module(), FirebaseTokenListener {
+    * @param token New push token.
+    */
+   override fun onNewToken(token: String) {
+-    sendEvent(
+-      NEW_TOKEN_EVENT_NAME,
+-      mapOf(
+-        NEW_TOKEN_EVENT_TOKEN_KEY to token
++    // FCM delivers a new token on its own background thread
++    // (Firebase-Messaging-Intent-Handle), which can happen while no React
++    // context is alive -- after a process restart, or on a cold delivery to a
++    // backgrounded app. sendEvent then resolves the module's event emitter
++    // through AppContext, which throws
++    //
++    //   IllegalArgumentException: Cannot create an event emitter for the
++    //   module that isn't present in the module registry.
++    //
++    // Nothing on that Firebase thread catches it, so it reached the default
++    // handler as a FATAL crash on launch -- 153 users on one release.
++    //
++    // There is nothing to do about it and nothing is lost: the listener only
++    // forwards the token to JS, and JS re-reads it on demand via
++    // getDevicePushTokenAsync() once a context exists. Swallowing here also
++    // keeps FirebaseMessagingDelegate.onNewToken's loop intact, so the
++    // remaining listeners still run and sLastToken is still recorded -- a
++    // throw propagating out of here skipped both.
++    try {
++      sendEvent(
++        NEW_TOKEN_EVENT_NAME,
++        mapOf(
++          NEW_TOKEN_EVENT_TOKEN_KEY to token
++        )
+       )
+-    )
++    } catch (e: IllegalArgumentException) {
++      android.util.Log.w(
++        "PushTokenModule",
++        "No React context to deliver the new push token to; it will be read on demand instead.",
++        e
++      )
++    }
+   }
+ 
+   override fun definition() = ModuleDefinition {

@@ -20,6 +20,27 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 export type AIModule = "strategy" | "calendar" | "content" | "general" | "onboarding";
 
 /**
+ * Which ai_config task backs a module's chat.
+ *
+ * ⚠️ MIRRORS THE BACKEND. `handleMessageWS` in backend-sls
+ * internal/trendlyapis/ai/chat.go picks the task from the conversation's
+ * module, and the model picker has to offer that same list or it lies: the
+ * content surface showed the `chat` models while the backend ran `design`, so
+ * choosing Claude Sonnet 4.6 — which `design` does not allow — was silently
+ * resolved to Opus, with the dropdown still reading Sonnet. Change one side and
+ * you must change the other.
+ *
+ * Not mirrored: the backend also switches to `multimodal` for a turn that
+ * carries attached images, on every module except content. That depends on what
+ * the user attaches to a message that does not exist yet, so a picker cannot
+ * anticipate it — content, the surface where design work happens, is unaffected
+ * because its task is already vision-capable throughout.
+ */
+export function taskForModule(module: string): string {
+    return module === "content" ? "design" : "chat";
+}
+
+/**
  * LiveContent is the current (possibly unsaved) content-editor state forwarded
  * with a chat message in the content module, so the AI reasons about exactly
  * what's on screen now instead of the last-saved Firestore doc. Mirrors the
@@ -546,6 +567,14 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
                     router.push("/billing");
                 }
             } else if (msg.type === "error") {
+                // The backend sends a sentence it has already made safe to show
+                // (the raw provider body stays in CloudWatch). Dropping it was
+                // why every failure — a dead provider, a rate limit, an expired
+                // key — reached the user as the typing indicator simply
+                // stopping, with nothing to act on and nothing to report.
+                Toaster.error(
+                    msg.message || "Something went wrong talking to the AI. Please try again."
+                );
                 finishStreaming();
             }
         });

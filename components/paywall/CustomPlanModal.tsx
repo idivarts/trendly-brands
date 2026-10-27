@@ -1,6 +1,7 @@
 
 //  import pricingPage from "@/app/(landing)/pricing-page";
 import Colors from "@/shared-uis/constants/Colors";
+import { Ionicons } from "@expo/vector-icons";
 import { Theme, useTheme } from "@react-navigation/native";
 import React, { useState } from "react";
 import {
@@ -47,6 +48,7 @@ export function CreateCustomLinkModal(props: CreateCustomLinkModalProps) {
     const [email, setEmail] = useState("");
     const [phone, setPhone] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [paymentType, setPaymentType] = useState<PaymentType>("subscription");
     const [offerId, setOfferId] = useState("");
     const [amount, setAmount] = useState("");
@@ -135,14 +137,29 @@ export function CreateCustomLinkModal(props: CreateCustomLinkModalProps) {
                             </View>
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Password</Text>
-                                <TextInput
-                                    value={password}
-                                    onChangeText={setPassword}
-                                    secureTextEntry
-                                    placeholder="Set account password"
-                                    placeholderTextColor={colors.textSecondary}
-                                    style={styles.input}
-                                />
+                                <View style={styles.passwordWrap}>
+                                    <TextInput
+                                        value={password}
+                                        onChangeText={setPassword}
+                                        secureTextEntry={!showPassword}
+                                        placeholder="Set account password"
+                                        placeholderTextColor={colors.textSecondary}
+                                        style={[styles.input, styles.passwordInput]}
+                                    />
+                                    <Pressable
+                                        onPress={() => setShowPassword((shown) => !shown)}
+                                        accessibilityRole="button"
+                                        accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+                                        hitSlop={8}
+                                        style={({ pressed }) => [styles.passwordToggle, pressed && styles.passwordTogglePressed]}
+                                    >
+                                        <Ionicons
+                                            name={showPassword ? "eye-off-outline" : "eye-outline"}
+                                            size={18}
+                                            color={colors.textSecondary}
+                                        />
+                                    </Pressable>
+                                </View>
                             </View>
                         </View>
 
@@ -279,6 +296,21 @@ const stylesCustomModalFn = (theme: Theme) => {
             paddingHorizontal: 12,
             color: colors.text,
         },
+        // Password field: the input leaves room on the right for the reveal
+        // toggle, which is overlaid rather than laid out beside it so the field
+        // keeps the same box as every other input in the modal.
+        passwordWrap: { position: "relative", justifyContent: "center" },
+        passwordInput: { paddingRight: 42 },
+        passwordToggle: {
+            position: "absolute",
+            right: 0,
+            top: 0,
+            bottom: 0,
+            width: 42,
+            alignItems: "center",
+            justifyContent: "center",
+        },
+        passwordTogglePressed: { opacity: 0.6 },
 
         row: { flexDirection: "row", alignItems: "center", gap: 16, marginTop: 6 },
         radioRow: { flexDirection: "row", alignItems: "center" },

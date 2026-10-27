@@ -1,6 +1,6 @@
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useActiveAgencyHire } from "@/hooks/useActiveAgencyHire";
-import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { HttpError, HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
@@ -115,13 +115,9 @@ const InviteToCampaignButton: React.FC<InviteButtonProps> = ({
             return true;
         } catch (err: any) {
             // Backend gates discover-only invites behind an active agency hire.
-            let code: string | undefined;
-            if (err instanceof Response) {
-                try {
-                    const parsed = await err.clone().json();
-                    code = parsed?.error;
-                } catch { /* non-JSON body */ }
-            }
+            // `data` is the parsed body, or null for a non-JSON one.
+            const code =
+                err instanceof HttpError ? (err.data?.error as string | undefined) : undefined;
             if (code === "agency-not-hired") {
                 setModalVisible(false);
                 promptHireUs();
