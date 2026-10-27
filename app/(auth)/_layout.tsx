@@ -9,11 +9,16 @@ const layoutStyles = StyleSheet.create({
     flex1: { flex: 1 },
 });
 
+// These routes paint their own full-screen canvas (AmbientBackground), so the
+// layout must not inset them — a safe-area padding applied out here sits
+// *outside* that canvas and shows up as a plain band of app background along
+// the screen edge, below the content.
 const FULL_BLEED_AUTH_ROUTES = [
     "/pre-signin",
     "/create-new-account",
     "/login",
     "/forgot-password",
+    "/lets-start",
 ] as const;
 
 const AuthLayout = () => {

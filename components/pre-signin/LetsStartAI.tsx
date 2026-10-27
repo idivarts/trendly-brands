@@ -10,7 +10,7 @@ import Colors from "@/shared-uis/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@react-navigation/native";
 import { router } from "expo-router";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     Image,
     Keyboard,
@@ -80,6 +80,25 @@ const LetsStartAI: React.FC = () => {
     const [prompt, setPrompt] = useState("");
     const [authOpen, setAuthOpen] = useState(false);
     const inputRef = useRef<TextInput>(null);
+
+    // The dock clears the home indicator while the keyboard is down — but once
+    // the keyboard is up it covers that area entirely, so the same padding just
+    // floats the bar above the keyboard. Track the keyboard and drop to a plain
+    // gap. `will*` on iOS so the change rides the same animation as the lift.
+    const [keyboardUp, setKeyboardUp] = useState(false);
+    useEffect(() => {
+        const isIOS = Platform.OS === "ios";
+        const show = Keyboard.addListener(isIOS ? "keyboardWillShow" : "keyboardDidShow", () =>
+            setKeyboardUp(true),
+        );
+        const hide = Keyboard.addListener(isIOS ? "keyboardWillHide" : "keyboardDidHide", () =>
+            setKeyboardUp(false),
+        );
+        return () => {
+            show.remove();
+            hide.remove();
+        };
+    }, []);
 
     // Tapping a suggestion fills the prompt — focus the input straight after so
     // the keyboard rising *is* the confirmation that the tap landed. Without it
@@ -194,7 +213,11 @@ const LetsStartAI: React.FC = () => {
     );
 
     return (
-        <AppLayout withWebPadding={false}>
+        // The bottom inset is the dock's to own, not the layout's: AppLayout
+        // applies it as padding *outside* AmbientBackground, which both stops the
+        // canvas 34pt short of the screen edge (a white band under the dock) and
+        // stacks a second copy of the same inset on top of the dock's own.
+        <AppLayout withWebPadding={false} safeAreaEdges={["left", "right"]}>
             <AmbientBackground>
                 {/* Top nav */}
                 <View style={[styles.nav, !isWide && styles.navNarrow]}>
@@ -281,7 +304,9 @@ const LetsStartAI: React.FC = () => {
                             </View>
                         </ScrollView>
 
-                        {!isWide && <View style={styles.dock}>{promptBox}</View>}
+                        {!isWide && (
+                            <View style={[styles.dock, keyboardUp && styles.dockKeyboardUp]}>{promptBox}</View>
+                        )}
                     </KeyboardAvoidingView>
                 </View>
 
@@ -550,15 +575,20 @@ function makeStyles(colors: ReturnType<typeof Colors>, topInset: number, bottomI
             fontWeight: "600",
         },
 
-        // Bottom-docked prompt bar. `bottomInset` keeps it clear of the home
-        // indicator when the keyboard is down; when the keyboard is up the
-        // KeyboardAvoidingView padding sits underneath it.
+        // Bottom-docked prompt bar. It owns the bottom inset (AppLayout is told
+        // not to), and sits a little inside it — the home indicator only occupies
+        // the lower half of that 34pt, so clearing all of it leaves the bar
+        // visibly adrift. When the keyboard is up, the KeyboardAvoidingView
+        // padding sits underneath this.
         dock: {
             // Matches `heroScrollNarrow` so the dock, the suggestion rows and the
             // text block all share one left/right edge.
             paddingHorizontal: 20,
             paddingTop: 8,
-            paddingBottom: Math.max(bottomInset, 12),
+            paddingBottom: Math.max(bottomInset - 8, 12),
+        },
+        dockKeyboardUp: {
+            paddingBottom: 10,
         },
 
         modalRoot: {
