@@ -1,5 +1,6 @@
 import AmbientBackground from "@/components/pre-signin/AmbientBackground";
 import AuthCard from "@/components/pre-signin/AuthCard";
+import { fbox, fs, lh } from "@/constants/Typography";
 import AppLayout from "@/layouts/app-layout";
 import { CREATORS_FE_URL } from "@/shared-constants/app";
 import { track } from "@/shared-libs/utils/analytics";
@@ -27,7 +28,20 @@ import Animated, { FadeIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const HEADLINE = "What can I create for you?";
+// Phone measure (~327pt) breaks the headline after "for", stranding "you?" as a
+// centered orphan. Break it by hand instead, into two balanced lines.
+const HEADLINE_NARROW = "What can I create\nfor you?";
+
+const SUBHEAD =
+    "Your social content command center — describe a goal and Trendly helps you plan, create, and ship it.";
+// Same promise, two lines instead of three — a 2-line display headline followed
+// by a 3-line centered paragraph is five stacked centered lines, which stops
+// being scannable.
+const SUBHEAD_NARROW = "Describe a goal — Trendly plans, creates, and ships it.";
+
 const PLACEHOLDER = "Describe what you need — a content plan, a week of posts, a campaign…";
+// Keeps the resting dock exactly one line tall.
+const PLACEHOLDER_NARROW = "Describe what you need…";
 
 const SUGGESTIONS = [
     { icon: "calendar-outline", label: "Plan a content calendar" },
@@ -42,13 +56,16 @@ const LetsStartAI: React.FC = () => {
     const { xl, width } = useBreakpoints();
     const isWide = xl || width >= 900;
     const insets = useSafeAreaInsets();
-    const styles = useMemo(() => makeStyles(colors, insets.top), [colors, insets.top]);
+    const styles = useMemo(
+        () => makeStyles(colors, insets.top, insets.bottom),
+        [colors, insets.top, insets.bottom],
+    );
 
     // KeyboardAvoidingView's `padding` math uses a parent-relative frame against a
     // screen-space keyboard, so the hero (which sits below the top nav) needs its
     // on-screen Y as keyboardVerticalOffset — otherwise the keyboard overlaps the
-    // centered prompt box. Measure it and feed it back. iOS-only — Android/web use
-    // `height` behaviour + system resize.
+    // prompt box. Measure it and feed it back. iOS-only — Android relies on the
+    // system window resize instead.
     const kbRootRef = useRef<View>(null);
     const [kbVerticalOffset, setKbVerticalOffset] = useState(0);
     const measureKbOffset = useCallback(() => {
@@ -62,6 +79,16 @@ const LetsStartAI: React.FC = () => {
 
     const [prompt, setPrompt] = useState("");
     const [authOpen, setAuthOpen] = useState(false);
+    const inputRef = useRef<TextInput>(null);
+
+    // Tapping a suggestion fills the prompt — focus the input straight after so
+    // the keyboard rising *is* the confirmation that the tap landed. Without it
+    // the only feedback is text appearing in a box at the other end of the
+    // screen, which on a phone reads as nothing having happened.
+    const handleSuggestionPress = useCallback((label: string) => {
+        setPrompt(label);
+        requestAnimationFrame(() => inputRef.current?.focus());
+    }, []);
 
     const showAuth = () => {
         // Drop the keyboard first so the auth modal isn't half-covered by it.
@@ -86,6 +113,86 @@ const LetsStartAI: React.FC = () => {
         }
     };
 
+    const promptBox = (
+        <View style={[styles.promptBox, !isWide && styles.promptBoxDocked]}>
+            <TextInput
+                ref={inputRef}
+                value={prompt}
+                onChangeText={setPrompt}
+                placeholder={isWide ? PLACEHOLDER : PLACEHOLDER_NARROW}
+                placeholderTextColor={colors.textSecondary}
+                style={[styles.promptInput, !isWide && styles.promptInputDocked]}
+                multiline
+                onSubmitEditing={() => openAuth(prompt)}
+                returnKeyType="go"
+                accessibilityLabel="Describe what you want to create"
+            />
+            <View style={styles.promptFooter}>
+                {/* Everything on this page funnels to the same auth modal —
+                    attaching a file is no exception, so the affordance stays
+                    live rather than being a decorative dead button. */}
+                <Pressable
+                    onPress={() => openAuth(prompt)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Attach a file"
+                    accessibilityHint="Sign in to attach files"
+                    hitSlop={6}
+                    style={({ pressed }) => [styles.plusBtn, pressed && { opacity: 0.7 }]}
+                >
+                    <Ionicons name="add" size={22} color={colors.text} />
+                </Pressable>
+                <Pressable
+                    onPress={() => openAuth(prompt)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Submit"
+                    style={({ pressed }) => [styles.sendBtn, pressed && { transform: [{ scale: 0.95 }] }]}
+                >
+                    <Ionicons name="arrow-up" size={20} color={colors.onPrimary} />
+                </Pressable>
+            </View>
+        </View>
+    );
+
+    // Wide: pills that wrap inside a roomy centered column.
+    const suggestionChips = (
+        <View style={styles.chips}>
+            {SUGGESTIONS.map((s) => (
+                <Pressable
+                    key={s.label}
+                    onPress={() => handleSuggestionPress(s.label)}
+                    style={({ pressed }) => [styles.chip, pressed && { opacity: 0.8 }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={s.label}
+                >
+                    <Ionicons name={s.icon as any} size={16} color={colors.textSecondary} />
+                    <Text style={styles.chipText}>{s.label}</Text>
+                </Pressable>
+            ))}
+        </View>
+    );
+
+    // Narrow: the same pills wrapped 1/2/1 into a staircase — four labels of very
+    // different lengths can never align under a centered `flexWrap`. Full-width
+    // rows share both edges instead, so the block is symmetric by construction,
+    // and they give it enough mass to hold the center of the screen.
+    const suggestionList = (
+        <View style={styles.suggestionList}>
+            {SUGGESTIONS.map((s) => (
+                <Pressable
+                    key={s.label}
+                    onPress={() => handleSuggestionPress(s.label)}
+                    style={({ pressed }) => [styles.suggestionRow, pressed && { opacity: 0.8 }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={s.label}
+                >
+                    <Ionicons name={s.icon as any} size={18} color={colors.textSecondary} />
+                    <Text style={styles.suggestionRowText} numberOfLines={1}>{s.label}</Text>
+                    <Ionicons name="arrow-forward" size={16} color={colors.textSecondary} />
+                </Pressable>
+            ))}
+        </View>
+    );
+
     return (
         <AppLayout withWebPadding={false}>
             <AmbientBackground>
@@ -106,12 +213,16 @@ const LetsStartAI: React.FC = () => {
                         )} */}
                         <Pressable
                             onPress={showAuth}
+                            hitSlop={8}
+                            accessibilityRole="button"
                             style={({ pressed }) => [styles.signInBtn, pressed && { opacity: 0.85 }]}
                         >
                             <Text style={styles.signInText}>Sign in</Text>
                         </Pressable>
                         <Pressable
                             onPress={showAuth}
+                            hitSlop={8}
+                            accessibilityRole="button"
                             style={({ pressed }) => [styles.signUpBtn, pressed && { transform: [{ scale: 0.98 }] }]}
                         >
                             <Text style={styles.signUpText}>Sign up</Text>
@@ -119,71 +230,59 @@ const LetsStartAI: React.FC = () => {
                     </View>
                 </View>
 
-                {/* Hero */}
+                {/* Hero.
+                    Wide (desktop web): one centered column — intent and input
+                    read as a single block, the way a desktop prompt page should.
+                    Narrow: the prompt is docked to the bottom edge above the
+                    keyboard, and the intent block (headline → subhead →
+                    suggestions) centers in the space left above it. That puts the
+                    primary action in the thumb zone, keeps it visible while a
+                    suggestion is tapped, and stops the keyboard from shoving the
+                    whole hero off-screen. */}
                 <View ref={kbRootRef} style={styles.fill} onLayout={measureKbOffset}>
-                <KeyboardAvoidingView
-                    style={styles.fill}
-                    behavior={Platform.OS === "ios" ? "padding" : "height"}
-                    keyboardVerticalOffset={kbVerticalOffset}
-                >
-                <ScrollView
-                    style={styles.fill}
-                    contentContainerStyle={styles.heroScroll}
-                    keyboardShouldPersistTaps="handled"
-                    showsVerticalScrollIndicator={false}
-                >
-                    <View style={styles.heroInner}>
-                        <Text style={[styles.headline, { fontSize: isWide ? 52 : 34 }]}>{HEADLINE}</Text>
-                        <Text style={styles.subhead}>
-                            Your social content command center — describe a goal and Trendly helps you plan, create, and ship it.
-                        </Text>
+                    <KeyboardAvoidingView
+                        style={styles.fill}
+                        // Android's window already resizes (Expo's default
+                        // `softwareKeyboardLayoutMode: "resize"`), so `height`
+                        // here would shrink the view a second time.
+                        behavior={Platform.OS === "ios" ? "padding" : undefined}
+                        keyboardVerticalOffset={kbVerticalOffset}
+                    >
+                        <ScrollView
+                            style={styles.fill}
+                            contentContainerStyle={isWide ? styles.heroScroll : styles.heroScrollNarrow}
+                            keyboardShouldPersistTaps="handled"
+                            keyboardDismissMode="interactive"
+                            showsVerticalScrollIndicator={false}
+                        >
+                            <View style={styles.heroInner}>
+                                <Text style={[styles.headline, isWide ? styles.headlineWide : styles.headlineNarrow]}>
+                                    {isWide ? HEADLINE : HEADLINE_NARROW}
+                                </Text>
+                                <Text style={[styles.subhead, !isWide && styles.subheadNarrow]}>
+                                    {isWide ? SUBHEAD : SUBHEAD_NARROW}
+                                </Text>
 
-                        {/* Prompt box */}
-                        <View style={styles.promptBox}>
-                            <TextInput
-                                value={prompt}
-                                onChangeText={setPrompt}
-                                placeholder={PLACEHOLDER}
-                                placeholderTextColor={colors.gray100}
-                                style={styles.promptInput}
-                                multiline
-                                onSubmitEditing={() => openAuth(prompt)}
-                                returnKeyType="go"
-                                accessibilityLabel="Describe what you want to create"
-                            />
-                            <View style={styles.promptFooter}>
-                                <View style={styles.plusBtn}>
-                                    <Ionicons name="add" size={22} color={colors.text} />
-                                </View>
-                                <Pressable
-                                    onPress={() => openAuth(prompt)}
-                                    accessibilityRole="button"
-                                    accessibilityLabel="Submit"
-                                    style={({ pressed }) => [styles.sendBtn, pressed && { transform: [{ scale: 0.95 }] }]}
-                                >
-                                    <Ionicons name="arrow-up" size={20} color={colors.onPrimary} />
-                                </Pressable>
+                                {isWide ? (
+                                    <>
+                                        {promptBox}
+                                        {suggestionChips}
+                                    </>
+                                ) : (
+                                    <>
+                                        {/* Without a cue, four rows under a subhead
+                                            read as feature blurbs rather than as things
+                                            to tap — especially now that the input they
+                                            fill is at the far end of the screen. */}
+                                        <Text style={styles.suggestionsLabel}>Try one of these</Text>
+                                        {suggestionList}
+                                    </>
+                                )}
                             </View>
-                        </View>
+                        </ScrollView>
 
-                        {/* Suggestion chips */}
-                        <View style={styles.chips}>
-                            {SUGGESTIONS.map((s) => (
-                                <Pressable
-                                    key={s.label}
-                                    onPress={() => setPrompt(s.label)}
-                                    style={({ pressed }) => [styles.chip, pressed && { opacity: 0.8 }]}
-                                    accessibilityRole="button"
-                                    accessibilityLabel={s.label}
-                                >
-                                    <Ionicons name={s.icon as any} size={16} color={colors.gray300} />
-                                    <Text style={styles.chipText}>{s.label}</Text>
-                                </Pressable>
-                            ))}
-                        </View>
-                    </View>
-                </ScrollView>
-                </KeyboardAvoidingView>
+                        {!isWide && <View style={styles.dock}>{promptBox}</View>}
+                    </KeyboardAvoidingView>
                 </View>
 
                 {/* Auth modal — floats over the same ambient canvas. The card now
@@ -221,7 +320,7 @@ const LetsStartAI: React.FC = () => {
     );
 };
 
-function makeStyles(colors: ReturnType<typeof Colors>, topInset: number) {
+function makeStyles(colors: ReturnType<typeof Colors>, topInset: number, bottomInset: number) {
     return StyleSheet.create({
         fill: { flex: 1 },
         nav: {
@@ -245,8 +344,8 @@ function makeStyles(colors: ReturnType<typeof Colors>, topInset: number) {
             gap: 16,
         },
         creatorLink: {
-            color: colors.gray300,
-            fontSize: 14,
+            color: colors.textSecondary,
+            fontSize: fs(14),
             fontWeight: "600",
         },
         signInBtn: {
@@ -256,7 +355,7 @@ function makeStyles(colors: ReturnType<typeof Colors>, topInset: number) {
         },
         signInText: {
             color: colors.text,
-            fontSize: 14,
+            fontSize: fs(14),
             fontWeight: "700",
         },
         signUpBtn: {
@@ -273,7 +372,7 @@ function makeStyles(colors: ReturnType<typeof Colors>, topInset: number) {
         },
         signUpText: {
             color: colors.onPrimary,
-            fontSize: 14,
+            fontSize: fs(14),
             fontWeight: "700",
         },
 
@@ -283,6 +382,19 @@ function makeStyles(colors: ReturnType<typeof Colors>, topInset: number) {
             justifyContent: "center",
             paddingHorizontal: 24,
             paddingVertical: 48,
+        },
+        // Narrow: top-aligned, so the intent block sits under the nav instead of
+        // drifting to the middle once the dock takes the bottom of the screen.
+        // Centered in whatever is left between the nav and the dock. `flexGrow: 1`
+        // keeps the centering purely optical — once the block is taller than that
+        // space (short device, keyboard up) it reverts to a normal scroll.
+        heroScrollNarrow: {
+            flexGrow: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            paddingHorizontal: 20,
+            paddingTop: 20,
+            paddingBottom: 24,
         },
         heroInner: {
             width: "100%",
@@ -295,13 +407,37 @@ function makeStyles(colors: ReturnType<typeof Colors>, topInset: number) {
             textAlign: "center",
             color: colors.text,
         },
+        headlineWide: {
+            fontSize: fs(52),
+            lineHeight: lh(60),
+        },
+        headlineNarrow: {
+            fontSize: fs(30),
+            lineHeight: lh(37),
+        },
         subhead: {
             marginTop: 16,
-            fontSize: 16,
-            lineHeight: 24,
+            fontSize: fs(16),
+            lineHeight: lh(24),
             textAlign: "center",
-            color: colors.gray300,
+            color: colors.textSecondary,
             maxWidth: 560,
+        },
+        subheadNarrow: {
+            marginTop: 12,
+            fontSize: fs(15),
+            lineHeight: lh(22),
+            maxWidth: 320,
+        },
+        suggestionsLabel: {
+            marginTop: 26,
+            fontSize: fs(12),
+            lineHeight: lh(16),
+            fontWeight: "700",
+            letterSpacing: 0.8,
+            textTransform: "uppercase",
+            textAlign: "center",
+            color: colors.textSecondary,
         },
 
         promptBox: {
@@ -318,13 +454,29 @@ function makeStyles(colors: ReturnType<typeof Colors>, topInset: number) {
             shadowOpacity: 0.1,
             ...Platform.select({ android: { elevation: 6 } }),
         },
+        // Docked variant: flush to the bottom bar, and the shadow points *up*
+        // over the content it floats above.
+        promptBoxDocked: {
+            marginTop: 0,
+            paddingTop: 14,
+            paddingBottom: 12,
+            shadowOffset: { width: 0, height: -4 },
+            shadowRadius: 8,
+            shadowOpacity: 0.05,
+            ...Platform.select({ android: { elevation: 4 } }),
+        },
         promptInput: {
-            minHeight: 48,
+            minHeight: fbox(48),
             maxHeight: 160,
-            fontSize: 17,
-            lineHeight: 24,
+            fontSize: fs(17),
+            lineHeight: lh(24),
             color: colors.text,
             ...Platform.select({ web: { outlineStyle: "none" } as any }),
+        },
+        // With the keyboard up there is far less room, so the input grows less
+        // before it starts scrolling internally.
+        promptInputDocked: {
+            maxHeight: 112,
         },
         promptFooter: {
             marginTop: 10,
@@ -366,14 +518,47 @@ function makeStyles(colors: ReturnType<typeof Colors>, topInset: number) {
             alignItems: "center",
             gap: 8,
             paddingHorizontal: 16,
-            height: 40,
+            height: fbox(40),
             borderRadius: 999,
             backgroundColor: colors.tag,
         },
         chipText: {
             color: colors.text,
-            fontSize: 14,
+            fontSize: fs(14),
             fontWeight: "600",
+        },
+
+        suggestionList: {
+            marginTop: 14,
+            width: "100%",
+            gap: 10,
+        },
+        suggestionRow: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+            paddingHorizontal: 16,
+            height: fbox(52),
+            borderRadius: 16,
+            backgroundColor: colors.tag,
+        },
+        suggestionRowText: {
+            flex: 1,
+            color: colors.text,
+            fontSize: fs(15),
+            lineHeight: lh(20),
+            fontWeight: "600",
+        },
+
+        // Bottom-docked prompt bar. `bottomInset` keeps it clear of the home
+        // indicator when the keyboard is down; when the keyboard is up the
+        // KeyboardAvoidingView padding sits underneath it.
+        dock: {
+            // Matches `heroScrollNarrow` so the dock, the suggestion rows and the
+            // text block all share one left/right edge.
+            paddingHorizontal: 20,
+            paddingTop: 8,
+            paddingBottom: Math.max(bottomInset, 12),
         },
 
         modalRoot: {

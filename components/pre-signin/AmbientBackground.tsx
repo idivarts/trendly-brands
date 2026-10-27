@@ -1,7 +1,7 @@
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import React, { PropsWithChildren, useMemo } from "react";
-import { StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 
 /**
  * Shared, full-bleed ambient canvas used by both the lets-start AI page and the
@@ -40,7 +40,11 @@ function makeStyles(colors: ReturnType<typeof Colors>) {
             flex: 1,
             overflow: "hidden",
             position: "relative",
-            minHeight: 640,
+            // Web-only: gives a short browser window a usable canvas. On native
+            // the screen height is the canvas, and a floor taller than a small
+            // device (568pt) would overflow a clipped container — silently
+            // cutting off anything docked to the bottom edge.
+            ...Platform.select({ web: { minHeight: 640 } }),
         },
         washLayer: {
             ...StyleSheet.absoluteFillObject,
