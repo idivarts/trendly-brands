@@ -37,6 +37,23 @@ export const markStrategyStarted = async (
 };
 
 /**
+ * Strategies already reported as formed, for this app session.
+ *
+ * Module-scoped on purpose. `useStrategies()` is mounted by several components
+ * at once — the strategy screen and CollaboratorsSection both call it, and the
+ * calendar and content screens do too — and each instance runs its own
+ * Firestore listener. A guard held in a hook instance therefore dedupes only
+ * against itself, so one empty-to-written transition fired once PER MOUNTED
+ * HOOK.
+ *
+ * Observed on dev: two `strategy_formed` rows 7ms apart for one strategy. The
+ * second had lost the race for the stored start record, so it also reported
+ * the wrong origin (`ai_chat` instead of `strategies_list`) and no duration —
+ * which would have quietly skewed both the funnel count and its timings.
+ */
+const reportedFormed = new Set<string>();
+
+/**
  * Report that a strategy now has content.
  *
  * `word_count` rather than the content itself: the strategy is the brand's own
@@ -47,6 +64,12 @@ export const reportStrategyFormed = async (
     strategyId: string,
     markdownContent: string
 ): Promise<void> => {
+    // Claimed synchronously, before the first await. Two listeners reacting to
+    // the same snapshot run in the same tick, so an async guard would let both
+    // through.
+    if (reportedFormed.has(strategyId)) return;
+    reportedFormed.add(strategyId);
+
     let origin: StrategyOrigin = "ai_chat";
     let durationMs: number | undefined;
 
