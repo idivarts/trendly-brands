@@ -1,6 +1,7 @@
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useOrganizationContext } from "@/contexts/organization-context.provider";
+import { PLAN_CURRENCY, planValueUSD } from "@/constants/PlanPricing";
 import { captureAttribution, toSuperProperties } from "@/utils/attribution";
 import { createBranchSink, initBranch } from "@/utils/observability/branch";
 import { createPostHogSink } from "@/utils/observability/posthog";
@@ -11,6 +12,7 @@ import {
     identify,
     registerSink,
     reset,
+    setPersonProperties,
     setSuperProperties,
     track,
 } from "@/shared-libs/utils/analytics";
@@ -198,6 +200,23 @@ export const AnalyticsOrgSync = () => {
  */
 const PLAN_SEEN_PREFIX = "plan_seen_";
 
+/** Tier order, lowest first. Mirrors PLAN_RANK in ai-config-context. */
+const PLAN_ORDER = ["free", "pro", "team", "agency"];
+
+/**
+ * The higher of two plan keys.
+ *
+ * Only the previously-seen plan is available here, not the true all-time
+ * maximum, so this ratchets upward from whatever we last recorded rather than
+ * claiming full history. An unknown key loses, which keeps a renamed or custom
+ * plan from silently topping the scale.
+ */
+const highestPlan = (previous: string | null | undefined, current: string): string => {
+    const a = PLAN_ORDER.indexOf((previous || "").toLowerCase());
+    const b = PLAN_ORDER.indexOf(current.toLowerCase());
+    return a > b ? (previous as string) : current;
+};
+
 export const SubscriptionTransitionWatcher = () => {
     const { selectedOrganization, selectedOrgBilling } = useOrganizationContext();
 
@@ -212,6 +231,37 @@ export const SubscriptionTransitionWatcher = () => {
         PersistentStorage.get(key)
             .then((previous) => {
                 if (cancelled || previous === planKey) return;
+
+                // Person properties, written on every observed transition —
+                // including the silent first one, so an org that was already
+                // paying still gets a profile we can cohort by.
+                //
+                // Deliberately NOT a substitute for the plan super-property
+                // set in AnalyticsOrgSync: that one says what plan an event
+                // fired on, which is what a funnel reads. Only person
+                // properties let PostHog filter and cohort PEOPLE, which is
+                // what retention-by-plan and "free users who hit three walls"
+                // need. Written here because this is already the one place
+                // that detects a transition and dedupes it per org, so the
+                // properties cannot drift from the event they belong to.
+                const nowPaid = planKey !== "free";
+                setPersonProperties(
+                    {
+                        plan_key: planKey,
+                        is_paid: nowPaid,
+                        // Only ever raised: a churned Team customer is a
+                        // different win-back case from a churned Pro one, and
+                        // a plain overwrite would erase that on downgrade.
+                        highest_plan_ever: highestPlan(previous, planKey),
+                    },
+                    {
+                        plan_key_first: planKey,
+                        // $set_once, so it records the FIRST time money moved
+                        // and survives every later upgrade — the anchor for
+                        // time-to-conversion and paid retention curves.
+                        became_paid_at: nowPaid ? new Date().toISOString() : undefined,
+                    }
+                );
 
                 // No previous record: adopt the current plan silently rather
                 // than reporting an org that was already paying as a new sale.
@@ -236,6 +286,15 @@ export const SubscriptionTransitionWatcher = () => {
                             plan_key: planKey,
                             provider,
                             is_trial: isTrial,
+                            // The event has always declared value/currency and
+                            // never carried them, so the primary conversion
+                            // reported no revenue and nothing downstream could
+                            // bid or report on it. A trial sends no value on
+                            // purpose: no money has moved yet, and a trial
+                            // priced as a sale is exactly what the is_trial
+                            // split exists to prevent.
+                            value: isTrial ? undefined : planValueUSD(planKey),
+                            currency: isTrial ? undefined : PLAN_CURRENCY,
                         });
                     } else if (wasPaid && !isPaid) {
                         track("subscription_cancelled", { plan_key: previous });

@@ -9,6 +9,8 @@ import AppLayout from "@/layouts/app-layout";
 import useBreakpoints from "@/shared-libs/utils/use-breakpoints";
 import Colors from "@/shared-uis/constants/Colors";
 import { AnalyticsRange, IAccountAnalytics } from "@/types/Analytics";
+import { track } from "@/shared-libs/utils/analytics";
+import { goToConnectedAccounts } from "@/utils/social-navigation";
 import { useTheme } from "@react-navigation/native";
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -72,6 +74,18 @@ const AnalyticsScreen = () => {
     const accounts = data?.accounts ?? [];
     const selectedAccount =
         selectedId === "all" ? null : accounts.find((a) => a.socialId === selectedId) ?? null;
+
+    // Reported once per visit, and only once loading has settled — firing it
+    // while the fetch is in flight would count every visit as empty.
+    const promptShownRef = React.useRef(false);
+    useEffect(() => {
+        if (loading || error || accounts.length > 0 || promptShownRef.current) return;
+        promptShownRef.current = true;
+        track("social_connect_prompt_shown", {
+            entry_point: "analytics_empty",
+            platforms_connected: 0,
+        });
+    }, [loading, error, accounts.length]);
 
     // ── Summary KPI cards from unified totals ─────────────────────────────────
     const renderSummary = () => {
@@ -283,6 +297,17 @@ const AnalyticsScreen = () => {
                     <Text style={styles.emptyBody}>
                         Connect your Instagram or Facebook page to see unified analytics here.
                     </Text>
+                    {/* This state told the user to connect an account and then
+                        gave them no way to do it — a dead end, and a product
+                        bug independent of the analytics gap. */}
+                    <Pressable
+                        style={styles.retryBtn}
+                        onPress={() => goToConnectedAccounts("analytics_empty")}
+                        accessibilityRole="button"
+                        accessibilityLabel="Connect accounts"
+                    >
+                        <Text style={styles.retryText}>Connect accounts</Text>
+                    </Pressable>
                 </View>
             );
         }

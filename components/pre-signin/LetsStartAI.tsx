@@ -104,9 +104,24 @@ const LetsStartAI: React.FC = () => {
     // the keyboard rising *is* the confirmation that the tap landed. Without it
     // the only feedback is text appearing in a box at the other end of the
     // screen, which on a phone reads as nothing having happened.
-    const handleSuggestionPress = useCallback((label: string) => {
+    // Which suggestion chip filled the prompt, if any. A chip only populates
+    // the input — the user still has to submit — so without remembering it
+    // here, every chip-driven signup would be indistinguishable from a typed
+    // one, and the chips were the whole reason to ask the question.
+    const suggestionRef = useRef<number | null>(null);
+
+    const handleSuggestionPress = useCallback((label: string, index: number) => {
+        suggestionRef.current = index;
         setPrompt(label);
         requestAnimationFrame(() => inputRef.current?.focus());
+    }, []);
+
+    // Editing the text by hand makes it the user's own prompt again, chip or no
+    // chip — otherwise a chip tapped and then rewritten would still report as a
+    // suggestion.
+    const handlePromptChange = useCallback((value: string) => {
+        suggestionRef.current = null;
+        setPrompt(value);
     }, []);
 
     const showAuth = () => {
@@ -115,12 +130,28 @@ const LetsStartAI: React.FC = () => {
         setAuthOpen(true);
     };
 
+    /**
+     * The nav Sign in / Sign up buttons. These used to call showAuth directly
+     * and so reported NOTHING — the event only ever saw people who typed or
+     * tapped a chip, which made the top button look unused rather than
+     * unmeasured.
+     */
+    const openAuthFromNav = () => {
+        track("lets_start_intent", { has_prompt: false, entry_route: "top_button" });
+        showAuth();
+    };
+
     const openAuth = (intent: string) => {
         if (intent?.trim()) {
             // Stash the intent so we can personalize once they're in.
             PersistentStorage.set("pending_brand_prompt", intent.trim()).catch(() => { });
         }
-        track("lets_start_intent", { has_prompt: !!intent?.trim() });
+        const suggestion = suggestionRef.current;
+        track("lets_start_intent", {
+            has_prompt: !!intent?.trim(),
+            entry_route: suggestion !== null ? "suggestion" : "typed_prompt",
+            suggestion: suggestion ?? undefined,
+        });
         showAuth();
     };
 
@@ -137,7 +168,7 @@ const LetsStartAI: React.FC = () => {
             <TextInput
                 ref={inputRef}
                 value={prompt}
-                onChangeText={setPrompt}
+                onChangeText={handlePromptChange}
                 placeholder={isWide ? PLACEHOLDER : PLACEHOLDER_NARROW}
                 placeholderTextColor={colors.textSecondary}
                 style={[styles.promptInput, !isWide && styles.promptInputDocked]}
@@ -175,10 +206,10 @@ const LetsStartAI: React.FC = () => {
     // Wide: pills that wrap inside a roomy centered column.
     const suggestionChips = (
         <View style={styles.chips}>
-            {SUGGESTIONS.map((s) => (
+            {SUGGESTIONS.map((s, i) => (
                 <Pressable
                     key={s.label}
-                    onPress={() => handleSuggestionPress(s.label)}
+                    onPress={() => handleSuggestionPress(s.label, i)}
                     style={({ pressed }) => [styles.chip, pressed && { opacity: 0.8 }]}
                     accessibilityRole="button"
                     accessibilityLabel={s.label}
@@ -196,10 +227,10 @@ const LetsStartAI: React.FC = () => {
     // and they give it enough mass to hold the center of the screen.
     const suggestionList = (
         <View style={styles.suggestionList}>
-            {SUGGESTIONS.map((s) => (
+            {SUGGESTIONS.map((s, i) => (
                 <Pressable
                     key={s.label}
-                    onPress={() => handleSuggestionPress(s.label)}
+                    onPress={() => handleSuggestionPress(s.label, i)}
                     style={({ pressed }) => [styles.suggestionRow, pressed && { opacity: 0.8 }]}
                     accessibilityRole="button"
                     accessibilityLabel={s.label}
@@ -235,7 +266,7 @@ const LetsStartAI: React.FC = () => {
                             </Pressable>
                         )} */}
                         <Pressable
-                            onPress={showAuth}
+                            onPress={openAuthFromNav}
                             hitSlop={8}
                             accessibilityRole="button"
                             style={({ pressed }) => [styles.signInBtn, pressed && { opacity: 0.85 }]}
@@ -243,7 +274,7 @@ const LetsStartAI: React.FC = () => {
                             <Text style={styles.signInText}>Sign in</Text>
                         </Pressable>
                         <Pressable
-                            onPress={showAuth}
+                            onPress={openAuthFromNav}
                             hitSlop={8}
                             accessibilityRole="button"
                             style={({ pressed }) => [styles.signUpBtn, pressed && { transform: [{ scale: 0.98 }] }]}

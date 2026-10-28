@@ -51,6 +51,7 @@ import { AdminPortal, AdminPortalSubDrawer } from "./admin-portal";
 import { DrawerColorsContext } from "./drawer-colors-context";
 import DrawerMenuItem, { DrawerIcon, Tab } from "./DrawerMenuItem";
 import { InfluencerLedGrowth, InfluencerLedGrowthSubDrawer } from "./influencer-led-growth";
+import { goToBilling } from "@/utils/billing-navigation";
 
 // ─── Width constants (kept in sync with _layout.tsx) ───────────────────────
 const COLLAPSED_WIDTH = 56;
@@ -1166,7 +1167,7 @@ const RenderBanner = (props: {
             <Pressable
                 onPress={() => {
                     if (props.customUrl) Linking.openURL(props.customUrl);
-                    else router.push("/billing");
+                    else goToBilling("drawer");
                 }}
                 style={({ pressed }) => [
                     bannerStyles.bannerButton,

@@ -1,4 +1,6 @@
+import type { AiTurnOutcome } from "@/shared-constants/analytics-events";
 import { track } from "@/shared-libs/utils/analytics";
+import { goToBilling } from "@/utils/billing-navigation";
 import { Focus, focusesToPromptString } from "@/types/focus";
 import { useAuthContext } from "@/contexts/auth-context.provider";
 import { useBrandContext } from "@/contexts/brand-context.provider";
@@ -6,7 +8,6 @@ import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { aiWS } from "@/utils/ai-ws";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
-import { router } from "expo-router";
 import {
     collection,
     limit as fsLimit,
@@ -250,6 +251,9 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
     // Images pushed mid-turn via the `chat_image` frame, surfaced on the lingering
     // bubble at `done` so they show before the committed doc syncs.
     const streamImagesRef = useRef<string[]>([]);
+    // What the in-flight turn was asked to do. Set by sendMessage, consumed by
+    // whichever terminal frame ends the turn.
+    const turnRef = useRef<{ model: string; task: string; startedAt: number } | null>(null);
     const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     // The backend heartbeats a `ping` frame every ~15s for the whole turn (plus
     // `status`/`token`/`chat_image` frames), so a live-but-slow turn keeps
@@ -271,6 +275,31 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
         }
     }, []);
 
+    /**
+     * Close the loop on the turn that just ended.
+     *
+     * Fired once per turn and then cleared, so the watchdog finishing a turn
+     * the backend already reported cannot double-count it. An outcome of
+     * `stopped` or `error` is the whole point: those turns consumed tokens and
+     * produced nothing, and until now they looked identical to a turn the user
+     * never started.
+     */
+    const reportTurnOutcome = useCallback(
+        (outcome: AiTurnOutcome) => {
+            const turn = turnRef.current;
+            if (!turn) return;
+            turnRef.current = null;
+            track("ai_chat_response_received", {
+                module,
+                model: turn.model,
+                task: turn.task,
+                outcome,
+                duration_ms: Date.now() - turn.startedAt,
+            });
+        },
+        [module]
+    );
+
     const armWatchdog = useCallback(() => {
         if (watchdogRef.current) clearTimeout(watchdogRef.current);
         watchdogRef.current = setTimeout(() => {
@@ -283,9 +312,14 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
             // can retry. (Not a slowness message: heartbeats mean a genuinely
             // slow-but-alive turn never reaches here.)
             finishStreaming();
+            // The turn died without a terminal frame. Reported as an error
+            // rather than left unreported, because a turn that silently
+            // stopped is the failure mode users complain about and the one
+            // nothing in the taxonomy could show.
+            reportTurnOutcome("error");
             Toaster.error("The AI response was interrupted. Please try again.");
         }, STREAM_SILENCE_TIMEOUT_MS);
-    }, [finishStreaming]);
+    }, [finishStreaming, reportTurnOutcome]);
 
     // Clear any pending watchdog when the hook unmounts.
     useEffect(() => () => {
@@ -542,6 +576,7 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
                     ? (msg.images as string[])
                     : (streamImagesRef.current.length > 0 ? streamImagesRef.current : undefined);
                 finishStreaming();
+                reportTurnOutcome("completed");
                 // Linger the finished assistant turn until Firestore delivers the
                 // committed doc (matched by messageId), so it never flickers.
                 if (finalContent || control || (doneImages && doneImages.length > 0)) {
@@ -556,6 +591,19 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
                 }
             } else if (msg.type === "upgrade_required") {
                 finishStreaming();
+                reportTurnOutcome("upgrade_required");
+                // Rung 1 of the monetisation ladder, reusing the same event
+                // every other gate reports so "hit a wall" stays one number.
+                //
+                // Watch this one for config bugs as well as demand: the
+                // Firestore ai_config registry REPLACES the built-in model
+                // registry, so a new TaskType with no key there hard-locks
+                // every plan regardless of what the org pays. A spike here
+                // with no pricing change is a missing key, not interest.
+                track("entitlement_blocked", {
+                    reason: msg.reason === "tokens_exhausted" ? "tokens_exhausted" : "plan_locked",
+                    feature: "ai_chat",
+                });
                 if (msg.reason === "tokens_exhausted") {
                     // Out of monthly AI tokens — the composer already shows an
                     // in-context Upgrade/Top-up block. Don't yank the user to
@@ -564,7 +612,10 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
                 } else {
                     // Plan-lock (this model/feature needs a higher tier).
                     Toaster.error("This needs a higher plan. Please upgrade to continue.");
-                    router.push("/billing");
+                    goToBilling("ai_chat_blocked", {
+                        feature: "ai_chat",
+                        reason: "plan_locked",
+                    });
                 }
             } else if (msg.type === "error") {
                 // The backend sends a sentence it has already made safe to show
@@ -576,10 +627,11 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
                     msg.message || "Something went wrong talking to the AI. Please try again."
                 );
                 finishStreaming();
+                reportTurnOutcome("error");
             }
         });
         return remove;
-    }, [activeThreadId]);
+    }, [activeThreadId, reportTurnOutcome]);
 
     const sendMessage = useCallback(
         async (
@@ -591,12 +643,29 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
         ): Promise<boolean> => {
             if (!brandId || !manager?.id) return false;
 
+            // `model` is optional on this signature (a caller may let the
+            // backend resolve it), but the event's is not: an optional field
+            // lets a forgetful caller report nothing, and the model is the most
+            // useful dimension here. "default" names the backend's own choice
+            // rather than hiding it as undefined.
+            const turnModel = model || "default";
+            const turnTask = taskForModule(module);
+            // Held for the matching ai_chat_response_received — the terminal
+            // frames carry neither the model nor a start time, so without this
+            // an abandoned turn is indistinguishable from one never sent.
+            turnRef.current = {
+                model: turnModel,
+                task: turnTask,
+                startedAt: Date.now(),
+            };
+
             // The main AI loop, and the product's core differentiator. Without
             // this we can see that content got created but not that the chat
             // is what created it, nor which model did the work.
             track("ai_chat_message_sent", {
                 module,
-                model,
+                model: turnModel,
+                task: turnTask,
                 has_focus: !!focus?.length,
                 has_images: !!images?.length,
             });
@@ -661,7 +730,8 @@ export function useAIChat({ module, contextId, scope = "module", autoOpenLatest 
             aiWS.send({ type: "stop", conversationId: activeThreadId }).catch(() => {});
         }
         finishStreaming();
-    }, [activeThreadId, finishStreaming]);
+        reportTurnOutcome("stopped");
+    }, [activeThreadId, finishStreaming, reportTurnOutcome]);
 
     // Rendered history = committed (Firestore) + any optimistic user bubbles not
     // yet synced + the lingering assistant turn not yet synced. The panel adds

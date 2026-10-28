@@ -1,4 +1,5 @@
 import Colors from "@/shared-uis/constants/Colors";
+import { track } from "@/shared-libs/utils/analytics";
 import { aiWS } from "@/utils/ai-ws";
 import {
     faCalendarCheck,
@@ -76,6 +77,9 @@ const PushToCalendarProgressModal: React.FC<PushToCalendarProgressModalProps> = 
     const [errorMsg, setErrorMsg] = useState<string>("");
 
     const jobIdRef = useRef<string>("");
+    // Start of the current attempt, for the duration on the completed event.
+    // Per-attempt rather than per-mount, so a retry is timed on its own.
+    const startedAtRef = useRef<number>(0);
     const scrollRef = useRef<ScrollView>(null);
 
     // Kick off a WS job: connect, send the request, and stream back progress.
@@ -83,6 +87,11 @@ const PushToCalendarProgressModal: React.FC<PushToCalendarProgressModalProps> = 
     const runJob = useCallback(() => {
         const jobId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
         jobIdRef.current = jobId;
+        startedAtRef.current = Date.now();
+        // Placed in runJob rather than at the confirm button so a retry counts
+        // as its own attempt — otherwise a second try would report a
+        // completion with no start.
+        track("push_to_calendar_started", {});
         setPhase("running");
         setSteps([]);
         setDone(null);
@@ -101,19 +110,31 @@ const PushToCalendarProgressModal: React.FC<PushToCalendarProgressModalProps> = 
                     },
                 ]);
             } else if (msg.type === "calendar_done") {
+                const createdCount = Number(msg.createdCount ?? 0);
                 setDone({
-                    createdCount: Number(msg.createdCount ?? 0),
+                    createdCount,
                     removedCount: Number(msg.removedCount ?? 0),
                     startDate: msg.startDate ?? startDate,
                     endDate: msg.endDate ?? startDate,
                 });
+                // The end of the strategy loop. `items` comes straight off the
+                // frame, which already carries it — a strategy that pushes 2
+                // posts and one that pushes 30 are not the same outcome.
+                track("push_to_calendar_completed", {
+                    success: true,
+                    items: createdCount,
+                    duration_ms: Date.now() - startedAtRef.current,
+                });
                 setPhase("success");
             } else if (msg.type === "calendar_error") {
-                setErrorMsg(
-                    typeof msg.message === "string" && msg.message
-                        ? msg.message
-                        : "Something went wrong. Please try again."
-                );
+                const reason =
+                    typeof msg.message === "string" && msg.message ? msg.message : undefined;
+                track("push_to_calendar_completed", {
+                    success: false,
+                    reason,
+                    duration_ms: Date.now() - startedAtRef.current,
+                });
+                setErrorMsg(reason ?? "Something went wrong. Please try again.");
                 setPhase("error");
             }
         });

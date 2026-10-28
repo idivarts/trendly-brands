@@ -8,8 +8,8 @@ import { IapPackage } from "@/utils/iap/types";
 import { faBolt, faCheck, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { router } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { goToBilling } from "@/utils/billing-navigation";
 import {
     ActivityIndicator,
     Modal,
@@ -76,7 +76,7 @@ const SubscribeNudgeSheet: React.FC<Props> = ({ trigger, onDismiss, onConverted 
         // which owns the Razorpay checkout / plan comparison.
         if (!isNativeIap || !proPackage) {
             onConverted();
-            router.push("/billing");
+            goToBilling("subscribe_nudge", { reason: trigger });
             return;
         }
         setBusy(true);

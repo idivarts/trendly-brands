@@ -1,4 +1,3 @@
-import { track } from "@/shared-libs/utils/analytics";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 import {
@@ -146,9 +145,10 @@ const MonthView: React.FC<MonthViewProps> = ({
         const newDate = over.id as string; // droppables are keyed by ISO date
         const item = items.find((i) => i.id === itemId);
         if (!item || item.date === newDate) return;
-        // The signature interaction of a scheduling product, and a good proxy
-        // for ongoing (rather than one-off) use.
-        track("calendar_item_rescheduled", {});
+        // Reporting moved to the screen's handleMoveItem, which is the only
+        // place that knows whether the move was actually accepted: scheduled
+        // and posted content is rejected there, so firing here counted every
+        // rejected drag as a successful reschedule.
         onMoveItem?.(itemId, newDate);
     };
 

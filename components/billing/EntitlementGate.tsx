@@ -3,11 +3,11 @@ import Colors from "@/shared-uis/constants/Colors";
 import { faLock } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { router } from "expo-router";
 import React, { useEffect, useMemo, useRef } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { fs, lh } from "@/constants/Typography";
 import { track } from "@/shared-libs/utils/analytics";
+import { goToBilling } from "@/utils/billing-navigation";
 
 // Entitlement gates — capability locks (NOT consumption). Two presentations:
 //   • UpgradeInline  — a compact in-context upsell row (Inbox view-only, posting cap).
@@ -15,9 +15,14 @@ import { track } from "@/shared-libs/utils/analytics";
 //                      user sees the value first (Analytics on free).
 // Pre-empt, don't punish: gate before the action, keep the user in context.
 
-function goToBilling() {
-    router.push("/billing");
-}
+/**
+ * Both presentations report the same `source`, carrying whichever `feature`
+ * and `reason` the gate was given. That pairs the click with the
+ * `entitlement_blocked` impression already emitted below, so "saw a lock" and
+ * "acted on a lock" become comparable per feature.
+ */
+const openBilling = (feature?: string, reason?: string) =>
+    goToBilling("entitlement_gate", { feature, reason });
 
 /**
  * Reports that a user hit a capability lock. Fired once per mount rather than
@@ -55,7 +60,7 @@ export const UpgradeInline: React.FC<{
             <FontAwesomeIcon icon={faLock} size={12} color={colors.primary} />
             <Text style={styles.inlineText} numberOfLines={2}>{message}</Text>
             <Pressable
-                onPress={onPress ?? goToBilling}
+                onPress={onPress ?? (() => openBilling(feature, reason))}
                 style={({ pressed }) => [styles.inlineCta, pressed && styles.pressed]}
                 accessibilityRole="button"
                 accessibilityLabel={ctaLabel}
@@ -100,7 +105,7 @@ export const LockedOverlay: React.FC<{
                     <Text style={styles.overlayTitle}>{title}</Text>
                     {subtitle ? <Text style={styles.overlaySubtitle}>{subtitle}</Text> : null}
                     <Pressable
-                        onPress={goToBilling}
+                        onPress={() => openBilling(feature, reason)}
                         style={({ pressed }) => [styles.overlayCta, pressed && styles.pressed]}
                         accessibilityRole="button"
                         accessibilityLabel={ctaLabel}

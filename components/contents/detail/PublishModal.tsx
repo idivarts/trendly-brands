@@ -17,7 +17,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useEffect, useMemo, useState } from "react";
+import { track } from "@/shared-libs/utils/analytics";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Modal,
@@ -155,6 +156,26 @@ const PublishModal: React.FC<PublishModalProps> = ({
     const readyCount = destinations.filter((d) => !blockedReasons.has(d.socialAccountId)).length;
     const blockedCount = destinations.length - readyCount;
     const canProceed = readyCount > 0 && blockedCount === 0 && !publishing;
+
+    // Which gate actually stops people, and on which platforms. Reported once
+    // per distinct block set rather than per render, so a user fixing one
+    // field does not emit the event on every keystroke.
+    const reportedBlockRef = useRef<string>("");
+    useEffect(() => {
+        if (!visible || blockedCount === 0) return;
+        const reasons = Array.from(new Set(Array.from(blockedReasons.values()))).sort();
+        const platforms = destinations
+            .filter((d) => blockedReasons.has(d.socialAccountId))
+            .map((d) => d.platform)
+            .sort();
+        const signature = `${reasons.join("|")}::${platforms.join("|")}`;
+        if (reportedBlockRef.current === signature) return;
+        reportedBlockRef.current = signature;
+        track("content_publish_blocked", {
+            reason: reasons.join(",") || "unknown",
+            platforms,
+        });
+    }, [visible, blockedCount, blockedReasons, destinations]);
     const scheduleValid = !isScheduleInPast(scheduledAt);
 
     // Which selected destinations will post from their own variation.

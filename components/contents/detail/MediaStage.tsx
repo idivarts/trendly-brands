@@ -67,6 +67,7 @@ import { aspectError, MEDIA_SPEC, parseAspectRatio, previewAspect } from "./medi
 import DesignRenderBar, { DesignRenderChip, DesignRenderState } from "./DesignRenderBar";
 import { useDesignRender } from "./design-stage/use-design-render";
 import { DesignFrameHandle } from "./design-stage/bridge";
+import { track } from "@/shared-libs/utils/analytics";
 
 /** Tallest a preview may get, so a 9:16 design doesn't push the page apart. */
 const MAX_PREVIEW_H = 420;
@@ -270,6 +271,11 @@ const MediaStage: React.FC<MediaStageProps> = ({
     // picker without choosing anything returns to the chooser.
     const pickLane = useCallback(
         async (next: MediaLane) => {
+            // The three lanes are mutually exclusive, so this is the cheapest
+            // read there is on how people actually make media — and AI image
+            // generation in particular was shipped without any way to tell
+            // whether anyone reaches for it.
+            track("content_media_lane_picked", { lane: next });
             if (next === "design") {
                 onOpenDesign();
                 return;

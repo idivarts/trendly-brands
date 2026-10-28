@@ -24,6 +24,8 @@ import { useContents } from "@/hooks/use-contents";
 import { useFeatureTour } from "@/hooks/use-feature-tour";
 import { useStrategies } from "@/hooks/use-strategies";
 import AppLayout from "@/layouts/app-layout";
+import { track } from "@/shared-libs/utils/analytics";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import {
     faCommentDots,
@@ -89,7 +91,24 @@ const ContentCalendarScreen = () => {
     // Month is the default everywhere. On phones the month view is the dot-grid +
     // tap-to-fill bottom list (MonthViewMobile) — readable at phone width, unlike
     // the desktop chips-in-cells grid which only renders for xl.
-    const [calView, setCalView] = useState<CalendarView>("month");
+    const [calView, setCalViewState] = useState<CalendarView>("month");
+    // Wrapped rather than tracked at each of the three view switchers, so the
+    // mobile and desktop variants cannot drift apart. The mobile month grid is
+    // reported distinctly because it is a different component with no
+    // drag-to-reschedule, so its usage is not comparable to desktop month.
+    const setCalView = useCallback(
+        (next: CalendarView) => {
+            if (next === calView) return;
+            track("calendar_view_changed", {
+                view:
+                    next === "month" && !xl
+                        ? "month_mobile"
+                        : (next as "month" | "week"),
+            });
+            setCalViewState(next);
+        },
+        [calView, xl]
+    );
     const [calYear, setCalYear] = useState(focusParsed?.getFullYear() ?? today.getFullYear());
     const [calMonth, setCalMonth] = useState(focusParsed?.getMonth() ?? today.getMonth());
 
@@ -168,6 +187,7 @@ const ContentCalendarScreen = () => {
                 },
             ];
         });
+        track("ai_focus_added", { source: "calendar_item", module: "calendar" });
         handleRightPanelModeChange("chat");
     }, [handleRightPanelModeChange]);
 
@@ -204,6 +224,7 @@ const ContentCalendarScreen = () => {
                 ...prev,
                 { id: `comment-${comment.id}-${Date.now()}`, focusText, focusArea },
             ]);
+            track("ai_focus_added", { source: "comment", module: "calendar" });
             handleRightPanelModeChange("chat");
         },
         [selectedCommentItem, handleRightPanelModeChange]
@@ -214,7 +235,12 @@ const ContentCalendarScreen = () => {
     // but the preview needs status + platforms) by id.
     const handleOpenItem = useCallback(
         (item: CalendarItem) => {
-            setDetailItem(allContents.find((c) => c.id === item.id) ?? null);
+            const content = allContents.find((c) => c.id === item.id) ?? null;
+            // `status` is the useful dimension: opening a draft is planning,
+            // opening a posted item is reviewing, and the calendar's value
+            // depends on which of the two people actually do.
+            track("calendar_item_opened", { status: content?.status });
+            setDetailItem(content);
         },
         [allContents]
     );
@@ -226,7 +252,10 @@ const ContentCalendarScreen = () => {
             router.push({
                 pathname:
                     "/(main)/(drawer)/(tabs)/(content)/contents/[contentId]" as any,
-                params: { contentId: item.id },
+                // Lets the content screen report where it was opened from —
+                // planning from the calendar reads very differently from
+                // browsing the contents list.
+                params: { contentId: item.id, origin: "calendar" },
             });
         },
         [router]
@@ -254,17 +283,46 @@ const ContentCalendarScreen = () => {
     // AddContentModal places new items (see toIContent in use-contents).
     const handleMoveItem = useCallback(
         async (itemId: string, newDate: string) => {
+            const moved = allContents.find((c) => c.id === itemId);
+            const postingTimeStamp = new Date(newDate + "T00:00:00Z").getTime();
+            // Signed, so the direction of a reschedule is readable: people
+            // pushing work later and people pulling it earlier are doing very
+            // different things with a calendar.
+            // CalendarItem.date is the ISO day the chip was dragged from —
+            // the only pre-move date available here, since the content model
+            // exposes no raw timestamp.
+            const daysMoved = moved?.date
+                ? Math.round(
+                    (postingTimeStamp - new Date(moved.date + "T00:00:00Z").getTime()) /
+                    (24 * 60 * 60 * 1000)
+                )
+                : undefined;
+
             // Scheduled / posted content is locked — its posting date can't be
             // changed by dragging. Unschedule (or it's already posted) first.
-            const moved = allContents.find((c) => c.id === itemId);
             if (moved && (moved.status === "scheduled" || moved.status === "posted")) {
+                // Reported as blocked rather than not at all: the attempt is
+                // real intent, and the event used to fire in MonthView before
+                // this check, so every rejected drag counted as a success.
+                track("calendar_item_rescheduled", { days_moved: daysMoved, blocked: true });
+                // The rejection was also entirely silent — the chip simply
+                // sprang back with no explanation.
+                Toaster.error(
+                    moved.status === "posted"
+                        ? "This post is already live, so its date can't change."
+                        : "Unschedule this post first to move it to another day."
+                );
                 return;
             }
-            const postingTimeStamp = new Date(newDate + "T00:00:00Z").getTime();
             try {
                 await updateContent(itemId, { postingTimeStamp });
+                // The signature interaction of a scheduling product, and a good
+                // proxy for ongoing (rather than one-off) use. Only after the
+                // write succeeds.
+                track("calendar_item_rescheduled", { days_moved: daysMoved, blocked: false });
             } catch (err) {
                 console.warn("Failed to move content to new day", err);
+                Toaster.error("Couldn't move this post. Please try again.");
             }
         },
         [updateContent, allContents]

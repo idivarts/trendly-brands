@@ -7,6 +7,7 @@ import {
 } from "@/shared-libs/firestore/trendly-pro/models/strategies";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { track } from "@/shared-libs/utils/analytics";
+import { markStrategyStarted, reportStrategyFormed } from "@/utils/strategy-funnel";
 import {
     addDoc,
     arrayUnion,
@@ -191,6 +192,22 @@ export function useStrategies(): UseStrategiesReturn {
     // we're idle. True same-doc concurrent merge is Phase 2 (Yjs CRDT).
     const localEditsRef = useRef<Record<string, string>>({});
 
+    // ── Strategy funnel bookkeeping ─────────────────────────────────────────
+    // Which strategies we have already reported as "formed", and whether each
+    // was empty when we first saw it. `strategy_formed` is the outcome
+    // `strategy_created` could never report: that one fires when an empty doc
+    // appears, which happens before anyone has written a strategy.
+    const emptyAtFirstSightRef = useRef<Record<string, boolean>>({});
+    const formedReportedRef = useRef<Record<string, boolean>>({});
+
+    // Editing sessions, for strategy_updated. Reported once per session rather
+    // than per save: the content write is debounced at 1.5s, so a per-save
+    // event would fire on every typing pause and measure keyboard habits
+    // instead of edits.
+    const editSessionRef = useRef<Record<string, { startedAt: number; saves: number }>>({});
+    const editSessionTimerRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+    const EDIT_SESSION_IDLE_MS = 30_000;
+
     // managerId read inside the snapshot listener without re-subscribing on login.
     const managerIdRef = useRef<string | undefined>(manager?.id);
     useEffect(() => {
@@ -237,6 +254,24 @@ export function useStrategies(): UseStrategiesReturn {
                     // keystrokes (our own echo / a stale snapshot) are never clobbered.
                     return toContentStrategy(d.id, { ...data, markdownContent: local });
                 });
+                // Fires for AI-written and hand-typed strategies alike,
+                // because both arrive here — the AI writes server-side and
+                // reaches us through this same listener.
+                for (const strategy of mapped) {
+                    const id = strategy.id;
+                    const hasContent = !!(strategy.content ?? "").trim();
+                    if (!(id in emptyAtFirstSightRef.current)) {
+                        emptyAtFirstSightRef.current[id] = !hasContent;
+                        // An already-filled strategy on first sight is history,
+                        // not something that just happened in this session.
+                        if (hasContent) formedReportedRef.current[id] = true;
+                        continue;
+                    }
+                    if (hasContent && !formedReportedRef.current[id]) {
+                        formedReportedRef.current[id] = true;
+                        void reportStrategyFormed(id, strategy.content ?? "");
+                    }
+                }
                 setStrategies(mapped);
                 setLoading(false);
             },
@@ -265,7 +300,11 @@ export function useStrategies(): UseStrategiesReturn {
             const data = toIStrategy(title, markdownContent, managerId);
             const strategiesRef = collection(FirestoreDB, "brands", brandId, "strategies");
             const docRef = await addDoc(strategiesRef, data);
+            // Kept for continuity of the existing series; strategy_formed is
+            // what the funnel should read.
             track("strategy_created", {});
+            track("strategy_creation_started", { origin: "strategies_list" });
+            void markStrategyStarted(docRef.id);
             return docRef.id;
         },
         [selectedBrand?.id, manager?.id]
@@ -318,6 +357,10 @@ export function useStrategies(): UseStrategiesReturn {
             const strategiesRef = collection(FirestoreDB, "brands", brandId, "strategies");
             const docRef = await addDoc(strategiesRef, copy);
             track("strategy_created", {});
+            // A duplicate starts life already formed, so it reports the intent
+            // and lets the snapshot pass above record the outcome.
+            track("strategy_creation_started", { origin: "duplicate" });
+            void markStrategyStarted(docRef.id);
             return docRef.id;
         },
         [selectedBrand?.id, manager?.id]
@@ -369,6 +412,27 @@ export function useStrategies(): UseStrategiesReturn {
             if (debounceRef.current[strategyId]) {
                 clearTimeout(debounceRef.current[strategyId]);
             }
+
+            // Open (or extend) this strategy's editing session. Reported once
+            // it goes idle, so one event covers a sitting rather than one per
+            // debounced write.
+            if (!editSessionRef.current[strategyId]) {
+                editSessionRef.current[strategyId] = { startedAt: Date.now(), saves: 0 };
+            }
+            editSessionRef.current[strategyId].saves += 1;
+            if (editSessionTimerRef.current[strategyId]) {
+                clearTimeout(editSessionTimerRef.current[strategyId]);
+            }
+            editSessionTimerRef.current[strategyId] = setTimeout(() => {
+                const session = editSessionRef.current[strategyId];
+                delete editSessionRef.current[strategyId];
+                delete editSessionTimerRef.current[strategyId];
+                if (!session) return;
+                track("strategy_updated", {
+                    source: "manual",
+                    duration_ms: Date.now() - session.startedAt - EDIT_SESSION_IDLE_MS,
+                });
+            }, EDIT_SESSION_IDLE_MS);
 
             // There are now edits not yet merged into markdownContent.
             markSaving(strategyId, true);

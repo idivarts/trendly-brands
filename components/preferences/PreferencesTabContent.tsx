@@ -51,6 +51,7 @@ import { ActivityIndicator } from "react-native-paper";
 import { Text } from "../theme/Themed";
 import Button from "../ui/button";
 import PageHeader from "../ui/page-header";
+import { goToBilling } from "@/utils/billing-navigation";
 
 interface PreferencesTabContentProps {
     collaborationId?: string;
@@ -119,7 +120,10 @@ const PreferencesTabContent: FC<PreferencesTabContentProps> = () => {
             description:
                 "Setting Brand Preferences is just member only functionality. Please upgrade the plan now to not lose any data",
             confirmAction: () => {
-                router.push("/billing");
+                goToBilling("preferences", {
+                    feature: "brand_preferences",
+                    reason: "plan_locked",
+                });
             },
             confirmText: "Upgrade Now",
         });

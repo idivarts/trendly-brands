@@ -1,18 +1,17 @@
 import { useDiscovery } from "@/components/discover/discovery-context";
 import { useOrganizationContext } from "@/contexts/organization-context.provider";
-import { useMyNavigation } from "@/shared-libs/utils/router";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Avatar, Button, Card } from "react-native-paper";
+import { goToBilling } from "@/utils/billing-navigation";
 
 export default function EmptyTrendlyInternalSelected() {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useMemo(() => makeStyles(colors), [colors]);
-    const router = useMyNavigation();
     const { selectedOrgBilling } = useOrganizationContext();
     const { selectedDb, setShowFilters } = useDiscovery();
 
@@ -54,7 +53,7 @@ export default function EmptyTrendlyInternalSelected() {
                             mode="contained"
                             style={styles.button}
                             buttonColor={colors.primary}
-                            onPress={() => router.push("/billing")}
+                            onPress={() => goToBilling("discover_empty", { feature: "influencer_discovery" })}
                         >
                             Unlock All Micro‑Influencers with Pro
                         </Button>

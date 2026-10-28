@@ -31,10 +31,11 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React from "react";
+import React, { useCallback, useRef } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { fs, lh } from "@/constants/Typography";
 import SectionLabel from "./SectionLabel";
+import { track } from "@/shared-libs/utils/analytics";
 
 interface Props {
     platform: Platform;
@@ -73,6 +74,17 @@ const VariationEditor: React.FC<Props> = ({
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
+
+    // Typing is per-keystroke, so this reports the FIRST override edit on a
+    // platform per mount and then goes quiet. The question is whether people
+    // tailor content per platform at all — a count of keystrokes answers a
+    // different and useless one.
+    const reportedRef = useRef(false);
+    const reportVariationEdited = useCallback(() => {
+        if (reportedRef.current) return;
+        reportedRef.current = true;
+        track("content_variation_edited", { platform });
+    }, [platform]);
     const styles = useStyles(colors);
 
     const spec = variationSpecForPlatform(platform);
@@ -135,7 +147,10 @@ const VariationEditor: React.FC<Props> = ({
                     editable={!disabled}
                     placeholder={placeholder}
                     placeholderTextColor={colors.textSecondary}
-                    onChangeText={(t) => onSetOverride(field, t)}
+                    onChangeText={(t) => {
+                        reportVariationEdited();
+                        onSetOverride(field, t);
+                    }}
                     multiline={opts.multiline}
                     textAlignVertical={opts.multiline ? "top" : "center"}
                     maxLength={opts.maxLen}

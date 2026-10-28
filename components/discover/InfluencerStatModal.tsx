@@ -1,3 +1,4 @@
+import { track } from "@/shared-libs/utils/analytics";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBreakpoints } from "@/hooks";
 import { useConfirmationModel } from "@/shared-uis/components/ConfirmationModal";
@@ -63,6 +64,11 @@ export const InfluencerStatsModal: React.FC<{
                 "We are working on this feature. Please contact support to know more about it and also to get the timeline for this",
             confirmText: "Contact Support",
             confirmAction: () => {
+                track("support_contact_clicked", {
+                    channel: "email",
+                    source: "influencer_stats",
+                    intent: "feature_unlock",
+                });
                 Linking.openURL("mailto:support@idiv.in");
             },
         });

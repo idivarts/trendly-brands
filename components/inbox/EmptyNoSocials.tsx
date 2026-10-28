@@ -5,18 +5,28 @@ import {
 import { faComments, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { useRouter } from "expo-router";
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { Text } from "@/components/theme/Themed";
 import Colors from "@/shared-uis/constants/Colors";
+import { track } from "@/shared-libs/utils/analytics";
+import { goToConnectedAccounts } from "@/utils/social-navigation";
 
 const EmptyNoSocials: React.FC = () => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useStyles(colors);
-    const router = useRouter();
+
+    // This component only renders when the brand has no connected accounts, so
+    // mounting IS the prompt being shown — the denominator for the whole
+    // connect funnel.
+    useEffect(() => {
+        track("social_connect_prompt_shown", {
+            entry_point: "inbox_empty",
+            platforms_connected: 0,
+        });
+    }, []);
 
     return (
         <View style={styles.container}>
@@ -39,7 +49,7 @@ const EmptyNoSocials: React.FC = () => {
             </Text>
 
             <Pressable
-                onPress={() => router.push("/connected-accounts" as any)}
+                onPress={() => goToConnectedAccounts("inbox_empty")}
                 style={[styles.cta, { backgroundColor: colors.primary }]}
             >
                 <FontAwesomeIcon icon={faPlus} size={15} color={colors.onPrimary} />

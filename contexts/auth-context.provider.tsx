@@ -257,6 +257,11 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
             return false;
         }
 
+        // E1 of the email sub-funnel. Fired before the request, so a signup
+        // that fails on the network or in Firebase still has a denominator —
+        // without it, a broken signup endpoint looks like nobody trying.
+        track("signup_email_submitted", {});
+
         try {
             const response = await HttpWrapper.fetch("/onboard/signup", {
                 method: "POST",
@@ -272,6 +277,14 @@ export const AuthContextProvider: React.FC<PropsWithChildren> = ({
 
             const data = await response.json();
             Console.log("Signup API Response:", data);
+
+            // E2. A 2xx from /onboard/signup means the account was created AND
+            // the mail was dispatched — the handler does both and cannot report
+            // them apart, so this one event covers both from the client's view.
+            // The backend's own signup_verification_email_sent is the precise
+            // counterpart: a gap between the two counts is mail delivery
+            // failing, which is invisible from here.
+            track("signup_email_registered", {});
 
             Toaster.success("Verification Email Sent!");
             return true;

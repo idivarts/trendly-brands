@@ -15,7 +15,6 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { Image } from "expo-image";
-import { router } from "expo-router";
 import React, { useMemo, useRef, useState } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { Menu } from "react-native-paper";
@@ -37,6 +36,7 @@ import {
     relativeTime,
     replyWindowLeft,
 } from "./utils";
+import { goToBilling } from "@/utils/billing-navigation";
 
 interface Props {
     conversation: InboxConversation;
@@ -435,7 +435,12 @@ const ThreadView: React.FC<Props> = ({
                     // Real reply intent: nudge in place, and only fall back to
                     // the billing page when the nudge is suppressed.
                     onPress={() => {
-                        if (!maybeNudge("inbox_read_only")) router.push("/billing");
+                        if (!maybeNudge("inbox_read_only")) {
+                            goToBilling("inbox_read_only", {
+                                feature: "inbox_reply",
+                                reason: "plan_locked",
+                            });
+                        }
                     }}
                 />
             ) : (

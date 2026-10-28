@@ -1,7 +1,9 @@
 import { AIModel } from "@/hooks/use-ai-models";
+import type { AiSurface } from "@/shared-constants/analytics-events";
+import { track } from "@/shared-libs/utils/analytics";
 import Colors from "@/shared-uis/constants/Colors";
+import { goToBilling } from "@/utils/billing-navigation";
 import { useTheme } from "@react-navigation/native";
-import { router } from "expo-router";
 import React, { useMemo, useRef, useState } from "react";
 import {
     Dimensions,
@@ -19,6 +21,18 @@ interface Props {
     selectedModel: string;
     onSelect: (modelId: string) => void;
     compact?: boolean;
+    /**
+     * Which chat surface this picker belongs to, and the task its models were
+     * resolved against.
+     *
+     * Required rather than optional: all five surfaces mount this same
+     * component, so without them every model action in the app reports
+     * identically — and the task matters because one stored preference is
+     * resolved per task, so the same pick means different models in different
+     * places.
+     */
+    surface: AiSurface;
+    task: string;
 }
 
 interface AnchorRect {
@@ -32,7 +46,14 @@ const DROPDOWN_WIDTH = 240;
 const DROPDOWN_MAX_HEIGHT = 320;
 const ANCHOR_GAP = 6;
 
-const AIModelSelector: React.FC<Props> = ({ models, selectedModel, onSelect, compact }) => {
+const AIModelSelector: React.FC<Props> = ({
+    models,
+    selectedModel,
+    onSelect,
+    compact,
+    surface,
+    task,
+}) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const [open, setOpen] = useState(false);
@@ -43,6 +64,15 @@ const AIModelSelector: React.FC<Props> = ({ models, selectedModel, onSelect, com
     const current = models.find((m) => m.id === selectedModel) ?? models[0];
 
     const openMenu = () => {
+        // The denominator for a switch: without it, "nobody changes model"
+        // and "nobody finds the picker" look the same. `locked_count` says how
+        // much of the list this plan cannot use, which is the shape of the
+        // upsell the user is looking at.
+        track("ai_model_picker_opened", {
+            surface,
+            task,
+            locked_count: models.filter((m) => !m.unlocked).length,
+        });
         chipRef.current?.measureInWindow((x, y, width, height) => {
             setAnchor({ x, y, width, height });
             setOpen(true);
@@ -52,8 +82,31 @@ const AIModelSelector: React.FC<Props> = ({ models, selectedModel, onSelect, com
     const handlePick = (m: AIModel) => {
         if (!m.unlocked) {
             setOpen(false);
-            router.push("/billing");
+            // ⭐ The highest-intent moment in the product: someone asked for a
+            // better model and was told no. `min_plan` is which tier they were
+            // reaching for — the number that should decide what sits in Pro
+            // versus Team. goToBilling then reports the upgrade tap itself.
+            track("ai_model_locked_tapped", {
+                model: m.id,
+                min_plan: m.minPlan ?? "free",
+                surface,
+                task,
+            });
+            goToBilling("ai_model_locked", {
+                feature: `ai_model:${m.id}`,
+                reason: "plan_locked",
+            });
             return;
+        }
+        // Re-picking the current model is not a switch; reporting it would
+        // inflate the one number this event exists to give.
+        if (m.id !== selectedModel) {
+            track("ai_model_switched", {
+                from_model: selectedModel || "default",
+                to_model: m.id,
+                surface,
+                task,
+            });
         }
         onSelect(m.id);
         setOpen(false);

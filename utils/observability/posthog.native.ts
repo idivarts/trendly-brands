@@ -1,7 +1,7 @@
 import { hasValue, OBSERVABILITY } from "@/shared-constants/marketing";
 import type { AnalyticsSink } from "@/shared-libs/utils/analytics";
 import PostHog from "posthog-react-native";
-import { toPostHogContext } from "./posthog-context";
+import { compact, toPostHogContext } from "./posthog-context";
 
 /**
  * PostHog sink — native build (posthog-react-native).
@@ -75,6 +75,18 @@ export const createPostHogSink = (): AnalyticsSink | null => {
         // user's events on a shared device.
         setContext: (props) => {
             client.register(toPostHogContext(props));
+        },
+        // posthog-react-native has no setPersonProperties (that is posthog-js's
+        // API), so this goes through the `$set` event, which is PostHog's own
+        // documented way to write person properties without re-identifying.
+        // Re-identifying would be the wrong tool: identify() with properties
+        // can only $set, and would lose the $set_once distinction that
+        // plan_key_first and became_paid_at depend on.
+        setPersonProperties: (props, once) => {
+            const $set = compact(props);
+            const $set_once = once ? compact(once) : {};
+            if (!Object.keys($set).length && !Object.keys($set_once).length) return;
+            client.capture("$set", { $set, $set_once });
         },
         reset: () => {
             client.reset();

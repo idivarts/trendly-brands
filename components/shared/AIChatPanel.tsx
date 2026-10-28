@@ -832,6 +832,8 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                                 selectedModel={selectedModel}
                                 onSelect={setSelectedModel}
                                 compact
+                                surface="chat_panel"
+                                task={taskForModule(activeModule)}
                             />
                         </View>
                         <TokenMeterBar tokens={tokens} />

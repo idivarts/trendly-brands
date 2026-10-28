@@ -790,6 +790,8 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                                     selectedModel={designModel}
                                     onSelect={setSelectedModel}
                                     compact
+                                    surface="design_stage"
+                                    task="design"
                                 />
                                 <Pressable
                                     style={({ pressed }) => [

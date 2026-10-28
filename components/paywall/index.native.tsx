@@ -81,7 +81,17 @@ const PayWallComponent = () => {
         track("checkout_started", { plan_key: pkg.planKey ?? pkg.productId, provider: "iap" })
         const res = await purchase(pkg)
         setBusyProduct(null)
-        if (res.userCancelled) return
+        if (res.userCancelled) {
+            // A cancel is a real outcome, not a non-event: it is the store
+            // sheet losing someone who had already decided to pay.
+            track("checkout_failed", {
+                plan_key: pkg.planKey ?? pkg.productId,
+                provider: "iap",
+                stage: "purchase",
+                reason: "user_cancelled",
+            })
+            return
+        }
         if (res.success) {
             // ⭐⭐ Primary conversion. The store is the source of truth for the
             // money, so this fires on RevenueCat's confirmation, not on intent.
@@ -92,6 +102,14 @@ const PayWallComponent = () => {
             // entitlement, and firing in both places would double-count.
             Toaster.success('Purchase successful — unlocking your plan. This can take a minute.')
         } else {
+            // Store declines live here — the most common way an IAP checkout
+            // dies, and until now the only trace was a toast.
+            track("checkout_failed", {
+                plan_key: pkg.planKey ?? pkg.productId,
+                provider: "iap",
+                stage: "purchase",
+                reason: res.error,
+            })
             Toaster.error(res.error ?? 'Purchase failed. Please try again.')
         }
     }, [])
@@ -108,11 +126,22 @@ const PayWallComponent = () => {
     }, [])
 
     const handleManage = useCallback(async () => {
+        // The store's management page is where a cancel happens, so this is
+        // the last moment anything can be done about it.
+        track("subscription_cancel_intent", {
+            plan_key: selectedOrgBilling?.planKey ?? "free",
+            surface: "store_management",
+        })
         const url = await getManagementURL()
         if (url) Linking.openURL(url)
-    }, [])
+    }, [selectedOrgBilling?.planKey])
 
     const handleContactAgency = useCallback(() => {
+        track("support_contact_clicked", {
+            channel: "email",
+            source: "paywall_agency_native",
+            intent: "upgrade",
+        })
         Linking.openURL('mailto:support@idiv.in?subject=Trendly%20Agency%20plan')
     }, [])
 
@@ -131,13 +160,28 @@ const PayWallComponent = () => {
                 </Text>
                 <Pressable
                     style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
-                    onPress={() =>
+                    onPress={() => {
+                        // This fallback renders whenever store products are not
+                        // configured, which makes it the ENTIRE native upgrade
+                        // path until IAP is live. Untracked, all of that intent
+                        // was invisible.
+                        track("support_contact_clicked", {
+                            channel: "whatsapp",
+                            source: "paywall_not_configured",
+                            intent: "upgrade",
+                        })
                         Linking.openURL(`https://wa.me/${WHATSAPP_NUMBER_DIGITS}?text=${encodeURIComponent(whatsAppMessage)}`)
-                    }
+                    }}
                 >
                     <Text style={styles.primaryBtnText}>Message us on WhatsApp</Text>
                 </Pressable>
-                <Pressable style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]} onPress={() => Linking.openURL(BRANDS_FE_URL)}>
+                <Pressable style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]} onPress={() => {
+                    // Tracked beside the WhatsApp CTA on purpose: if most people
+                    // take this one, the answer is a better mobile upgrade path,
+                    // not more WhatsApp.
+                    track("open_on_desktop_clicked", { source: "paywall_not_configured" })
+                    Linking.openURL(BRANDS_FE_URL)
+                }}>
                     <Text style={styles.secondaryBtnText}>Open Trendly on desktop</Text>
                 </Pressable>
             </View>
@@ -156,7 +200,12 @@ const PayWallComponent = () => {
                     <Text style={styles.infoBody}>
                         You subscribed on the Trendly website. To change or cancel this plan, open Trendly on desktop.
                     </Text>
-                    <Pressable style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]} onPress={() => Linking.openURL(BRANDS_FE_URL)}>
+                    <Pressable style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]} onPress={() => {
+                        // A web-managed plan can only be changed or cancelled on
+                        // desktop, so this deflection is also churn intent.
+                        track("open_on_desktop_clicked", { source: "managed_on_web" })
+                        Linking.openURL(BRANDS_FE_URL)
+                    }}>
                         <Text style={styles.secondaryBtnText}>Open Trendly on desktop</Text>
                     </Pressable>
                 </View>

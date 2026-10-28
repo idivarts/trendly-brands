@@ -25,6 +25,7 @@ import { View } from "../theme/Themed";
 import PreviewCollaboration from "./PreviewCollaboration";
 import ScreenThree from "./screen-three";
 import { AICampaignDraft, AIGeneratedCampaignData } from "./types";
+import { goToBilling } from "@/utils/billing-navigation";
 
 // Mapping functions to convert API response to app format
 const mapPromotionType = (apiValue: string): PromotionType => {
@@ -333,7 +334,10 @@ const CreateCollaboration: React.FC<CreateCollaborationProps> = ({ headerRight, 
             description:
                 "You need to upgrade your plan to be able to post a collaboration",
             confirmAction: () => {
-                router.push("/billing");
+                goToBilling("create_collaboration", {
+                    feature: "post_collaboration",
+                    reason: "plan_locked",
+                });
             },
             confirmText: "Upgrade Now",
         });

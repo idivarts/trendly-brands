@@ -158,9 +158,14 @@ export default function PricingPage() {
             // These are this screen's own legacy INR plans (₹499/mo "growth" vs
             // ₹4999/yr "business"), NOT the USD org tiers in PlanLimitsMap —
             // do not map them onto free/pro/team/agency.
+            // `surface` is what keeps these legacy keys from being silently
+            // joined against the USD tiers the in-app funnel uses. Without it,
+            // a funnel across plan_selected → checkout_started drops every row
+            // from this screen and the loss is invisible.
             track("plan_selected", {
                 plan_key: isGrowthPlan ? "growth" : "business",
                 discount_percentage: discountPercentage(),
+                surface: "landing",
             })
             setSubmitting(true);
             const link = isGrowthPlan ? 0 : 1

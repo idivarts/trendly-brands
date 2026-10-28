@@ -77,6 +77,7 @@ import { createFirestoreProviderFactory, FirestoreYjsProvider } from "./lexical/
 import { $createImageNode, ImageNode } from "./lexical/ImageNode";
 import { $serializeToEnrichedInner, $setEditorContentFromHtml } from "./lexical/serialize";
 import LinkInsertModal from "./LinkInsertModal";
+import { track } from "@/shared-libs/utils/analytics";
 
 export interface StrategyEditorPanelProps {
     content: string;
@@ -735,6 +736,9 @@ const EditorBody: React.FC<StrategyEditorPanelProps> = ({
                     : ""
             );
         });
+        // Web-only: this selection popover has no native equivalent, so a low
+        // mobile number here means "no such control", not low usage.
+        track("ai_quick_edit_requested", { surface: "quick_edit" });
         setQuickEditVisible(true);
     }, [editor, captureSelection]);
 
@@ -754,11 +758,16 @@ const EditorBody: React.FC<StrategyEditorPanelProps> = ({
                 selection.insertText(newHtml);
             }
         });
+        // Accepted, as opposed to opened — the pair is the only way to see
+        // whether the AI's rewrite was actually any good.
+        track("ai_quick_edit_resolved", { surface: "quick_edit", accepted: true });
         setQuickEditVisible(false);
     }, [editor, restoreSelection]);
 
     const handleSendToChat = useCallback(() => {
-        if (selectedText) onSendToChatRef.current(selectedText);
+        if (!selectedText) return;
+        track("ai_focus_added", { source: "editor_selection" });
+        onSendToChatRef.current(selectedText);
     }, [selectedText]);
 
     const handleSnippetComment = useCallback(() => {
