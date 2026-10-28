@@ -97,9 +97,21 @@ export function useInboxApi(): UseInboxResult {
 
     useEffect(() => {
         if (!brandId) {
+            // "No brand resolved YET" is not "this brand has no socials", and
+            // settling to loading:false here conflated the two. On a cold page
+            // load the brand context resolves a beat after mount, so the inbox
+            // spent that window rendering its connect-your-accounts empty state
+            // — which both flashed the wrong screen and fired
+            // social_connect_prompt_shown for brands that already have accounts
+            // connected, inflating the top of the social funnel with almost
+            // every inbox visit.
+            //
+            // Staying in the loading state is the honest reading: there is
+            // nothing to show and nothing has been ruled out. The listeners
+            // below settle it as soon as a brand arrives.
             setConnectedAccounts([]);
             setConversations([]);
-            setLoading(false);
+            setLoading(true);
             return;
         }
 
