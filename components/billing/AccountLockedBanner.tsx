@@ -3,8 +3,8 @@ import Colors from "@/shared-uis/constants/Colors";
 import { faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { router } from "expo-router";
 import React, { useMemo } from "react";
+import { goToBilling } from "@/utils/billing-navigation";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 // Persistent, app-wide banner shown when the org's subscription is locked /
@@ -31,7 +31,7 @@ const AccountLockedBanner: React.FC = () => {
             <FontAwesomeIcon icon={faTriangleExclamation} size={13} color={colors.white} />
             <Text style={styles.text} numberOfLines={2}>{msg}</Text>
             <Pressable
-                onPress={() => router.push("/billing")}
+                onPress={() => goToBilling("account_locked", { reason: "billing_locked" })}
                 style={({ pressed }) => [styles.cta, pressed && styles.pressed]}
                 accessibilityRole="button"
                 accessibilityLabel="Fix billing"

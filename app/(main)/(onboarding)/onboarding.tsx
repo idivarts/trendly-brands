@@ -1,4 +1,5 @@
-import { track } from "@/shared-libs/utils/analytics";
+import { setPersonProperties, track } from "@/shared-libs/utils/analytics";
+import { markStrategyStarted } from "@/utils/strategy-funnel";
 import OnboardingLoader from "@/components/onboarding/OnboardingLoader";
 import PhoneNumberInput from "@/components/onboarding/PhoneNumberInput";
 import WhatNextStep, { NextChoice } from "@/components/onboarding/WhatNextStep";
@@ -255,6 +256,24 @@ const OnboardingFlow = () => {
         } as any);
         if (!newId) return null;
 
+        // AFTER createBrand resolves, not before. The only existing call site
+        // (the legacy landing screen) fires it ahead of the API call, so a
+        // failed creation still counted as a brand — and this, the live
+        // post-signup path, fired nothing at all.
+        track("brand_created", {
+            brand_name: form.name.trim(),
+            brand_age: form.age,
+            is_first: true,
+        });
+
+        // brand_age overwrites — a manager can run several brands and the
+        // latest answer is the useful one. The first_* pair is $set_once so
+        // the acquisition cohort never shifts under a later brand.
+        setPersonProperties(
+            { brand_age: form.age },
+            { first_brand_name: form.name.trim(), first_brand_age: form.age }
+        );
+
         setBrandId(newId);
 
         const snap = await getDoc(doc(FirestoreDB, "brands", newId));
@@ -304,6 +323,10 @@ const OnboardingFlow = () => {
     // ── Step 7: route into the chosen destination (seeded + sidebar set) ─────
     const handleChoice = async (choice: NextChoice) => {
         if (busy) return;
+        // Reported before the provisioning work below, so a choice still
+        // counts even if the setup that follows it fails — the question this
+        // answers is what people came for, not what succeeded.
+        track("onboarding_next_choice_selected", { choice });
         setBusy(true);
         // Keep the loader curtain up while we provision + seed, so the
         // destination only appears once it's ready.
@@ -322,12 +345,22 @@ const OnboardingFlow = () => {
             }
 
             if (choice === "strategy") {
+                // The funnel step strategy_created never covered: that one
+                // fires when an empty doc appears, which is a side effect of
+                // asking, not the asking itself.
+                track("strategy_creation_started", { origin: "onboarding" });
                 const res = await HttpWrapper.fetch("/api/ai/onboarding/strategy-init", {
                     method: "POST",
                     headers: { "content-type": "application/json" },
                     body: JSON.stringify({ brandId: id }),
                 });
                 const data = await res.json();
+                // Parked so strategy_formed can time the AI's work from the
+                // moment it was asked for — it lands on the detail screen,
+                // after this navigation, so a ref would not survive.
+                if (data?.strategyId) {
+                    await markStrategyStarted(data.strategyId, "onboarding");
+                }
                 router.resetAndNavigate({
                     pathname:
                         "/(main)/(drawer)/(tabs)/(content)/content-strategies/[strategyId]" as any,
@@ -338,6 +371,7 @@ const OnboardingFlow = () => {
                     },
                 });
             } else if (choice === "calendar") {
+                track("calendar_init_started", {});
                 await HttpWrapper.fetch("/api/ai/onboarding/calendar-init", {
                     method: "POST",
                     headers: { "content-type": "application/json" },

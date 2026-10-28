@@ -1,3 +1,4 @@
+import { isSocialEntryPoint, type SocialEntryPoint } from "@/shared-constants/analytics-events";
 import { track } from "@/shared-libs/utils/analytics";
 import { Text } from "@/components/theme/Themed";
 import { SOCIAL_PLATFORMS, SocialPlatform } from "@/constants/Socials";
@@ -16,6 +17,7 @@ import Colors from "@/shared-uis/constants/Colors";
 import { faCheck, faLinkSlash, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
+import { useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
@@ -32,6 +34,7 @@ const ConnectedAccounts: React.FC = () => {
     const { xl, width } = useBreakpoints();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
+    const { from } = useLocalSearchParams<{ from?: string }>();
     const { selectedBrand, hasCapability } = useBrandContext();
     const canConnectSocials = hasCapability("connect_socials");
     const { socialAccounts, isFetchingSocials, refreshSocials } =
@@ -51,6 +54,31 @@ const ConnectedAccounts: React.FC = () => {
         () => new Set(socialAccounts.map((a) => a.platform)),
         [socialAccounts]
     );
+
+    // Set by goToConnectedAccounts(); an unrecognised or absent value means
+    // the user got here some other way (a deep link, a reload, the menu).
+    const entryPoint: SocialEntryPoint = isSocialEntryPoint(from) ? from : "direct";
+
+    // Reported once the socials have actually loaded, so platforms_connected
+    // is the real count rather than the zero every mount starts at — which
+    // would otherwise make every visit look like a brand with no accounts.
+    const viewedRef = React.useRef(false);
+    useEffect(() => {
+        if (isFetchingSocials || viewedRef.current) return;
+        viewedRef.current = true;
+        track("social_accounts_viewed", {
+            platforms_connected: socialAccounts.length,
+            can_connect: canConnectSocials,
+        });
+        if (!canConnectSocials) {
+            // Reached the screen with no privilege to connect anything. Worth
+            // its own event: it is a team member hitting a permission wall,
+            // which looks identical to disinterest in the view event alone.
+            track("social_connect_locked", {
+                platforms_connected: socialAccounts.length,
+            });
+        }
+    }, [isFetchingSocials, socialAccounts.length, canConnectSocials]);
 
     const handleDisconnect = async (socialId: string, platform: string) => {
         if (!brandId) return;
@@ -239,7 +267,13 @@ const ConnectedAccounts: React.FC = () => {
                     return (
                         <Pressable
                             key={meta.key}
-                            onPress={() => connectSocial(meta.key)}
+                            onPress={() =>
+                                connectSocial(meta.key, {
+                                    entryPoint,
+                                    platformsConnected: socialAccounts.length,
+                                    isReconnect: isConnected,
+                                })
+                            }
                             style={({ pressed, hovered }) => [
                                 styles.tile,
                                 {

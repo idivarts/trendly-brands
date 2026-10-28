@@ -28,3 +28,14 @@ export const toPostHogContext = (
     // would put two names for one value on every event.
     return screen ? { ...rest, $screen_name: screen } : { ...rest };
 };
+
+/**
+ * Drop keys whose value is undefined.
+ *
+ * Person properties are partial by design — a caller that knows only the plan
+ * passes only the plan. Forwarding the absent keys would write them as present
+ * on the profile, which is worse than leaving them unset: a person property
+ * that exists with an empty value still matches "is set" in a PostHog cohort.
+ */
+export const compact = <T extends Record<string, any>>(props: T): Record<string, any> =>
+    Object.fromEntries(Object.entries(props).filter(([, v]) => v !== undefined));

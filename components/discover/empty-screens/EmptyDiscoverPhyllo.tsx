@@ -1,3 +1,4 @@
+import { track } from "@/shared-libs/utils/analytics";
 import Colors from "@/shared-uis/constants/Colors";
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useMemo } from 'react';
@@ -69,7 +70,14 @@ export default function EmptyPhylloSelected() {
                     <Text style={styles.footnote}>* Phyllo lists custom pricing only; public sources indicate enterprise-grade quotes. Trendly’s bundled access is designed to be materially cheaper for startups. Sources cited in UI copy.</Text>
                     <Text style={styles.note}>Requires Enterprise plan. Contact sales for demo.</Text>
                     <Button mode="contained" style={styles.button} buttonColor={colors.emptyPhylloPrimary}
-                        onPress={() => Linking.openURL("mailto:support@trendly.now")}
+                        onPress={() => {
+                            track("support_contact_clicked", {
+                                channel: "email",
+                                source: "discover_phyllo",
+                                intent: "feature_unlock",
+                            });
+                            Linking.openURL("mailto:support@trendly.now");
+                        }}
                     >Upgrade to Enterprise & Expand Your Reach</Button>
                 </Card.Content>
             </Card>

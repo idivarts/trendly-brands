@@ -5,6 +5,7 @@ import Colors from "@/shared-uis/constants/Colors";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import { faLock } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { track } from "@/shared-libs/utils/analytics";
 import { useTheme } from "@react-navigation/native";
 import { Href, usePathname, useRouter } from "expo-router";
 import React, { JSX, useState } from "react";
@@ -68,11 +69,33 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
         ? (colorSet as any).drawerText ?? colorSet.text
         : drawerColors?.activeColor ?? colorSet.primary;
 
+    /**
+     * Every drawer item presses through here.
+     *
+     * One handler rather than a track() per item: there are dozens of entries
+     * and the list grows, so a hand-written call per item would be stale
+     * within a release. The item's own href is the identifier.
+     *
+     * Reported BEFORE the lock check on purpose. A tap on a plan-gated entry
+     * is the highest-intent signal the menu produces — someone reaching for a
+     * feature they cannot have — and returning early meant it produced no
+     * event at all.
+     */
+    const handlePress = () => {
+        track("menu_item_clicked", {
+            item: String(tab.href),
+            surface: "drawer_web",
+            locked: isLocked,
+        });
+        if (isLocked) return;
+        if (tab.href) router.push(tab.href);
+    };
+
     // Collapsed mode: icon-only with hover tooltip
     if (isCollapsed) {
         return (
             <Pressable
-                onPress={() => { if (isLocked) return; if (tab.href) router.push(tab.href); }}
+                onPress={handlePress}
                 onHoverIn={() => setHovered(true)}
                 onHoverOut={() => setHovered(false)}
                 android_ripple={{ color: colorSet.primary + "22" }}
@@ -119,10 +142,7 @@ const DrawerMenuItem: React.FC<DrawerMenuItemProps> = ({ tab, proLock }) => {
     // Expanded mode (default)
     return (
         <Pressable
-            onPress={() => {
-                if (isLocked) return;
-                if (tab.href) router.push(tab.href);
-            }}
+            onPress={handlePress}
             onHoverIn={() => setHovered(true)}
             onHoverOut={() => setHovered(false)}
             android_ripple={{ color: colorSet.primary + "22" }}

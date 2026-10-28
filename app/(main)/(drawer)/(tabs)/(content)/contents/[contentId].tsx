@@ -1,4 +1,6 @@
+import type { ContentOrigin } from "@/shared-constants/analytics-events";
 import { track } from "@/shared-libs/utils/analytics";
+import { goToConnectedAccounts } from "@/utils/social-navigation";
 import { CONTENT_TYPE_LABELS, ContentType } from "@/components/content-calendar/types";
 import ContentCommentsPanel from "@/components/contents/ContentCommentsPanel";
 import ContentActionsMenu from "@/components/contents/detail/ContentActionsMenu";
@@ -138,6 +140,7 @@ const CreateContentScreen = () => {
         type: paramType,
         date: paramDate,
         tab: paramTab,
+        origin: paramOrigin,
     } = useLocalSearchParams<{
         contentId: string;
         title?: string;
@@ -145,8 +148,26 @@ const CreateContentScreen = () => {
         type?: string;
         date?: string;
         tab?: string;
+        origin?: string;
     }>();
     const styles = useStyles(colors, xl);
+
+    // Where this doc was opened from. Knowing a content doc was opened says
+    // little; knowing it came from the calendar rather than the list is the
+    // difference between planning and browsing. Reported once per contentId so
+    // a re-render or a tab switch does not re-count the visit.
+    const openedRef = useRef<string | null>(null);
+    useEffect(() => {
+        if (!contentId || openedRef.current === contentId) return;
+        openedRef.current = contentId;
+        const origin: ContentOrigin =
+            paramOrigin === "calendar" ||
+            paramOrigin === "ai_chat" ||
+            paramOrigin === "deep_link"
+                ? paramOrigin
+                : "contents_list";
+        track("content_opened", { origin });
+    }, [contentId, paramOrigin]);
 
     const router = useRouter();
     const { items, addContent, updateContent, deleteContent } = useContents();
@@ -1001,6 +1022,9 @@ const CreateContentScreen = () => {
         const brandId = selectedBrand?.id;
         if (!brandId) return;
         setRetrying(true);
+        // Every retry is a publish that already failed once, so the rate of
+        // this event against content_published is the real reliability number.
+        track("content_publish_retried", {});
         try {
             const res = await HttpWrapper.fetch(
                 `/api/v2/brands/${brandId}/contents/${contentId}/publish/retry`,
@@ -1016,8 +1040,11 @@ const CreateContentScreen = () => {
     }, [contentId, retrying, selectedBrand?.id]);
 
     const handleReconnectAccounts = useCallback(() => {
-        router.push("/connected-accounts" as any);
-    }, [router]);
+        // A distinct door from publish_blocked: this one is a BROKEN token on
+        // an account that is already connected, not a missing account, and the
+        // two need different fixes.
+        goToConnectedAccounts("publish_reconnect");
+    }, []);
 
     const handleCreateCollab = useCallback(() => {
         router.push("/hire-us");
@@ -2242,7 +2269,7 @@ const CreateContentScreen = () => {
                 onClose={() => setShowNoSocialsModal(false)}
                 onConnect={() => {
                     setShowNoSocialsModal(false);
-                    router.push("/connected-accounts" as any);
+                    goToConnectedAccounts("publish_blocked");
                 }}
             />
             <PublishModal

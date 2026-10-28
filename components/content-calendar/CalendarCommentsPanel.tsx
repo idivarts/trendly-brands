@@ -17,6 +17,7 @@ import { useMonthComments } from "@/hooks/use-month-comments";
 import { faCalendarDays, faCommentDots } from "@fortawesome/free-solid-svg-icons";
 import React from "react";
 import { CalendarItem } from "./types";
+import { track } from "@/shared-libs/utils/analytics";
 
 const MONTH_NAMES = [
     "January", "February", "March", "April", "May", "June",
@@ -58,7 +59,13 @@ const CalendarCommentsPanel: React.FC<CalendarCommentsPanelProps> = ({
         <SharedCommentsPanel
             comments={comments}
             loading={loading}
-            onAddComment={addComment}
+            onAddComment={async (text) => {
+                // Wrapped here rather than in each hook: the two comment
+                // sources (month-level and item-level) are picked above, so
+                // this is the one place both pass through.
+                await addComment(text);
+                track("calendar_comment_added", {});
+            }}
             onDeleteComment={deleteComment}
             // Threading and resolve only available in item mode
             onAddReply={isItemMode ? itemHook.addReply : undefined}

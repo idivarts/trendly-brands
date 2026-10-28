@@ -16,11 +16,12 @@
  * state, which is what makes the render survive a page reload, a phone lock, or
  * the user walking away: the worker keeps going either way.
  */
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HttpError, HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { DesignRenderStatus } from "@/shared-libs/firestore/trendly-pro/models/design";
 import { useBrandContext } from "@/contexts/brand-context.provider";
+import { track } from "@/shared-libs/utils/analytics";
 
 export interface RenderError {
     message: string;
@@ -72,6 +73,15 @@ export function useDesignRender({
     // dismissing it has to be local.
     const [dismissedError, setDismissedError] = useState<string | null>(null);
 
+    // When this render was asked for. Rendering is the slowest thing in the
+    // product, and it finishes server-side — so without timing it from the
+    // press, someone abandoning a long render is indistinguishable from
+    // someone who never started one.
+    const startedAtRef = useRef<number | null>(null);
+    // Guards the terminal report: renderStatus is a prop and re-renders freely,
+    // so the effect below would otherwise fire on every parent update.
+    const reportedRef = useRef<string | null>(null);
+
     const label = isVideoDesign
         ? "Render video"
         : slideCount > 1
@@ -99,6 +109,8 @@ export function useDesignRender({
         setLocalError(null);
         setDismissedError(null);
         setSubmitting(true);
+        startedAtRef.current = Date.now();
+        reportedRef.current = null;
 
         HttpWrapper.fetch(`/api/v2/brands/${brandId}/contents/${contentId}/render`, {
             method: "POST",
@@ -122,6 +134,21 @@ export function useDesignRender({
             // non-2xx lands here rather than in the success branch.
             .catch(async (err: unknown) => {
                 if (err instanceof HttpError && err.status === 402) {
+                    // A wall, reported with the same event as every other
+                    // gate so "hit a limit" stays one number across the app.
+                    track("entitlement_blocked", {
+                        reason: "tokens_exhausted",
+                        feature: "design_render",
+                    });
+                    track("design_rendered", {
+                        success: false,
+                        reason: "tokens_exhausted",
+                        duration_ms: startedAtRef.current
+                            ? Date.now() - startedAtRef.current
+                            : undefined,
+                        frames: slideCount,
+                    });
+                    startedAtRef.current = null;
                     // Out of tokens. Phrased as a limit, not a failure — the
                     // design is fine, the wallet is empty, and retrying it
                     // unchanged would only fail again.
@@ -142,6 +169,24 @@ export function useDesignRender({
             })
             .finally(() => setSubmitting(false));
     }, [brandId, contentId, revisionId, isVideoDesign]);
+
+    // The render completes on the server, so the outcome arrives as a
+    // renderStatus change rather than as a response to the POST above.
+    useEffect(() => {
+        if (renderStatus !== "done" && renderStatus !== "failed") return;
+        if (!startedAtRef.current) return; // not a render we started
+        if (reportedRef.current === renderStatus) return;
+        reportedRef.current = renderStatus;
+        track("design_rendered", {
+            success: renderStatus === "done",
+            duration_ms: Date.now() - startedAtRef.current,
+            // Frames is what makes the duration readable: a 30s single image
+            // and a 30s twelve-slide reel are very different results.
+            frames: slideCount,
+            reason: renderStatus === "failed" ? renderError || undefined : undefined,
+        });
+        startedAtRef.current = null;
+    }, [renderStatus, renderError, slideCount]);
 
     return {
         capturing,

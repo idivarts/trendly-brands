@@ -9,6 +9,8 @@ import { SubscribeNudgeProvider } from "@/contexts/subscribe-nudge-context.provi
 import { streamClient } from "@/contexts/chat-context.provider";
 import { createGuideTourStorageAdapter } from "@/contexts/guide-tour-storage-adapter";
 import { track } from "@/shared-libs/utils/analytics";
+import { followerBucket } from "@/utils/follower-bucket";
+import { takeSocialConnectAttempt } from "@/utils/social-connect-attempt";
 import { ScrollProvider } from "@/shared-libs/contexts/scroll-context";
 import TrackingProvider from "@/shared-libs/contexts/tracking-provider";
 import { useMyNavigation } from "@/shared-libs/utils/router";
@@ -27,7 +29,7 @@ import { AutocompleteDropdownContextProvider } from "react-native-autocomplete-d
 // Handles the trendly-brands://social-connected deep link returned by connect.trendly.now
 // Must sit inside BrandSocialContextProvider to access refreshSocials.
 const BrandSocialConnectHandler: React.FC = () => {
-    const { refreshSocials } = useBrandSocialContext();
+    const { refreshSocials, socialAccounts } = useBrandSocialContext();
 
     const handleURL = (url: string) => {
         try {
@@ -39,17 +41,49 @@ const BrandSocialConnectHandler: React.FC = () => {
             const platform = parsed.searchParams.get("platform") || "social";
             const message = parsed.searchParams.get("message");
 
-            if (status === "success") {
-                // ⭐ Activation. Tracked here rather than where the connect flow
-                // is launched (hooks/request/use-connect-brand-social.tsx),
-                // because this callback is the first point that knows the
-                // OAuth round-trip actually succeeded.
-                track("social_connected", { platform });
-                Toaster.success(`${platform.charAt(0).toUpperCase() + platform.slice(1)} connected to your brand!`);
-                refreshSocials();
-            } else {
-                Toaster.error(message || `Failed to connect ${platform}. Please try again.`);
-            }
+            // The attempt stashed when the user left for connect.trendly.now.
+            // On web this callback lands in a NEW TAB, so it is the only way
+            // to know which door they came through or how long the OAuth round
+            // trip took. Awaited before reporting rather than alongside it, so
+            // the event is never sent twice with and without context.
+            void takeSocialConnectAttempt().then((attempt) => {
+                const duration = attempt ? Date.now() - attempt.startedAt : undefined;
+
+                if (status === "success") {
+                    const account = socialAccounts.find((a) => a.platform === platform);
+                    // ⭐ Activation. Tracked here rather than where the connect
+                    // flow is launched (hooks/request/use-connect-brand-social.tsx),
+                    // because this callback is the first point that knows the
+                    // OAuth round-trip actually succeeded.
+                    //
+                    // platforms_connected is read from the attempt, not from
+                    // the context: on web this tab mounted fresh and its
+                    // socials have not loaded yet, so the live list would read
+                    // as empty and make every connection look like a first.
+                    track("social_connected", {
+                        platform,
+                        account_type: account?.accountType,
+                        is_first: attempt ? attempt.platformsConnected === 0 : undefined,
+                        entry_point: attempt?.entryPoint,
+                        follower_bucket: followerBucket(account?.followerCount),
+                        duration_ms: duration,
+                    });
+                    Toaster.success(`${platform.charAt(0).toUpperCase() + platform.slice(1)} connected to your brand!`);
+                    refreshSocials();
+                } else {
+                    // `message` is trendly-connect's own account of what broke
+                    // — permission denied, token exchange failed, no eligible
+                    // Page. It was being shown in a toast and then discarded,
+                    // and it is the most useful field in this whole flow.
+                    track("social_connect_failed", {
+                        platform,
+                        reason: message || undefined,
+                        entry_point: attempt?.entryPoint,
+                        duration_ms: duration,
+                    });
+                    Toaster.error(message || `Failed to connect ${platform}. Please try again.`);
+                }
+            });
         } catch {
             // ignore malformed URLs
         }

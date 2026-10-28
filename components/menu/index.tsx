@@ -1,4 +1,5 @@
 import { canAccessNav } from "@/constants/Access";
+import { track } from "@/shared-libs/utils/analytics";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useOrganizationContext } from "@/contexts/organization-context.provider";
@@ -239,7 +240,21 @@ const Menu = () => {
         return () => sub.remove();
     }, [activeHub]);
 
-    const navigate = (href: Href) => {
+    /**
+     * Every menu row and org row goes through here, which is why one call
+     * covers the whole mobile menu — present and future entries alike.
+     *
+     * `locked` is reported BEFORE bailing out: a tap on a plan-gated row is
+     * the strongest intent signal in the menu, and it used to produce nothing
+     * because a locked row had no onPress at all.
+     */
+    const navigate = (href: Href, locked = false) => {
+        track("menu_item_clicked", {
+            item: String(href),
+            surface: "menu_mobile",
+            locked,
+        });
+        if (locked) return;
         // @ts-ignore — Href union is wider than the typed routes
         router.push(href);
     };
@@ -297,7 +312,7 @@ const Menu = () => {
                                     key={item.id}
                                     item={item}
                                     theme={theme}
-                                    onPress={() => navigate(item.href)}
+                                    onPress={() => navigate(item.href, !!item.locked)}
                                 />
                             ))}
                         </View>
@@ -376,7 +391,13 @@ const Menu = () => {
                         key={hub.key}
                         hub={hub}
                         theme={theme}
-                        onPress={() => setActiveHub(hub.key)}
+                        onPress={() => {
+                            // Opening a hub is intent in its own right — the
+                            // user is browsing for a capability before any
+                            // item is picked, and often without picking one.
+                            track("menu_hub_opened", { hub: hub.key });
+                            setActiveHub(hub.key);
+                        }}
                     />
                 ))}
             </View>
@@ -498,7 +519,10 @@ const ItemRow: React.FC<{
     const disabled = !!item.locked;
     return (
         <Pressable
-            onPress={disabled ? undefined : onPress}
+            // Always pressable, even when locked: the handler reports the tap
+            // and then declines to navigate. Withholding onPress made the
+            // highest-intent taps in the menu invisible.
+            onPress={onPress}
             style={({ pressed }) => [
                 styles.itemRow,
                 pressed && !disabled && styles.itemRowPressed,

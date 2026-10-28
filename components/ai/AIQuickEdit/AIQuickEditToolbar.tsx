@@ -1,4 +1,5 @@
 import AIModelSelector from "@/components/ai/AIModelSelector/AIModelSelector";
+import { taskForModule } from "@/hooks/use-ai-chat";
 import { AIModel } from "@/hooks/use-ai-models";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
@@ -76,6 +77,8 @@ const AIQuickEditToolbar: React.FC<Props> = ({
                     selectedModel={model}
                     onSelect={setModel}
                     compact
+                    surface="quick_edit"
+                    task={taskForModule(module)}
                 />
                 {onClose ? (
                     <Pressable hitSlop={6} onPress={onClose}>

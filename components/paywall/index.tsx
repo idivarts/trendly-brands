@@ -9,7 +9,9 @@ import Toaster from '@/shared-uis/components/toaster/Toaster'
 import Colors from '@/shared-uis/constants/Colors'
 import { faArrowRight, faBullhorn, faChartLine, faCoins, faMagicWandSparkles, faUsers } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
+import { track } from '@/shared-libs/utils/analytics'
 import { useTheme } from '@react-navigation/native'
+import { Linking } from 'react-native'
 import { router } from 'expo-router'
 import { collection, doc, onSnapshot } from 'firebase/firestore'
 import { default as React, useEffect, useMemo, useState } from 'react'
@@ -73,10 +75,26 @@ const PayWallComponent = () => {
                 <HireUsCard colors={colors} isMobile={isMobile} />
 
                 {/* Contact Support */}
+                {/* This block used to be plain text, so "contact support" from
+                    the billing page was not an action at all — nothing to click
+                    and nothing to measure. The address is now a real mailto. */}
                 <View style={styles.contactSection}>
                     <Text variant="titleLarge" style={styles.contactTitle}>Need help?</Text>
                     <Text style={styles.contactText}>
-                        If you have any query or faced any issues, please email at support@trendly.now
+                        If you have any query or faced any issues, please email at{' '}
+                        <Text
+                            style={styles.contactLink}
+                            onPress={() => {
+                                track("support_contact_clicked", {
+                                    channel: "email",
+                                    source: "billing_screen",
+                                    intent: "billing_blocked",
+                                })
+                                Linking.openURL('mailto:support@trendly.now')
+                            }}
+                        >
+                            support@trendly.now
+                        </Text>
                     </Text>
                 </View>
 
@@ -85,7 +103,16 @@ const PayWallComponent = () => {
                         <Text
                             variant="bodyLarge"
                             style={styles.cancelLink}
-                            onPress={() => setCancelPlan(true)}
+                            onPress={() => {
+                                // The moment BEFORE churn, and the only one
+                                // anything can still be done about —
+                                // subscription_cancelled arrives when it is over.
+                                track("subscription_cancel_intent", {
+                                    plan_key: selectedOrgBilling?.planKey ?? "free",
+                                    surface: "billing_screen",
+                                })
+                                setCancelPlan(true)
+                            }}
                         >
                             Need to Cancel Plan? Click Here
                         </Text>
@@ -380,6 +407,10 @@ function createStyles(
             fontSize: 16,
             textAlign: 'center',
             color: colors.textSecondary,
+        },
+        contactLink: {
+            color: colors.primary,
+            textDecorationLine: 'underline',
         },
         cancelSection: {
             marginTop: 40,

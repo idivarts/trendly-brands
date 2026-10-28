@@ -17,6 +17,7 @@ import {
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { addDoc, collection, doc, updateDoc } from "firebase/firestore";
 import { useMemo } from "react";
+import { track } from "@/shared-libs/utils/analytics";
 
 export interface DesignWriters {
     /** Persist a new HTML revision and point the content at it. Returns the id. */
@@ -85,6 +86,15 @@ export function useDesignWriters(contentId: string | null): DesignWriters {
                 createdAt: Date.now(),
             });
             await pointContentAt({ id: created.id, docType, width, height, slideCount });
+            // Every design change lands as a revision, so this one call covers
+            // AI edits and hand edits alike. "revert" is excluded: undoing an
+            // edit is not applying one, and counting it would make the AI look
+            // most useful on the designs people disliked.
+            if (origin !== "revert") {
+                track("design_edit_applied", {
+                    via: origin === "edit" || origin === "generate" ? "ai_chat" : "manual",
+                });
+            }
             return created.id;
         };
 

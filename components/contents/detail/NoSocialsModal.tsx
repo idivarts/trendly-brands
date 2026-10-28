@@ -3,9 +3,10 @@ import { useBreakpoints } from "@/hooks";
 import { faShareNodes, faTriangleExclamation, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { fs, lh } from "@/constants/Typography";
+import { track } from "@/shared-libs/utils/analytics";
 
 // ─── NoSocialsModal ───────────────────────────────────────────────────────────
 // Shown when the user taps Publish but the brand has no connected social
@@ -22,6 +23,19 @@ const NoSocialsModal: React.FC<NoSocialsModalProps> = ({ visible, onClose, onCon
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
     const styles = useStyles(colors, xl);
+
+    // Keyed on `visible`, not on mount: the modal is rendered unconditionally
+    // by the content screen and only becomes a prompt when it opens.
+    //
+    // The highest-intent connect prompt in the app — this is someone with
+    // content ready and nowhere to publish it.
+    useEffect(() => {
+        if (!visible) return;
+        track("social_connect_prompt_shown", {
+            entry_point: "publish_blocked",
+            platforms_connected: 0,
+        });
+    }, [visible]);
 
     return (
         <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>

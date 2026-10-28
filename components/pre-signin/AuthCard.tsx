@@ -4,6 +4,7 @@ import { authLayoutStyles } from "@/components/auth/AuthPageLayout";
 import AuthTextField from "@/components/auth/AuthTextField";
 import AuthOptions from "@/components/pre-signin/AuthOptions";
 import Button from "@/components/ui/button";
+import { track } from "@/shared-libs/utils/analytics";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { useRouter } from "expo-router";
@@ -42,6 +43,14 @@ const AuthCard: React.FC = () => {
                 body: JSON.stringify({ email: trimmed }),
             });
             const data = await response.json();
+
+            // Only a NEW email is a signup start. An existing one routes to
+            // login, and reporting that as a signup would inflate the top of
+            // the funnel with returning users — which is why this sits after
+            // the check-email response rather than on the button.
+            if (!data?.exists) {
+                track("signup_started", { method: "email" });
+            }
 
             router.push({
                 pathname: data?.exists ? "/login" : "/create-new-account",

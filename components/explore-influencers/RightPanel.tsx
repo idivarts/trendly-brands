@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import React from 'react'
 import { Platform, ScrollView, StyleSheet } from 'react-native'
 import { Badge, Button, Divider, Surface, Text } from 'react-native-paper'
+import { goToBilling } from "@/utils/billing-navigation";
 
 // A compact, elegant right sidebar inspired by modern dashboards
 // Uses Surface instead of Card for lighter, cleaner blocks
@@ -179,7 +180,7 @@ const RightPanel: React.FC<IProps> = () => {
                                 labelStyle={styles.soonCtaLabel}
                                 style={styles.soonCtaBtn}
                                 icon={() => <FontAwesome name="arrow-right" size={14} color={Colors(theme).primary} />}
-                                onPress={() => router.push('/billing')}
+                                onPress={() => goToBilling("influencer_panel", { feature: "influencer_search" })}
                             >
                                 Updrage to Pro
                             </Button>

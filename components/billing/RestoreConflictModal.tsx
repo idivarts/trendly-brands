@@ -1,4 +1,5 @@
 import { useOrganizationContext } from '@/contexts/organization-context.provider'
+import { track } from '@/shared-libs/utils/analytics'
 import { useConfirmationModel } from '@/shared-uis/components/ConfirmationModal'
 import React, { useEffect, useRef } from 'react'
 import { Linking } from 'react-native'
@@ -44,6 +45,15 @@ const RestoreConflictModal: React.FC = () => {
                 `Subscriptions can't be moved between organizations — if you think this is a mistake, contact support.`,
             confirmText: 'Contact support on WhatsApp',
             confirmAction: () => {
+                // intent "billing_blocked", not "upgrade": this person has
+                // already paid and cannot get what they paid for. It is the
+                // most urgent row on the support list and must not be read as
+                // upgrade interest.
+                track("support_contact_clicked", {
+                    channel: "whatsapp",
+                    source: "restore_conflict",
+                    intent: "billing_blocked",
+                })
                 Linking.openURL(`https://wa.me/${WHATSAPP_NUMBER_DIGITS}?text=${encodeURIComponent(message)}`)
             },
             cancelText: 'Dismiss',

@@ -1,3 +1,4 @@
+import { track } from "@/shared-libs/utils/analytics";
 import Colors from "@/shared-uis/constants/Colors";
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useMemo } from 'react';
@@ -72,7 +73,14 @@ export default function EmptyModashSelected() {
 
                     <Text style={styles.note}>Enterprise required. Request onboarding to access.</Text>
                     <Button mode="contained" buttonColor={colors.emptyModashPrimary} style={styles.button}
-                        onPress={() => Linking.openURL("mailto:support@trendly.now")}>Unlock Modash Access with Enterprise</Button>
+                        onPress={() => {
+                            track("support_contact_clicked", {
+                                channel: "email",
+                                source: "discover_modash",
+                                intent: "feature_unlock",
+                            });
+                            Linking.openURL("mailto:support@trendly.now");
+                        }}>Unlock Modash Access with Enterprise</Button>
                 </Card.Content>
             </Card>
         </View>

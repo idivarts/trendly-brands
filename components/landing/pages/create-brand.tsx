@@ -73,9 +73,6 @@ export default function CreateBrandPage() {
         if (submitting) return;
         if (!validate()) return;
         try {
-            track("brand_created", {
-                brand_name: brandName,
-            })
             setSubmitting(true);
             const brandObj: IBrands = {
                 name: brandName,
@@ -90,6 +87,15 @@ export default function CreateBrandPage() {
                 Toaster.error("Something went wrong!", "Couldn't create your brand")
                 return
             }
+            // Moved below the await: fired above it, a failed creation still
+            // counted as a brand. is_first is false here because this legacy
+            // landing path is reached by an existing manager adding a brand,
+            // not by first-run onboarding.
+            track("brand_created", {
+                brand_name: brandName,
+                brand_age: brandAge,
+                is_first: false,
+            })
             setSelectedBrand({
                 ...brandObj,
                 id: newId

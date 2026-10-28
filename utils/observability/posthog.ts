@@ -1,7 +1,7 @@
 import { hasValue, OBSERVABILITY } from "@/shared-constants/marketing";
 import type { AnalyticsSink } from "@/shared-libs/utils/analytics";
 import posthog from "posthog-js";
-import { toPostHogContext } from "./posthog-context";
+import { compact, toPostHogContext } from "./posthog-context";
 
 /**
  * PostHog sink — web build (posthog-js).
@@ -46,6 +46,11 @@ export const createPostHogSink = (): AnalyticsSink | null => {
         // campaign means autocapture clicks and $exception carry them too,
         // and those never pass through track().
         setContext: (props) => posthog.register(toPostHogContext(props)),
+        // $set vs $set_once, which is the whole reason this exists separately
+        // from setContext: plan_key_first and became_paid_at must survive every
+        // later upgrade, and a plain set would overwrite them each time.
+        setPersonProperties: (props, once) =>
+            posthog.setPersonProperties(compact(props), once ? compact(once) : undefined),
         reset: () => posthog.reset(),
     };
 };

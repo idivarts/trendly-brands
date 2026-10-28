@@ -202,6 +202,8 @@ const FloatingPromptInput: React.FC<FloatingPromptInputProps> = ({
                                     selectedModel={selectedModel}
                                     onSelect={setModelOverride}
                                     compact
+                                    surface="floating_prompt"
+                                    task={task}
                                 />
                             ) : (
                                 <View />

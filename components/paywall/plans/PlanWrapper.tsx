@@ -1,4 +1,5 @@
 //  import pricingPage from "@/app/(landing)/pricing-page";
+import { PLAN_MONTHLY_USD } from "@/constants/PlanPricing";
 import { track } from "@/shared-libs/utils/analytics";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
@@ -66,21 +67,21 @@ const PLANS: { key: PlanKey, name: string, monthly: number, features: string[], 
     {
         key: "free",
         name: "Free",
-        monthly: 0,
+        monthly: PLAN_MONTHLY_USD.free,
         features: freeFeatures,
         preferred: false
     },
     {
         key: "pro",
         name: "Pro",
-        monthly: 29,
+        monthly: PLAN_MONTHLY_USD.pro,
         features: proFeatures,
         preferred: false
     },
     {
         key: "team",
         name: "Team",
-        monthly: 79,
+        monthly: PLAN_MONTHLY_USD.team,
         features: teamFeatures,
         preferred: true
     },
@@ -111,6 +112,10 @@ const PlanWrapper = (props: PlanWrapperProps) => {
     const [modalVisible, setModalVisible] = useState(false);
     const [modalState, setModalState] = useState<"loading" | "ready" | "opened" | "error" | "admin">("loading");
     const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+    // Which plan this checkout is for. The modal that opens the payment link
+    // is rendered outside handleSubmit's closure, so without this the rung-5
+    // event could not name the plan.
+    const [checkoutPlanKey, setCheckoutPlanKey] = useState<PlanKey | null>(null);
     const [customModalVisible, setCustomModalVisible] = useState(false);
     const [customPlanKey, setCustomPlanKey] = useState<PlanKey | null>(null);
     const [adminData, setAdminData] = useState<IAdminData & { userExists: boolean } | null>(null)
@@ -121,12 +126,30 @@ const PlanWrapper = (props: PlanWrapperProps) => {
 
     const handleSubmit = async (planKey: typeof PLANS[number]["key"], adminData?: IAdminData) => {
         try {
+            // Rung 4, and it has to sit ABOVE the branches below: the two most
+            // informative choices on this screen (the top tier, and the
+            // downgrade) both return early, so a `plan_selected` placed after
+            // them would only ever see the middle of the range.
+            //
+            // `surface: "in_app"` is load-bearing — the landing page reports
+            // the same event with legacy INR keys that do not join with these
+            // USD tiers.
+            track("plan_selected", { plan_key: planKey, surface: "in_app" });
+
             if (planKey == "agency" && !manager?.isAdmin) {
                 openModal({
                     title: "Upgrade to Agency",
                     description: "Agency plans are tailored to your needs with custom pricing. Contact support and we'll set you up.",
                     confirmText: "Contact Support",
                     confirmAction: () => {
+                        // Someone asking for Agency has self-identified as the
+                        // largest customer we could have, and the only trace
+                        // used to be whether they actually sent the mail.
+                        track("support_contact_clicked", {
+                            channel: "email",
+                            source: "paywall_agency",
+                            intent: "upgrade",
+                        });
                         Linking.openURL("mailto:support@idiv.in")
                     }
                 })
@@ -146,6 +169,7 @@ const PlanWrapper = (props: PlanWrapperProps) => {
             // emitted from the org's plan transition instead.
             track("checkout_started", { plan_key: planKey, provider: "razorpay" });
 
+            setCheckoutPlanKey(planKey);
             setModalVisible(true);
             setModalState("loading");
             setPaymentUrl(null);
@@ -176,6 +200,15 @@ const PlanWrapper = (props: PlanWrapperProps) => {
                 setModalState("ready");
             }
         } catch (e) {
+            // Without this a `checkout_started` with no `subscription_started`
+            // conflates "our payment-link API broke" with "the user walked away
+            // from the Razorpay page" — which call for opposite responses.
+            track("checkout_failed", {
+                plan_key: planKey,
+                provider: "razorpay",
+                stage: "link_creation",
+                reason: e instanceof Error ? e.message : undefined,
+            });
             setModalState("error");
         }
     };
@@ -208,6 +241,15 @@ const PlanWrapper = (props: PlanWrapperProps) => {
     const openPaymentLink = async () => {
         if (!paymentUrl) return;
         try {
+            // A better rung 5 than `checkout_started`, which only means a link
+            // was CREATED. This is the user actually leaving to pay, so the
+            // drop between the two is ours and the drop after it is theirs.
+            if (checkoutPlanKey) {
+                track("checkout_link_opened", {
+                    plan_key: checkoutPlanKey,
+                    provider: "razorpay",
+                });
+            }
             setModalState("opened");
             const canOpen = await Linking.canOpenURL(paymentUrl);
             if (canOpen) await Linking.openURL(paymentUrl);

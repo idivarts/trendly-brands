@@ -207,6 +207,8 @@ const ScriptEditorBody: React.FC<ScriptEditorBodyProps> = ({
                                 selectedModel={selectedModel}
                                 onSelect={setModelOverride}
                                 compact
+                                surface="script_editor"
+                                task={task}
                             />
                         </View>
                     ) : null}

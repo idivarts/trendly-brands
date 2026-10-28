@@ -4,10 +4,10 @@ import Colors from "@/shared-uis/constants/Colors";
 import { faBolt, faCircleArrowUp } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { router } from "expo-router";
 import React, { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { fs, lh } from "@/constants/Typography";
+import { goToBilling as goToBillingWithSource } from "@/utils/billing-navigation";
 
 // The AI-token meter family. Three presentations off one TokenStatus:
 //   • TokenMeterBar    — ambient compact strip (panel header). Quiet until low.
@@ -16,9 +16,10 @@ import { fs, lh } from "@/constants/Typography";
 // All read design-system tokens, never encode state in colour alone (always a
 // text label), and keep the upgrade CTA ≥ 44px.
 
-function goToBilling() {
-    router.push("/billing");
-}
+// Always `tokens_exhausted` rather than a plan lock: this family is the
+// consumption meter, so the right conversation is a top-up, not a tier.
+const goToBilling = () =>
+    goToBillingWithSource("token_meter", { reason: "tokens_exhausted" });
 
 function resetLabel(periodResetAt: number): string {
     if (!periodResetAt) return "the 1st";

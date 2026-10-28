@@ -1,5 +1,6 @@
 import TermsAndCondition from "@/components/TermsAndCondition";
 import BottomSheetScrollContainer from "@/components/ui/bottom-sheet/BottomSheetWithScroll";
+import { track } from "@/shared-libs/utils/analytics";
 import { useAppleLogin } from "@/utils/use-apple-login";
 import { useGoogleLogin } from "@/utils/use-google-login";
 import { faApple, faGoogle } from "@fortawesome/free-brands-svg-icons";
@@ -35,7 +36,14 @@ const AuthOptions: React.FC = () => {
         <>
             <View style={styles.buttonStack}>
                 <Pressable
-                    onPress={googleLogin}
+                    onPress={() => {
+                        // Google and Apple collapse signup and login into one
+                        // tap, so this is "started an auth attempt by this
+                        // method"; signup_completed is what distinguishes a
+                        // genuinely new account.
+                        track("signup_started", { method: "google" });
+                        googleLogin();
+                    }}
                     disabled={loading}
                     style={[styles.providerButton, { opacity: loading ? 0.6 : 1 }]}
                     accessibilityRole="button"
@@ -47,7 +55,10 @@ const AuthOptions: React.FC = () => {
 
                 {showApple && (
                     <Pressable
-                        onPress={appleLogin}
+                        onPress={() => {
+                            track("signup_started", { method: "apple" });
+                            appleLogin();
+                        }}
                         disabled={loading}
                         style={[styles.providerButton, { opacity: loading ? 0.6 : 1 }]}
                         accessibilityRole="button"

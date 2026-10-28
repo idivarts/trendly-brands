@@ -4,7 +4,7 @@ import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { aiWS } from "@/utils/ai-ws";
 import { LiveContentVariation } from "@/hooks/use-ai-chat";
-import { router } from "expo-router";
+import { goToBilling } from "@/utils/billing-navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 // Shared upgrade prompt for premium-gated AI actions (script/image on free plans,
@@ -17,7 +17,7 @@ function promptUpgrade(reason?: string) {
         return;
     }
     Toaster.error("This needs a higher plan. Please upgrade to continue.");
-    router.push("/billing");
+    goToBilling("ai_generate_blocked", { reason: reason ?? "plan_locked" });
 }
 
 export interface CaptionVariant {
