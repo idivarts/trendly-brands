@@ -32,7 +32,20 @@ const normalizeDateArg = (date: DateArg<Date> | TimestampLike) => {
         return new Date(ms);
     }
 
-    return date as DateArg<Date>;
+    // A date string stays supported — `new Date(str)` parses the ISO strings
+    // callers pass and yields an invalid Date for anything else, which the
+    // guard below then catches.
+    if (typeof date === "string") {
+        return new Date(date);
+    }
+
+    // Anything else — undefined, null, an object that is not a Timestamp —
+    // becomes an invalid Date so the NaN guard in every caller actually fires.
+    // Returning the value untouched meant `date instanceof Date` was false, the
+    // guard was skipped, and date-fns threw "RangeError: Invalid time value"
+    // from inside a render — which does not degrade a label, it takes down the
+    // screen that holds it.
+    return new Date(NaN);
 };
 
 // Examples:

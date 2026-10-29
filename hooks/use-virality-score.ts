@@ -4,7 +4,7 @@ import { IViralityScore } from "@/shared-libs/firestore/trendly-pro/models/conte
 import { track } from "@/shared-libs/utils/analytics";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { displayBand } from "@/components/contents/detail/virality";
+import { displayBand, isUsableScore } from "@/components/contents/detail/virality";
 
 /** Why scoring is unavailable. `null` means it is available. */
 export type ScoreGate = "tokens_exhausted" | "plan_locked" | null;
@@ -28,9 +28,15 @@ interface ScoreArgs {
  * calls, so the panel opens on the stored one and only re-scores when asked —
  * a panel that scored on mount would bill the user for looking.
  */
-export function useViralityScore(initial?: IViralityScore) {
+export function useViralityScore(stored?: IViralityScore) {
     const { selectedBrand } = useBrandContext();
     const { tokens } = useEntitlements();
+
+    // A stored score we cannot read is no score. Documents written before the
+    // backend persisted this in its API shape have capitalised keys, so every
+    // field reads undefined — and a band derived from undefined would render as
+    // the lowest one, stating a confident verdict from nothing.
+    const initial = isUsableScore(stored) ? stored : undefined;
 
     const [score, setScore] = useState<IViralityScore | undefined>(initial);
     const [loading, setLoading] = useState(false);

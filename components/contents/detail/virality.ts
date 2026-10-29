@@ -164,3 +164,17 @@ export function repairInstruction(messages: string[]): string {
         ...messages.map((m) => `- ${m}`),
     ].join("\n");
 }
+
+/**
+ * Whether a stored score is worth rendering.
+ *
+ * A document written before the backend persisted the score in its API shape
+ * has capitalised keys, so every field reads undefined — a band derived from
+ * `undefined` would show as the lowest one, which is a confident lie. Treat
+ * anything we cannot read as "not scored yet" and offer to score it.
+ */
+export function isUsableScore(s: unknown): boolean {
+    if (!s || typeof s !== "object") return false;
+    const o = s as { overall?: unknown; dimensions?: unknown };
+    return typeof o.overall === "number" && Number.isFinite(o.overall) && Array.isArray(o.dimensions);
+}
