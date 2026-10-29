@@ -58,6 +58,7 @@ import DesignFrame from "./DesignFrame";
 import AudioLanes from "./AudioLanes";
 import AudioAddSheet from "./AudioAddSheet";
 import DesignScoreCard from "./DesignScoreCard";
+import InspectorPanel from "./InspectorPanel";
 import { useSoundtrackPlayer } from "./use-audio-player";
 import { useContentDesign } from "./use-content-design";
 import { useDesignRender } from "./use-design-render";
@@ -603,7 +604,38 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
             {/* Nudge to complete the brand's Design System for better AI designs. */}
             {!readOnly && <DesignSystemNudge />}
 
-            {/* Body — canvas when there's a design, else a clean empty state. */}
+            {/* Body — canvas when there's a design, else a clean empty state.
+                On a wide screen the Inspector docks to its left: the canvas is
+                what you look at, the pane is where you change what you picked.
+                Not on a phone, where the canvas needs the whole width and the
+                floating toolbar is the right affordance for touch. */}
+            <View style={styles.bodyRow}>
+            {xl && hasDesign ? (
+                <InspectorPanel
+                    selection={selected}
+                    slide={slide}
+                    slideCount={slideCount}
+                    isVideo={isVideoDesign}
+                    readOnly={readOnly}
+                    onSetText={(id, text) => {
+                        frameRef.current?.setText(id, text);
+                        setSelected((cur) => (cur && cur.id === id ? { ...cur, text } : cur));
+                    }}
+                    // Attach the element to the chat as a focus and let the
+                    // user type the instruction there, rather than opening a
+                    // one-line modal over the thing they are editing. The chat
+                    // is where the conversation already is.
+                    onAskAI={() => {
+                        const focus = buildElementFocus();
+                        if (focus) props.onFocus(focus);
+                    }}
+                    onComment={openComment}
+                    onDeselect={() => {
+                        frameRef.current?.deselect();
+                        setSelected(null);
+                    }}
+                />
+            ) : null}
             <View
                 style={styles.body}
                 onLayout={(e) => {
@@ -890,6 +922,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                     </ScrollView>
                 )}
             </View>
+            </View>
 
             {/* Sound — two lanes under the player (video only).
                 Always visible: audio used to live behind a collapsed trigger
@@ -1060,7 +1093,8 @@ const useStyles = (colors: any, topInset: number) =>
                 },
                 renderBtnText: { fontSize: fs(13), fontWeight: "700", color: colors.onPrimary },
 
-                body: { flex: 1 },
+                bodyRow: { flex: 1, flexDirection: "row", minHeight: 0 },
+                body: { flex: 1, minWidth: 0 },
                 canvasScroll: { flexGrow: 1, alignItems: "center", justifyContent: "center", padding: 16, gap: 12 },
                 canvasWrap: { alignItems: "center", gap: 12 },
                 frameWrap: { borderRadius: 12, overflow: "visible" },
