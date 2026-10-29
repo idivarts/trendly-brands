@@ -44,11 +44,19 @@ describe("resolveMediaLane", () => {
         expect(resolveMediaLane({ designRef, attachments: [image], source: "ai" })).toBe("design");
     });
 
-    it("separates a generated image from an uploaded one", () => {
-        // Both are a plain image attachment with no designRef — only `source`
-        // tells them apart, which is why it has to be stamped.
-        expect(resolveMediaLane({ attachments: [image], source: "ai-image" })).toBe("generate");
+    it("reads a legacy generated image as an upload", () => {
+        // Photoreal generation now writes a design document, so a NEW generated
+        // image arrives with a designRef and resolves as "design". Content from
+        // the old path kept a bare attachment and nothing to restore it from —
+        // it stays previewable and publishable, just not editable.
+        expect(resolveMediaLane({ attachments: [image], source: "ai-image" })).toBe("upload");
         expect(resolveMediaLane({ attachments: [image], source: "upload" })).toBe("upload");
+    });
+
+    it("ignores `source` entirely — the lane comes from the data", () => {
+        // A stale or wrong source must never be able to claim a lane.
+        expect(resolveMediaLane({ attachments: [], source: "ai-image" })).toBeNull();
+        expect(resolveMediaLane({ designRef, attachments: [], source: "upload" })).toBe("design");
     });
 
     it("treats a legacy content with no source as an upload", () => {
@@ -89,8 +97,6 @@ describe("clearLabelFor", () => {
         expect(clearLabelFor("upload", "reel")).toBe("Remove video");
         expect(clearLabelFor("upload", "post")).toBe("Remove image");
         expect(clearLabelFor("upload", "carousel")).toBe("Remove all slides");
-        expect(clearLabelFor("generate", "post")).toBe("Discard generated image");
-        expect(clearLabelFor("generate", "carousel")).toBe("Discard generated slides");
     });
 });
 
