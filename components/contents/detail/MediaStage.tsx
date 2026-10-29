@@ -94,6 +94,13 @@ interface MediaStageProps {
     onSubmitBrief?: (brief: ComposerBrief) => void;
     /** A brief is with the AI and no design has landed yet. */
     briefPending?: boolean;
+    /** What the user asked for, echoed back while they wait. */
+    briefText?: string | null;
+    /**
+     * The live step the AI is on, pushed by the backend as it calls each tool.
+     * Empty between steps — fall back to generic copy rather than blanking.
+     */
+    briefStatus?: string;
     /** Clear the media (and the design pointer) back to the empty state. */
     onClearMedia: () => void;
     /** When true the media is read-only (content is scheduled or posted). */
@@ -118,6 +125,8 @@ const MediaStage: React.FC<MediaStageProps> = ({
     onOpenDesign,
     onSubmitBrief,
     briefPending = false,
+    briefText,
+    briefStatus,
     onClearMedia,
     readOnly = false,
 }) => {
@@ -626,14 +635,31 @@ const MediaStage: React.FC<MediaStageProps> = ({
         } else if (hasMedia) {
             body = renderedView();
         } else if (briefPending) {
-            // The brief is with the AI. This holds the user's words in the place
-            // they typed them, rather than a bare spinner — the chat beside it
-            // carries the detail.
+            // The brief is with the AI.
+            //
+            // Two things sit here deliberately. The STEP is the real one — the
+            // backend names each tool as it runs, so this reports work rather
+            // than animating a reassuring script; a fake progress list is a lie
+            // that gets found out the first time something is slow. And the
+            // user's own words stay on screen, in the place they typed them,
+            // because the one spot they just acted should not go blank while
+            // the only feedback moves to a panel they may not be looking at.
             body = (
-                <View style={styles.laneLoading}>
+                <View style={styles.generating} accessibilityLiveRegion="polite">
                     <ActivityIndicator size="small" color={colors.primary} />
-                    <Text style={styles.laneLoadingText}>
-                        Making it now — follow along in the chat.
+                    <Text style={styles.generatingStep}>
+                        {briefStatus || "Making it now…"}
+                    </Text>
+                    {briefText ? (
+                        <View style={styles.briefEcho}>
+                            <Text style={styles.briefEchoLabel}>YOUR BRIEF</Text>
+                            <Text style={styles.briefEchoText} numberOfLines={6}>
+                                {briefText}
+                            </Text>
+                        </View>
+                    ) : null}
+                    <Text style={styles.generatingHint}>
+                        You can follow along in the chat, or keep writing the caption below.
                     </Text>
                 </View>
             );
@@ -1167,6 +1193,48 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             fontSize: fs(13),
             fontWeight: "600",
             color: colors.textSecondary,
+        },
+        generating: {
+            alignItems: "center",
+            gap: 10,
+            paddingVertical: 26,
+            paddingHorizontal: 16,
+        },
+        generatingStep: {
+            fontSize: fs(14),
+            lineHeight: lh(19),
+            fontWeight: "600",
+            color: colors.text,
+            textAlign: "center",
+        },
+        briefEcho: {
+            alignSelf: "stretch",
+            maxWidth: 460,
+            width: "100%",
+            marginHorizontal: "auto",
+            backgroundColor: colors.tag,
+            borderRadius: 10,
+            paddingVertical: 10,
+            paddingHorizontal: 12,
+            gap: 4,
+        },
+        briefEchoLabel: {
+            fontSize: fs(10),
+            lineHeight: lh(13),
+            fontWeight: "700",
+            letterSpacing: 0.8,
+            color: colors.textSecondary,
+        },
+        briefEchoText: {
+            fontSize: fs(12.5),
+            lineHeight: lh(18),
+            color: colors.text,
+        },
+        generatingHint: {
+            fontSize: fs(11.5),
+            lineHeight: lh(16),
+            color: colors.textSecondary,
+            textAlign: "center",
         },
         lockedEmpty: {
             fontSize: fs(13),

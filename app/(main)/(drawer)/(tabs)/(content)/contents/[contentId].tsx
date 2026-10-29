@@ -503,6 +503,9 @@ const CreateContentScreen = () => {
     // document the design actually lands on.
     const [pendingBrief, setPendingBrief] = useState<string | null>(null);
     const [chatBusy, setChatBusy] = useState(false);
+    // The live step the AI is on, lifted out of the chat panel so the media
+    // section can report real work while the user waits on the canvas.
+    const [chatStatus, setChatStatus] = useState("");
     // Whether the AI turn for the current brief has actually begun streaming.
     const turnStartedRef = useRef(false);
 
@@ -2106,6 +2109,8 @@ const CreateContentScreen = () => {
                                     onOpenDesign={() => setStage("design")}
                                     onSubmitBrief={handleComposerBrief}
                                     briefPending={!!pendingBrief}
+                                    briefText={pendingBrief}
+                                    briefStatus={chatStatus}
                                     onClearMedia={handleClearMedia}
                                     readOnly={locked}
                                 />
@@ -2313,6 +2318,7 @@ const CreateContentScreen = () => {
                                     }}
                                     onControlsChange={handleChatControls}
                                     onBusyChange={setChatBusy}
+                                    onStatusChange={setChatStatus}
                                     isCompact
                                 />
                             }
@@ -2360,6 +2366,7 @@ const CreateContentScreen = () => {
                             }}
                             onControlsChange={handleChatControls}
                             onBusyChange={setChatBusy}
+                            onStatusChange={setChatStatus}
                             isCompact
                             onCollapse={() => setRightPanelMode("none")}
                             // Tab bar owns the bottom inset (don't double it), but this
