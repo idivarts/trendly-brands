@@ -40,12 +40,17 @@ function copyFor(lane: MediaLane, contentType: ContentType): CardCopy {
 
     switch (lane) {
         case "design":
+            // Naming the approaches here is what tells the user the AI card is
+            // not just "the graphic one" — photoreal and stock live behind it
+            // too, and a card that says only "tell the AI what you want" reads
+            // as the narrow option beside a concrete "upload your own".
             return {
                 icon: faWandMagicSparkles,
                 title: "Design with AI",
-                sub: spec.multi
-                    ? "An editable, on-brand set of slides — tell the AI what you want."
-                    : `An editable, on-brand ${noun} — tell the AI what you want.`,
+                sub:
+                    spec.kind === "video"
+                        ? "Motion graphics, a generative clip, or a cut of your own footage."
+                        : "A graphic layout, a photoreal image, or stock photography.",
             };
         case "generate":
             return {

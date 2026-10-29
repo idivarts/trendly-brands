@@ -43,6 +43,19 @@ export interface ResolveLaneArgs {
  *
  * A design pointer wins over attachments, because a rendered design has both
  * (the render IS the attachment) and it must stay editable in the Studio.
+ *
+ * ⚠️ This still resolves "generate", which `lanesFor` no longer offers. That
+ * asymmetry is deliberate and TEMPORARY. Photoreal generation writes plain
+ * image attachments stamped `source: "ai-image"`, and the panel that lets you
+ * iterate on them is the generate lane. Deleting this branch before generation
+ * writes a DESIGN DOCUMENT would drop every such image into the upload lane,
+ * where it can be published but never iterated on — a regression to a shipped
+ * feature, for content created minutes earlier.
+ *
+ * The branch goes when the backend makes photoreal generation produce a design
+ * document (Phase 1b). At that point generated images arrive with a `designRef`
+ * and resolve as "design" on the line above, legacy ones fall through to
+ * "upload" as decided, and `MediaLane` narrows to two values for good.
  */
 export function resolveMediaLane({ designRef, attachments, source }: ResolveLaneArgs): MediaLane | null {
     if (designRef?.revisionId) return "design";
@@ -51,17 +64,21 @@ export function resolveMediaLane({ designRef, attachments, source }: ResolveLane
 }
 
 /**
- * Which lanes a content type can offer.
+ * Which lanes a content type can OFFER on the chooser.
  *
- * The Design Studio authors both image and video designs, so "design" is always
- * available. AI image generation is image-only — there is no photoreal video
- * generation — so "generate" is gated on the media kind rather than on a
- * per-type flag.
+ * Two, for both image and video. The image/video asymmetry is gone: photoreal
+ * generation used to be a lane of its own, available only for images, and is
+ * now an APPROACH inside "Design with AI" (see composer/approach-spec.ts).
+ * Approaches converge on one document; lanes do not. Keeping generation as a
+ * lane is what made "a photo with a headline on it" an impossible combination.
+ *
+ * Note this is deliberately NOT the same set as `resolveMediaLane` can return —
+ * see the comment there.
  */
 export function lanesFor(type: ContentType): MediaLane[] {
     const spec = MEDIA_SPEC[type];
     if (spec.kind === "none") return [];
-    return spec.kind === "image" ? ["design", "generate", "upload"] : ["design", "upload"];
+    return ["design", "upload"];
 }
 
 /** Lane-appropriate label for the action that clears the media back to empty. */

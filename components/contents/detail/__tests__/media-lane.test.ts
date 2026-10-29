@@ -57,15 +57,24 @@ describe("resolveMediaLane", () => {
 });
 
 describe("lanesFor", () => {
-    it("offers photoreal generation only for image types", () => {
-        expect(lanesFor("post")).toEqual(["design", "generate", "upload"]);
-        expect(lanesFor("carousel")).toEqual(["design", "generate", "upload"]);
-        expect(lanesFor("story")).toEqual(["design", "generate", "upload"]);
+    // Photoreal generation used to be a lane of its own, offered only for image
+    // types. It is now an approach inside "Design with AI", which is what makes
+    // "a generated photo with a headline on it" expressible at all — so the
+    // chooser offers the same two lanes whatever the media kind.
+    it("offers the same two lanes for image types", () => {
+        expect(lanesFor("post")).toEqual(["design", "upload"]);
+        expect(lanesFor("carousel")).toEqual(["design", "upload"]);
+        expect(lanesFor("story")).toEqual(["design", "upload"]);
     });
 
-    it("offers design and upload for video types — there is no video generation", () => {
+    it("offers the same two lanes for video types", () => {
         expect(lanesFor("reel")).toEqual(["design", "upload"]);
         expect(lanesFor("video")).toEqual(["design", "upload"]);
+    });
+
+    it("never offers generate — it is an approach now, not a lane", () => {
+        const every = (["post", "carousel", "story", "reel", "video"] as const).flatMap(lanesFor);
+        expect(every).not.toContain("generate");
     });
 
     it("offers nothing for the types that have no media area", () => {

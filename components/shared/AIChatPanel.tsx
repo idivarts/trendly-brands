@@ -153,6 +153,13 @@ interface AIChatPanelProps {
      * onboarding step. Parent should clear it after observing send.
      */
     initialMessage?: string;
+    /**
+     * Images to send WITH `initialMessage` — the same channel a manual send
+     * uses for attached images, so a brief composed elsewhere on the page can
+     * hand the AI the references it was given. Without this the composer's
+     * reference tray would collect images the model never sees.
+     */
+    initialImages?: string[];
     /** Notified after `initialMessage` has been dispatched. */
     onInitialMessageSent?: () => void;
 
@@ -254,6 +261,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     onBusyChange,
     initialConversationId,
     initialMessage,
+    initialImages,
     onInitialMessageSent,
     focusItems = [],
     onRemoveFocusItem,
@@ -450,10 +458,10 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
         setStartingConversation(true);
         // Attach the current focus items to the auto-sent message, just like a
         // manual send does, then clear them.
-        sendMessage(initialMessage, focusItems, selectedModel, undefined, getLiveContent?.());
+        sendMessage(initialMessage, focusItems, selectedModel, initialImages, getLiveContent?.());
         focusItems.forEach((f) => onRemoveFocusItem?.(f.id));
         onInitialMessageSent?.();
-    }, [initialMessage, notReady, sendMessage, selectedModel, onInitialMessageSent]);
+    }, [initialMessage, initialImages, notReady, sendMessage, selectedModel, onInitialMessageSent]);
 
     // Drop the starting flag as soon as the conversation shows life — the first
     // message lands (optimistic bubble or committed history) or the assistant
