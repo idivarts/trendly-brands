@@ -78,6 +78,7 @@ function toContentItem(id: string, data: IContent): ContentItem {
         strategyId: data.strategyId,
         contentPillars: data.contentPillars,
         viralityScore: data.viralityScore,
+        designScore: data.designScore,
     };
 }
 
