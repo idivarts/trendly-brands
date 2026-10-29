@@ -146,6 +146,11 @@ export interface ContentItem extends CalendarItem {
      * this. Mirrors `IContent.viralityScore`.
      */
     viralityScore?: IViralityScore;
+    /**
+     * Latest virality score for the DESIGN. Same shape, different subject —
+     * see {@link IContent.designScore}.
+     */
+    designScore?: IViralityScore;
     isArchived: boolean;
     createdAt: string;
 }

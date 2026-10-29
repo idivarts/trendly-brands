@@ -1743,6 +1743,7 @@ const CreateContentScreen = () => {
                                 contentType={contentType}
                                 isVideo={mediaSpec.kind === "video"}
                                 designRef={seedItem?.designRef}
+                                designScore={seedItem?.designScore}
                                 voiceoverSource={script || caption}
                                 audio={seedItem?.audio}
                                 onAudioChange={(audio) => updateContent(contentId, { audio })}

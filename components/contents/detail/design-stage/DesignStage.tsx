@@ -18,6 +18,7 @@ import { useAIModels } from "@/hooks/use-ai-models";
 import { Focus, FocusArea } from "@/types/focus";
 import { useContentComments } from "@/hooks/use-content-comments";
 import { IContentAudio, IContentDesignRef } from "@/shared-libs/firestore/trendly-pro/models/design";
+import { IViralityScore } from "@/shared-libs/firestore/trendly-pro/models/contents";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Colors from "@/shared-uis/constants/Colors";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
@@ -25,6 +26,7 @@ import {
     faBullseye,
     faChevronUp,
     faClockRotateLeft,
+    faGaugeHigh,
     faComment,
     faEllipsisVertical,
     faMusic,
@@ -56,6 +58,7 @@ import DesignSystemNudge from "@/components/design-system/DesignSystemNudge";
 import { DesignFrameHandle, FrameOutMsg } from "./bridge";
 import DesignFrame from "./DesignFrame";
 import SoundtrackPanel from "./SoundtrackPanel";
+import DesignScoreCard from "./DesignScoreCard";
 import { useSoundtrackPlayer } from "./use-audio-player";
 import { useContentDesign } from "./use-content-design";
 import { useDesignRender } from "./use-design-render";
@@ -68,6 +71,8 @@ interface DesignStageProps {
     contentType: ContentType;
     isVideo: boolean;
     designRef?: IContentDesignRef;
+    /** The design's last virality score, if it has been scored before. */
+    designScore?: IViralityScore;
     voiceoverSource: string;
     audio?: IContentAudio;
     onAudioChange: (audio: IContentAudio) => void;
@@ -415,6 +420,23 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     };
     // Structured focus on the exact selected element — carries elementId, slide,
     // doc type + content id so the AI can target precisely (not just prose).
+    // The virality read on the design, as a floating card rather than a panel:
+    // what is useful here is a verdict and three fixes while you are looking at
+    // the artefact, and the canvas should keep the space when you are not.
+    const [showScore, setShowScore] = useState(false);
+
+    // The score's fixes are about the design as a whole, so they scope to the
+    // CONTENT rather than to whichever element happens to be selected — there
+    // is no element focus for "the carousel's last slide does not ask for
+    // anything", and attaching one would point the AI at the wrong thing.
+    const askAboutDesign = (instruction: string) => {
+        props.onAskAI(instruction, {
+            id: `focus-${Date.now()}`,
+            focusText: "Design",
+            focusArea: { type: "content", contentId },
+        });
+    };
+
     const buildElementFocus = (): Focus | null => {
         if (!selected) return null;
         const multi = slideCount > 1;
@@ -492,6 +514,21 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                             <FontAwesomeIcon icon={faClockRotateLeft} size={15} color={colors.text} />
                         </Pressable>
                     ) : null}
+                    {hasDesign ? (
+                        <Pressable
+                            onPress={() => setShowScore((v) => !v)}
+                            style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
+                            accessibilityRole="button"
+                            accessibilityLabel={showScore ? "Hide the virality check" : "Check how this design will perform"}
+                            hitSlop={8}
+                        >
+                            <FontAwesomeIcon
+                                icon={faGaugeHigh}
+                                size={15}
+                                color={showScore ? colors.primary : colors.text}
+                            />
+                        </Pressable>
+                    ) : null}
                     {hasDesign && !readOnly ? (
                         <Pressable
                             onPress={saveRender}
@@ -541,6 +578,21 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                     ) : null}
                 </View>
             </View>
+
+            {/* Floating, top right, clear of the header. A verdict you consult
+                while looking at the design — not a panel that takes the canvas. */}
+            {showScore && hasDesign ? (
+                <View style={styles.scoreFloat} pointerEvents="box-none">
+                    <DesignScoreCard
+                        contentId={contentId}
+                        stored={props.designScore}
+                        hasDesign={hasDesign}
+                        onAskAI={askAboutDesign}
+                        onClose={() => setShowScore(false)}
+                        readOnly={readOnly}
+                    />
+                </View>
+            ) : null}
 
             {/* Nudge to complete the brand's Design System for better AI designs. */}
             {!readOnly && <DesignSystemNudge />}
@@ -1086,6 +1138,12 @@ const useStyles = (colors: any, topInset: number) =>
 
                 // Selection overlay + floating contextual toolbar
                 selectionOverlay: { ...StyleSheet.absoluteFillObject },
+                scoreFloat: {
+                    position: "absolute",
+                    top: 64,
+                    right: 16,
+                    zIndex: 40,
+                },
                 floatToolbar: {
                     position: "absolute",
                     flexDirection: "row",
