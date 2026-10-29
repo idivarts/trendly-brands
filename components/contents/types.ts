@@ -1,7 +1,7 @@
 import { CalendarItem } from "@/components/content-calendar/types";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { Platform } from "@/shared-libs/firestore/trendly-pro/constants/platform";
-import { IContentPublishResult, IImageGeneration, IPlatformOptions } from "@/shared-libs/firestore/trendly-pro/models/contents";
+import { IContentPublishResult, IImageGeneration, IPlatformOptions, IViralityScore } from "@/shared-libs/firestore/trendly-pro/models/contents";
 import { IContentAudio, IContentDesignRef } from "@/shared-libs/firestore/trendly-pro/models/design";
 // Type-only: media-lane pulls in MEDIA_SPEC, which transitively imports this
 // file. `import type` is erased, so this adds no runtime import cycle.
@@ -140,6 +140,12 @@ export interface ContentItem extends CalendarItem {
      * `IContent.publishResults`.
      */
     publishResults?: IContentPublishResult[];
+    /**
+     * Latest virality score for `script`, written by the backend scorer.
+     * Read-only here — the panel re-scores through the API rather than editing
+     * this. Mirrors `IContent.viralityScore`.
+     */
+    viralityScore?: IViralityScore;
     isArchived: boolean;
     createdAt: string;
 }

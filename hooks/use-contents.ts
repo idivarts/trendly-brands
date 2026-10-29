@@ -77,6 +77,7 @@ function toContentItem(id: string, data: IContent): ContentItem {
         createdAt: epochToIsoDate(data.createdAt),
         strategyId: data.strategyId,
         contentPillars: data.contentPillars,
+        viralityScore: data.viralityScore,
     };
 }
 
