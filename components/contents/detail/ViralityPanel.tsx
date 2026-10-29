@@ -108,6 +108,12 @@ const ViralityPanel: React.FC<Props> = ({
     const onScore = () =>
         run({ contextId: contentId, script, format, platforms });
 
+    // Pre-empt, don't punish. The hook refuses an exhausted wallet before the
+    // request goes out, but a button that looks available until you press it
+    // still spends the user's attention to tell them no. When the wallet is
+    // already empty at render, show the block in its place.
+    const effectiveGate = gate ?? (tokens.state === "exhausted" ? "tokens_exhausted" : null);
+
     const hasScript = script.trim().length > 0;
 
     return (
@@ -271,14 +277,14 @@ const ViralityPanel: React.FC<Props> = ({
                 {error ? <Text style={styles.error}>{error}</Text> : null}
 
                 {/* ── The action, or why it is unavailable ─────────────── */}
-                {gate === "tokens_exhausted" ? (
+                {effectiveGate === "tokens_exhausted" ? (
                     <UpgradeInline
                         message="You're out of AI tokens this month. Add a top-up to keep scoring."
                         ctaLabel="Add tokens"
                         feature="virality_score"
                         reason="tokens_exhausted"
                     />
-                ) : gate === "plan_locked" ? (
+                ) : effectiveGate === "plan_locked" ? (
                     <UpgradeInline
                         message="Scoring is on the paid plans."
                         feature="virality_score"

@@ -11,6 +11,7 @@
  * permanent space above the thing it is a tool for.
  */
 import { fs, lh } from "@/constants/Typography";
+import { useEntitlements } from "@/hooks/use-entitlements";
 import { HookCandidate, useHookLadder } from "@/hooks/use-hook-ladder";
 import Colors from "@/shared-uis/constants/Colors";
 import { withAlpha } from "@/utils/color";
@@ -69,6 +70,10 @@ const HookLadderCard: React.FC<Props> = ({
     const colors = Colors(theme);
     const styles = useStyles(colors);
     const { hooks, unranked, loading, gate, error, run } = useHookLadder();
+    const { tokens } = useEntitlements();
+
+    // Pre-empt, don't punish — see the matching note in ViralityPanel.
+    const effectiveGate = gate ?? (tokens.state === "exhausted" ? "tokens_exhausted" : null);
 
     const tone = useMemo(
         () => ({
@@ -180,14 +185,14 @@ const HookLadderCard: React.FC<Props> = ({
 
                 {error ? <Text style={styles.error}>{error}</Text> : null}
 
-                {gate === "tokens_exhausted" ? (
+                {effectiveGate === "tokens_exhausted" ? (
                     <UpgradeInline
                         message="You're out of AI tokens this month. Add a top-up to keep writing hooks."
                         ctaLabel="Add tokens"
                         feature="hook_ladder"
                         reason="tokens_exhausted"
                     />
-                ) : gate === "plan_locked" ? (
+                ) : effectiveGate === "plan_locked" ? (
                     <UpgradeInline
                         message="Hook options are on the paid plans."
                         feature="hook_ladder"
