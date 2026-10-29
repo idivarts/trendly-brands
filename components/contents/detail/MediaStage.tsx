@@ -59,7 +59,6 @@ import {
 } from "react-native";
 import DesignFrame from "./design-stage/DesignFrame";
 import { DesignPreview } from "./design-stage/use-design-preview";
-import ImageGenPanel from "./ImageGenPanel";
 import MediaAssetPreview from "./MediaAssetPreview";
 import MediaLaneCards from "./MediaLaneCards";
 import Composer, { ComposerBrief } from "./composer/Composer";
@@ -97,10 +96,6 @@ interface MediaStageProps {
     briefPending?: boolean;
     /** Clear the media (and the design pointer) back to the empty state. */
     onClearMedia: () => void;
-    /** AI image generation for the generate lane. */
-    imageGenerating?: boolean;
-    imageGenError?: string | null;
-    onGenerateImage?: (prompt: string, style: string, focusedSlideIndex?: number) => void;
     /** When true the media is read-only (content is scheduled or posted). */
     readOnly?: boolean;
 }
@@ -124,9 +119,6 @@ const MediaStage: React.FC<MediaStageProps> = ({
     onSubmitBrief,
     briefPending = false,
     onClearMedia,
-    imageGenerating = false,
-    imageGenError,
-    onGenerateImage,
     readOnly = false,
 }) => {
     const theme = useTheme();
@@ -141,7 +133,6 @@ const MediaStage: React.FC<MediaStageProps> = ({
     const [previewOpen, setPreviewOpen] = useState(false);
     const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
     const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
-    const [focusedSlide, setFocusedSlide] = useState<number | undefined>(undefined);
     // Measured width of the stage, needed to scale the design frame.
     const [stageWidth, setStageWidth] = useState(0);
     // Slide-strip scrolling. The strip is horizontally scrollable, which a
@@ -194,13 +185,6 @@ const MediaStage: React.FC<MediaStageProps> = ({
     useEffect(() => {
         if (resolvedLane) setPickedLane(null);
     }, [resolvedLane]);
-
-    // A cleared stage must forget the focused slide too, or the next generation
-    // would silently target a slide that no longer exists.
-    useEffect(() => {
-        if (!hasMedia) setFocusedSlide(undefined);
-        else if (focusedSlide !== undefined && focusedSlide >= attachments.length) setFocusedSlide(undefined);
-    }, [hasMedia, attachments.length, focusedSlide]);
 
     const onStageLayout = useCallback((e: LayoutChangeEvent) => {
         setStageWidth(e.nativeEvent.layout.width);
@@ -319,7 +303,6 @@ const MediaStage: React.FC<MediaStageProps> = ({
 
     const handleClear = useCallback(() => {
         setPickedLane(null);
-        setFocusedSlide(undefined);
         setError(null);
         onClearMedia();
     }, [onClearMedia]);
@@ -431,14 +414,12 @@ const MediaStage: React.FC<MediaStageProps> = ({
                     const isVideo = isVideoAttachment(a);
                     const vUrl = isVideo ? videoUrlOf(a) : null;
                     const canPreview = isVideo ? !!vUrl : !!a.imageUrl;
-                    const focused = focusedSlide === i;
                     return (
                         <View key={`${a.imageUrl ?? a.playUrl ?? "a"}-${i}`} style={styles.slideCol}>
                             <Pressable
                                 style={[
                                     styles.slideTile,
                                     { width: tileW, aspectRatio: tileAspect },
-                                    focused && styles.slideTileFocused,
                                 ]}
                                 onPress={canPreview ? () => openPreview(a) : undefined}
                                 disabled={!canPreview}
@@ -520,22 +501,6 @@ const MediaStage: React.FC<MediaStageProps> = ({
                                 </View>
                             ) : null}
 
-                            {editable && !readOnly && lane === "generate" ? (
-                                <Pressable
-                                    style={({ pressed }) => [styles.slideAiBtn, pressed && styles.pressed]}
-                                    onPress={() => setFocusedSlide(focused ? undefined : i)}
-                                    accessibilityLabel={`Edit slide ${i + 1} with AI`}
-                                >
-                                    <FontAwesomeIcon
-                                        icon={faWandMagicSparkles}
-                                        size={10}
-                                        color={focused ? colors.primary : colors.textSecondary}
-                                    />
-                                    <Text style={[styles.slideAiText, focused && styles.slideAiTextActive]}>
-                                        {focused ? "Editing" : "Edit"}
-                                    </Text>
-                                </Pressable>
-                            ) : null}
                         </View>
                     );
                 })}
@@ -698,10 +663,18 @@ const MediaStage: React.FC<MediaStageProps> = ({
             );
         }
 
-        // Before anything is made there is nothing to render, nothing to clear
-        // and nothing to export — the composer owns the whole lane.
-        const composing = !hasMedia && !designPreview && !briefPending && !designRef?.revisionId;
-        if (composing) return body;
+        // Before anything EXISTS there is nothing to render, nothing to clear
+        // and nothing to export — the composer (or the wait for it) owns the
+        // whole lane.
+        //
+        // `briefPending` is included deliberately. It used to be excluded, which
+        // put a "Clear canvas" button under the spinner: it offered to clear a
+        // design that did not exist yet, and pressing it would not have stopped
+        // the AI turn — so the one action on screen was a no-op dressed as a
+        // cancel. Nothing is better than a button that lies. A real cancel needs
+        // to abort the turn, which belongs with the generating stage.
+        const nothingYet = !hasMedia && !designPreview && !designRef?.revisionId;
+        if (nothingYet) return body;
 
         return (
             <>
@@ -725,34 +698,6 @@ const MediaStage: React.FC<MediaStageProps> = ({
             </>
         );
     };
-
-    const renderGenerateLane = () => (
-        <>
-            {hasMedia ? (
-                spec.multi ? renderSlides(true) : <MediaAssetPreview
-                        attachment={attachments[0]}
-                        contentType={contentType}
-                        maxHeight={MAX_PREVIEW_H}
-                        onPress={openPreview}
-                    />
-            ) : null}
-
-            {!readOnly && onGenerateImage ? (
-                <ImageGenPanel
-                    contentType={contentType}
-                    generating={imageGenerating}
-                    error={imageGenError}
-                    hasImages={hasMedia}
-                    focusedSlideIndex={focusedSlide}
-                    onClearFocusedSlide={() => setFocusedSlide(undefined)}
-                    onGenerate={(prompt, style) => onGenerateImage(prompt, style, focusedSlide)}
-                    onCancel={hasMedia ? undefined : () => setPickedLane(null)}
-                />
-            ) : null}
-
-            {hasMedia && !readOnly ? laneActions() : null}
-        </>
-    );
 
     const renderUploadLane = () => (
         <>
@@ -830,11 +775,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
         return (
             <>
                 {laneControl()}
-                {lane === "design"
-                    ? renderDesignLane()
-                    : lane === "generate"
-                        ? renderGenerateLane()
-                        : renderUploadLane()}
+                {lane === "design" ? renderDesignLane() : renderUploadLane()}
             </>
         );
     };
@@ -1107,13 +1048,6 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             alignItems: "center",
             justifyContent: "center",
         },
-        slideTileFocused: {
-            shadowColor: colors.primary,
-            shadowOffset: { width: 0, height: 0 },
-            shadowRadius: 10,
-            shadowOpacity: 0.9,
-            elevation: 6,
-        },
         orderBadge: {
             position: "absolute",
             bottom: 6,
@@ -1142,23 +1076,6 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             alignItems: "center",
             justifyContent: "center",
             backgroundColor: colors.tag,
-        },
-        slideAiBtn: {
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 5,
-            paddingHorizontal: 9,
-            paddingVertical: 4,
-            borderRadius: 8,
-            backgroundColor: colors.tag,
-        },
-        slideAiText: {
-            fontSize: fs(11),
-            fontWeight: "700",
-            color: colors.textSecondary,
-        },
-        slideAiTextActive: {
-            color: colors.primary,
         },
         removeBtn: {
             position: "absolute",

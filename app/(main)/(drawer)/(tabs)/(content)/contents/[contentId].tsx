@@ -1472,6 +1472,19 @@ const CreateContentScreen = () => {
         [title, idea, contentType, targetPlatforms, caption, hashtags, script, attachments, buildAIVariations]
     );
 
+    /**
+     * ⚠️ DORMANT — nothing in the content detail UI calls this any more.
+     *
+     * It drove the old "Generate images" lane, which is gone: photoreal
+     * generation is now an APPROACH on the composer, and it runs through the
+     * AI chat's `generate_image` tool, which writes a design document instead
+     * of loose attachments. That is what lets a generated image be captioned.
+     *
+     * Kept, not deleted, because the websocket path it calls is still live and
+     * still used by the calendar module — and because `imagePrompt` below it is
+     * persisted on the content doc and read by save, publish and duplicate.
+     * Removing the whole chain is its own change, not a rider on this one.
+     */
     const handleImageGenerate = useCallback((promptArg?: string, style?: string, focusedSlideIndex?: number, model?: string) => {
         const p = (promptArg ?? imagePrompt).trim();
         if (!p) return;
@@ -1616,15 +1629,6 @@ const CreateContentScreen = () => {
             return serverAtt;
         });
     }, [seedItem?.imageGeneration, seedItem?.attachments]);
-
-    // Derived image-generation UI state: show progress while either the local
-    // request or the backend job is running; surface backend errors.
-    const imageGenStatus = seedItem?.imageGeneration?.status;
-    const imageGenerating = isGeneratingImage || imageGenStatus === "generating";
-    const imageGenError =
-        imageGenStatus === "error"
-            ? seedItem?.imageGeneration?.error || "Image generation failed. Please try again."
-            : null;
 
     // Device locale, not a hardcoded "en-IN" — the app is not India-only.
     const formattedDate = date.toLocaleDateString(undefined, {
@@ -2103,9 +2107,6 @@ const CreateContentScreen = () => {
                                     onSubmitBrief={handleComposerBrief}
                                     briefPending={!!pendingBrief}
                                     onClearMedia={handleClearMedia}
-                                    imageGenerating={imageGenerating}
-                                    imageGenError={imageGenError}
-                                    onGenerateImage={handleImageGenerate}
                                     readOnly={locked}
                                 />
                             )}

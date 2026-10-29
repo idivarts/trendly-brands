@@ -12,7 +12,6 @@ import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 import {
     faArrowUpFromBracket,
-    faImages,
     faWandMagicSparkles,
 } from "@fortawesome/free-solid-svg-icons";
 import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
@@ -51,12 +50,6 @@ function copyFor(lane: MediaLane, contentType: ContentType): CardCopy {
                     spec.kind === "video"
                         ? "Motion graphics, a generative clip, or a cut of your own footage."
                         : "A graphic layout, a photoreal image, or stock photography.",
-            };
-        case "generate":
-            return {
-                icon: faImages,
-                title: spec.multi ? "Generate images" : "Generate an image",
-                sub: "Describe a photo and the AI creates it from scratch.",
             };
         case "upload":
             return {

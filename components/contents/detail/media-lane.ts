@@ -1,33 +1,30 @@
 /**
  * Media lanes — how a content's current media was produced.
  *
- * A content's media comes from exactly one of three creation surfaces, and the
- * Media Stage shows only the lane that owns it (picking one hides the others):
+ * A content's media comes from exactly one of two creation surfaces, and the
+ * Media Stage shows only the lane that owns it (picking one hides the other):
  *
- *   "design"   → an HTML design authored in the Design Studio (`designRef`)
- *   "generate" → photoreal image(s) from AI image generation
- *   "upload"   → asset(s) the user picked themselves
+ *   "design" → made by the AI, on a canvas (`designRef`)
+ *   "upload" → a file the user picked themselves
  *
  * `null` means no lane is committed yet — the Media Stage shows the lane chooser.
  *
- * The content doc's `source` field is the authoritative record, but it is only
- * consulted to disambiguate the two lanes that both produce plain image
- * attachments. Everything else is derived from the data, which keeps three
- * things true at once:
+ * There used to be a third, "generate", for photoreal images. It was not a
+ * lane: it was one way of making a design, and modelling it as a peer of
+ * "design" is what made "a generated photo with a headline over it" — the most
+ * ordinary request there is — impossible to express. HOW the AI makes the media
+ * is an approach, a tab on the composer; approaches converge on one document.
  *
- *   - Legacy contents (written before `source` was stamped) resolve correctly
- *     with no migration.
- *   - A stale `source` can never claim a lane for a content that has no media —
- *     evidence (a design pointer or an attachment) is always required.
- *   - An upload that is still unsaved doesn't need `source` written early just
- *     to render the right lane.
+ * The lane is derived entirely from the data. Evidence is always required, so a
+ * content with no media can never have a lane claimed for it, and an upload
+ * that is still unsaved needs nothing written early just to render correctly.
  */
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { IContentDesignRef } from "@/shared-libs/firestore/trendly-pro/models/design";
 import { ContentType } from "@/components/content-calendar/types";
 import { MEDIA_SPEC } from "./media-spec";
 
-export type MediaLane = "design" | "generate" | "upload";
+export type MediaLane = "design" | "upload";
 
 /** The `source` values a content doc can carry. Mirrors the Firestore model. */
 export type MediaSource = "ai" | "ai-image" | "upload" | "canva";
@@ -44,22 +41,21 @@ export interface ResolveLaneArgs {
  * A design pointer wins over attachments, because a rendered design has both
  * (the render IS the attachment) and it must stay editable in the Studio.
  *
- * ⚠️ This still resolves "generate", which `lanesFor` no longer offers. That
- * asymmetry is deliberate and TEMPORARY. Photoreal generation writes plain
- * image attachments stamped `source: "ai-image"`, and the panel that lets you
- * iterate on them is the generate lane. Deleting this branch before generation
- * writes a DESIGN DOCUMENT would drop every such image into the upload lane,
- * where it can be published but never iterated on — a regression to a shipped
- * feature, for content created minutes earlier.
+ * `source` is no longer consulted. Photoreal generation now writes a DESIGN
+ * DOCUMENT holding the image, so a generated image arrives with a `designRef`
+ * and resolves as "design" on the first line — editable on the canvas, which is
+ * the whole point of generating it there.
  *
- * The branch goes when the backend makes photoreal generation produce a design
- * document (Phase 1b). At that point generated images arrive with a `designRef`
- * and resolve as "design" on the line above, legacy ones fall through to
- * "upload" as decided, and `MediaLane` narrows to two values for good.
+ * Content generated under the old path kept its image as a bare attachment with
+ * no `designRef`, so it reads as an upload: intact, previewable and
+ * publishable, but no longer editable. That is the agreed trade. The
+ * alternative was carrying a third lane forever to serve rows that a backfill
+ * could not make editable anyway, since there was never a design document to
+ * restore.
  */
-export function resolveMediaLane({ designRef, attachments, source }: ResolveLaneArgs): MediaLane | null {
+export function resolveMediaLane({ designRef, attachments }: ResolveLaneArgs): MediaLane | null {
     if (designRef?.revisionId) return "design";
-    if (attachments.length > 0) return source === "ai-image" ? "generate" : "upload";
+    if (attachments.length > 0) return "upload";
     return null;
 }
 
@@ -85,7 +81,6 @@ export function lanesFor(type: ContentType): MediaLane[] {
 export function clearLabelFor(lane: MediaLane, type: ContentType): string {
     const spec = MEDIA_SPEC[type];
     if (lane === "design") return "Clear canvas";
-    if (lane === "generate") return spec.multi ? "Discard generated slides" : "Discard generated image";
     if (spec.multi) return "Remove all slides";
     return spec.kind === "video" ? "Remove video" : "Remove image";
 }
