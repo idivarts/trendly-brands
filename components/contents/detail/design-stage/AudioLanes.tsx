@@ -37,7 +37,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { PanResponder, Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { safeVolume, useAudioDuration } from "./use-audio-player";
 
@@ -69,6 +69,29 @@ const AudioLanes: React.FC<Props> = ({
     // request the provider rounded, and what matters is what will actually play.
     const musicMs = useAudioDuration(audio?.musicUrl);
     const voiceMs = useAudioDuration(audio?.voiceoverUrl);
+
+    // Write the measured lengths back once known. The backend cannot work them
+    // out — a generated length is only what was requested, and a TTS clip's
+    // length is not derivable from its text — so without this the AI's
+    // check_audio_fit has no way to tell whether the voice overruns the video.
+    const persistedMs = useRef<{ music?: number; voice?: number }>({});
+    useEffect(() => {
+        const next: Partial<IContentAudio> = {};
+        if (musicMs && Math.round(musicMs) !== Math.round(audio?.musicMs ?? 0)) {
+            next.musicMs = Math.round(musicMs);
+        }
+        if (voiceMs && Math.round(voiceMs) !== Math.round(audio?.voiceoverMs ?? 0)) {
+            next.voiceoverMs = Math.round(voiceMs);
+        }
+        if (!Object.keys(next).length) return;
+        // Guard against a loop: the parent round-trips `audio` through
+        // Firestore, so a write that comes back slightly different would
+        // otherwise re-trigger this on every snapshot.
+        if (persistedMs.current.music === next.musicMs && persistedMs.current.voice === next.voiceoverMs) return;
+        persistedMs.current = { music: next.musicMs, voice: next.voiceoverMs };
+        onAudioChange({ ...audio, ...next });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [musicMs, voiceMs]);
 
     const hasMusic = !!audio?.musicUrl;
     const hasVoice = !!audio?.voiceoverUrl;
