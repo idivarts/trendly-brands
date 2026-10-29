@@ -328,7 +328,10 @@ const ViralityPanel: React.FC<Props> = ({
                     <Text style={styles.footnote}>Write or generate a script first.</Text>
                 ) : score ? (
                     <Text style={styles.footnote}>
-                        Scored {formatTimeToNow(score.scoredAt)} · rubric {score.rubricVersion}
+                        {Number.isFinite(score.scoredAt)
+                            ? `Scored ${formatTimeToNow(score.scoredAt)}`
+                            : "Scored"}
+                        {score.rubricVersion ? ` · rubric ${score.rubricVersion}` : ""}
                     </Text>
                 ) : null}
             </View>

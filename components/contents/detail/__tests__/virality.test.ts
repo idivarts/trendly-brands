@@ -1,6 +1,7 @@
 import {
     BANDS,
     displayBand,
+    isUsableScore,
     rawBand,
     repairInstruction,
 } from "@/components/contents/detail/virality";
@@ -82,5 +83,34 @@ describe("repairInstruction", () => {
         expect(out).toContain("change nothing else");
         expect(out).toContain("- Add a hook.");
         expect(out).toContain("- Cut one of the two asks.");
+    });
+});
+
+describe("isUsableScore", () => {
+    const good = { overall: 84, band: "Strong", dimensions: [] };
+
+    it("accepts a score it can read", () => {
+        expect(isUsableScore(good)).toBe(true);
+    });
+
+    // The document the backend wrote before it persisted the API shape. Every
+    // field reads undefined, and a band derived from undefined would render as
+    // the lowest one — a confident verdict from nothing.
+    it("rejects a document with Go field names", () => {
+        expect(isUsableScore({ Overall: 84, Band: "Strong", Dimensions: [] })).toBe(false);
+    });
+
+    it("rejects the obvious non-scores", () => {
+        expect(isUsableScore(undefined)).toBe(false);
+        expect(isUsableScore(null)).toBe(false);
+        expect(isUsableScore({})).toBe(false);
+        expect(isUsableScore("84")).toBe(false);
+        expect(isUsableScore({ overall: "84", dimensions: [] })).toBe(false);
+        expect(isUsableScore({ overall: NaN, dimensions: [] })).toBe(false);
+        expect(isUsableScore({ overall: 84 })).toBe(false);
+    });
+
+    it("accepts a zero score, which is a real verdict", () => {
+        expect(isUsableScore({ overall: 0, dimensions: [] })).toBe(true);
     });
 });
