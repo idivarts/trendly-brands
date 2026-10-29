@@ -62,7 +62,8 @@ import { DesignPreview } from "./design-stage/use-design-preview";
 import ImageGenPanel from "./ImageGenPanel";
 import MediaAssetPreview from "./MediaAssetPreview";
 import MediaLaneCards from "./MediaLaneCards";
-import { clearLabelFor, MediaLane, MediaSource, resolveMediaLane } from "./media-lane";
+import Composer, { ComposerBrief } from "./composer/Composer";
+import { clearLabelFor, lanesFor, MediaLane, MediaSource, resolveMediaLane } from "./media-lane";
 import { aspectError, MEDIA_SPEC, parseAspectRatio, previewAspect } from "./media-spec";
 import DesignRenderBar, { DesignRenderChip, DesignRenderState } from "./DesignRenderBar";
 import { useDesignRender } from "./design-stage/use-design-render";
@@ -84,8 +85,16 @@ interface MediaStageProps {
     designRef?: IContentDesignRef;
     /** Live HTML of that revision, for previewing a canvas that isn't rendered yet. */
     designPreview?: DesignPreview | null;
-    /** Open the Design Studio — to start a design, or edit the existing one. */
+    /** Open the Design Studio — to edit an existing design on the full canvas. */
     onOpenDesign: () => void;
+    /**
+     * Send the composer's brief to the AI. Starting a design no longer means
+     * leaving the page: the brief is collected here, beside the caption it
+     * belongs with, and only the finished canvas is worth a takeover.
+     */
+    onSubmitBrief?: (brief: ComposerBrief) => void;
+    /** A brief is with the AI and no design has landed yet. */
+    briefPending?: boolean;
     /** Clear the media (and the design pointer) back to the empty state. */
     onClearMedia: () => void;
     /** AI image generation for the generate lane. */
@@ -112,6 +121,8 @@ const MediaStage: React.FC<MediaStageProps> = ({
     designRef,
     designPreview,
     onOpenDesign,
+    onSubmitBrief,
+    briefPending = false,
     onClearMedia,
     imageGenerating = false,
     imageGenError,
@@ -271,22 +282,23 @@ const MediaStage: React.FC<MediaStageProps> = ({
     // picker without choosing anything returns to the chooser.
     const pickLane = useCallback(
         async (next: MediaLane) => {
-            // The three lanes are mutually exclusive, so this is the cheapest
-            // read there is on how people actually make media — and AI image
-            // generation in particular was shipped without any way to tell
-            // whether anyone reaches for it.
+            // The lanes are mutually exclusive, so this is the cheapest read
+            // there is on how people actually make media. Which APPROACH they
+            // then take is a separate, finer-grained event on the composer —
+            // this one only says AI-made versus their own file.
             track("content_media_lane_picked", { lane: next });
-            if (next === "design") {
-                onOpenDesign();
-                return;
-            }
             setPickedLane(next);
+            // "design" used to jump straight to the full-bleed Studio. It now
+            // opens the composer in place: the brief is the thing being written,
+            // and writing it beside the caption and the hashtags beats losing
+            // the whole page to an empty canvas with a prompt box on it.
+            if (next === "design") return;
             if (next === "upload") {
                 const added = await handleUpload();
                 if (!added) setPickedLane((cur) => (cur === "upload" ? null : cur));
             }
         },
-        [handleUpload, onOpenDesign]
+        [handleUpload]
     );
 
     const removeAt = useCallback(
@@ -648,6 +660,35 @@ const MediaStage: React.FC<MediaStageProps> = ({
             body = renderDesignCanvas(designPreview);
         } else if (hasMedia) {
             body = renderedView();
+        } else if (briefPending) {
+            // The brief is with the AI. This holds the user's words in the place
+            // they typed them, rather than a bare spinner — the chat beside it
+            // carries the detail.
+            body = (
+                <View style={styles.laneLoading}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                    <Text style={styles.laneLoadingText}>
+                        Making it now — follow along in the chat.
+                    </Text>
+                </View>
+            );
+        } else if (designRef?.revisionId) {
+            // A design exists but its HTML hasn't arrived yet.
+            body = (
+                <View style={styles.laneLoading}>
+                    <ActivityIndicator size="small" color={colors.textSecondary} />
+                    <Text style={styles.laneLoadingText}>Loading your design…</Text>
+                </View>
+            );
+        } else if (onSubmitBrief && !readOnly) {
+            // Nothing made yet: the composer IS the design lane's empty state.
+            body = (
+                <Composer
+                    contentType={contentType}
+                    onSubmit={onSubmitBrief}
+                    disabled={readOnly}
+                />
+            );
         } else {
             body = (
                 <View style={styles.laneLoading}>
@@ -656,6 +697,11 @@ const MediaStage: React.FC<MediaStageProps> = ({
                 </View>
             );
         }
+
+        // Before anything is made there is nothing to render, nothing to clear
+        // and nothing to export — the composer owns the whole lane.
+        const composing = !hasMedia && !designPreview && !briefPending && !designRef?.revisionId;
+        if (composing) return body;
 
         return (
             <>
@@ -781,9 +827,63 @@ const MediaStage: React.FC<MediaStageProps> = ({
             }
             return <MediaLaneCards contentType={contentType} onPick={pickLane} />;
         }
-        if (lane === "design") return renderDesignLane();
-        if (lane === "generate") return renderGenerateLane();
-        return renderUploadLane();
+        return (
+            <>
+                {laneControl()}
+                {lane === "design"
+                    ? renderDesignLane()
+                    : lane === "generate"
+                        ? renderGenerateLane()
+                        : renderUploadLane()}
+            </>
+        );
+    };
+
+    /**
+     * What the two cards become once one is picked: a control at the top of the
+     * section, with the other lane one tap away.
+     *
+     * Only while the lane is still reversible. Once media exists the lane is a
+     * fact about the content, not a preference — switching would have to throw
+     * work away, and "Clear" already says that honestly.
+     */
+    const laneControl = () => {
+        const reversible = !hasMedia && !designRef?.revisionId && !briefPending && !readOnly;
+        if (!reversible) return null;
+        const offered = lanesFor(contentType);
+        if (offered.length < 2) return null;
+        return (
+            <View style={styles.laneControl}>
+                {offered.map((l) => {
+                    const active = l === lane;
+                    return (
+                        <Pressable
+                            key={l}
+                            style={({ pressed }) => [
+                                styles.lanePill,
+                                active && styles.lanePillActive,
+                                pressed && styles.pressed,
+                            ]}
+                            onPress={() => {
+                                if (!active) pickLane(l);
+                            }}
+                            accessibilityRole="radio"
+                            accessibilityState={{ selected: active }}
+                            accessibilityLabel={l === "design" ? "Design with AI" : "Upload your own"}
+                        >
+                            <FontAwesomeIcon
+                                icon={l === "design" ? faWandMagicSparkles : faArrowUpFromBracket}
+                                size={11}
+                                color={active ? colors.onPrimary : colors.textSecondary}
+                            />
+                            <Text style={[styles.lanePillText, active && styles.lanePillTextActive]}>
+                                {l === "design" ? "Design with AI" : "Upload your own"}
+                            </Text>
+                        </Pressable>
+                    );
+                })}
+            </View>
+        );
     };
 
     return (
@@ -1072,6 +1172,34 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.backdropStrong,
         },
 
+        laneControl: {
+            flexDirection: "row",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 6,
+            marginBottom: 12,
+        },
+        lanePill: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 7,
+            paddingVertical: 7,
+            paddingHorizontal: 12,
+            borderRadius: 999,
+            backgroundColor: colors.tag,
+        },
+        lanePillActive: {
+            backgroundColor: colors.primary,
+        },
+        lanePillText: {
+            fontSize: fs(12),
+            lineHeight: lh(16),
+            fontWeight: "600",
+            color: colors.textSecondary,
+        },
+        lanePillTextActive: {
+            color: colors.onPrimary,
+        },
         laneActionRow: {
             flexDirection: "row",
             alignItems: "center",

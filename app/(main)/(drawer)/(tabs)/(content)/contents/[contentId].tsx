@@ -9,6 +9,12 @@ import HandoffCard from "@/components/contents/detail/HandoffCard";
 import SectionLabel from "@/components/contents/detail/SectionLabel";
 import { MEDIA_SPEC } from "@/components/contents/detail/media-spec";
 import MediaStage from "@/components/contents/detail/MediaStage";
+import { ComposerBrief } from "@/components/contents/detail/composer/Composer";
+import {
+    APPROACHES,
+    SETTINGS,
+    SettingKey,
+} from "@/components/contents/detail/composer/approach-spec";
 import DesignStage from "@/components/contents/detail/design-stage/DesignStage";
 import { useDesignPreview } from "@/components/contents/detail/design-stage/use-design-preview";
 import NoSocialsModal from "@/components/contents/detail/NoSocialsModal";
@@ -421,6 +427,9 @@ const CreateContentScreen = () => {
     // Auto-send channel for the AI chat (used by "Ask AI to apply" in the Design
     // Stage): queues a message that AIChatPanel sends once the thread is ready.
     const [pendingChatMessage, setPendingChatMessage] = useState<string | undefined>(undefined);
+    // Images that must ride along with `pendingChatMessage` — the composer's
+    // reference tray. Cleared with the message, by the same callback.
+    const [pendingChatImages, setPendingChatImages] = useState<string[] | undefined>(undefined);
 
     // "Ask AI to apply" on a selected design element: attach the structured focus
     // and auto-send the instruction as the actual message.
@@ -552,11 +561,12 @@ const CreateContentScreen = () => {
         [autoSave]
     );
 
-    const handleSubmitBrief = useCallback((brief: string) => {
+    const handleSubmitBrief = useCallback((brief: string, images?: string[]) => {
         turnStartedRef.current = false;
         setPendingBrief(brief);
         chatControlsRef.current?.newChat();
         setPendingChatMessage(brief);
+        setPendingChatImages(images?.length ? images : undefined);
         setRightPanelMode("chat");
     }, []);
 
@@ -628,6 +638,50 @@ const CreateContentScreen = () => {
     const isFilmed = contentType === "reel" || contentType === "video";
     const isTextPost = contentType === "text";
     const mediaSpec = MEDIA_SPEC[contentType];
+
+    /**
+     * The composer's structured brief, turned into the first message of a fresh
+     * thread.
+     *
+     * Settings are written as a plain sentence rather than a JSON blob: the same
+     * model reads this and every follow-up the user types, and a brief it can
+     * restate back in its own words is one it has actually understood. The
+     * approach leads, because it decides what kind of thing is being made.
+     */
+    const handleComposerBrief = useCallback(
+        (brief: ComposerBrief) => {
+            const spec = APPROACHES[brief.approach];
+            const noun = mediaSpec.multi ? "carousel" : contentType;
+            const lines = [spec.briefLead.replace("{noun}", noun), "", brief.prompt];
+
+            const settings = Object.entries(brief.settings)
+                .filter(([, v]) => !!v)
+                .map(([k, v]) => `${SETTINGS[k as SettingKey].label}: ${v}`);
+            if (settings.length) lines.push("", `${settings.join(" · ")}.`);
+
+            // Only images travel: the chat's attachment channel is images, and a
+            // source video is Phase 9's problem, not something to half-send now.
+            const images = [
+                ...(brief.refs.attachments ?? []),
+                brief.refs.reference,
+                brief.refs.startFrame,
+                brief.refs.endFrame,
+            ]
+                .map((a) => a?.imageUrl)
+                .filter((u): u is string => !!u);
+            if (images.length) {
+                lines.push(
+                    "",
+                    images.length === 1
+                        ? "I've attached an image to work from."
+                        : `I've attached ${images.length} images to work from.`
+                );
+            }
+
+            handleSubmitBrief(lines.join("\n"), images);
+        },
+        [handleSubmitBrief, contentType, mediaSpec.multi]
+    );
 
     // Platforms a destination may use: the content's targeted platforms (or all,
     // for legacy docs with none) that also support the chosen format. This is the
@@ -2046,6 +2100,8 @@ const CreateContentScreen = () => {
                                     designRef={seedItem?.designRef}
                                     designPreview={designPreview}
                                     onOpenDesign={() => setStage("design")}
+                                    onSubmitBrief={handleComposerBrief}
+                                    briefPending={!!pendingBrief}
                                     onClearMedia={handleClearMedia}
                                     imageGenerating={imageGenerating}
                                     imageGenError={imageGenError}
@@ -2249,7 +2305,11 @@ const CreateContentScreen = () => {
                                     }
                                     getLiveContent={getLiveChatContent}
                                     initialMessage={pendingChatMessage}
-                                    onInitialMessageSent={() => setPendingChatMessage(undefined)}
+                                    initialImages={pendingChatImages}
+                                    onInitialMessageSent={() => {
+                                        setPendingChatMessage(undefined);
+                                        setPendingChatImages(undefined);
+                                    }}
                                     onControlsChange={handleChatControls}
                                     onBusyChange={setChatBusy}
                                     isCompact
@@ -2292,7 +2352,11 @@ const CreateContentScreen = () => {
                             }
                             getLiveContent={getLiveChatContent}
                             initialMessage={pendingChatMessage}
-                            onInitialMessageSent={() => setPendingChatMessage(undefined)}
+                            initialImages={pendingChatImages}
+                            onInitialMessageSent={() => {
+                                setPendingChatMessage(undefined);
+                                setPendingChatImages(undefined);
+                            }}
                             onControlsChange={handleChatControls}
                             onBusyChange={setChatBusy}
                             isCompact
