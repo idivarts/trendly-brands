@@ -137,6 +137,16 @@ interface AIChatPanelProps {
      * producing anything, so it does not wait forever.
      */
     onBusyChange?: (busy: boolean) => void;
+    /**
+     * The live "what the AI is doing right now" label, lifted for callers that
+     * show their own waiting state elsewhere on the page.
+     *
+     * These are REAL steps: the backend pushes a `status` frame naming each
+     * tool as it runs ("Designing your visual…", "Generating an image…"), so
+     * whoever renders this is reporting work, not animating a script. Empty
+     * between steps, and when the turn ends.
+     */
+    onStatusChange?: (status: string) => void;
 
     /**
      * Hero (empty-draft) state, shown when `scope="all"` and no conversation is
@@ -259,6 +269,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     heroSuggestions,
     onControlsChange,
     onBusyChange,
+    onStatusChange,
     initialConversationId,
     initialMessage,
     initialImages,
@@ -664,6 +675,10 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     useEffect(() => {
         onBusyChange?.(isStreaming);
     }, [isStreaming, onBusyChange]);
+
+    useEffect(() => {
+        onStatusChange?.(statusLabel);
+    }, [statusLabel, onStatusChange]);
 
     // "Expand" — open the active conversation in the full Playground. Deep-links
     // with its id so the Playground opens it by default. Only meaningful from a
