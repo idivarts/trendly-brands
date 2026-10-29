@@ -24,12 +24,10 @@ import Colors from "@/shared-uis/constants/Colors";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import {
     faBullseye,
-    faChevronUp,
     faClockRotateLeft,
     faGaugeHigh,
     faComment,
     faEllipsisVertical,
-    faMusic,
     faPen,
     faPenRuler,
     faTriangleExclamation,
@@ -57,7 +55,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DesignSystemNudge from "@/components/design-system/DesignSystemNudge";
 import { DesignFrameHandle, FrameOutMsg } from "./bridge";
 import DesignFrame from "./DesignFrame";
-import SoundtrackPanel from "./SoundtrackPanel";
+import AudioLanes from "./AudioLanes";
+import AudioAddSheet from "./AudioAddSheet";
 import DesignScoreCard from "./DesignScoreCard";
 import { useSoundtrackPlayer } from "./use-audio-player";
 import { useContentDesign } from "./use-content-design";
@@ -173,8 +172,10 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     // (render progress / errors now live in useDesignRender)
     // "preparing" phase). Drives the on-canvas progress overlay + header %.
     // Render failure surfaced on the canvas (gracious, dismissible, with retry).
-    // Soundtrack starts collapsed — the user opens it on demand.
-    const [musicOpen, setMusicOpen] = useState(false);
+    // Which audio sheet is open, if any. The lanes themselves are always
+    // visible for a video — audio used to hide behind a collapsed trigger, so
+    // most people never found it.
+    const [audioSheet, setAudioSheet] = useState<"music" | "voice" | null>(null);
     // The brief typed on the empty canvas, before any design exists.
     const [brief, setBrief] = useState("");
     // Header overflow (⋮) menu — currently just the Canva hand-off.
@@ -290,14 +291,6 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
         top = Math.max(TB_EDGE, Math.min(top, displayHeight - tbSize.h - TB_EDGE));
         return { left, top };
     }, [selected, tbSize.w, tbSize.h, displayWidth, displayHeight]);
-
-    // Short summary of what audio is attached — shown on the collapsed trigger.
-    const audioSummary = useMemo(() => {
-        const parts: string[] = [];
-        if (props.audio?.musicUrl) parts.push(props.audio.musicTitle || "Music");
-        if (props.audio?.voiceoverUrl) parts.push("Voiceover");
-        return parts.join(" · ");
-    }, [props.audio?.musicUrl, props.audio?.musicTitle, props.audio?.voiceoverUrl]);
 
     const goToSlide = (i: number) => {
         const clamped = Math.max(0, Math.min(i, slideCount - 1));
@@ -898,45 +891,30 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                 )}
             </View>
 
-            {/* Soundtrack — collapsed trigger + bottom panel (video only). */}
-            {isVideo && !musicOpen ? (
-                <Pressable
-                    style={({ pressed }) => [styles.musicTrigger, pressed && styles.pressed]}
-                    onPress={() => setMusicOpen(true)}
-                    accessibilityRole="button"
-                    accessibilityLabel="Add music and voiceover"
-                >
-                    <View style={styles.musicIcon}>
-                        <FontAwesomeIcon icon={faMusic} size={14} color={colors.primary} />
-                    </View>
-                    <View style={styles.musicTriggerBody}>
-                        <Text style={styles.musicTriggerTitle}>
-                            {audioSummary ? "Soundtrack" : "Add music & voiceover"}
-                        </Text>
-                        {audioSummary ? (
-                            <Text style={styles.musicTriggerSub} numberOfLines={1}>
-                                {audioSummary}
-                            </Text>
-                        ) : null}
-                    </View>
-                    <FontAwesomeIcon icon={faChevronUp} size={13} color={colors.textSecondary} />
-                </Pressable>
+            {/* Sound — two lanes under the player (video only).
+                Always visible: audio used to live behind a collapsed trigger
+                that opened a sheet which narrowed the design above it, so you
+                lost sight of the video while working on its audio. */}
+            {isVideo ? (
+                <AudioLanes
+                    audio={props.audio}
+                    onAudioChange={props.onAudioChange}
+                    videoMs={durMs}
+                    onAddMusic={() => setAudioSheet("music")}
+                    onAddVoice={() => setAudioSheet("voice")}
+                    readOnly={readOnly}
+                />
             ) : null}
 
-            {isVideo && musicOpen ? (
-                <View style={styles.musicSheet}>
-                    <ScrollView showsVerticalScrollIndicator={false}>
-                        <SoundtrackPanel
-                            brandId={brandId}
-                            voiceoverSource={props.voiceoverSource}
-                            audio={props.audio}
-                            onAudioChange={props.onAudioChange}
-                            readOnly={readOnly}
-                            onClose={() => setMusicOpen(false)}
-                        />
-                    </ScrollView>
-                </View>
-            ) : null}
+            <AudioAddSheet
+                mode={audioSheet}
+                brandId={brandId}
+                videoMs={durMs}
+                voiceoverSource={props.voiceoverSource}
+                audio={props.audio}
+                onAudioChange={props.onAudioChange}
+                onClose={() => setAudioSheet(null)}
+            />
 
             <Modal visible={modalOpen !== null} transparent animationType="fade" onRequestClose={close}>
                 <Pressable style={styles.backdrop} onPress={close}>
@@ -1368,46 +1346,6 @@ const useStyles = (colors: any, topInset: number) =>
                     fontSize: fs(13),
                     fontWeight: "700",
                     color: colors.textSecondary,
-                },
-
-                // Soundtrack collapsed trigger
-                musicTrigger: {
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 12,
-                    paddingHorizontal: 14,
-                    paddingVertical: 12,
-                    backgroundColor: colors.card,
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: -3 },
-                    shadowRadius: 8,
-                    shadowOpacity: 0.06,
-                    elevation: 4,
-                },
-                musicIcon: {
-                    width: 34,
-                    height: 34,
-                    borderRadius: 10,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: colors.aliceBlue,
-                },
-                musicTriggerBody: { flex: 1, gap: 2 },
-                musicTriggerTitle: { fontSize: fs(14), fontWeight: "700", color: colors.text },
-                musicTriggerSub: { fontSize: fs(12), color: colors.textSecondary },
-
-                // Soundtrack expanded bottom panel — narrows the design above it.
-                musicSheet: {
-                    maxHeight: "62%",
-                    backgroundColor: colors.card,
-                    borderTopLeftRadius: 16,
-                    borderTopRightRadius: 16,
-                    paddingTop: 6,
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: -6 },
-                    shadowRadius: 16,
-                    shadowOpacity: 0.1,
-                    elevation: 8,
                 },
 
                 backdrop: {
