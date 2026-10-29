@@ -197,7 +197,18 @@ ${SHARED_RUNTIME}
     if (el && el.nodeType === 3) el = el.parentElement;
     var t = el;
     while (t && t !== document.body && !(t.getAttribute && t.getAttribute('data-el'))) t = t.parentElement;
-    if (t && t.getAttribute && t.getAttribute('data-el')) return t;
+    if (t && t.getAttribute && t.getAttribute('data-el')){
+      // The tagged block is the AI's intended unit, and it is the right answer
+      // whenever it can actually be edited. But the model is told to tag
+      // BLOCKS, and a block with children is never text-editable (editing it
+      // would flatten its structure) — so on a well-tagged design every tap
+      // landed on something uneditable and the text editor was unreachable.
+      // Falling back to the exact leaf under the cursor is strictly safer than
+      // flattening, and it still carries a data-el for the AI to target.
+      if (isEditable(t) || !el || el === t || !isEditable(el)) return t;
+      if (isScaffold(el)) return t;
+      return el;
+    }
     if (!el || el === document.body || el === document.documentElement) return null;
     if (isScaffold(el)) return null;
     return el;
@@ -215,6 +226,8 @@ ${SHARED_RUNTIME}
   // Directly editable = a leaf whose own text IS its content (no child elements).
   // Containers (which aggregate children's text) are NOT text-editable — editing
   // them would flatten their structure — so they only get the Ask-AI action.
+  // Also consulted by pickEl above (hoisted) to decide whether a tagged block
+  // can be offered for editing or whether the leaf under the cursor is better.
   function isEditable(el){
     return el.children.length === 0 && (el.textContent || '').trim() !== '';
   }
