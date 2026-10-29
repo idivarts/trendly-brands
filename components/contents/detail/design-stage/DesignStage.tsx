@@ -423,7 +423,20 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     // The virality read on the design, as a floating card rather than a panel:
     // what is useful here is a verdict and three fixes while you are looking at
     // the artefact, and the canvas should keep the space when you are not.
+    //
+    // Open by default on a wide screen once there is a design to judge. A card
+    // nobody knows to look for is a feature nobody uses, and on xl there is
+    // room beside the canvas for it to cost nothing. Below xl it stays shut:
+    // 300px of overlay on a narrow screen is in the way, not in support.
     const [showScore, setShowScore] = useState(false);
+    // Auto-open happens at most once per mount, so closing it means closed —
+    // the design changing, or a resize, must not reopen something dismissed.
+    const autoOpenedScore = useRef(false);
+    useEffect(() => {
+        if (autoOpenedScore.current || !xl || !hasDesign) return;
+        autoOpenedScore.current = true;
+        setShowScore(true);
+    }, [xl, hasDesign]);
 
     // The score's fixes are about the design as a whole, so they scope to the
     // CONTENT rather than to whichever element happens to be selected — there
