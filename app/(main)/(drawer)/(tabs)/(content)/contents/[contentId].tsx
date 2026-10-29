@@ -265,6 +265,49 @@ const CreateContentScreen = () => {
         setDirty(false);
     }, [seedItem]);
 
+    // ── The AI's own script edits ───────────────────────────────────────────
+    // `update_script` writes Firestore directly (every server tool does), and
+    // the hydration above is one-shot per content id — so without this the
+    // edit would be invisible until a reload, and the next Save would overwrite
+    // it with the stale local copy.
+    //
+    // Adopted only when the local script still matches what the server had
+    // before the write. If the user has been typing, their text stands and the
+    // new version is offered instead: a background write must never silently
+    // discard what someone is in the middle of writing.
+    const scriptRef = useRef(script);
+    useEffect(() => {
+        scriptRef.current = script;
+    }, [script]);
+    const serverScriptRef = useRef<string | null>(null);
+    const [aiScriptUpdate, setAiScriptUpdate] = useState<string | null>(null);
+    useEffect(() => {
+        if (!seedItem) return;
+        const incoming = seedItem.script ?? "";
+        if (serverScriptRef.current === null) {
+            serverScriptRef.current = incoming;
+            return;
+        }
+        if (incoming === serverScriptRef.current) return;
+        const prevServer = serverScriptRef.current;
+        serverScriptRef.current = incoming;
+        if (scriptRef.current === prevServer) {
+            setScript(incoming);
+            skipDirtyRef.current = true;
+            setDirty(false);
+            setAiScriptUpdate(null);
+        } else {
+            setAiScriptUpdate(incoming);
+        }
+    }, [seedItem?.script, seedItem]);
+
+    const acceptAiScript = useCallback(() => {
+        setAiScriptUpdate((pending) => {
+            if (pending !== null) setScript(pending);
+            return null;
+        });
+    }, []);
+
     // Publish-pipeline statuses are backend-driven and arrive out-of-band — the
     // publish worker updates the doc over SQS, so the transitions
     // publishing → posted / partially_failed / failed land after the one-shot
@@ -1893,6 +1936,9 @@ const CreateContentScreen = () => {
                                     contentId={contentId}
                                     onSendToChat={handleSendToChat}
                                     readOnly={locked}
+                                    aiScriptPending={aiScriptUpdate !== null}
+                                    onAcceptAiScript={acceptAiScript}
+                                    onDismissAiScript={() => setAiScriptUpdate(null)}
                                 />
                             </View>
                         ) : null}
