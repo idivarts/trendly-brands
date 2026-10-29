@@ -24,6 +24,7 @@ import {
 import PublishStatusPanel from "@/components/contents/detail/PublishStatusPanel";
 import ScriptEditor from "@/components/contents/detail/ScriptEditor";
 import ViralityPanel from "@/components/contents/detail/ViralityPanel";
+import { sameScript } from "@/components/contents/detail/script-stats";
 import HookLadderCard from "@/components/contents/detail/HookLadderCard";
 import UnsavedChangesModal from "@/components/contents/detail/UnsavedChangesModal";
 import PlatformOptionsSection from "@/components/contents/detail/platform-fields/PlatformOptionsSection";
@@ -291,7 +292,11 @@ const CreateContentScreen = () => {
         if (incoming === serverScriptRef.current) return;
         const prevServer = serverScriptRef.current;
         serverScriptRef.current = incoming;
-        if (scriptRef.current === prevServer) {
+        // Compared by visible text, not by string: the rich-text editor
+        // reformats the markup it is handed, so an untouched script stops
+        // matching the server's bytes within a render and every AI edit would
+        // queue behind a conflict prompt nobody needed.
+        if (sameScript(scriptRef.current, prevServer)) {
             setScript(incoming);
             skipDirtyRef.current = true;
             setDirty(false);
@@ -303,7 +308,14 @@ const CreateContentScreen = () => {
 
     const acceptAiScript = useCallback(() => {
         setAiScriptUpdate((pending) => {
-            if (pending !== null) setScript(pending);
+            if (pending !== null) {
+                setScript(pending);
+                // What was just adopted IS what is stored, so the editor must
+                // not go on claiming unsaved changes for a save that already
+                // happened on the server.
+                skipDirtyRef.current = true;
+                setDirty(false);
+            }
             return null;
         });
     }, []);

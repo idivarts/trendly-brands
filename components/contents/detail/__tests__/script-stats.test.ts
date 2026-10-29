@@ -5,7 +5,7 @@
  * read as a draft — rich text arrives wrapped in markup, and markup alone is
  * not content.
  */
-import { scriptStateLabel, scriptWordCount } from "../script-stats";
+import { sameScript, scriptStateLabel, scriptWordCount } from "../script-stats";
 
 describe("scriptWordCount", () => {
     it("is zero for an empty script", () => {
@@ -52,5 +52,27 @@ describe("scriptStateLabel", () => {
     it("reads as a draft once there are words, and singularises one word", () => {
         expect(scriptStateLabel("<p>Hook</p>")).toBe("Draft · ~1 word");
         expect(scriptStateLabel("<p>Hook line two</p>")).toBe("Draft · ~3 words");
+    });
+});
+
+describe("sameScript", () => {
+    it("ignores the markup the editor reformats", () => {
+        expect(sameScript("<p>One two</p>", "<p>One two</p>\n")).toBe(true);
+        expect(sameScript("<p>One two</p>", "<div>One two</div>")).toBe(true);
+        expect(sameScript("<p><b>One</b> two</p>", "<p>One two</p>")).toBe(true);
+        expect(sameScript("<p>One&nbsp;two</p>", "<p>One two</p>")).toBe(true);
+        expect(sameScript("<p>One  two</p>", "<p>One two</p>")).toBe(true);
+    });
+
+    // The whole point: a real edit must still register, or the AI's write would
+    // silently overwrite what someone was in the middle of typing.
+    it("sees a real change", () => {
+        expect(sameScript("<p>One two</p>", "<p>One three</p>")).toBe(false);
+        expect(sameScript("<p>One</p><p>two</p>", "<p>One</p>")).toBe(false);
+        expect(sameScript("", "<p>One</p>")).toBe(false);
+    });
+
+    it("does not merge adjacent blocks into one word", () => {
+        expect(sameScript("<p>one</p><p>two</p>", "<p>onetwo</p>")).toBe(false);
     });
 });
