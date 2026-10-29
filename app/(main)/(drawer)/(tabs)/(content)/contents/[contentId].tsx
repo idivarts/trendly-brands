@@ -23,6 +23,7 @@ import {
 } from "@/components/contents/detail/schedule-presets";
 import PublishStatusPanel from "@/components/contents/detail/PublishStatusPanel";
 import ScriptEditor from "@/components/contents/detail/ScriptEditor";
+import ViralityPanel from "@/components/contents/detail/ViralityPanel";
 import UnsavedChangesModal from "@/components/contents/detail/UnsavedChangesModal";
 import PlatformOptionsSection from "@/components/contents/detail/platform-fields/PlatformOptionsSection";
 import VariationEditor from "@/components/contents/detail/VariationEditor";
@@ -372,6 +373,19 @@ const CreateContentScreen = () => {
         setPendingChatMessage(instruction);
         setRightPanelMode("chat");
     }, []);
+
+    // A fix from the virality panel. It goes through the chat rather than
+    // rewriting the script in place: the editor holds the script in local state
+    // here, so a silent server-side repair would leave Firestore and the screen
+    // holding different scripts until a reload. The chat already applies edits
+    // through a path that keeps both in step, and the user sees what changed.
+    const handleScriptFix = useCallback((instruction: string) => {
+        handleAskAI(instruction, {
+            id: `focus-${Date.now()}`,
+            focusText: "Script",
+            focusArea: { type: "content", contentId, title },
+        });
+    }, [handleAskAI, contentId, title]);
 
     // "Focus" on a design element: just attach it to the chat (no message sent),
     // so the user's next message is scoped to that element.
@@ -1877,6 +1891,23 @@ const CreateContentScreen = () => {
                                     task="script"
                                     contentId={contentId}
                                     onSendToChat={handleSendToChat}
+                                    readOnly={locked}
+                                />
+                            </View>
+                        ) : null}
+
+                        {/* Directly under the script, because it is a read ON the
+                            script and nothing else — above the handoff, which is
+                            what you do once you believe the script is right. */}
+                        {mediaSpec.hasScript ? (
+                            <View style={styles.section}>
+                                <ViralityPanel
+                                    contentId={contentId}
+                                    script={script}
+                                    format={contentType}
+                                    platforms={targetPlatforms}
+                                    stored={seedItem?.viralityScore}
+                                    onAskAI={handleScriptFix}
                                     readOnly={locked}
                                 />
                             </View>
