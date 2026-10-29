@@ -171,7 +171,7 @@ const ViralityPanel: React.FC<Props> = ({
                 {/* ── Dimensions ───────────────────────────────────────── */}
                 {score ? (
                     <View style={styles.dims}>
-                        {score.dimensions.map((d) => (
+                        {(score.dimensions ?? []).map((d) => (
                             <DimensionRow
                                 key={d.key}
                                 dimension={d}
@@ -238,10 +238,10 @@ const ViralityPanel: React.FC<Props> = ({
                 ) : null}
 
                 {/* ── What to change, ranked by what it would move ─────── */}
-                {score && score.fixes.length > 0 ? (
+                {score && (score.fixes?.length ?? 0) > 0 ? (
                     <View style={styles.fixes}>
                         <Text style={styles.fixesTitle}>FIX FIRST</Text>
-                        {score.fixes.map((f) => (
+                        {(score.fixes ?? []).map((f) => (
                             <View key={f.criterion} style={styles.fixRow}>
                                 <View style={styles.fixBody}>
                                     <Text style={styles.fixDim}>{f.dimension}</Text>
