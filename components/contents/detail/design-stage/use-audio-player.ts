@@ -161,18 +161,38 @@ export function useSoundtrackPlayer(audio: IContentAudio | undefined): SyncedPla
     const musicVol = safeVolume(audio?.musicVolume, 0.7);
     const voiceVol = safeVolume(audio?.voiceoverVolume, 1);
     const duck = audio?.duckMusic ?? true;
-    // Music is a bed — duck it under the voice and loop it so it fills the whole
-    // video (mirrors the render's `music.loop = true`).
-    const effectiveMusicVol = duck && voiceUrl ? musicVol * DUCK_FACTOR : musicVol;
 
-    // (Re)load the sounds when the urls change.
+    /**
+     * Whether the voice is sounding right now.
+     *
+     * The preview used to duck the music for the WHOLE video whenever a
+     * voiceover existed, while the render ducks it only while the voice speaks
+     * (a real sidechain compressor). So the music you balanced by ear in the
+     * studio came out louder in the finished file — you were mixing against a
+     * different mix. Ducking only while the voice actually plays is a much
+     * closer approximation, and costs one status callback.
+     */
+    const [voiceSounding, setVoiceSounding] = useState(false);
+    const effectiveMusicVol = duck && voiceUrl && voiceSounding ? musicVol * DUCK_FACTOR : musicVol;
+
+    /**
+     * Load on URL change ONLY.
+     *
+     * This effect used to depend on the volumes and the duck flag too, so every
+     * change to a level unloaded and re-created both sounds — which stopped
+     * playback mid-listen, and with a draggable slider would thrash on every
+     * pixel. You could not hear a level while setting it, which is most of what
+     * "the mixing doesn't work" meant. Levels are applied below instead, on the
+     * live sound.
+     */
     useEffect(() => {
         let cancelled = false;
         const load = async (
             url: string | undefined,
             ref: React.MutableRefObject<Audio.Sound | null>,
             volume: number,
-            loop: boolean
+            loop: boolean,
+            onEnd?: () => void
         ) => {
             if (ref.current) {
                 try {
@@ -191,17 +211,37 @@ export function useSoundtrackPlayer(audio: IContentAudio | undefined): SyncedPla
                     return;
                 }
                 ref.current = sound;
+                if (onEnd) {
+                    sound.setOnPlaybackStatusUpdate((st) => {
+                        if (st.isLoaded && st.didJustFinish) onEnd();
+                    });
+                }
             } catch (e) {
                 warnAudio(e);
             }
         };
-        load(musicUrl, musicRef, effectiveMusicVol, true);
-        load(voiceUrl, voiceRef, voiceVol, false);
+        load(musicUrl, musicRef, musicVol, true);
+        load(voiceUrl, voiceRef, voiceVol, false, () => {
+            // The voice has finished, so the bed comes back up — as it does in
+            // the render once the compressor releases.
+            setVoiceSounding(false);
+        });
         return () => {
             cancelled = true;
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [musicUrl, voiceUrl, musicVol, voiceVol, duck]);
+    }, [musicUrl, voiceUrl]);
+
+    /**
+     * Apply levels to the sounds that are already loaded, so a drag is audible
+     * as it happens rather than after a reload.
+     */
+    useEffect(() => {
+        void musicRef.current?.setVolumeAsync(effectiveMusicVol).catch(warnAudio);
+    }, [effectiveMusicVol]);
+    useEffect(() => {
+        void voiceRef.current?.setVolumeAsync(voiceVol).catch(warnAudio);
+    }, [voiceVol]);
 
     const each = async (fn: (s: Audio.Sound) => Promise<any>) => {
         await Promise.all(
@@ -241,7 +281,13 @@ export function useSoundtrackPlayer(audio: IContentAudio | undefined): SyncedPla
                     .catch(warnAudio)
             );
         };
-        start(musicRef, musicUrl, effectiveMusicVol, true);
+        // The bed starts at its ducked level when a voice is about to play, so
+        // the dip is there from the first word rather than arriving late.
+        const musicStartVol = duck && voiceUrl ? musicVol * DUCK_FACTOR : musicVol;
+        if (voiceUrl) {
+            setVoiceSounding(true);
+        }
+        start(musicRef, musicUrl, musicStartVol, true);
         start(voiceRef, voiceUrl, voiceVol, false);
         await Promise.all(starts);
     };
