@@ -24,6 +24,7 @@ import {
 import PublishStatusPanel from "@/components/contents/detail/PublishStatusPanel";
 import ScriptEditor from "@/components/contents/detail/ScriptEditor";
 import ViralityPanel from "@/components/contents/detail/ViralityPanel";
+import HookLadderCard from "@/components/contents/detail/HookLadderCard";
 import UnsavedChangesModal from "@/components/contents/detail/UnsavedChangesModal";
 import PlatformOptionsSection from "@/components/contents/detail/platform-fields/PlatformOptionsSection";
 import VariationEditor from "@/components/contents/detail/VariationEditor";
@@ -1907,6 +1908,24 @@ const CreateContentScreen = () => {
                                     format={contentType}
                                     platforms={targetPlatforms}
                                     stored={seedItem?.viralityScore}
+                                    onAskAI={handleScriptFix}
+                                    readOnly={locked}
+                                />
+                            </View>
+                        ) : null}
+
+                        {/* After the panel, not before it: the score is what tells
+                            you the hook is the weak part, and the tool for fixing
+                            it should be the next thing you reach. */}
+                        {mediaSpec.hasScript ? (
+                            <View style={styles.section}>
+                                <HookLadderCard
+                                    contentId={contentId}
+                                    script={script}
+                                    title={title}
+                                    topic={idea}
+                                    format={contentType}
+                                    platforms={targetPlatforms}
                                     onAskAI={handleScriptFix}
                                     readOnly={locked}
                                 />
