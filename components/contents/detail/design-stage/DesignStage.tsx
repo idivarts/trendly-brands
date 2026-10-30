@@ -65,6 +65,7 @@ import DesignScoreCard from "./DesignScoreCard";
 import InspectorPanel from "./InspectorPanel";
 import AssetsPanel from "../AssetsPanel";
 import ClipInspector from "./ClipInspector";
+import ClipPreview from "./ClipPreview";
 import TimelineStrip, { TimelineAction } from "./TimelineStrip";
 import { appendClip, clipFromAsset, setTransition } from "./composition-edits";
 import { useContentComposition } from "./use-content-composition";
@@ -200,8 +201,11 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     const [canvasSize, setCanvasSize] = useState({ w: 0, h: 0 });
 
     const html = revision?.html ?? "";
-    const w = revision?.width ?? designRef?.width ?? 1080;
-    const h = revision?.height ?? designRef?.height ?? 1350;
+    // The canvas box. With no design at all — a timeline of generated clips or
+    // footage — the COMPOSITION's own size is the right shape to fit into; the
+    // 1080x1350 fallback would letterbox a 9:16 clip inside a 4:5 box.
+    const w = revision?.width ?? designRef?.width ?? props.compositionRef?.width ?? 1080;
+    const h = revision?.height ?? designRef?.height ?? props.compositionRef?.height ?? 1350;
     const docType = revision?.docType ?? designRef?.docType ?? "image";
     const isVideoDesign = docType === "video";
     const slideCount = Math.max(revision?.slideCount ?? designRef?.slideCount ?? 1, 1);
@@ -595,6 +599,24 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     };
 
 
+    /**
+     * The clip the canvas should show instead of the design frame.
+     *
+     * A selected non-design clip wins, because selecting one is asking to look
+     * at it. With nothing selected and no design to fall back on, the first
+     * clip stands in — otherwise a content whose only media is a generated clip
+     * opens the studio showing nothing at all.
+     */
+    const previewClip = useMemo(() => {
+        const clips = (timeline.composition?.tracks ?? []).flatMap((t) => t.clips ?? []);
+        const selected = clips.find((c) => c.id === selectedClipId);
+        if (selected) return selected.source?.kind === "design" ? null : selected;
+        if (hasDesign) return null;
+        const first = (timeline.composition?.tracks ?? []).find((t) => t.kind === "video")
+            ?.clips?.[0];
+        return first && first.source?.kind !== "design" ? first : null;
+    }, [timeline.composition, selectedClipId, hasDesign]);
+
     const clipInspector =
         selectedClipId && timeline.composition ? (
             <ClipInspector
@@ -762,7 +784,28 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                     }
                 }}
             >
-                {hasDesign ? (
+                {previewClip ? (
+                    /* A clip that is not the design: footage, a still, a
+                       generated clip. The frame below can only play HTML, so
+                       without this the strip let you arrange media you could
+                       never look at — and on a content with no design, the only
+                       way to see a generated clip was to render the video. */
+                    <ScrollView
+                        contentContainerStyle={styles.canvasScroll}
+                        showsVerticalScrollIndicator={false}
+                    >
+                        <View style={styles.canvasWrap}>
+                            <ClipPreview
+                                clip={previewClip}
+                                width={displayWidth}
+                                height={displayHeight}
+                            />
+                            <Text style={styles.clipPreviewNote}>
+                                One clip, on its own. The render is what puts the timeline together.
+                            </Text>
+                        </View>
+                    </ScrollView>
+                ) : hasDesign ? (
                     <ScrollView
                         contentContainerStyle={styles.canvasScroll}
                         showsVerticalScrollIndicator={false}
@@ -1581,6 +1624,14 @@ const useStyles = (colors: any, topInset: number) =>
                 // screen rather than sized to its contents: a footage clip's
                 // transcript is long, and a sheet that grows with it would push
                 // its own controls off the bottom.
+                clipPreviewNote: {
+                    marginTop: 10,
+                    maxWidth: 420,
+                    textAlign: "center",
+                    fontSize: fs(11),
+                    lineHeight: lh(15),
+                    color: colors.textSecondary,
+                },
                 clipSheet: {
                     width: "100%",
                     maxWidth: 480,
