@@ -49,7 +49,7 @@ import {
     onSnapshot,
     updateDoc,
 } from "firebase/firestore";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /**
  * Frame rate for a composition the app authors.
@@ -77,6 +77,18 @@ export interface CompositionDesign {
 
 type Revision = IContentCompositionRevision & { id: string };
 
+/**
+ * How long an edit sits in the draft before it is written.
+ *
+ * Every save is a new immutable revision plus a pointer update, and the
+ * inspector's controls are STEPPERS — three taps on "+" is three edits in under
+ * a second. Without this, each tap would write a revision, and the second tap
+ * would read a composition the first had not come back from yet and produce the
+ * same result twice. Long enough to coalesce a burst of taps, short enough that
+ * nobody waits for it; a pending edit is also flushed on unmount.
+ */
+const SAVE_DEBOUNCE_MS = 700;
+
 export interface UseContentCompositionReturn {
     /** The timeline as the renderer will see it. Null only without a design. */
     composition: Composition | null;
@@ -88,9 +100,23 @@ export interface UseContentCompositionReturn {
     revision: Revision | null;
     loading: boolean;
     saving: boolean;
+    /**
+     * Set when a write failed. The edit stays on screen — the draft is not
+     * rolled back — because the user's arrangement is not wrong just because
+     * the network is, and a timeline that silently reverts a clip is worse than
+     * one that says it has not been saved.
+     */
+    saveError: string | null;
     /** Why this timeline cannot render, if it cannot. Empty when it can. */
     problems: CompositionProblem[];
-    /** Persist a new revision and point the content at it. */
+    /**
+     * Apply an edit: shown immediately, written a moment later.
+     *
+     * The draft is what the UI reads, so a stepper responds to every tap rather
+     * than to every round-trip.
+     */
+    apply: (next: Composition) => void;
+    /** Persist right now, bypassing the draft. For a one-off structural save. */
     save: (
         next: Composition,
         origin?: IContentCompositionRevision["origin"]
@@ -111,6 +137,11 @@ export function useContentComposition(
     const [revision, setRevision] = useState<Revision | null>(null);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
+    // The local draft: what the UI reads while a write is on its way.
+    const [draft, setDraft] = useState<Composition | null>(null);
+    const pending = useRef<Composition | null>(null);
+    const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         if (!brandId || !contentId || !revisionId) {
@@ -152,6 +183,7 @@ export function useContentComposition(
      * later clip and every overlay.
      */
     const composition = useMemo<Composition | null>(() => {
+        if (draft) return draft;
         if (revision?.composition) return revision.composition;
         if (!design) return null;
         return compositionFromDesign({
@@ -161,7 +193,7 @@ export function useContentComposition(
             fps: COMPOSITION_FPS,
             durationMs: design.durationMs,
         });
-    }, [revision?.composition, design]);
+    }, [draft, revision?.composition, design]);
 
     const measured = useMemo(
         () => (composition ? measureComposition(composition) : null),
@@ -218,6 +250,7 @@ export function useContentComposition(
                     doc(FirestoreDB, "brands", brandId, "contents", contentId),
                     { compositionRef: ref, updatedAt: Date.now() }
                 );
+                setSaveError(null);
                 return created.id;
             } finally {
                 setSaving(false);
@@ -226,8 +259,63 @@ export function useContentComposition(
         [brandId, contentId, revisionId]
     );
 
+    /**
+     * Write whatever is pending, now.
+     *
+     * Deliberately reads the ref rather than taking an argument, so the unmount
+     * path and the timer path cannot disagree about what is unsaved.
+     */
+    const flush = useCallback(() => {
+        if (timer.current) {
+            clearTimeout(timer.current);
+            timer.current = null;
+        }
+        const next = pending.current;
+        if (!next) return;
+        pending.current = null;
+        void save(next).catch(() => {
+            // The draft stays on screen: the user's arrangement is not wrong
+            // because the write failed, and reverting a clip under them would
+            // be worse than saying so.
+            setSaveError("We couldn't save the timeline. Your changes are still here — try again.");
+        });
+    }, [save]);
+
+    const apply = useCallback(
+        (next: Composition) => {
+            setDraft(next);
+            pending.current = next;
+            if (timer.current) clearTimeout(timer.current);
+            timer.current = setTimeout(flush, SAVE_DEBOUNCE_MS);
+        },
+        [flush]
+    );
+
+    // An edit in the last few hundred milliseconds before the studio closes is
+    // still an edit. Flushed rather than dropped.
+    useEffect(() => flush, [flush]);
+
+    /**
+     * Let the stored revision take over once it matches what we wrote.
+     *
+     * Keyed on the revision ID rather than on a deep compare: every save
+     * produces a new revision, so the arrival of one we have no pending edit
+     * for means the server is now the better copy. Holding the draft forever
+     * would make a revert — or another device's edit — invisible.
+     */
+    useEffect(() => {
+        if (!revision?.id || pending.current) return;
+        setDraft(null);
+    }, [revision?.id]);
+
     const discard = useCallback(async () => {
         if (!brandId || !contentId) return;
+        // A dropped timeline must not be resurrected by a debounced edit that
+        // was still in flight when the user pressed it.
+        if (timer.current) clearTimeout(timer.current);
+        timer.current = null;
+        pending.current = null;
+        setDraft(null);
         setSaving(true);
         try {
             // Only the POINTER is removed. The revisions stay where they are:
@@ -250,7 +338,9 @@ export function useContentComposition(
         revision,
         loading,
         saving,
+        saveError,
         problems,
+        apply,
         save,
         discard,
     };

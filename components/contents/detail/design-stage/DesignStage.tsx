@@ -250,11 +250,15 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
         if (clipId && !xl) setClipSheetOpen(true);
     };
 
-    const saveTimeline = (next: Parameters<typeof timeline.save>[0]) => {
-        void timeline.save(next).catch(() => {
-            Toaster.error("Couldn't save the timeline", "Please try again.");
-        });
-    };
+    // Shown at once, written a moment later — the inspector's controls are
+    // steppers, and a tap that waits for a revision to come back would both feel
+    // broken and read a stale composition on the next tap.
+    const saveTimeline = timeline.apply;
+
+    // A failed write is reported once, where the user is looking.
+    useEffect(() => {
+        if (timeline.saveError) Toaster.error("Timeline not saved", timeline.saveError);
+    }, [timeline.saveError]);
 
     const addFromLibrary = (asset: IAsset) => {
         const current = timeline.composition;
