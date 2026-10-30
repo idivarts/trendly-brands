@@ -23,6 +23,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -512,14 +513,30 @@ const useStyles = (colors: any) =>
     React.useMemo(
         () =>
             StyleSheet.create({
+                /**
+                 * The composer sits in a WELL, not on the section's card.
+                 *
+                 * Both surfaces used to be `colors.card`, so a card sat on an
+                 * identical card and the whole thing read as one flat plane
+                 * with two rows of tabs on it. Recessing the composer gives the
+                 * prompt card something to lift off, and pushes the section
+                 * chrome above it into the background where it belongs — the
+                 * lane was chosen a step ago and is not the decision on screen.
+                 */
                 wrap: {
-                    gap: 8,
+                    gap: 10,
+                    padding: 12,
+                    borderRadius: 14,
+                    backgroundColor: colors.tag,
                 },
                 tabs: {
                     flexDirection: "row",
                     gap: 4,
                     paddingRight: 8,
                 },
+                // On the well, an inactive tab takes the raised surface and the
+                // active one keeps the fill — so the loudest thing in the
+                // section is the approach you are on, which is the live choice.
                 tab: {
                     flexDirection: "row",
                     alignItems: "center",
@@ -527,10 +544,15 @@ const useStyles = (colors: any) =>
                     paddingVertical: 7,
                     paddingHorizontal: 13,
                     borderRadius: 9,
-                    backgroundColor: colors.tag,
+                    backgroundColor: colors.card,
                 },
                 tabActive: {
                     backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 10,
+                    shadowOpacity: 0.3,
+                    elevation: 3,
                 },
                 tabText: {
                     fontSize: fs(12.5),
@@ -560,13 +582,15 @@ const useStyles = (colors: any) =>
                 },
                 card: {
                     backgroundColor: colors.card,
-                    borderRadius: 14,
+                    borderRadius: 12,
                     padding: 12,
+                    // A little more lift than the section card's 0.07: this is
+                    // the thing being used, sitting in a recess.
                     shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowRadius: 10,
-                    shadowOpacity: 0.07,
-                    elevation: 3,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 12,
+                    shadowOpacity: 0.1,
+                    elevation: 4,
                 },
                 models: {
                     flexDirection: "row",
@@ -587,6 +611,12 @@ const useStyles = (colors: any) =>
                     color: colors.text,
                     textAlignVertical: "top",
                     paddingTop: 2,
+                    // No focus ring on web. The card is the field — the same
+                    // call the chat composer already makes, and what every
+                    // prompt box people use all day does: the surface says it
+                    // is active, a hard outline around a multi-line box just
+                    // boxes in the thing you are writing.
+                    ...Platform.select({ web: { outlineStyle: "none" } as any }),
                 },
                 footer: {
                     flexDirection: "row",
@@ -630,7 +660,7 @@ const useStyles = (colors: any) =>
                     paddingVertical: 6,
                     paddingHorizontal: 11,
                     borderRadius: 999,
-                    backgroundColor: colors.tag,
+                    backgroundColor: colors.card,
                 },
                 starterText: {
                     fontSize: fs(12),

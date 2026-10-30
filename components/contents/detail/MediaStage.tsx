@@ -1374,7 +1374,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
                             <FontAwesomeIcon
                                 icon={l === "design" ? faWandMagicSparkles : faArrowUpFromBracket}
                                 size={11}
-                                color={active ? colors.onPrimary : colors.textSecondary}
+                                color={active ? colors.text : colors.textSecondary}
                             />
                             <Text style={[styles.lanePillText, active && styles.lanePillTextActive]}>
                                 {l === "design" ? "Design with AI" : "Upload your own"}
@@ -1693,26 +1693,35 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             gap: 6,
             marginBottom: 12,
         },
+        // ── The lane switch ──
+        // Deliberately quiet. It used to be a filled primary pill, identical to
+        // the approach tabs below it, so two rows of navigation shouted equally
+        // — while the lane is a decision the user made a step ago and the
+        // approach is the one in front of them. This is now a "you are here,
+        // tap to go back" control: no fill on the inactive side, a soft one on
+        // the active side, and no primary anywhere.
         lanePill: {
             flexDirection: "row",
             alignItems: "center",
-            gap: 7,
-            paddingVertical: 7,
-            paddingHorizontal: 12,
+            gap: 6,
+            paddingVertical: 5,
+            paddingHorizontal: 10,
             borderRadius: 999,
-            backgroundColor: colors.tag,
+            backgroundColor: "transparent",
         },
         lanePillActive: {
-            backgroundColor: colors.primary,
+            backgroundColor: colors.tag,
         },
         lanePillText: {
-            fontSize: fs(12),
-            lineHeight: lh(16),
+            fontSize: fs(11.5),
+            lineHeight: lh(15),
             fontWeight: "600",
             color: colors.textSecondary,
         },
         lanePillTextActive: {
-            color: colors.onPrimary,
+            // Text colour, not onPrimary: the active lane now sits on a soft
+            // tag fill rather than a primary one.
+            color: colors.text,
         },
         laneActionRow: {
             flexDirection: "row",
