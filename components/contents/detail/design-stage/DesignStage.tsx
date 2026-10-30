@@ -31,6 +31,7 @@ import {
     faComment,
     faEllipsisVertical,
     faPen,
+    faFilm,
     faPenRuler,
     faPhotoFilm,
     faTriangleExclamation,
@@ -965,6 +966,26 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                                     </View>
                                 ) : null}
                             </View>
+                        ) : timeline.authored ? (
+                            /* A timeline, but no design — a generated clip or a
+                               cut of footage, which is a whole video on its own.
+                               It used to fall through to "What should we make?",
+                               which denies the thing the user just made and
+                               hides the strip that holds it. */
+                            <View style={styles.brief}>
+                                <View style={styles.emptyIcon}>
+                                    <FontAwesomeIcon icon={faFilm} size={26} color={colors.primary} />
+                                </View>
+                                <Text style={styles.emptyTitle}>
+                                    {timeline.clipCount === 1 ? "One clip" : `${timeline.clipCount} clips`} on
+                                    the timeline
+                                </Text>
+                                <Text style={styles.emptySub}>
+                                    It's below — trim it, reorder it, or add more. The canvas stays empty
+                                    until you design something to go with it, and the render puts the whole
+                                    timeline together.
+                                </Text>
+                            </View>
                         ) : (
                         <View style={styles.brief}>
                             <View style={styles.emptyIcon}>
@@ -1043,7 +1064,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
             {/* The timeline — the picture track, to scale, under the player.
                 Only for a video: an image has no sequence, and a carousel's
                 order is its slide strip. */}
-            {isVideo && hasDesign && timeline.composition ? (
+            {isVideo && timeline.composition && (hasDesign || timeline.authored) ? (
                 <TimelineStrip
                     composition={timeline.composition}
                     selectedClipId={selectedClipId}
