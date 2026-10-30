@@ -36,6 +36,7 @@ export type SettingKey =
     | "aspect"
     | "slides"
     | "quality"
+    | "sound"
     | "orientation"
     | "scenes"
     | "length"
@@ -187,7 +188,7 @@ export const APPROACHES: Record<ApproachId, ApproachSpec> = {
             { key: "startFrame", label: "Start frame" },
             { key: "endFrame", label: "End frame" },
         ],
-        settings: ["length"],
+        settings: ["length", "sound"],
         cta: "Generate",
         starters: [
             "A slow push onto the product on a marble counter, morning light",
@@ -198,7 +199,12 @@ export const APPROACHES: Record<ApproachId, ApproachSpec> = {
         // when it HAS one, so a missing default is a control that silently
         // vanishes. Locked in by approach-spec.test.ts. The LENGTH offered is
         // the chosen model's own min/max, not this table's list — see SETTINGS.
-        defaults: { length: "8s" },
+        // Sound ON is the provider's own default, and the right one: a prompt
+        // like "make him say hello" asked for sound, and a model that lip-syncs
+        // in silence has answered a question nobody put to it. The clip's audio
+        // is a lane in the mix, not a replacement for the soundtrack — the bed
+        // ducks under it the way it ducks under a voiceover.
+        defaults: { length: "8s", sound: "On" },
     },
 
     footage: {
@@ -304,6 +310,22 @@ export const SETTINGS: Record<SettingKey, SettingSpec> = {
         // the length is ours to choose.
         options: () => ["5s", "8s", "10s", "15s", "30s"].map((v) => ({ value: v, name: v })),
     },
+    sound: {
+        label: "Sound",
+        sub: "Whether the model generates sound with the clip. Only some models can.",
+        options: () => [
+            {
+                value: "On",
+                name: "On",
+                detail: "The model speaks, and adds the room's own sound.",
+            },
+            {
+                value: "Off",
+                name: "Off",
+                detail: "A silent clip, for the timeline's music and voiceover to carry.",
+            },
+        ],
+    },
     music: {
         label: "Music",
         options: () => [
@@ -318,6 +340,7 @@ export const SETTINGS: Record<SettingKey, SettingSpec> = {
 export function settingLabel(key: SettingKey, value: string): string {
     if (key === "slides") return `${value} slides`;
     if (key === "scenes") return `${value} scenes`;
+    if (key === "sound") return value === "Off" ? "Silent" : "Sound on";
     return value;
 }
 
