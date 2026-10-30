@@ -18,7 +18,6 @@ import { fs, lh } from "@/constants/Typography";
 import { useBreakpoints } from "@/hooks";
 import Colors from "@/shared-uis/constants/Colors";
 import { track } from "@/shared-libs/utils/analytics";
-import { withAlpha } from "@/utils/color";
 import { faArrowUp, faWandMagicSparkles } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -574,25 +573,6 @@ const useStyles = (colors: any) =>
                     flexWrap: "wrap",
                     gap: 5,
                     marginBottom: 10,
-                },
-                modelChip: {
-                    paddingVertical: 5,
-                    paddingHorizontal: 10,
-                    borderRadius: 8,
-                    backgroundColor: colors.tag,
-                },
-                modelChipActive: {
-                    backgroundColor: withAlpha(colors.primary, 0.16),
-                },
-                modelChipText: {
-                    fontSize: fs(11),
-                    lineHeight: lh(15),
-                    fontWeight: "600",
-                    color: colors.textSecondary,
-                },
-                modelChipTextActive: {
-                    color: colors.primary,
-                    fontWeight: "700",
                 },
                 modelOnly: {
                     fontSize: fs(11),
