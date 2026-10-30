@@ -535,10 +535,13 @@ const MediaStage: React.FC<MediaStageProps> = ({
                             aspectRatio: spec.aspectRatios[0],
                             durationSecs: secs,
                             resolution: preferredResolution(model.resolutions),
-                            // Off: the composition has its own soundtrack, and a
-                            // clip arriving with audio nobody asked for fights
-                            // the music bed and the voiceover in the mix.
-                            generateAudio: false,
+                            // The model's own sound — dialogue, ambience — when
+                            // it can make any and the brief did not turn it off.
+                            // It becomes a lane in the render's mix rather than
+                            // a replacement for the soundtrack: the bed ducks
+                            // under it the way it ducks under a voiceover.
+                            generateAudio:
+                                !!model.nativeAudio && brief.settings.sound !== "Off",
                             startFrameUrl,
                             endFrameUrl,
                         }),

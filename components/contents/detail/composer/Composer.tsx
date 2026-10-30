@@ -205,7 +205,7 @@ const Composer: React.FC<Props> = ({
         [approachId, contentType]
     );
 
-    const visibleSettings = useMemo(
+    const approachSettings = useMemo(
         () => (approach ? settingsFor(approach, contentType) : []),
         [approach, contentType]
     );
@@ -230,6 +230,18 @@ const Composer: React.FC<Props> = ({
                 ? durationOptionsFor(model).map((v) => ({ value: v, name: v }))
                 : undefined,
         [needsModel, model]
+    );
+
+    // Sound is the MODEL's capability, not the approach's. Creatify Aurora
+    // refuses `generate_audio` outright, so offering the control there would be
+    // offering a choice the API rejects — the registry's `nativeAudio` is the
+    // answer, checked against the provider rather than assumed.
+    const visibleSettings = useMemo(
+        () =>
+            approachSettings.filter((key) =>
+                key === "sound" ? !!(needsModel && model?.nativeAudio) : true
+            ),
+        [approachSettings, needsModel, model?.nativeAudio]
     );
 
     // Keep the chosen length inside what this model can make — switching from a
