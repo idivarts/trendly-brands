@@ -13,7 +13,7 @@
  * means "not available to you", not "something is broken", and the composer
  * says so rather than offering a send button that 400s.
  */
-import { IMediaModel } from "@/shared-libs/firestore/trendly-pro/models/media-model";
+import { IMediaModel, MediaModelKind } from "@/shared-libs/firestore/trendly-pro/models/media-model";
 import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { useEffect, useMemo, useState } from "react";
@@ -31,7 +31,7 @@ export interface UseMediaModelsReturn {
  * spend someone's tokens on a choice they never made. Models with no estimate
  * sort last: an unknown price is not a low one.
  */
-export function useMediaModels(kind: "video" | "image"): UseMediaModelsReturn {
+export function useMediaModels(kind: MediaModelKind): UseMediaModelsReturn {
     const [rows, setRows] = useState<IMediaModel[]>([]);
     const [loading, setLoading] = useState(true);
 

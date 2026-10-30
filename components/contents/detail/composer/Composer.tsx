@@ -47,7 +47,9 @@ import {
     settingsFor,
 } from "./approach-spec";
 import { IMediaModel } from "@/shared-libs/firestore/trendly-pro/models/media-model";
-import { durationOptionsFor } from "@/hooks/use-media-models";
+import { durationOptionsFor } from "@/hooks/media-model-options";
+import AIModelSelector from "@/components/ai/AIModelSelector/AIModelSelector";
+import { useAIModels } from "@/hooks/use-ai-models";
 
 /** Everything the composer collected, handed to whoever runs the generation. */
 export interface ComposerBrief {
@@ -94,6 +96,13 @@ interface Props {
     onSubmit: (brief: ComposerBrief) => void;
     /** Enabled video models, for the AI-video approach. Empty is a real state. */
     videoModels?: IMediaModel[];
+    /**
+     * Enabled speech-to-text models, for the footage approach: the thing that
+     * READS an upload before the AI can cut it. Shown rather than hidden
+     * because "the AI reads your footage" is the entire promise of that tab,
+     * and which model does the reading is the first question it raises.
+     */
+    sttModels?: IMediaModel[];
     disabled?: boolean;
 }
 
@@ -106,11 +115,27 @@ const hasAnyRef = (refs: ComposerRefs): boolean =>
         refs.sourceVideo
     );
 
-const Composer: React.FC<Props> = ({ contentType, onSubmit, videoModels = [], disabled }) => {
+const Composer: React.FC<Props> = ({
+    contentType,
+    onSubmit,
+    videoModels = [],
+    sttModels = [],
+    disabled,
+}) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
     const styles = useStyles(colors);
+
+    // The model that writes the design. Shared selection with the chat and the
+    // Studio's own brief box, so a choice made in any of them shows in all —
+    // this was the only prompt box in the app without the picker, which read
+    // as the chat beside it being the real input.
+    const {
+        models: designModels,
+        selectedModel: designModel,
+        setSelectedModel,
+    } = useAIModels("design");
 
     const approaches = useMemo(() => approachesFor(contentType), [contentType]);
     const [approachId, setApproachId] = useState<ApproachId | null>(() =>
@@ -311,6 +336,21 @@ const Composer: React.FC<Props> = ({ contentType, onSubmit, videoModels = [], di
                             choice rather than one buried in the strip. A single
                             model is stated rather than offered — a picker with
                             one option implies a decision that does not exist. */}
+                        {/* Footage is read before it is cut. A single model is
+                            stated rather than offered — a picker with one
+                            option implies a decision that does not exist —
+                            and no model at all says so, because the trim still
+                            works without a transcript. */}
+                        {approach.id === "footage" ? (
+                            <View style={styles.models}>
+                                <Text style={styles.modelOnly}>
+                                    {sttModels.length
+                                        ? `Read by ${sttModels[0].displayName}`
+                                        : "Transcription isn't switched on — you'll trim this by hand"}
+                                </Text>
+                            </View>
+                        ) : null}
+
                         {needsModel && model ? (
                             <View style={styles.models}>
                                 {videoModels.length > 1 ? (
@@ -374,6 +414,25 @@ const Composer: React.FC<Props> = ({ contentType, onSubmit, videoModels = [], di
                                     disabled={disabled}
                                 />
                             </View>
+
+                            {/* The model that will do the work, named where the
+                                work is asked for. Which model it IS depends on
+                                the approach: a brief that goes to the AI is
+                                written by the design model, a generated clip is
+                                made by a video model, and footage is READ by a
+                                speech-to-text model before anything can cut it.
+                                Showing the wrong one would be worse than
+                                showing none. */}
+                            {needsModel ? null : (
+                                <AIModelSelector
+                                    models={designModels}
+                                    selectedModel={designModel}
+                                    onSelect={setSelectedModel}
+                                    compact
+                                    surface="composer"
+                                    task="design"
+                                />
+                            )}
                             <Pressable
                                 style={({ pressed }) => [
                                     styles.send,
