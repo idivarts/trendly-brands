@@ -18,7 +18,8 @@ import Colors from "@/shared-uis/constants/Colors";
 import { faImage, faPlay, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { ResizeMode, Video } from "expo-av";
+import VideoSurface from "@/components/shared/VideoSurface";
+import { ResizeMode } from "expo-av";
 import React, { useState } from "react";
 import { Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { previewAspect } from "./media-spec";
@@ -79,7 +80,7 @@ const MediaAssetPreview: React.FC<Props> = ({ attachment: a, contentType, maxHei
             {isVideo ? (
                 vUrl ? (
                     <>
-                        <Video
+                        <VideoSurface
                             source={{ uri: vUrl }}
                             style={styles.fill}
                             resizeMode={ResizeMode.CONTAIN}

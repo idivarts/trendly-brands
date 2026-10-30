@@ -48,7 +48,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { ResizeMode, Video } from "expo-av";
+import VideoSurface from "@/components/shared/VideoSurface";
+import { ResizeMode } from "expo-av";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
@@ -893,7 +894,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
                             >
                                 {isVideo ? (
                                     vUrl ? (
-                                        <Video
+                                        <VideoSurface
                                             source={{ uri: vUrl }}
                                             style={styles.fill}
                                             resizeMode={ResizeMode.COVER}

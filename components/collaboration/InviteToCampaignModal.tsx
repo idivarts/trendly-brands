@@ -5,7 +5,6 @@ import { FirestoreDB } from "@/shared-libs/utils/firebase/firestore";
 import Colors from "@/shared-uis/constants/Colors";
 import ImageComponent from "@/shared-uis/components/image-component";
 import { useTheme } from "@react-navigation/native";
-import { Video } from "expo-av";
 import { collection, getDocs, orderBy, query, where } from "firebase/firestore";
 import React, { useEffect, useMemo, useState } from "react";
 import {

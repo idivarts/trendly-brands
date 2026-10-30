@@ -25,7 +25,8 @@ import Colors from "@/shared-uis/constants/Colors";
 import { faFilm } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { ResizeMode, Video } from "expo-av";
+import VideoSurface from "@/components/shared/VideoSurface";
+import { ResizeMode } from "expo-av";
 import React from "react";
 import { ActivityIndicator, Image, StyleSheet, Text, View } from "react-native";
 
@@ -96,7 +97,7 @@ const ClipPreview: React.FC<Props> = ({ clip, width, height }) => {
             {/* Native controls on purpose: this is a file to look at, and the
                 player's own scrubber is better at that than anything bolted to
                 a timeline the clip does not drive. */}
-            <Video
+            <VideoSurface
                 source={{ uri: url }}
                 style={styles.fill}
                 resizeMode={ResizeMode.CONTAIN}
