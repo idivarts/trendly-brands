@@ -1,7 +1,8 @@
 import { track } from "@/shared-libs/utils/analytics";
 import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
-import { ResizeMode, Video } from "expo-av";
+import VideoSurface from "@/components/shared/VideoSurface";
+import { ResizeMode } from "expo-av";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
     Animated,
@@ -163,7 +164,7 @@ function NativeDirectVideoPlayer({
 
     return (
         <View style={styles.embedContainer}>
-            <Video
+            <VideoSurface
                 source={{ uri }}
                 useNativeControls
                 resizeMode={ResizeMode.CONTAIN}

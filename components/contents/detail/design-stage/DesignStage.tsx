@@ -305,9 +305,17 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
               renderProgress: revision?.renderProgress,
               renderError: revision?.renderError,
           });
+    // What the RENDER produces, which is not the same question as what the
+    // design document is. A composition always renders to a video; a content
+    // whose only media is a generated clip has no design at all, so `docType`
+    // falls back to "image" and the primary button read "Render image" while
+    // queueing a six-second video. `isVideoDesign` still answers the other
+    // question — whether the FRAME plays a video — and the frame's scrubber,
+    // seek and slide-capture keep using it.
+    const rendersVideo = isVideoDesign || renderTarget.targetKind === "composition";
     const render = useDesignRender({
         contentId,
-        isVideoDesign,
+        isVideoDesign: rendersVideo,
         slideCount,
         ...renderTarget,
     });
@@ -361,7 +369,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     const capturing = render.capturing;
     const renderError = render.error;
     const renderFrac = render.progress != null ? Math.min(render.progress, 1) : null;
-    const renderLabel = isVideoDesign
+    const renderLabel = rendersVideo
         ? renderFrac != null
             ? `Rendering video… ${Math.round(renderFrac * 100)}%`
             : "Preparing video…"
