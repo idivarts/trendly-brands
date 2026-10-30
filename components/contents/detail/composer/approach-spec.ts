@@ -151,11 +151,6 @@ export const APPROACHES: Record<ApproachId, ApproachSpec> = {
             "A minimal flat lay",
         ],
         defaults: { orientation: "Portrait" },
-        comingSoon: {
-            promo: "Real photography from a stock library, searched by description and laid out on brand.",
-            supporting:
-                "Credit is carried on the photo automatically, so publishing stays clean.",
-        },
     },
 
     motion: {
