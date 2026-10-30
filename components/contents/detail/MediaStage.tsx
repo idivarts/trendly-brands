@@ -37,6 +37,7 @@ import {
     faChevronLeft,
     faChevronRight,
     faImage,
+    faFilm,
     faPen,
     faPhotoFilm,
     faPlay,
@@ -276,8 +277,8 @@ const MediaStage: React.FC<MediaStageProps> = ({
     // The lane the data says owns this media, and the one the user just picked
     // (before any media exists to prove it). Resolved always wins.
     const resolvedLane = useMemo(
-        () => resolveMediaLane({ designRef, attachments, source }),
-        [designRef, attachments, source]
+        () => resolveMediaLane({ designRef, compositionRef, attachments, source }),
+        [designRef, compositionRef, attachments, source]
     );
     const [pickedLane, setPickedLane] = useState<MediaLane | null>(null);
     const lane = resolvedLane ?? pickedLane;
@@ -1130,6 +1131,37 @@ const MediaStage: React.FC<MediaStageProps> = ({
                     </Text>
                 </View>
             );
+        } else if (timeline.authored && timeline.clipCount > 0) {
+            // A timeline and no design — a generated clip, or a cut of footage.
+            // It is a whole video, so it gets a summary and a way in rather
+            // than the composer, which would ask what to make next to media
+            // that already exists.
+            body = (
+                <Pressable
+                    style={({ pressed }) => [styles.timelineCard, pressed && styles.pressed]}
+                    onPress={onOpenDesign}
+                    accessibilityRole="button"
+                    accessibilityLabel="Open the Studio to edit this timeline"
+                >
+                    <View style={styles.iconBadge}>
+                        <FontAwesomeIcon icon={faFilm} size={16} color={colors.primary} />
+                    </View>
+                    <View style={styles.timelineBody}>
+                        <Text style={styles.timelineTitle}>
+                            {timeline.clipCount === 1
+                                ? "One clip on the timeline"
+                                : `${timeline.clipCount} clips on the timeline`}
+                            {timeline.totalMs > 0
+                                ? ` · ${(timeline.totalMs / 1000).toFixed(1)}s`
+                                : ""}
+                        </Text>
+                        <Text style={styles.timelineSub}>
+                            Open the Studio to trim it, reorder it or add more. Render it when it's
+                            ready to post.
+                        </Text>
+                    </View>
+                </Pressable>
+            );
         } else if (designRef?.revisionId) {
             // A design exists but its HTML hasn't arrived yet.
             body = (
@@ -1412,6 +1444,34 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             shadowRadius: 8,
             shadowOpacity: 0.07,
             elevation: 3,
+        },
+        timelineCard: {
+            flexDirection: "row",
+            alignItems: "flex-start",
+            gap: 12,
+            padding: 16,
+            borderRadius: 14,
+            backgroundColor: colors.tag,
+        },
+        iconBadge: {
+            width: 38,
+            height: 38,
+            borderRadius: 11,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colors.card,
+        },
+        timelineBody: { flex: 1, gap: 4 },
+        timelineTitle: {
+            fontSize: fs(14),
+            lineHeight: lh(19),
+            fontWeight: "800",
+            color: colors.text,
+        },
+        timelineSub: {
+            fontSize: fs(12),
+            lineHeight: lh(17),
+            color: colors.textSecondary,
         },
         ratioChip: {
             paddingHorizontal: 10,

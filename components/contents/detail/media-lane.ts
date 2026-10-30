@@ -21,6 +21,7 @@
  */
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { IContentDesignRef } from "@/shared-libs/firestore/trendly-pro/models/design";
+import { IContentCompositionRef } from "@/shared-libs/firestore/trendly-pro/models/composition";
 import { ContentType } from "@/components/content-calendar/types";
 import { MEDIA_SPEC } from "./media-spec";
 
@@ -31,6 +32,12 @@ export type MediaSource = "ai" | "ai-image" | "upload" | "canva";
 
 export interface ResolveLaneArgs {
     designRef?: IContentDesignRef;
+    /**
+     * Pointer to an authored timeline. A content can have one with NO design —
+     * a generated clip, or a cut of uploaded footage — and that is a whole
+     * video, not an absence of media.
+     */
+    compositionRef?: IContentCompositionRef;
     attachments: Attachment[];
     source?: MediaSource;
 }
@@ -53,8 +60,18 @@ export interface ResolveLaneArgs {
  * could not make editable anyway, since there was never a design document to
  * restore.
  */
-export function resolveMediaLane({ designRef, attachments }: ResolveLaneArgs): MediaLane | null {
+export function resolveMediaLane({
+    designRef,
+    compositionRef,
+    attachments,
+}: ResolveLaneArgs): MediaLane | null {
     if (designRef?.revisionId) return "design";
+    // A timeline with clips on it IS the media, even with no design: a
+    // generated clip or a cut of footage is a whole video. It resolves to the
+    // design lane because the Studio is where a timeline is edited — reading
+    // as "nothing here yet" offered the user two cards to start over with,
+    // beside a clip they had already paid for.
+    if (compositionRef?.revisionId && compositionRef.clipCount > 0) return "design";
     if (attachments.length > 0) return "upload";
     return null;
 }

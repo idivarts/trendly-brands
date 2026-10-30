@@ -121,3 +121,42 @@ describe("previewAspect", () => {
         expect(previewAspect("live")).toBe(1);
     });
 });
+
+describe("a timeline is media", () => {
+    // A content whose only media is a generated clip or a cut of footage has no
+    // design and no attachments. Reading that as "nothing here yet" offered two
+    // start-over cards beside a clip the user had already paid for.
+    it("resolves the design lane for a timeline with clips and no design", () => {
+        expect(
+            resolveMediaLane({
+                attachments: [],
+                compositionRef: {
+                    revisionId: "r1",
+                    width: 1080,
+                    height: 1920,
+                    fps: 30,
+                    durationMs: 4000,
+                    clipCount: 1,
+                    updatedAt: 1,
+                },
+            })
+        ).toBe("design");
+    });
+
+    it("ignores a pointer with no clips on it", () => {
+        expect(
+            resolveMediaLane({
+                attachments: [],
+                compositionRef: {
+                    revisionId: "r1",
+                    width: 1080,
+                    height: 1920,
+                    fps: 30,
+                    durationMs: 0,
+                    clipCount: 0,
+                    updatedAt: 1,
+                },
+            })
+        ).toBeNull();
+    });
+});
