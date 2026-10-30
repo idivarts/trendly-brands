@@ -37,6 +37,16 @@ export interface InspectorSelection {
 
 interface Props {
     selection: InspectorSelection | null;
+    /**
+     * The selected timeline clip's properties, when one is selected.
+     *
+     * Passed in as a node rather than described by props, so this panel knows
+     * nothing about compositions: it is the studio's properties column, and
+     * what a clip's properties ARE belongs with the timeline. A clip takes
+     * priority over an element — selecting one on the strip is a more recent
+     * and more deliberate act than whatever is still highlighted on the canvas.
+     */
+    clipSection?: React.ReactNode;
     /** 0-based index of the slide/scene on screen, and how many there are. */
     slide: number;
     slideCount: number;
@@ -53,6 +63,7 @@ interface Props {
 
 const InspectorPanel: React.FC<Props> = ({
     selection,
+    clipSection,
     slide,
     slideCount,
     isVideo,
@@ -95,6 +106,10 @@ const InspectorPanel: React.FC<Props> = ({
             </View>
 
             <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
+                {clipSection ? (
+                    clipSection
+                ) : (
+                    <>
                 {where ? <Text style={styles.where}>{where}</Text> : null}
 
                 {!selection ? (
@@ -185,6 +200,8 @@ const InspectorPanel: React.FC<Props> = ({
                                 </Pressable>
                             </View>
                         ) : null}
+                    </>
+                )}
                     </>
                 )}
             </ScrollView>

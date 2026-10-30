@@ -3,6 +3,7 @@ import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attach
 import { Platform } from "@/shared-libs/firestore/trendly-pro/constants/platform";
 import { IContentPublishResult, IImageGeneration, IPlatformOptions, IViralityScore } from "@/shared-libs/firestore/trendly-pro/models/contents";
 import { IContentAudio, IContentDesignRef } from "@/shared-libs/firestore/trendly-pro/models/design";
+import { IContentCompositionRef } from "@/shared-libs/firestore/trendly-pro/models/composition";
 // Type-only: media-lane pulls in MEDIA_SPEC, which transitively imports this
 // file. `import type` is erased, so this adds no runtime import cycle.
 import type { MediaSource } from "./detail/media-lane";
@@ -117,6 +118,13 @@ export interface ContentItem extends CalendarItem {
      */
     source?: MediaSource;
     designRef?: IContentDesignRef;
+    /**
+     * Pointer to the authored timeline. Absent on every content nobody has
+     * opened the timeline on, which still renders through `designRef` as a
+     * one-clip composition — so this is "somebody arranged clips", not "this
+     * content predates timelines".
+     */
+    compositionRef?: IContentCompositionRef;
     audio?: IContentAudio;
     /** Target connected accounts for publish / schedule (Phase 4). */
     destinations?: SocialDestination[];
