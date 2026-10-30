@@ -69,6 +69,86 @@ const fmt = (ms: number) => `${(Math.max(ms, 0) / 1000).toFixed(1)}s`;
 /** How much a ± button moves a length or a trim point. */
 const NUDGE_MS = 250;
 
+/**
+ * The inspector's three building blocks, defined at MODULE level on purpose.
+ *
+ * Declared inside the component they would be a new component type on every
+ * render, so React would unmount and remount the whole subtree for each tap —
+ * losing any state inside them and, the day somebody puts a TextInput in one,
+ * the keyboard focus with it.
+ */
+const Row: React.FC<{
+    label: string;
+    styles: ReturnType<typeof useStyles>;
+    children: React.ReactNode;
+}> = ({ label, styles, children }) => (
+    <>
+        <Text style={styles.label}>{label}</Text>
+        {children}
+    </>
+);
+
+const Chips: React.FC<{
+    options: { value: string; label: string }[];
+    value: string;
+    onPick: (v: string) => void;
+    styles: ReturnType<typeof useStyles>;
+    readOnly?: boolean;
+}> = ({ options, value, onPick, styles, readOnly }) => (
+    <View style={styles.chips}>
+        {options.map((o) => {
+            const active = o.value === value;
+            return (
+                <Pressable
+                    key={o.value}
+                    style={({ pressed }) => [
+                        styles.chip,
+                        active && styles.chipActive,
+                        pressed && styles.pressed,
+                    ]}
+                    onPress={() => !readOnly && onPick(o.value)}
+                    disabled={readOnly}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active }}
+                    accessibilityLabel={o.label}
+                >
+                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{o.label}</Text>
+                </Pressable>
+            );
+        })}
+    </View>
+);
+
+const Stepper: React.FC<{
+    value: string;
+    onStep: (dir: -1 | 1) => void;
+    label: string;
+    styles: ReturnType<typeof useStyles>;
+    readOnly?: boolean;
+}> = ({ value, onStep, label, styles, readOnly }) => (
+    <View style={styles.stepper}>
+        <Pressable
+            style={({ pressed }) => [styles.stepBtn, pressed && styles.pressed]}
+            onPress={() => !readOnly && onStep(-1)}
+            disabled={readOnly}
+            accessibilityRole="button"
+            accessibilityLabel={`${label} — less`}
+        >
+            <Text style={styles.stepBtnText}>−</Text>
+        </Pressable>
+        <Text style={styles.stepValue}>{value}</Text>
+        <Pressable
+            style={({ pressed }) => [styles.stepBtn, pressed && styles.pressed]}
+            onPress={() => !readOnly && onStep(1)}
+            disabled={readOnly}
+            accessibilityRole="button"
+            accessibilityLabel={`${label} — more`}
+        >
+            <Text style={styles.stepBtnText}>+</Text>
+        </Pressable>
+    </View>
+);
+
 interface Props {
     composition: Composition;
     clipId: string;
@@ -154,72 +234,6 @@ const ClipInspector: React.FC<Props> = ({
         onChange(next);
     };
 
-    const Row: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-        <>
-            <Text style={styles.label}>{label}</Text>
-            {children}
-        </>
-    );
-
-    const Chips: React.FC<{
-        options: { value: string; label: string }[];
-        value: string;
-        onPick: (v: string) => void;
-    }> = ({ options, value, onPick }) => (
-        <View style={styles.chips}>
-            {options.map((o) => {
-                const active = o.value === value;
-                return (
-                    <Pressable
-                        key={o.value}
-                        style={({ pressed }) => [
-                            styles.chip,
-                            active && styles.chipActive,
-                            pressed && styles.pressed,
-                        ]}
-                        onPress={() => !readOnly && onPick(o.value)}
-                        disabled={readOnly}
-                        accessibilityRole="radio"
-                        accessibilityState={{ selected: active }}
-                        accessibilityLabel={o.label}
-                    >
-                        <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                            {o.label}
-                        </Text>
-                    </Pressable>
-                );
-            })}
-        </View>
-    );
-
-    const Stepper: React.FC<{
-        value: string;
-        onStep: (dir: -1 | 1) => void;
-        label: string;
-    }> = ({ value, onStep, label }) => (
-        <View style={styles.stepper}>
-            <Pressable
-                style={({ pressed }) => [styles.stepBtn, pressed && styles.pressed]}
-                onPress={() => !readOnly && onStep(-1)}
-                disabled={readOnly}
-                accessibilityRole="button"
-                accessibilityLabel={`${label} — less`}
-            >
-                <Text style={styles.stepBtnText}>−</Text>
-            </Pressable>
-            <Text style={styles.stepValue}>{value}</Text>
-            <Pressable
-                style={({ pressed }) => [styles.stepBtn, pressed && styles.pressed]}
-                onPress={() => !readOnly && onStep(1)}
-                disabled={readOnly}
-                accessibilityRole="button"
-                accessibilityLabel={`${label} — more`}
-            >
-                <Text style={styles.stepBtnText}>+</Text>
-            </Pressable>
-        </View>
-    );
-
     return (
         <View style={styles.body}>
             <View style={styles.head}>
@@ -243,15 +257,17 @@ const ClipInspector: React.FC<Props> = ({
                 a clip declare four seconds over a window holding two, which
                 renders as a freeze-frame nobody asked for. */}
             {footage ? (
-                <Row label="On screen">
+                <Row label="On screen" styles={styles}>
                     <Text style={styles.readout}>
                         {fmt(clip.durationMs)}
                         <Text style={styles.readoutSub}> — from the trim below</Text>
                     </Text>
                 </Row>
             ) : (
-                <Row label="Length">
+                <Row label="Length" styles={styles}>
                     <Stepper
+                        styles={styles}
+                        readOnly={readOnly}
                         label="Length"
                         value={fmt(clip.durationMs)}
                         onStep={(d) =>
@@ -262,8 +278,10 @@ const ClipInspector: React.FC<Props> = ({
             )}
 
             {isOverlay ? (
-                <Row label="Starts at">
+                <Row label="Starts at" styles={styles}>
                     <Stepper
+                        styles={styles}
+                        readOnly={readOnly}
                         label="Start"
                         value={fmt(clip.startMs ?? 0)}
                         onStep={(d) =>
@@ -284,9 +302,11 @@ const ClipInspector: React.FC<Props> = ({
                 Only from the second clip on: the first has nothing behind it to
                 fade from, which the runtime normalizes to a cut anyway. */}
             {!isOverlay && index > 0 ? (
-                <Row label="Enters">
+                <Row label="Enters" styles={styles}>
                     <>
                         <Chips
+                            styles={styles}
+                            readOnly={readOnly}
                             value={transition}
                             onPick={(v) =>
                                 apply(setTransition(composition, clipId, v === "fade" ? "fade" : "cut"))
@@ -299,6 +319,8 @@ const ClipInspector: React.FC<Props> = ({
                         {transition === "fade" ? (
                             <>
                                 <Stepper
+                        styles={styles}
+                        readOnly={readOnly}
                                     label="Fade length"
                                     value={fmt(clip.transitionIn?.ms ?? 0)}
                                     onStep={(d) =>
@@ -330,8 +352,10 @@ const ClipInspector: React.FC<Props> = ({
 
             {/* ── Per-kind ── */}
             {source.kind === "design" && designSceneCount > 1 ? (
-                <Row label="Shows">
+                <Row label="Shows" styles={styles}>
                     <Chips
+                            styles={styles}
+                            readOnly={readOnly}
                         value={
                             (source as DesignClipSource).sceneIndex === undefined ||
                             (source as DesignClipSource).sceneIndex === null
@@ -360,8 +384,10 @@ const ClipInspector: React.FC<Props> = ({
             ) : null}
 
             {source.kind === "image" ? (
-                <Row label="Motion">
+                <Row label="Motion" styles={styles}>
                     <Chips
+                            styles={styles}
+                            readOnly={readOnly}
                         value={(source as ImageClipSource).kenBurns ?? "none"}
                         onPick={(v) =>
                             apply(
@@ -381,7 +407,7 @@ const ClipInspector: React.FC<Props> = ({
 
             {source.kind === "genvideo" ? (
                 <>
-                    <Row label="Prompt">
+                    <Row label="Prompt" styles={styles}>
                         <Text style={styles.readout}>{(source as GenVideoClipSource).prompt}</Text>
                     </Row>
                     <Text style={styles.note}>
@@ -396,8 +422,10 @@ const ClipInspector: React.FC<Props> = ({
                 <>
                     {/* ── Trim ── in and out are SOURCE time, so they are the
                         same clock the transcript and the shots are on. */}
-                    <Row label="Starts at">
+                    <Row label="Starts at" styles={styles}>
                         <Stepper
+                        styles={styles}
+                        readOnly={readOnly}
                             label="In point"
                             value={fmt(footage.inMs ?? 0)}
                             onStep={(d) =>
@@ -412,8 +440,10 @@ const ClipInspector: React.FC<Props> = ({
                             }
                         />
                     </Row>
-                    <Row label="Ends at">
+                    <Row label="Ends at" styles={styles}>
                         <Stepper
+                        styles={styles}
+                        readOnly={readOnly}
                             label="Out point"
                             value={fmt(footage.outMs ?? assetMs ?? 0)}
                             onStep={(d) =>
@@ -437,8 +467,10 @@ const ClipInspector: React.FC<Props> = ({
                         />
                     </Row>
 
-                    <Row label="Speed">
+                    <Row label="Speed" styles={styles}>
                         <Chips
+                            styles={styles}
+                            readOnly={readOnly}
                             value={String(footage.speed ?? 1)}
                             onPick={(v) =>
                                 apply(patchFootage(composition, clipId, { speed: Number(v) }, assetMs))
@@ -454,8 +486,10 @@ const ClipInspector: React.FC<Props> = ({
 
                     {/* Muted by default when a clip is placed, so it cannot talk
                         over a music bed the user already chose. */}
-                    <Row label="Its own sound">
+                    <Row label="Its own sound" styles={styles}>
                         <Chips
+                            styles={styles}
+                            readOnly={readOnly}
                             value={String(footage.volume ?? 0)}
                             onPick={(v) =>
                                 apply(patchFootage(composition, clipId, { volume: Number(v) }, assetMs))
@@ -486,7 +520,7 @@ const ClipInspector: React.FC<Props> = ({
                         A described shot is a trim you can tap. This is the whole
                         reason the frames were sampled and sent to a model. */}
                     {asset?.ingest?.shots?.length ? (
-                        <Row label="Shots">
+                        <Row label="Shots" styles={styles}>
                             <View style={styles.shots}>
                                 {asset.ingest.shots.map((shot, i) => (
                                     <Pressable
@@ -523,7 +557,7 @@ const ClipInspector: React.FC<Props> = ({
                         inside it to clear. Cutting the span removes that window
                         of the take — a split when it lands in the middle. */}
                     {words.length ? (
-                        <Row label="Transcript">
+                        <Row label="Transcript" styles={styles}>
                             <>
                                 <View style={styles.transcript}>
                                     {words.map((w, i) => {
