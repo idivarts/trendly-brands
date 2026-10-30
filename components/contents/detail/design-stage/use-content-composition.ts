@@ -237,6 +237,12 @@ export function useContentComposition(
     const save = useCallback<UseContentCompositionReturn["save"]>(
         async (next, origin = "timeline") => {
             if (!brandId || !contentId) return null;
+            // A timeline with no picture cannot render, and pointing the
+            // content at one is worse than leaving it with no timeline at all:
+            // the backend prefers a composition over a design, so an empty one
+            // would take precedence over media that works. Refused here as well
+            // as avoided by the callers, because this is the only door.
+            if (!(videoTrack(next)?.clips ?? []).length) return null;
             setSaving(true);
             try {
                 // Restamped before storing, so the cached offsets in the

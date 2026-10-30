@@ -484,6 +484,9 @@ const MediaStage: React.FC<MediaStageProps> = ({
             const startFrameUrl = model.startFrame ? brief.refs.startFrame?.imageUrl : undefined;
             const endFrameUrl = model.endFrame ? brief.refs.endFrame?.imageUrl : undefined;
             const base = baseComposition();
+            // Whether there was a timeline here BEFORE this clip, which is what
+            // decides how to undo a failed submit.
+            const hadTimeline = timeline.authored;
             const clipId = newClipId();
             const withClip = appendClip(base, {
                 id: clipId,
@@ -543,8 +546,16 @@ const MediaStage: React.FC<MediaStageProps> = ({
                 );
                 onOpenDesign();
             } catch (err) {
-                // Take the clip back off, so the timeline stays renderable.
-                await timeline.save(base).catch(() => undefined);
+                // Undo the clip. Which undo depends on what was here first: a
+                // timeline somebody arranged gets restored without the clip,
+                // but a content that had none must be left with NONE — saving
+                // the empty base would point it at a timeline with no clips,
+                // which cannot render and is worse than the nothing it had.
+                if (hadTimeline) {
+                    await timeline.save(base).catch(() => undefined);
+                } else {
+                    await timeline.discard().catch(() => undefined);
+                }
                 if (err instanceof HttpError && err.status === 402) {
                     track("entitlement_blocked", {
                         reason: String(err.data?.reason ?? "tokens_exhausted"),
@@ -563,7 +574,15 @@ const MediaStage: React.FC<MediaStageProps> = ({
                 setBriefBusy(false);
             }
         },
-        [brandId, contentId, videoModels, baseComposition, timeline, spec.aspectRatios, onOpenDesign]
+        [
+            brandId,
+            contentId,
+            videoModels,
+            baseComposition,
+            timeline,
+            spec.aspectRatios,
+            onOpenDesign,
+        ]
     );
 
     /**
