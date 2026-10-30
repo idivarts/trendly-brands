@@ -362,3 +362,38 @@ describe("ids and labels", () => {
         ).toBe("AI clip — generating");
     });
 });
+
+describe("what a genvideo clip looks like when it is written", () => {
+    // Firestore refuses a write containing `undefined` outright, and a clip is
+    // exactly the shape that produces one: a source carries every field its
+    // kind might use and leaves the rest unset. This is the shape the composer
+    // builds for a clip with no pinned frames — the keys have to be ABSENT.
+    it("omits the frame keys rather than setting them undefined", () => {
+        const clip = {
+            id: "g1",
+            durationMs: 4000,
+            source: { kind: "genvideo" as const, model: "veo", prompt: "a cup" },
+        };
+        const next = appendClip(comp([design("a", 1000)]), clip);
+        const written = videoClips(next)[1].source as unknown as Record<string, unknown>;
+        expect("startFrameUrl" in written).toBe(false);
+        expect("endFrameUrl" in written).toBe(false);
+        expect(Object.values(written).every((v) => v !== undefined)).toBe(true);
+    });
+
+    // clipFromAsset falls through to `undefined` when nothing knows the length.
+    it("leaves no undefined on a footage clip built from a bare asset", () => {
+        const clip = clipFromAsset({
+            id: "a1",
+            kind: "video",
+            source: "upload",
+            url: "https://x/v.mp4",
+            createdAt: 1,
+        });
+        const written = clip.source as unknown as Record<string, unknown>;
+        // `outMs` is genuinely unknown here, so the key is absent rather than
+        // present-and-undefined.
+        expect("outMs" in written).toBe(false);
+        expect(Object.values(written).every((v) => v !== undefined)).toBe(true);
+    });
+});

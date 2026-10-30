@@ -379,12 +379,16 @@ export function overlaysOf(composition: Composition) {
  */
 export function clipFromAsset(asset: IAsset, fallbackMs = DEFAULT_IMAGE_CLIP_MS): Clip {
     if (asset.kind === "video") {
+        const outMs = asset.trimOutMs ?? asset.durationMs ?? asset.ingest?.durationMs;
         const source: FootageClipSource = {
             kind: "footage",
             url: asset.url,
             assetId: asset.id,
             inMs: asset.trimInMs ?? 0,
-            outMs: asset.trimOutMs ?? asset.durationMs ?? asset.ingest?.durationMs ?? undefined,
+            // Spread, so an unknown out point leaves the KEY out. Firestore
+            // refuses a write containing `undefined`, and "we do not know where
+            // this take ends" is absence, not a value.
+            ...(outMs !== undefined ? { outMs } : {}),
             // Audio OFF by default. A clip dropped onto a timeline that already
             // has a music bed and a voiceover should not start talking over
             // them; turning it up is one control in the inspector, and noticing
