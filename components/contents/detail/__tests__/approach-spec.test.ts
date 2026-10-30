@@ -39,11 +39,14 @@ describe("approachesFor", () => {
         expect(approachesFor("text")).toEqual([]);
     });
 
-    it("includes the approaches that are not built yet", () => {
-        // They ship as live, selectable tabs carrying a coming-soon panel. A
-        // hidden tab teaches nothing and collects no signal about who wants it.
-        const soon = approachesFor("reel").filter((a) => a.comingSoon);
-        expect(soon.map((a) => a.id)).toEqual(["genvideo", "footage"]);
+    it("has every video approach live", () => {
+        // Nothing on a video type is behind a coming-soon panel any more:
+        // motion graphics, generated video and footage editing all ship. The
+        // one thing that can still stop AI video is the model registry having
+        // nothing enabled for the workspace, which the composer reports itself
+        // — it is not a property of the approach.
+        expect(approachesFor("reel").filter((a) => a.comingSoon)).toEqual([]);
+        expect(approachesFor("video").filter((a) => a.comingSoon)).toEqual([]);
     });
 });
 
@@ -129,11 +132,21 @@ describe("which approaches are live", () => {
         expect(APPROACHES.stock.briefLead).toMatch(/stock/i);
     });
 
-    it("keeps generated video and footage editing behind coming-soon", () => {
-        // These are genuinely not built. When they are, the flag comes off
-        // here and this expectation flips with them.
-        expect(APPROACHES.genvideo.comingSoon).toBeDefined();
-        expect(APPROACHES.footage.comingSoon).toBeDefined();
+    it("has generated video and footage editing live", () => {
+        // Both ship: genvideo queues a clip on the timeline through the
+        // generate endpoint, footage places the upload and hands the cut to
+        // the AI's cut_footage tool. Neither goes through a design brief.
+        expect(APPROACHES.genvideo.comingSoon).toBeUndefined();
+        expect(APPROACHES.footage.comingSoon).toBeUndefined();
+    });
+
+    it("gives every live approach something to start from", () => {
+        // An empty prompt box with no starters is where the coming-soon panel
+        // used to be. A live approach has to suggest what to type.
+        for (const approach of Object.values(APPROACHES)) {
+            if (approach.comingSoon) continue;
+            expect(approach.starters.length).toBeGreaterThan(0);
+        }
     });
 
     it("offers a live image approach for every image content type", () => {

@@ -100,6 +100,24 @@ export const MEDIA_SPEC: Record<ContentType, MediaSpec> = {
 };
 
 /** Parses a "W:H" ratio label (e.g. "4:5") into a numeric tuple for crop UIs. */
+/**
+ * The pixel size a content type's media is authored at.
+ *
+ * 1080 on the SHORT side, which is what every design the AI writes already
+ * uses (1080x1920, 1080x1350, 1080x1080, 1920x1080). It is here rather than
+ * inlined because a composition authored from scratch — a generated clip on a
+ * content with no design yet — has to agree with the designs it may later be
+ * mixed with: two clips at different sizes in one timeline means one of them
+ * is scaled, and which one is a coin flip.
+ */
+export function canonicalSize(type: ContentType): { width: number; height: number } {
+    const [rw, rh] = parseAspectRatio(MEDIA_SPEC[type].aspectRatios[0] ?? "9:16");
+    if (!(rw > 0) || !(rh > 0)) return { width: 1080, height: 1920 };
+    return rw <= rh
+        ? { width: 1080, height: Math.round((1080 * rh) / rw) }
+        : { width: Math.round((1080 * rw) / rh), height: 1080 };
+}
+
 export function parseAspectRatio(ratio: string): [number, number] {
     const [w, h] = ratio.split(":").map(Number);
     return [w, h];

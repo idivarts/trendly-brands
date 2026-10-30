@@ -38,6 +38,15 @@ export interface DesignPreview {
     renderUrl?: string;
     docType: DesignDocType;
     /**
+     * The video design's measured length, as persisted with the revision.
+     *
+     * Needed outside the Studio to derive the implicit one-clip timeline: a
+     * generated clip appended on a content that has a design must land AFTER
+     * the design, which means knowing how long the design is without mounting
+     * the frame that measures it.
+     */
+    durationMs?: number;
+    /**
      * Server-render lifecycle. Absent on revisions created before rendering
      * moved to the server, where a `renderUrl` alone still means "rendered" —
      * so never treat a missing status as "not started" when a url exists.
@@ -82,6 +91,7 @@ export function useDesignPreview(
                             slideCount: Math.max(d.slideCount ?? 1, 1),
                             renderUrl: d.renderUrl,
                             docType: d.docType ?? "image",
+                            durationMs: d.durationMs,
                             renderStatus: d.renderStatus,
                             renderProgress: d.renderProgress,
                             renderError: d.renderError,

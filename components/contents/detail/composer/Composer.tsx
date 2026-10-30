@@ -39,12 +39,15 @@ import {
     APPROACHES,
     ApproachId,
     ApproachSpec,
+    ComingSoon,
     SettingKey,
     approachesFor,
     defaultApproachFor,
     defaultSettings,
     settingsFor,
 } from "./approach-spec";
+import { IMediaModel } from "@/shared-libs/firestore/trendly-pro/models/media-model";
+import { durationOptionsFor } from "@/hooks/use-media-models";
 
 /** Everything the composer collected, handed to whoever runs the generation. */
 export interface ComposerBrief {
@@ -52,11 +55,45 @@ export interface ComposerBrief {
     prompt: string;
     refs: ComposerRefs;
     settings: Partial<Record<SettingKey, string>>;
+    /**
+     * The chosen video model, for the AI-video approach only.
+     *
+     * Carried on the brief rather than looked up later because the generation
+     * is charged the moment it is accepted: whoever submits has to send the
+     * model the user was actually looking at when they pressed send, not
+     * whatever the registry happens to list first by then.
+     */
+    modelId?: string;
+    /**
+     * Instructions ABOUT the brief, added by whoever submits it rather than
+     * typed by the user — "the footage is asset X, read it with get_footage
+     * first". Kept separate from `prompt` so the user's own words are never
+     * rewritten, and so a reader of the thread can tell which is which.
+     */
+    notes?: string[];
 }
+
+/**
+ * Shown in place of the composer when the AI-video approach has no model to
+ * run on.
+ *
+ * `enabled` in the model registry is a REVIEW GATE — the catalog sync inserts
+ * new models disabled and never flips it — so an empty list is an ordinary
+ * state for a workspace, not a fault. It reuses the coming-soon panel because
+ * the situation is the same from where the user sits, and the interest signal
+ * it collects is just as useful.
+ */
+const NO_VIDEO_MODEL: ComingSoon = {
+    promo: "Generated video isn't switched on for your workspace yet.",
+    supporting:
+        "Tell us you want it and we'll turn it on — the clip drops straight onto the same timeline as your motion graphics.",
+};
 
 interface Props {
     contentType: ContentType;
     onSubmit: (brief: ComposerBrief) => void;
+    /** Enabled video models, for the AI-video approach. Empty is a real state. */
+    videoModels?: IMediaModel[];
     disabled?: boolean;
 }
 
@@ -69,7 +106,7 @@ const hasAnyRef = (refs: ComposerRefs): boolean =>
         refs.sourceVideo
     );
 
-const Composer: React.FC<Props> = ({ contentType, onSubmit, disabled }) => {
+const Composer: React.FC<Props> = ({ contentType, onSubmit, videoModels = [], disabled }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const { xl } = useBreakpoints();
@@ -122,6 +159,62 @@ const Composer: React.FC<Props> = ({ contentType, onSubmit, disabled }) => {
         [approach, contentType]
     );
 
+    // ── The video model ──────────────────────────────────────────────────────
+    // Only the AI-video approach has one. The first entry is the cheapest (the
+    // hook sorts them), which is the right default for something charged on
+    // acceptance.
+    const [modelId, setModelId] = useState<string | null>(null);
+    const model = useMemo(
+        () => videoModels.find((m) => m.id === modelId) ?? videoModels[0],
+        [videoModels, modelId]
+    );
+    const needsModel = approach?.id === "genvideo";
+
+    // The length chips for AI video are the MODEL's bounds, not the table's
+    // list. A model capped at 8s refuses a 30s request, so offering 30 would be
+    // offering a value that is always rejected.
+    const lengthOptions = useMemo(
+        () =>
+            needsModel && model
+                ? durationOptionsFor(model).map((v) => ({ value: v, name: v }))
+                : undefined,
+        [needsModel, model]
+    );
+
+    // Keep the chosen length inside what this model can make — switching from a
+    // model that goes to 30s to one that caps at 8 must not leave 30s showing.
+    useEffect(() => {
+        if (!needsModel || !lengthOptions?.length) return;
+        if (!lengthOptions.some((o) => o.value === settings.length)) {
+            setSettings((cur) => ({ ...cur, length: lengthOptions[0].value }));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [needsModel, lengthOptions?.map((o) => o.value).join(",")]);
+
+    // An approach with no model to run on, said in the same voice as a feature
+    // that has not shipped — because from here it is the same thing.
+    const comingSoon: ComingSoon | undefined =
+        approach?.comingSoon ?? (needsModel && !videoModels.length ? NO_VIDEO_MODEL : undefined);
+
+    /**
+     * The slots actually offered.
+     *
+     * For AI video this is the MODEL's capabilities, not the approach's wish
+     * list: an end-frame slot on a model without keyframes is a control that
+     * takes the user's money and ignores them, and the backend refuses the
+     * combination anyway — so the slot is not drawn rather than drawn and
+     * rejected.
+     */
+    const refSlots = useMemo(() => {
+        if (!approach) return [];
+        if (approach.id !== "genvideo") return approach.refs;
+        return approach.refs.filter((slot) => {
+            if (slot.key === "startFrame") return !!model?.startFrame;
+            if (slot.key === "endFrame") return !!model?.endFrame;
+            return true;
+        });
+    }, [approach, model?.startFrame, model?.endFrame]);
+
     // A required slot with nothing in it is the one thing that blocks send —
     // the approach genuinely has no work to do without it.
     const missingRequired = useMemo(
@@ -132,7 +225,8 @@ const Composer: React.FC<Props> = ({ contentType, onSubmit, disabled }) => {
         [approach, refs]
     );
 
-    const canSend = !!approach && !approach.comingSoon && !!prompt.trim() && !missingRequired && !disabled;
+    const canSend =
+        !!approach && !comingSoon && !!prompt.trim() && !missingRequired && !disabled;
 
     const submit = useCallback(() => {
         if (!canSend || !approach) return;
@@ -142,8 +236,25 @@ const Composer: React.FC<Props> = ({ contentType, onSubmit, disabled }) => {
             has_refs: hasAnyRef(refs),
             settings_changed: settingsChanged,
         });
-        onSubmit({ approach: approach.id, prompt: prompt.trim(), refs, settings });
-    }, [canSend, approach, prompt, refs, settings, defaults, visibleSettings, onSubmit]);
+        onSubmit({
+            approach: approach.id,
+            prompt: prompt.trim(),
+            refs,
+            settings,
+            modelId: needsModel ? model?.id : undefined,
+        });
+    }, [
+        canSend,
+        approach,
+        prompt,
+        refs,
+        settings,
+        defaults,
+        visibleSettings,
+        needsModel,
+        model?.id,
+        onSubmit,
+    ]);
 
     if (!approach) return null;
 
@@ -186,13 +297,57 @@ const Composer: React.FC<Props> = ({ contentType, onSubmit, disabled }) => {
 
             <Text style={styles.description}>{approach.description}</Text>
 
-            {approach.comingSoon ? (
-                <ComingSoonPanel approach={approach} hadPrompt={!!prompt.trim()} />
+            {comingSoon ? (
+                <ComingSoonPanel
+                    approach={approach}
+                    comingSoon={comingSoon}
+                    hadPrompt={!!prompt.trim()}
+                />
             ) : (
                 <>
                     <View style={styles.card}>
+                        {/* The model, above the references: it decides what the
+                            slots and the length can even be, so it is the first
+                            choice rather than one buried in the strip. A single
+                            model is stated rather than offered — a picker with
+                            one option implies a decision that does not exist. */}
+                        {needsModel && model ? (
+                            <View style={styles.models}>
+                                {videoModels.length > 1 ? (
+                                    videoModels.map((m) => {
+                                        const active = m.id === model.id;
+                                        return (
+                                            <Pressable
+                                                key={m.id}
+                                                style={({ pressed }) => [
+                                                    styles.modelChip,
+                                                    active && styles.modelChipActive,
+                                                    pressed && styles.pressed,
+                                                ]}
+                                                onPress={() => setModelId(m.id)}
+                                                accessibilityRole="radio"
+                                                accessibilityState={{ selected: active }}
+                                                accessibilityLabel={`Use ${m.displayName}`}
+                                            >
+                                                <Text
+                                                    style={[
+                                                        styles.modelChipText,
+                                                        active && styles.modelChipTextActive,
+                                                    ]}
+                                                >
+                                                    {m.displayName}
+                                                </Text>
+                                            </Pressable>
+                                        );
+                                    })
+                                ) : (
+                                    <Text style={styles.modelOnly}>{model.displayName}</Text>
+                                )}
+                            </View>
+                        ) : null}
+
                         <ReferenceTray
-                            slots={approach.refs}
+                            slots={refSlots}
                             refs={refs}
                             onChange={setRefs}
                             disabled={disabled}
@@ -282,6 +437,7 @@ const Composer: React.FC<Props> = ({ contentType, onSubmit, disabled }) => {
                 settingKey={openSetting}
                 value={openSetting ? settings[openSetting] : undefined}
                 contentType={contentType}
+                overrideOptions={openSetting === "length" ? lengthOptions : undefined}
                 onPick={(v) => {
                     if (openSetting) setSettings((cur) => ({ ...cur, [openSetting]: v }));
                     setOpenSetting(null);
@@ -351,6 +507,37 @@ const useStyles = (colors: any) =>
                     shadowRadius: 10,
                     shadowOpacity: 0.07,
                     elevation: 3,
+                },
+                models: {
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    gap: 5,
+                    marginBottom: 10,
+                },
+                modelChip: {
+                    paddingVertical: 5,
+                    paddingHorizontal: 10,
+                    borderRadius: 8,
+                    backgroundColor: colors.tag,
+                },
+                modelChipActive: {
+                    backgroundColor: withAlpha(colors.primary, 0.16),
+                },
+                modelChipText: {
+                    fontSize: fs(11),
+                    lineHeight: lh(15),
+                    fontWeight: "600",
+                    color: colors.textSecondary,
+                },
+                modelChipTextActive: {
+                    color: colors.primary,
+                    fontWeight: "700",
+                },
+                modelOnly: {
+                    fontSize: fs(11),
+                    lineHeight: lh(15),
+                    fontWeight: "600",
+                    color: colors.textSecondary,
                 },
                 prompt: {
                     minHeight: 84,

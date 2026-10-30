@@ -16,17 +16,32 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SETTINGS, SettingKey } from "./approach-spec";
+import { SETTINGS, SettingKey, SettingOption } from "./approach-spec";
 
 interface Props {
     settingKey: SettingKey | null;
     value?: string;
     contentType: ContentType;
+    /**
+     * Replaces the table's options for one setting.
+     *
+     * Used for the AI-video length, which is the chosen MODEL's min/max rather
+     * than a list of ours: a model capped at 8s refuses a 30s request, so
+     * offering 30 would be offering a value that is always rejected.
+     */
+    overrideOptions?: SettingOption[];
     onPick: (value: string) => void;
     onClose: () => void;
 }
 
-const SettingSheet: React.FC<Props> = ({ settingKey, value, contentType, onPick, onClose }) => {
+const SettingSheet: React.FC<Props> = ({
+    settingKey,
+    value,
+    contentType,
+    overrideOptions,
+    onPick,
+    onClose,
+}) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useStyles(colors);
@@ -51,7 +66,7 @@ const SettingSheet: React.FC<Props> = ({ settingKey, value, contentType, onPick,
                                 style={styles.list}
                                 showsVerticalScrollIndicator={false}
                             >
-                                {spec.options(contentType).map((o) => {
+                                {(overrideOptions ?? spec.options(contentType)).map((o) => {
                                     const active = o.value === value;
                                     return (
                                         <Pressable

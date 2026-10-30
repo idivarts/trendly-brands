@@ -1,4 +1,4 @@
-import { isAspectAccepted, previewAspect } from "../media-spec";
+import { canonicalSize, isAspectAccepted, previewAspect } from "../media-spec";
 
 describe("isAspectAccepted", () => {
     it("rejects a landscape asset on a reel (the reported bug)", () => {
@@ -35,5 +35,18 @@ describe("isAspectAccepted", () => {
     it("never accepts a type that has no media", () => {
         expect(isAspectAccepted("live", 1)).toBe(false);
         expect(isAspectAccepted("text", 1)).toBe(false);
+    });
+});
+
+describe("canonicalSize", () => {
+    // 1080 on the short side, matching every design the AI writes. A clip
+    // authored at another size in the same timeline gets scaled, and which one
+    // loses is a coin flip.
+    it("sizes each content type the way its designs are sized", () => {
+        expect(canonicalSize("reel")).toEqual({ width: 1080, height: 1920 });
+        expect(canonicalSize("story")).toEqual({ width: 1080, height: 1920 });
+        expect(canonicalSize("video")).toEqual({ width: 1920, height: 1080 });
+        expect(canonicalSize("post")).toEqual({ width: 1080, height: 1080 });
+        expect(canonicalSize("carousel")).toEqual({ width: 1080, height: 1080 });
     });
 });
