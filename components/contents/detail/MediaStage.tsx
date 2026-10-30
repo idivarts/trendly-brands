@@ -245,8 +245,12 @@ const MediaStage: React.FC<MediaStageProps> = ({
     const uploadAndFile = useCallback(
         async (p: PickedAsset): Promise<Attachment> => {
             const uploaded = await uploadPicked(p);
+            // `playUrl` for a video, NOT `videoUrlOf` — that prefers the Apple
+            // HLS url on iOS, which is a playlist. The library's url is what
+            // ffprobe and ffmpeg are pointed at when the video is ingested, and
+            // what a composition clip decodes, so it has to be the plain file.
             const url = isVideoAttachment(uploaded)
-                ? videoUrlOf(uploaded) ?? uploaded.playUrl ?? ""
+                ? uploaded.playUrl ?? uploaded.appleUrl ?? ""
                 : uploaded.imageUrl ?? "";
             await recordAsset(brandId, {
                 kind: (p.type === "video" ? "video" : "image") as AssetKind,
