@@ -58,6 +58,18 @@ const STORAGE_KEY = "ai.selectedModel";
 
 const PLAN_RANK: Record<AIPlan, number> = { free: 0, pro: 1, team: 2, agency: 3 };
 
+/**
+ * Does this plan reach that minimum?
+ *
+ * Exported because the model registry gates the same way with its own rows, and
+ * a second copy of this rank table is a silent disagreement waiting for the day
+ * a tier is added — one side would let a model through and the other would
+ * lock it.
+ */
+export function planAllows(plan: AIPlan, minPlan?: string | null): boolean {
+    return PLAN_RANK[plan] >= (PLAN_RANK[(minPlan || "free") as AIPlan] ?? 0);
+}
+
 // Mirrors backend openrouter.PlanFromKey — maps USD + legacy India plan keys.
 function planFromKey(key?: string | null): AIPlan {
     switch (key) {
@@ -176,7 +188,7 @@ export const AIConfigProvider = ({ children }: { children: ReactNode }) => {
                 minPlan: m.minPlan,
                 vision: m.vision,
                 imageGen: m.imageGen,
-                unlocked: PLAN_RANK[plan] >= PLAN_RANK[m.minPlan ?? "free"],
+                unlocked: planAllows(plan, m.minPlan),
             })),
         [rawModels, plan]
     );

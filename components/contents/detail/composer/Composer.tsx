@@ -50,6 +50,30 @@ import { IMediaModel } from "@/shared-libs/firestore/trendly-pro/models/media-mo
 import { durationOptionsFor } from "@/hooks/media-model-options";
 import AIModelSelector from "@/components/ai/AIModelSelector/AIModelSelector";
 import { useAIModels } from "@/hooks/use-ai-models";
+import { AIModel, AIPlan, planAllows } from "@/contexts/ai-config-context.provider";
+
+/**
+ * A registry row, as the shared model picker sees it.
+ *
+ * The SAME picker renders both kinds on purpose. A video model and a design
+ * model are the same decision to the person making it — "which thing does
+ * this" — so a second control, with its own look in its own corner, would
+ * teach that they are different things. One control, one place, every
+ * approach.
+ *
+ * `unlocked` is computed rather than assumed, so a model above the org's plan
+ * shows as locked and routes to billing from here, instead of being offered,
+ * accepted, and refused by the backend with a 402.
+ */
+function asPickerModel(m: IMediaModel, plan: AIPlan): AIModel {
+    return {
+        id: m.id,
+        displayName: m.displayName,
+        provider: m.provider,
+        minPlan: (m.minPlan || "free") as AIPlan,
+        unlocked: planAllows(plan, m.minPlan),
+    };
+}
 
 /** Everything the composer collected, handed to whoever runs the generation. */
 export interface ComposerBrief {
@@ -135,6 +159,7 @@ const Composer: React.FC<Props> = ({
         models: designModels,
         selectedModel: designModel,
         setSelectedModel,
+        plan,
     } = useAIModels("design");
 
     const approaches = useMemo(() => approachesFor(contentType), [contentType]);
@@ -215,6 +240,21 @@ const Composer: React.FC<Props> = ({
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [needsModel, lengthOptions?.map((o) => o.value).join(",")]);
+
+    /**
+     * The models the picker offers, and which one is on.
+     *
+     * The approach decides WHICH registry it reads, never WHERE the control
+     * lives: a generated clip is made by a video model, everything else is
+     * written by the design model, and both appear in the same slot beside the
+     * send button. Consistency here is not tidiness — a control that moves
+     * between tabs reads as a different control.
+     */
+    const pickerModels = useMemo(
+        () => (needsModel ? videoModels.map((m) => asPickerModel(m, plan)) : designModels),
+        [needsModel, videoModels, designModels, plan]
+    );
+    const pickerSelected = needsModel ? model?.id ?? "" : designModel;
 
     // An approach with no model to run on, said in the same voice as a feature
     // that has not shipped — because from here it is the same thing.
@@ -351,41 +391,6 @@ const Composer: React.FC<Props> = ({
                             </View>
                         ) : null}
 
-                        {needsModel && model ? (
-                            <View style={styles.models}>
-                                {videoModels.length > 1 ? (
-                                    videoModels.map((m) => {
-                                        const active = m.id === model.id;
-                                        return (
-                                            <Pressable
-                                                key={m.id}
-                                                style={({ pressed }) => [
-                                                    styles.modelChip,
-                                                    active && styles.modelChipActive,
-                                                    pressed && styles.pressed,
-                                                ]}
-                                                onPress={() => setModelId(m.id)}
-                                                accessibilityRole="radio"
-                                                accessibilityState={{ selected: active }}
-                                                accessibilityLabel={`Use ${m.displayName}`}
-                                            >
-                                                <Text
-                                                    style={[
-                                                        styles.modelChipText,
-                                                        active && styles.modelChipTextActive,
-                                                    ]}
-                                                >
-                                                    {m.displayName}
-                                                </Text>
-                                            </Pressable>
-                                        );
-                                    })
-                                ) : (
-                                    <Text style={styles.modelOnly}>{model.displayName}</Text>
-                                )}
-                            </View>
-                        ) : null}
-
                         <ReferenceTray
                             slots={refSlots}
                             refs={refs}
@@ -415,24 +420,21 @@ const Composer: React.FC<Props> = ({
                                 />
                             </View>
 
-                            {/* The model that will do the work, named where the
-                                work is asked for. Which model it IS depends on
-                                the approach: a brief that goes to the AI is
-                                written by the design model, a generated clip is
-                                made by a video model, and footage is READ by a
-                                speech-to-text model before anything can cut it.
-                                Showing the wrong one would be worse than
-                                showing none. */}
-                            {needsModel ? null : (
-                                <AIModelSelector
-                                    models={designModels}
-                                    selectedModel={designModel}
-                                    onSelect={setSelectedModel}
-                                    compact
-                                    surface="composer"
-                                    task="design"
-                                />
-                            )}
+                            {/* The model that will do the work, in the same
+                                place on every approach. Which model it IS
+                                changes — a brief goes to the design model, a
+                                generated clip to a video model — but the
+                                control does not move, because a control that
+                                moves between tabs reads as a different
+                                control. */}
+                            <AIModelSelector
+                                models={pickerModels}
+                                selectedModel={pickerSelected}
+                                onSelect={needsModel ? setModelId : setSelectedModel}
+                                compact
+                                surface="composer"
+                                task={needsModel ? "video" : "design"}
+                            />
                             <Pressable
                                 style={({ pressed }) => [
                                     styles.send,
