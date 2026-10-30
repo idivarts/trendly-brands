@@ -52,6 +52,35 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 /**
+ * Strip keys whose value is `undefined`, recursively.
+ *
+ * Firestore REFUSES a write containing one — `addDoc() called with invalid
+ * data. Unsupported field value: undefined` — and a clip is exactly the shape
+ * that produces them: a source is built with every field its kind might use,
+ * and the ones that do not apply are left undefined rather than omitted. An
+ * optional field is "absent", so dropping the key is what was meant in the
+ * first place.
+ *
+ * Done here, at the one place a composition is written, rather than at each
+ * caller: every future clip kind will have optional fields too, and a rule that
+ * has to be remembered per call site is one that will be forgotten.
+ */
+function pruneUndefined<T>(value: T): T {
+    if (Array.isArray(value)) {
+        return value.map((v) => pruneUndefined(v)) as unknown as T;
+    }
+    if (value && typeof value === "object") {
+        const out: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+            if (v === undefined) continue;
+            out[k] = pruneUndefined(v);
+        }
+        return out as unknown as T;
+    }
+    return value;
+}
+
+/**
  * Frame rate for a composition the app authors.
  *
  * The same 30 the render worker falls back to (`RENDER_FPS`), because a
@@ -215,7 +244,7 @@ export function useContentComposition(
                 // backend recomputes them again on read anyway — they are what
                 // a render is billed on — and agreeing in advance means the UI
                 // and the invoice describe the same timeline.
-                const stamped = withDerivedOffsets(next);
+                const stamped = pruneUndefined(withDerivedOffsets(next));
                 const created = await addDoc(
                     collection(
                         FirestoreDB,

@@ -481,6 +481,8 @@ const MediaStage: React.FC<MediaStageProps> = ({
 
             const secs = secondsOf(brief.settings.length) ||
                 secondsOf(durationOptionsFor(model)[0]);
+            const startFrameUrl = model.startFrame ? brief.refs.startFrame?.imageUrl : undefined;
+            const endFrameUrl = model.endFrame ? brief.refs.endFrame?.imageUrl : undefined;
             const base = baseComposition();
             const clipId = newClipId();
             const withClip = appendClip(base, {
@@ -490,11 +492,16 @@ const MediaStage: React.FC<MediaStageProps> = ({
                     kind: "genvideo",
                     model: model.id,
                     prompt: brief.prompt,
-                    // Only sent where the model can use them — the composer does
+                    // Spread rather than assigned: an absent frame has to leave
+                    // the KEY out, not set it to undefined, which Firestore
+                    // refuses outright. (The writer prunes these too — this is
+                    // the shape being honest at the source.)
+                    //
+                    // Only sent where the model can use them: the composer does
                     // not draw a slot the model cannot honour, but a ref kept
                     // from another approach would still be in state.
-                    startFrameUrl: model.startFrame ? brief.refs.startFrame?.imageUrl : undefined,
-                    endFrameUrl: model.endFrame ? brief.refs.endFrame?.imageUrl : undefined,
+                    ...(startFrameUrl ? { startFrameUrl } : {}),
+                    ...(endFrameUrl ? { endFrameUrl } : {}),
                 },
             });
 
@@ -520,10 +527,8 @@ const MediaStage: React.FC<MediaStageProps> = ({
                             // clip arriving with audio nobody asked for fights
                             // the music bed and the voiceover in the mix.
                             generateAudio: false,
-                            startFrameUrl: model.startFrame
-                                ? brief.refs.startFrame?.imageUrl
-                                : undefined,
-                            endFrameUrl: model.endFrame ? brief.refs.endFrame?.imageUrl : undefined,
+                            startFrameUrl,
+                            endFrameUrl,
                         }),
                     }
                 );
