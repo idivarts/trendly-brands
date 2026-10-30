@@ -445,6 +445,9 @@ const MediaStage: React.FC<MediaStageProps> = ({
     // call. Routing them through the chat (as every other approach is) would
     // mean the model paraphrasing a request it cannot act on.
     const { models: videoModels } = useMediaModels("video");
+    // What reads an upload before the AI cuts it. Registry-driven like the
+    // video models, so switching transcription model is a field edit.
+    const { models: sttModels } = useMediaModels("stt");
     const [briefBusy, setBriefBusy] = useState(false);
     // The footage whose ingest we are waiting on before handing the cut to the
     // AI, and the brief to hand over when it lands.
@@ -1177,6 +1180,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
                     contentType={contentType}
                     onSubmit={submitBrief}
                     videoModels={videoModels}
+                    sttModels={sttModels}
                     disabled={readOnly || briefBusy}
                 />
             );
