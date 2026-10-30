@@ -24,6 +24,7 @@ import { ContentType } from "@/components/content-calendar/types";
 import { fs, lh } from "@/constants/Typography";
 import SectionLabel from "@/components/contents/detail/SectionLabel";
 import { useBreakpoints } from "@/hooks";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useAWSContext } from "@/shared-libs/contexts/aws-context.provider";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { IContentDesignRef } from "@/shared-libs/firestore/trendly-pro/models/design";
@@ -36,6 +37,7 @@ import {
     faChevronRight,
     faImage,
     faPen,
+    faPhotoFilm,
     faPlay,
     faPlus,
     faTrashCan,
@@ -57,6 +59,9 @@ import {
     Text,
     View,
 } from "react-native";
+import { AssetKind, IAsset } from "@/shared-libs/firestore/trendly-pro/models/asset";
+import { recordAsset } from "@/hooks/use-asset-library";
+import AssetsPanel from "./AssetsPanel";
 import DesignFrame from "./design-stage/DesignFrame";
 import { DesignPreview } from "./design-stage/use-design-preview";
 import MediaAssetPreview from "./MediaAssetPreview";
@@ -136,8 +141,11 @@ const MediaStage: React.FC<MediaStageProps> = ({
     const styles = useStyles(colors);
     const spec = MEDIA_SPEC[contentType];
     const { uploadFileUri } = useAWSContext();
+    const { selectedBrand } = useBrandContext();
+    const brandId = selectedBrand?.id;
 
     const [uploading, setUploading] = useState(false);
+    const [libraryOpen, setLibraryOpen] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [previewOpen, setPreviewOpen] = useState(false);
     const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
@@ -221,6 +229,80 @@ const MediaStage: React.FC<MediaStageProps> = ({
         [uploadFileUri]
     );
 
+    /**
+     * Upload a picked file AND file it in the brand's library.
+     *
+     * The second half is not bookkeeping. A library row is what makes the file
+     * reachable from another post, and for a VIDEO it is also what starts
+     * ingest — the backend queues the probe and the frame sampling when a new
+     * video row is created, and the transcript and shot list follow from that.
+     * An upload that is never recorded is usable here and nowhere else.
+     *
+     * The record is awaited rather than fired off, so a user who uploads and
+     * immediately opens the library sees what they just added; it fails
+     * silently by design (see `recordAsset`), because the file is already up.
+     */
+    const uploadAndFile = useCallback(
+        async (p: PickedAsset): Promise<Attachment> => {
+            const uploaded = await uploadPicked(p);
+            // `playUrl` for a video, NOT `videoUrlOf` — that prefers the Apple
+            // HLS url on iOS, which is a playlist. The library's url is what
+            // ffprobe and ffmpeg are pointed at when the video is ingested, and
+            // what a composition clip decodes, so it has to be the plain file.
+            const url = isVideoAttachment(uploaded)
+                ? uploaded.playUrl ?? uploaded.appleUrl ?? ""
+                : uploaded.imageUrl ?? "";
+            await recordAsset(brandId, {
+                kind: (p.type === "video" ? "video" : "image") as AssetKind,
+                url,
+                width: p.width,
+                height: p.height,
+                originContentId: contentId ?? undefined,
+            });
+            return uploaded;
+        },
+        [uploadPicked, brandId, contentId]
+    );
+
+    /**
+     * An asset chosen from the library becomes this content's media.
+     *
+     * Converted to an `Attachment` rather than stored as a reference: the whole
+     * publish pipeline, every preview and the slide strip read attachments, and
+     * a second shape meaning the same thing is how a preview and an export come
+     * to disagree. The library row stays where it is — the same asset can be on
+     * two posts, which is the point.
+     */
+    const attachmentFor = useCallback((asset: IAsset): Attachment => {
+        if (asset.kind === "video") {
+            // Both urls get the same value: the library stores one playable
+            // url, and `videoUrlOf` picks per platform from a pair that an
+            // upload happens to have. Giving it one url it can always use beats
+            // leaving the iOS branch empty.
+            return { type: "video", playUrl: asset.url, appleUrl: asset.url };
+        }
+        return {
+            type: "image",
+            imageUrl: asset.url,
+            ...(asset.thumbUrl ? { thumbUrl: asset.thumbUrl } : {}),
+        };
+    }, []);
+
+    const handleLibraryPick = useCallback(
+        (picked: IAsset[]) => {
+            if (!picked.length) return;
+            setError(null);
+            const next = picked.map(attachmentFor);
+            onAttachmentsChange(spec.multi ? [...attachments, ...next] : [next[0]]);
+            setPickedLane("upload");
+            track("content_media_from_library", {
+                count: next.length,
+                sources: Array.from(new Set(picked.map((a) => a.source))).join(","),
+            });
+        },
+        [attachmentFor, attachments, spec.multi, onAttachmentsChange]
+    );
+
     /** Returns true when at least one asset was uploaded. */
     const handleUpload = useCallback(async (): Promise<boolean> => {
         setError(null);
@@ -236,7 +318,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
                 }
 
                 setUploading(true);
-                const uploaded = await Promise.all(valid.map(uploadPicked));
+                const uploaded = await Promise.all(valid.map(uploadAndFile));
                 onAttachmentsChange([...attachments, ...uploaded]);
 
                 const skipped = picked.length - valid.length;
@@ -259,7 +341,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
             }
 
             setUploading(true);
-            const uploaded = await uploadPicked(picked);
+            const uploaded = await uploadAndFile(picked);
             onAttachmentsChange([uploaded]);
             return true;
         } catch (e) {
@@ -268,7 +350,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
         } finally {
             setUploading(false);
         }
-    }, [attachments, contentType, spec.kind, spec.multi, spec.aspectLabel, spec.aspectRatios, uploadPicked, onAttachmentsChange]);
+    }, [attachments, contentType, spec.kind, spec.multi, spec.aspectLabel, spec.aspectRatios, uploadAndFile, onAttachmentsChange]);
 
     // Picking the upload lane goes straight to the picker — a card that opens a
     // panel with one more button in it is a wasted step. Backing out of the
@@ -725,6 +807,29 @@ const MediaStage: React.FC<MediaStageProps> = ({
         );
     };
 
+    /**
+     * "Your media" — the brand's library, which is neither a lane nor a device
+     * picker.
+     *
+     * It sits beside Upload rather than beside the two lane cards on purpose: a
+     * file already in the library and a file on the phone end up in exactly the
+     * same place, so offering the library as a third peer card would imply a
+     * third kind of media. What it prevents is the thing it is worth a button
+     * for — uploading the same product shot for the fourth time because the
+     * previous three are only reachable from the posts they were used on.
+     */
+    const libraryBtn = () => (
+        <Pressable
+            style={({ pressed }) => [styles.laneBtn, pressed && styles.pressed]}
+            onPress={() => setLibraryOpen(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Choose from your media"
+        >
+            <FontAwesomeIcon icon={faPhotoFilm} size={12} color={colors.primary} />
+            <Text style={styles.laneBtnText}>Your media</Text>
+        </Pressable>
+    );
+
     const renderUploadLane = () => (
         <>
             {hasMedia ? (
@@ -769,6 +874,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
                             <Text style={styles.laneBtnText}>{uploading ? "Uploading…" : "Replace"}</Text>
                         </Pressable>
                     )}
+                    {libraryBtn()}
                     {hasMedia ? (
                         <Pressable
                             style={({ pressed }) => [styles.clearBtn, pressed && styles.pressed]}
@@ -796,7 +902,12 @@ const MediaStage: React.FC<MediaStageProps> = ({
                     </Text>
                 );
             }
-            return <MediaLaneCards contentType={contentType} onPick={pickLane} />;
+            return (
+                <>
+                    <MediaLaneCards contentType={contentType} onPick={pickLane} />
+                    <View style={styles.laneActionRow}>{libraryBtn()}</View>
+                </>
+            );
         }
         return (
             <>
@@ -878,6 +989,16 @@ const MediaStage: React.FC<MediaStageProps> = ({
                 {renderBody()}
 
                 {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+                <AssetsPanel
+                    visible={libraryOpen}
+                    onClose={() => setLibraryOpen(false)}
+                    onPick={(asset) => handleLibraryPick([asset])}
+                    // Several at a time only where several can land: on a
+                    // single-image post the second pick would replace the first.
+                    onPickMany={spec.multi ? handleLibraryPick : undefined}
+                    kinds={[(spec.kind === "video" ? "video" : "image") as AssetKind]}
+                />
 
                 {previewOpen ? (
                     <AssetPreviewModal
