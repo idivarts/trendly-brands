@@ -1024,9 +1024,8 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                                     the timeline
                                 </Text>
                                 <Text style={styles.emptySub}>
-                                    It's below — trim it, reorder it, or add more. The canvas stays empty
-                                    until you design something to go with it, and the render puts the whole
-                                    timeline together.
+                                    It's below — trim it, reorder it, or add more. Pick a clip to look at
+                                    it; the render puts the whole timeline together.
                                 </Text>
                             </View>
                         ) : (
@@ -1122,6 +1121,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                     }}
                     actions={timelineActions}
                     authored={timeline.authored}
+                    hasDesign={hasDesign}
                     onReset={() => {
                         void timeline.discard();
                         setSelectedClipId(null);

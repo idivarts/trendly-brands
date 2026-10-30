@@ -81,6 +81,14 @@ interface Props {
      * saying so is what stops "Reset" reading as a destructive mystery.
      */
     authored: boolean;
+    /**
+     * Whether there is a design underneath to go back TO.
+     *
+     * Without one, dropping the timeline drops the content's only media, so the
+     * affordance is not offered: "Back to the design" on a content with no
+     * design is a button that deletes a video and calls itself an undo.
+     */
+    hasDesign: boolean;
     onReset?: () => void;
     readOnly?: boolean;
 }
@@ -92,6 +100,7 @@ const TimelineStrip: React.FC<Props> = ({
     onToggleTransition,
     actions,
     authored,
+    hasDesign,
     onReset,
     readOnly,
 }) => {
@@ -132,7 +141,7 @@ const TimelineStrip: React.FC<Props> = ({
                     {measured.clips.length > 1 ? ` · ${measured.clips.length} clips` : ""}
                     {overlays.length ? ` · ${overlays.length} overlay${overlays.length > 1 ? "s" : ""}` : ""}
                 </Text>
-                {authored && onReset && !readOnly ? (
+                {authored && hasDesign && onReset && !readOnly ? (
                     <Pressable
                         onPress={onReset}
                         style={({ pressed }) => [styles.resetBtn, pressed && styles.pressed]}
@@ -269,11 +278,15 @@ const TimelineStrip: React.FC<Props> = ({
                 pressing play and concluding their footage had not been added. */}
             {measured.clips.length > 1 ? (
                 <Text style={styles.hint}>
-                    The canvas plays your design. The clips come together in the render.
+                    {hasDesign
+                        ? "The canvas plays your design. The clips come together in the render."
+                        : "The canvas shows one clip at a time. The render puts them together."}
                 </Text>
             ) : !readOnly ? (
                 <Text style={styles.hint}>
-                    One clip: your design. Add footage or a photo and they render in order.
+                    {hasDesign
+                        ? "One clip: your design. Add footage or a photo and they render in order."
+                        : "One clip. Add footage, a photo or another generated clip and they render in order."}
                 </Text>
             ) : null}
 
