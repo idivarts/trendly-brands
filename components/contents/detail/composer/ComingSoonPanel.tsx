@@ -93,7 +93,9 @@ const useStyles = (colors: any) =>
                     paddingVertical: 18,
                     paddingHorizontal: 16,
                     borderRadius: 12,
-                    backgroundColor: colors.tag,
+                    // The raised surface: this panel stands where the prompt
+                    // card stands, on the composer's recessed well.
+                    backgroundColor: colors.card,
                     gap: 6,
                 },
                 promo: {
