@@ -373,7 +373,13 @@ const CreateContentScreen = () => {
     const renderBaselinedRef = useRef(false);
     useEffect(() => {
         if (!seedItem) return;
-        const renderUrl = seedItem.designRef?.renderUrl;
+        // Either pointer, because either can be what was rendered: a timeline
+        // wins over a design when the backend resolves the target, and its
+        // output lands on `compositionRef.renderUrl`. Watching only the design
+        // meant a rendered timeline appeared on the page after a reload and not
+        // before it.
+        const renderUrl =
+            seedItem.compositionRef?.renderUrl ?? seedItem.designRef?.renderUrl;
         if (!renderBaselinedRef.current) {
             seenRenderRef.current = renderUrl;
             renderBaselinedRef.current = true;
@@ -386,7 +392,7 @@ const CreateContentScreen = () => {
             setDirty(false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [seedItem, seedItem?.designRef?.renderUrl]);
+    }, [seedItem, seedItem?.designRef?.renderUrl, seedItem?.compositionRef?.renderUrl]);
 
     // ── Unsaved-changes (dirty) tracking ─────────────────────────────────────
     const [dirty, setDirty] = useState(false);
@@ -1528,6 +1534,12 @@ const CreateContentScreen = () => {
             await updateContent(contentId, {
                 attachments: [],
                 designRef: deleteField() as any,
+                // The timeline goes with it. A composition WINS over a design
+                // when the backend resolves what to render, so leaving the
+                // pointer behind would keep rendering a timeline whose design
+                // clip no longer exists. The revisions themselves stay, like
+                // the designs do.
+                compositionRef: deleteField() as any,
                 source: deleteField() as any,
             });
         } catch (e) {
@@ -1804,6 +1816,7 @@ const CreateContentScreen = () => {
                                 contentType={contentType}
                                 isVideo={mediaSpec.kind === "video"}
                                 designRef={seedItem?.designRef}
+                                compositionRef={seedItem?.compositionRef}
                                 designScore={seedItem?.designScore}
                                 voiceoverSource={script || caption}
                                 audio={seedItem?.audio}
@@ -2105,6 +2118,7 @@ const CreateContentScreen = () => {
                                     onAttachmentsChange={setAttachments}
                                     source={seedItem?.source}
                                     designRef={seedItem?.designRef}
+                                    compositionRef={seedItem?.compositionRef}
                                     designPreview={designPreview}
                                     onOpenDesign={() => setStage("design")}
                                     onSubmitBrief={handleComposerBrief}

@@ -18,6 +18,8 @@ import { useAIModels } from "@/hooks/use-ai-models";
 import { Focus, FocusArea } from "@/types/focus";
 import { useContentComments } from "@/hooks/use-content-comments";
 import { IContentAudio, IContentDesignRef } from "@/shared-libs/firestore/trendly-pro/models/design";
+import { IContentCompositionRef } from "@/shared-libs/firestore/trendly-pro/models/composition";
+import { IAsset } from "@/shared-libs/firestore/trendly-pro/models/asset";
 import { IViralityScore } from "@/shared-libs/firestore/trendly-pro/models/contents";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Colors from "@/shared-uis/constants/Colors";
@@ -30,6 +32,7 @@ import {
     faEllipsisVertical,
     faPen,
     faPenRuler,
+    faPhotoFilm,
     faTriangleExclamation,
     faWandMagicSparkles,
     faXmark,
@@ -59,6 +62,11 @@ import AudioLanes from "./AudioLanes";
 import AudioAddSheet from "./AudioAddSheet";
 import DesignScoreCard from "./DesignScoreCard";
 import InspectorPanel from "./InspectorPanel";
+import AssetsPanel from "../AssetsPanel";
+import ClipInspector from "./ClipInspector";
+import TimelineStrip, { TimelineAction } from "./TimelineStrip";
+import { appendClip, clipFromAsset, setTransition } from "./composition-edits";
+import { useContentComposition } from "./use-content-composition";
 import { useSoundtrackPlayer } from "./use-audio-player";
 import { useContentDesign } from "./use-content-design";
 import { useDesignRender } from "./use-design-render";
@@ -71,6 +79,8 @@ interface DesignStageProps {
     contentType: ContentType;
     isVideo: boolean;
     designRef?: IContentDesignRef;
+    /** Pointer to the authored timeline, when there is one. */
+    compositionRef?: IContentCompositionRef;
     /** The design's last virality score, if it has been scored before. */
     designScore?: IViralityScore;
     voiceoverSource: string;
@@ -195,20 +205,105 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     const isVideoDesign = docType === "video";
     const slideCount = Math.max(revision?.slideCount ?? designRef?.slideCount ?? 1, 1);
 
+    // ── The timeline ─────────────────────────────────────────────────────────
+    // `composition` is never null while there is a video design: with nothing
+    // authored it is the implicit one-clip timeline the render worker derives
+    // for every pre-composition video, so the strip has something real to show
+    // from the first open and "add a clip" is an edit rather than a mode.
+    //
+    // The design's length comes from the FRAME's live measurement where there
+    // is one, and from the stored revision before the frame has reported. A
+    // design edited in this session is longer or shorter than the document
+    // says, and the first clip's duration is what the render is billed on.
+    const timelineDesign = useMemo(
+        () =>
+            revision?.id && isVideoDesign
+                ? {
+                      revisionId: revision.id,
+                      width: w,
+                      height: h,
+                      durationMs: durMs || revision.durationMs || 0,
+                  }
+                : null,
+        [revision?.id, revision?.durationMs, isVideoDesign, w, h, durMs]
+    );
+    const timeline = useContentComposition(contentId, props.compositionRef, timelineDesign);
+    const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
+    const [clipSheetOpen, setClipSheetOpen] = useState(false);
+    const [libraryOpen, setLibraryOpen] = useState(false);
+
+    // A clip that was removed — or a timeline that was dropped — must not leave
+    // an inspector pointed at nothing.
+    useEffect(() => {
+        if (!selectedClipId) return;
+        const clips = (timeline.composition?.tracks ?? []).flatMap((t) => t.clips ?? []);
+        if (!clips.some((c) => c.id === selectedClipId)) {
+            setSelectedClipId(null);
+            setClipSheetOpen(false);
+        }
+    }, [timeline.composition, selectedClipId]);
+
+    const selectClip = (clipId: string | null) => {
+        setSelectedClipId(clipId);
+        // On a phone the inspector is not docked, so a selection has to open
+        // something. On a wide screen it lands in the pane already on screen.
+        if (clipId && !xl) setClipSheetOpen(true);
+    };
+
+    const saveTimeline = (next: Parameters<typeof timeline.save>[0]) => {
+        void timeline.save(next).catch(() => {
+            Toaster.error("Couldn't save the timeline", "Please try again.");
+        });
+    };
+
+    const addFromLibrary = (asset: IAsset) => {
+        const current = timeline.composition;
+        if (!current) return;
+        saveTimeline(appendClip(current, clipFromAsset(asset)));
+    };
+
+    const timelineActions: TimelineAction[] = [
+        {
+            key: "library",
+            label: "From your media",
+            sub: "Footage or a photo you've already got.",
+            icon: faPhotoFilm,
+            onPress: () => setLibraryOpen(true),
+        },
+    ];
+
     // Ask the server to render. Shared with the Media Stage's render action so
     // there is one render pipeline, not two. Nothing is paused first: the worker
     // renders the SAVED HTML in its own browser, so whatever this preview is
     // doing is irrelevant to the output.
+    // An authored timeline is what gets rendered — the backend prefers a
+    // composition over a design, because the composition is the thing the user
+    // arranged and the design is one clip inside it. So the render is pointed
+    // at the composition revision and reports from it, and the request names no
+    // revision at all (naming one would be read as naming a design revision).
+    const renderTarget = timeline.authored && timeline.revision
+        ? ({
+              targetKind: "composition" as const,
+              revisionId: timeline.revision.id,
+              renderStatus: timeline.revision.renderStatus,
+              renderProgress: timeline.revision.renderProgress,
+              renderError: timeline.revision.renderError,
+          })
+        : ({
+              targetKind: "design" as const,
+              revisionId: revision?.id,
+              renderStatus: revision?.renderStatus,
+              renderProgress: revision?.renderProgress,
+              renderError: revision?.renderError,
+          });
     const render = useDesignRender({
         contentId,
-        revisionId: revision?.id,
         isVideoDesign,
         slideCount,
-        renderStatus: revision?.renderStatus,
-        renderProgress: revision?.renderProgress,
-        renderError: revision?.renderError,
+        ...renderTarget,
     });
     const hasDesign = !!html;
+
     // Fit the design into the measured canvas area, preserving aspect ratio AND
     // reserving room for the on-canvas controls (video scrubber / slide nav) so a
     // tall reel is never clipped. Falls back to a sensible width before measured.
@@ -495,6 +590,22 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     };
 
 
+    const clipInspector =
+        selectedClipId && timeline.composition ? (
+            <ClipInspector
+                composition={timeline.composition}
+                clipId={selectedClipId}
+                designSceneCount={slideCount}
+                onChange={saveTimeline}
+                onDeselect={() => {
+                    setSelectedClipId(null);
+                    setClipSheetOpen(false);
+                }}
+                onAskAI={(instruction) => props.onSendToChat(instruction)}
+                readOnly={readOnly}
+            />
+        ) : null;
+
     return (
         <View style={styles.container}>
             {/* Header — close (✕) on the left, primary Render on the right. */}
@@ -613,6 +724,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
             {xl && hasDesign ? (
                 <InspectorPanel
                     selection={selected}
+                    clipSection={clipInspector}
                     slide={slide}
                     slideCount={slideCount}
                     isVideo={isVideoDesign}
@@ -924,6 +1036,32 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
             </View>
             </View>
 
+            {/* The timeline — the picture track, to scale, under the player.
+                Only for a video: an image has no sequence, and a carousel's
+                order is its slide strip. */}
+            {isVideo && hasDesign && timeline.composition ? (
+                <TimelineStrip
+                    composition={timeline.composition}
+                    selectedClipId={selectedClipId}
+                    onSelectClip={selectClip}
+                    onToggleTransition={(clipId) => {
+                        const current = timeline.composition;
+                        if (!current) return;
+                        const clips = (current.tracks ?? []).flatMap((t) => t.clips ?? []);
+                        const clip = clips.find((c) => c.id === clipId);
+                        const next = clip?.transitionIn?.kind === "fade" ? "cut" : "fade";
+                        saveTimeline(setTransition(current, clipId, next));
+                    }}
+                    actions={timelineActions}
+                    authored={timeline.authored}
+                    onReset={() => {
+                        void timeline.discard();
+                        setSelectedClipId(null);
+                    }}
+                    readOnly={readOnly}
+                />
+            ) : null}
+
             {/* Sound — two lanes under the player (video only).
                 Always visible: audio used to live behind a collapsed trigger
                 that opened a sheet which narrowed the design above it, so you
@@ -938,6 +1076,30 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                     readOnly={readOnly}
                 />
             ) : null}
+
+            <AssetsPanel
+                visible={libraryOpen}
+                onClose={() => setLibraryOpen(false)}
+                onPick={addFromLibrary}
+                title="Add a clip"
+            />
+
+            {/* On a phone the properties column does not exist, so a selected
+                clip opens a sheet with the same body in it. */}
+            <Modal
+                visible={clipSheetOpen && !xl && !!clipInspector}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setClipSheetOpen(false)}
+            >
+                <Pressable style={styles.backdrop} onPress={() => setClipSheetOpen(false)}>
+                    <Pressable style={styles.clipSheet} onPress={() => {}}>
+                        <ScrollView contentContainerStyle={styles.clipSheetBody}>
+                            {clipInspector}
+                        </ScrollView>
+                    </Pressable>
+                </Pressable>
+            </Modal>
 
             <AudioAddSheet
                 mode={audioSheet}
@@ -1390,6 +1552,18 @@ const useStyles = (colors: any, topInset: number) =>
                     padding: 24,
                 },
                 sheet: { width: "100%", maxWidth: 420, borderRadius: 16, backgroundColor: colors.card, padding: 16, gap: 12 },
+                // The clip's properties on a phone. Capped at most of the
+                // screen rather than sized to its contents: a footage clip's
+                // transcript is long, and a sheet that grows with it would push
+                // its own controls off the bottom.
+                clipSheet: {
+                    width: "100%",
+                    maxWidth: 480,
+                    maxHeight: "80%",
+                    borderRadius: 16,
+                    backgroundColor: colors.card,
+                },
+                clipSheetBody: { padding: 16 },
                 sheetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
                 sheetClose: {
                     width: 30,

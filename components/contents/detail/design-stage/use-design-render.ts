@@ -32,6 +32,20 @@ export interface UseDesignRenderOptions {
     contentId: string | null;
     /** Current revision id — the render is recorded against it. */
     revisionId?: string;
+    /**
+     * Which of the content's two kinds of media is being rendered.
+     *
+     * This exists because of one rule in the backend: an explicit `revisionId`
+     * in the request names a DESIGN revision and deliberately bypasses the
+     * composition precedence — that is how an older design revision gets
+     * re-rendered. So a content with an authored timeline must send NO revision
+     * id, or pressing Render would quietly render the design on its own and
+     * publish media the user did not arrange.
+     *
+     * "composition" therefore means "let the server resolve the target", and
+     * the caller passes that revision's own render fields below.
+     */
+    targetKind?: "design" | "composition";
     isVideoDesign: boolean;
     slideCount: number;
     /** Live render state, read off the revision document. */
@@ -55,6 +69,7 @@ export interface UseDesignRenderReturn {
 export function useDesignRender({
     contentId,
     revisionId,
+    targetKind = "design",
     isVideoDesign,
     slideCount,
     renderStatus,
@@ -115,7 +130,9 @@ export function useDesignRender({
         HttpWrapper.fetch(`/api/v2/brands/${brandId}/contents/${contentId}/render`, {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ revisionId }),
+            // Empty for a composition: naming a revision would be read as
+            // naming a DESIGN revision and would skip the timeline entirely.
+            body: targetKind === "composition" ? "{}" : JSON.stringify({ revisionId }),
         })
             .then(async (res) => {
                 const data = await res.json().catch(() => ({} as Record<string, unknown>));
@@ -168,7 +185,7 @@ export function useDesignRender({
                 });
             })
             .finally(() => setSubmitting(false));
-    }, [brandId, contentId, revisionId, isVideoDesign]);
+    }, [brandId, contentId, revisionId, targetKind, isVideoDesign]);
 
     // The render completes on the server, so the outcome arrives as a
     // renderStatus change rather than as a response to the POST above.

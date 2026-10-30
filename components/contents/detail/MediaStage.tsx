@@ -28,6 +28,7 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useAWSContext } from "@/shared-libs/contexts/aws-context.provider";
 import { Attachment } from "@/shared-libs/firestore/trendly-pro/constants/attachment";
 import { IContentDesignRef } from "@/shared-libs/firestore/trendly-pro/models/design";
+import { IContentCompositionRef } from "@/shared-libs/firestore/trendly-pro/models/composition";
 import { pickMedia, pickMediaMulti, PickedAsset } from "@/shared-libs/utils/media-picker";
 import AssetPreviewModal from "@/shared-uis/components/carousel/asset-preview-modal";
 import Colors from "@/shared-uis/constants/Colors";
@@ -71,6 +72,7 @@ import { clearLabelFor, lanesFor, MediaLane, MediaSource, resolveMediaLane } fro
 import { aspectError, MEDIA_SPEC, parseAspectRatio, previewAspect } from "./media-spec";
 import DesignRenderBar, { DesignRenderChip, DesignRenderState } from "./DesignRenderBar";
 import { useDesignRender } from "./design-stage/use-design-render";
+import { useContentComposition } from "./design-stage/use-content-composition";
 import { DesignFrameHandle } from "./design-stage/bridge";
 import { track } from "@/shared-libs/utils/analytics";
 
@@ -87,6 +89,13 @@ interface MediaStageProps {
     source?: MediaSource;
     /** Pointer to the current design revision, when the design lane owns the media. */
     designRef?: IContentDesignRef;
+    /**
+     * Pointer to the authored timeline, when there is one. Needed here for the
+     * render bar alone: a composition wins over a design when the backend
+     * resolves what to render, so the chip and the progress have to follow the
+     * composition's revision or they describe media nobody is making.
+     */
+    compositionRef?: IContentCompositionRef;
     /** Live HTML of that revision, for previewing a canvas that isn't rendered yet. */
     designPreview?: DesignPreview | null;
     /** Open the Design Studio — to edit an existing design on the full canvas. */
@@ -126,6 +135,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
     onAttachmentsChange,
     source,
     designRef,
+    compositionRef,
     designPreview,
     onOpenDesign,
     onSubmitBrief,
@@ -178,14 +188,29 @@ const MediaStage: React.FC<MediaStageProps> = ({
         return hasMedia ? "stale" : "never";
     }, [designPreview, hasMedia]);
 
+    // Only the stored timeline matters here: with nothing authored the design
+    // IS the media, and no design is passed so nothing is derived.
+    const timeline = useContentComposition(contentId, compositionRef, null);
+    const renderTarget = timeline.authored && timeline.revision
+        ? ({
+              targetKind: "composition" as const,
+              revisionId: timeline.revision.id,
+              renderStatus: timeline.revision.renderStatus,
+              renderProgress: timeline.revision.renderProgress,
+              renderError: timeline.revision.renderError,
+          })
+        : ({
+              targetKind: "design" as const,
+              revisionId: designRef?.revisionId,
+              renderStatus: designPreview?.renderStatus,
+              renderProgress: designPreview?.renderProgress,
+              renderError: designPreview?.renderError,
+          });
     const designRender = useDesignRender({
         contentId,
-        revisionId: designRef?.revisionId,
         isVideoDesign: designPreview?.docType === "video",
         slideCount: designPreview?.slideCount ?? 1,
-        renderStatus: designPreview?.renderStatus,
-        renderProgress: designPreview?.renderProgress,
-        renderError: designPreview?.renderError,
+        ...renderTarget,
     });
 
     // The lane the data says owns this media, and the one the user just picked

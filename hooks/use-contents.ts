@@ -64,6 +64,7 @@ function toContentItem(id: string, data: IContent): ContentItem {
         imageGeneration: data.imageGeneration,
         source: data.source,
         designRef: data.designRef,
+        compositionRef: data.compositionRef,
         audio: data.audio,
         destinations: data.destinations as SocialDestination[] | undefined,
         platformOptions: data.platformOptions as ContentItem["platformOptions"],
