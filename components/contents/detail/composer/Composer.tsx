@@ -48,6 +48,7 @@ import {
 } from "./approach-spec";
 import { IMediaModel } from "@/shared-libs/firestore/trendly-pro/models/media-model";
 import { durationOptionsFor } from "@/hooks/media-model-options";
+import { withAlpha } from "@/utils/color";
 import AIModelSelector from "@/components/ai/AIModelSelector/AIModelSelector";
 import { useAIModels } from "@/hooks/use-ai-models";
 import { AIModel, AIPlan, planAllows } from "@/contexts/ai-config-context.provider";
@@ -527,7 +528,12 @@ const useStyles = (colors: any) =>
                     gap: 10,
                     padding: 12,
                     borderRadius: 14,
-                    backgroundColor: colors.tag,
+                    // The well the composer sits in. `colors.tag` is the house
+                    // recessed surface, but in LIGHT theme it is rgb(249,249,249)
+                    // against a white card — a 1.05:1 step, which is invisible at
+                    // this size. A tint of the text colour steps both themes the
+                    // same way (1.17:1 light, 1.22:1 dark) without a new token.
+                    backgroundColor: withAlpha(colors.text, 0.07),
                 },
                 tabs: {
                     flexDirection: "row",
