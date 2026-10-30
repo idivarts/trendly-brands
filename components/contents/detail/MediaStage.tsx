@@ -77,7 +77,9 @@ import { useFootageAsset } from "./design-stage/use-footage-asset";
 import {
     appendClip,
     clipFromAsset,
+    findClip,
     newClipId,
+    patchFootage,
 } from "./design-stage/composition-edits";
 import { durationOptionsFor, secondsOf, useMediaModels } from "@/hooks/use-media-models";
 import { Composition } from "@/shared-libs/design/composition-runtime";
@@ -447,6 +449,8 @@ const MediaStage: React.FC<MediaStageProps> = ({
     // AI, and the brief to hand over when it lands.
     const [reading, setReading] = useState<{
         assetId: string;
+        /** The clip this upload was placed as, so its length can be corrected. */
+        clipId: string;
         brief: ComposerBrief;
     } | null>(null);
     // Set when the wait has gone on too long. Explicit state rather than a
@@ -609,6 +613,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
                     url,
                     originContentId: contentId ?? undefined,
                 });
+                let clipId = "";
                 if (assetId) {
                     // Placed from the library row, so the clip carries the
                     // assetId — which is what lets the inspector find the
@@ -620,6 +625,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
                         url,
                         createdAt: Date.now(),
                     });
+                    clipId = clip.id;
                     await timeline.save(appendClip(baseComposition(), clip));
                 }
                 track("content_brief_submitted", {
@@ -636,7 +642,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
                     return;
                 }
                 setReadTimedOut(false);
-                setReading({ assetId, brief });
+                setReading({ assetId, clipId, brief });
             } catch {
                 setError("We couldn't start that. Please try again.");
             } finally {
@@ -661,6 +667,23 @@ const MediaStage: React.FC<MediaStageProps> = ({
         // Said to the model as a NOTE on the brief rather than folded into the
         // user's own words: it is instruction about how to act, and the user did
         // not write it.
+        // The real length, now that something has measured it. A freshly
+        // uploaded video has none — the picker does not report one — so it was
+        // placed at the default clip length, and leaving it there would have
+        // the timeline claim three seconds of a thirty-second take.
+        const measured = readingAsset?.ingest?.durationMs ?? readingAsset?.durationMs;
+        if (reading.clipId && measured && timeline.composition) {
+            const placed = findClip(timeline.composition, reading.clipId);
+            const source = placed?.clip.source;
+            // Only while it is still the whole take: a trim the user or the AI
+            // has already made is theirs, not ours to stretch back out.
+            if (source?.kind === "footage" && !source.outMs) {
+                timeline.apply(
+                    patchFootage(timeline.composition, reading.clipId, { outMs: measured }, measured)
+                );
+            }
+        }
+
         const notes = [
             `The footage is on this content's timeline as asset ${reading.assetId}. ` +
                 "Read it with get_footage, then cut it with cut_footage — keep the lines that " +

@@ -13,6 +13,7 @@ import {
     videoTrack,
 } from "@/shared-libs/design/composition-runtime";
 import { IAsset } from "@/shared-libs/firestore/trendly-pro/models/asset";
+import { DEFAULT_CLIP_MS } from "@/shared-libs/design/composition-runtime";
 import {
     MIN_CLIP_MS,
     addOverlay,
@@ -324,6 +325,15 @@ describe("clipFromAsset", () => {
             asset({ kind: "video", ingest: { status: "done", durationMs: 9000 } })
         );
         expect(clip.durationMs).toBe(9000);
+    });
+
+    // An upload the picker reported no length for — the usual case, since
+    // ingest measures it a minute later. A clip at the 67ms minimum reads as
+    // broken; the default length reads as a clip.
+    it("places a video of unknown length at the default clip length", () => {
+        const clip = clipFromAsset(asset({ kind: "video", url: "https://x/v.mp4" }));
+        expect(clip.durationMs).toBe(DEFAULT_CLIP_MS);
+        expect(clip.durationMs).toBeGreaterThan(MIN_CLIP_MS);
     });
 
     it("gives a still a slow push and carries the asset id", () => {
