@@ -398,7 +398,12 @@ export function clipFromAsset(asset: IAsset, fallbackMs = DEFAULT_IMAGE_CLIP_MS)
         const assetMs = asset.durationMs ?? asset.ingest?.durationMs;
         return {
             id: newClipId(),
-            durationMs: footageOnScreenMs(source, assetMs),
+            // A video whose length nothing knows yet — the usual case for an
+            // upload, since ingest measures it a minute later — is placed at
+            // the default clip length rather than at the minimum. A 67ms clip
+            // reads as broken; a three-second one reads as a clip, and the
+            // real length replaces it when the measurement lands.
+            durationMs: assetMs ? footageOnScreenMs(source, assetMs) : DEFAULT_CLIP_MS,
             source,
         };
     }
