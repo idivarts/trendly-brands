@@ -668,6 +668,10 @@ const CreateContentScreen = () => {
                 .map(([k, v]) => `${SETTINGS[k as SettingKey].label}: ${v}`);
             if (settings.length) lines.push("", `${settings.join(" · ")}.`);
 
+            // Notes from whoever submitted the brief, not from the user — which
+            // is why they are appended rather than folded into their words.
+            for (const note of brief.notes ?? []) lines.push("", note);
+
             // Only images travel: the chat's attachment channel is images, and a
             // source video is Phase 9's problem, not something to half-send now.
             const images = [

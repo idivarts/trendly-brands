@@ -189,18 +189,16 @@ export const APPROACHES: Record<ApproachId, ApproachSpec> = {
         ],
         settings: ["length"],
         cta: "Generate",
-        starters: [],
-        // Every declared setting needs a value even while the approach is
-        // coming-soon: the strip renders a setting only when it HAS one, so a
-        // missing default is a control that silently vanishes the day the
-        // approach goes live. Locked in by approach-spec.test.ts.
+        starters: [
+            "A slow push onto the product on a marble counter, morning light",
+            "Hands lifting the cup, steam catching the light",
+            "The bottle turning slowly on seamless white",
+        ],
+        // Every declared setting needs a value: the strip renders a setting only
+        // when it HAS one, so a missing default is a control that silently
+        // vanishes. Locked in by approach-spec.test.ts. The LENGTH offered is
+        // the chosen model's own min/max, not this table's list — see SETTINGS.
         defaults: { length: "8s" },
-        comingSoon: {
-            promo:
-                "Describe a shot, or pin a start and end frame, and a video model creates the clip.",
-            supporting:
-                "It drops straight onto the same timeline as your motion graphics, so you can mix the two.",
-        },
     },
 
     footage: {
@@ -216,14 +214,12 @@ export const APPROACHES: Record<ApproachId, ApproachSpec> = {
         refs: [{ key: "sourceVideo", label: "Your video", upload: true, required: true }],
         settings: ["length", "music"],
         cta: "Read the footage",
-        starters: [],
+        starters: [
+            "Cut the dead air and keep the three best lines",
+            "Open on the strongest moment, then the product",
+            "Tighten it to 15 seconds without losing the pricing line",
+        ],
         defaults: { length: "15s", music: "Auto" },
-        comingSoon: {
-            promo:
-                "Upload a video and the AI reads it, finds the best takes and cuts it for you.",
-            supporting:
-                "It reads your audio too, so captions come from your own words — nothing is cut you haven't approved.",
-        },
     },
 };
 
@@ -300,6 +296,12 @@ export const SETTINGS: Record<SettingKey, SettingSpec> = {
     },
     length: {
         label: "Length",
+        // ⚠️ For the AI-video approach these are NOT the options offered: the
+        // chosen model's own min/max bounds are, read from the registry by the
+        // composer (`durationOptionsFor`). Asking a model that caps at 8s for 30
+        // is refused, and a control whose value is always rejected is worse than
+        // one with three that work. This list stays for motion graphics, where
+        // the length is ours to choose.
         options: () => ["5s", "8s", "10s", "15s", "30s"].map((v) => ({ value: v, name: v })),
     },
     music: {

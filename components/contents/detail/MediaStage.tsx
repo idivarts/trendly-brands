@@ -69,15 +69,54 @@ import MediaAssetPreview from "./MediaAssetPreview";
 import MediaLaneCards from "./MediaLaneCards";
 import Composer, { ComposerBrief } from "./composer/Composer";
 import { clearLabelFor, lanesFor, MediaLane, MediaSource, resolveMediaLane } from "./media-lane";
-import { aspectError, MEDIA_SPEC, parseAspectRatio, previewAspect } from "./media-spec";
+import { aspectError, canonicalSize, MEDIA_SPEC, parseAspectRatio, previewAspect } from "./media-spec";
 import DesignRenderBar, { DesignRenderChip, DesignRenderState } from "./DesignRenderBar";
 import { useDesignRender } from "./design-stage/use-design-render";
 import { useContentComposition } from "./design-stage/use-content-composition";
+import { useFootageAsset } from "./design-stage/use-footage-asset";
+import {
+    appendClip,
+    clipFromAsset,
+    newClipId,
+} from "./design-stage/composition-edits";
+import { durationOptionsFor, secondsOf, useMediaModels } from "@/hooks/use-media-models";
+import { Composition } from "@/shared-libs/design/composition-runtime";
+import { HttpError, HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
+import { COMPOSITION_FPS } from "./design-stage/use-content-composition";
 import { DesignFrameHandle } from "./design-stage/bridge";
 import { track } from "@/shared-libs/utils/analytics";
 
 /** Tallest a preview may get, so a 9:16 design doesn't push the page apart. */
 const MAX_PREVIEW_H = 420;
+
+/**
+ * How long to wait for a video to be READ before handing the cut to the AI
+ * anyway.
+ *
+ * Ingest normally takes a minute or two — the render worker measures the file
+ * and samples frames, then the backend transcribes and describes them. Three
+ * minutes is comfortably past that without being a wait anybody sits through on
+ * purpose, and the AI is still useful on a video it cannot read as long as it
+ * is told so.
+ */
+const READ_TIMEOUT_MS = 3 * 60 * 1000;
+
+/**
+ * The resolution to ask a video model for.
+ *
+ * The highest it offers, because the generation is charged per SECOND and not
+ * per pixel — asking for less saves nothing and gives the user a softer clip to
+ * publish. Falls through to whatever the model lists when it is something we
+ * have not seen.
+ */
+function preferredResolution(resolutions?: string[]): string | undefined {
+    if (!resolutions?.length) return undefined;
+    for (const want of ["1080p", "720p", "540p"]) {
+        if (resolutions.includes(want)) return want;
+    }
+    return resolutions[0];
+}
 
 interface MediaStageProps {
     contentType: ContentType;
@@ -188,9 +227,28 @@ const MediaStage: React.FC<MediaStageProps> = ({
         return hasMedia ? "stale" : "never";
     }, [designPreview, hasMedia]);
 
-    // Only the stored timeline matters here: with nothing authored the design
-    // IS the media, and no design is passed so nothing is derived.
-    const timeline = useContentComposition(contentId, compositionRef, null);
+    // The design is passed so the hook can derive the implicit one-clip timeline
+    // every video already has: appending a generated clip to a content that has
+    // a design has to put the design FIRST, not replace it.
+    const timelineDesign = useMemo(
+        () =>
+            designRef?.revisionId && designPreview?.docType === "video"
+                ? {
+                      revisionId: designRef.revisionId,
+                      width: designPreview.width,
+                      height: designPreview.height,
+                      durationMs: designPreview.durationMs ?? 0,
+                  }
+                : null,
+        [
+            designRef?.revisionId,
+            designPreview?.docType,
+            designPreview?.width,
+            designPreview?.height,
+            designPreview?.durationMs,
+        ]
+    );
+    const timeline = useContentComposition(contentId, compositionRef, timelineDesign);
     const renderTarget = timeline.authored && timeline.revision
         ? ({
               targetKind: "composition" as const,
@@ -376,6 +434,247 @@ const MediaStage: React.FC<MediaStageProps> = ({
             setUploading(false);
         }
     }, [attachments, contentType, spec.kind, spec.multi, spec.aspectLabel, spec.aspectRatios, uploadAndFile, onAttachmentsChange]);
+
+    // ── The two video approaches that do not go through the chat ────────────
+    //
+    // A generated clip and a cut of your own footage are not briefs for the AI
+    // to write a design from — they are a clip on the timeline and a provider
+    // call. Routing them through the chat (as every other approach is) would
+    // mean the model paraphrasing a request it cannot act on.
+    const { models: videoModels } = useMediaModels("video");
+    const [briefBusy, setBriefBusy] = useState(false);
+    // The footage whose ingest we are waiting on before handing the cut to the
+    // AI, and the brief to hand over when it lands.
+    const [reading, setReading] = useState<{
+        assetId: string;
+        brief: ComposerBrief;
+    } | null>(null);
+    // Set when the wait has gone on too long. Explicit state rather than a
+    // comparison against a stored timestamp, because nothing re-renders on its
+    // own while we are only waiting for a clock.
+    const [readTimedOut, setReadTimedOut] = useState(false);
+    const { asset: readingAsset } = useFootageAsset(reading?.assetId);
+
+    /** The timeline to append to: the stored one, the implicit one, or a new one. */
+    const baseComposition = useCallback((): Composition => {
+        if (timeline.composition) return timeline.composition;
+        const { width, height } = canonicalSize(contentType);
+        return { width, height, fps: COMPOSITION_FPS, tracks: [{ kind: "video", clips: [] }] };
+    }, [timeline.composition, contentType]);
+
+    /**
+     * Queue a generated clip.
+     *
+     * Order matters and is not arbitrary: the clip is SAVED FIRST, because the
+     * generate endpoint records the job against a composition revision and a
+     * clip id, and writes the finished url onto exactly that clip. Submitting
+     * first and saving after would leave a job whose result has nowhere to land.
+     *
+     * If the submit is refused the clip is taken back off. A clip that can never
+     * land makes the whole timeline unrenderable, so leaving it there would
+     * break a video the user could otherwise still render.
+     */
+    const startGeneratedClip = useCallback(
+        async (brief: ComposerBrief) => {
+            const model = videoModels.find((m) => m.id === brief.modelId) ?? videoModels[0];
+            if (!brandId || !contentId || !model) return;
+
+            const secs = secondsOf(brief.settings.length) ||
+                secondsOf(durationOptionsFor(model)[0]);
+            const base = baseComposition();
+            const clipId = newClipId();
+            const withClip = appendClip(base, {
+                id: clipId,
+                durationMs: Math.max(1, secs) * 1000,
+                source: {
+                    kind: "genvideo",
+                    model: model.id,
+                    prompt: brief.prompt,
+                    // Only sent where the model can use them — the composer does
+                    // not draw a slot the model cannot honour, but a ref kept
+                    // from another approach would still be in state.
+                    startFrameUrl: model.startFrame ? brief.refs.startFrame?.imageUrl : undefined,
+                    endFrameUrl: model.endFrame ? brief.refs.endFrame?.imageUrl : undefined,
+                },
+            });
+
+            setBriefBusy(true);
+            try {
+                const revisionId = await timeline.save(withClip);
+                if (!revisionId) throw new Error("no revision");
+
+                await HttpWrapper.fetch(
+                    `/api/v2/brands/${brandId}/contents/${contentId}/clips/generate`,
+                    {
+                        method: "POST",
+                        headers: { "content-type": "application/json" },
+                        body: JSON.stringify({
+                            compositionId: revisionId,
+                            clipId,
+                            modelId: model.id,
+                            prompt: brief.prompt,
+                            aspectRatio: spec.aspectRatios[0],
+                            durationSecs: secs,
+                            resolution: preferredResolution(model.resolutions),
+                            // Off: the composition has its own soundtrack, and a
+                            // clip arriving with audio nobody asked for fights
+                            // the music bed and the voiceover in the mix.
+                            generateAudio: false,
+                            startFrameUrl: model.startFrame
+                                ? brief.refs.startFrame?.imageUrl
+                                : undefined,
+                            endFrameUrl: model.endFrame ? brief.refs.endFrame?.imageUrl : undefined,
+                        }),
+                    }
+                );
+                track("content_brief_submitted", {
+                    approach: "genvideo",
+                    has_refs: !!(brief.refs.startFrame || brief.refs.endFrame),
+                    settings_changed: true,
+                });
+                Toaster.success(
+                    "Generating your clip",
+                    "It takes a few minutes. You can leave this page — it lands on the timeline."
+                );
+                onOpenDesign();
+            } catch (err) {
+                // Take the clip back off, so the timeline stays renderable.
+                await timeline.save(base).catch(() => undefined);
+                if (err instanceof HttpError && err.status === 402) {
+                    track("entitlement_blocked", {
+                        reason: String(err.data?.reason ?? "tokens_exhausted"),
+                        feature: "generative_video",
+                    });
+                    setError(
+                        err.data?.reason === "plan_required"
+                            ? "Generated video needs a higher plan. Upgrade to use this model."
+                            : "You're out of AI tokens, so this clip can't be generated. Top up or upgrade."
+                    );
+                } else {
+                    const detail = await HttpWrapper.extractErrorMessage(err).catch(() => null);
+                    setError(detail || "We couldn't start that clip. Please try again.");
+                }
+            } finally {
+                setBriefBusy(false);
+            }
+        },
+        [brandId, contentId, videoModels, baseComposition, timeline, spec.aspectRatios, onOpenDesign]
+    );
+
+    /**
+     * Place uploaded footage, then hand the cut to the AI.
+     *
+     * Two deliberate steps. The clip goes on the timeline IMMEDIATELY, so the
+     * footage is usable — trimmable by hand, renderable — whatever the AI does
+     * next. Then the brief waits for INGEST: the whole promise of this approach
+     * is that the AI reads the footage first, and handing it the brief while the
+     * transcript is still being made produces a model that says it will cut the
+     * video later. `useFootageAsset` is a live listener, so the wait ends the
+     * moment the backend writes the transcript and the shot list.
+     */
+    const startFootageCut = useCallback(
+        async (brief: ComposerBrief) => {
+            const video = brief.refs.sourceVideo;
+            const url = video?.playUrl ?? video?.appleUrl;
+            if (!brandId || !url) return;
+
+            setBriefBusy(true);
+            try {
+                const assetId = await recordAsset(brandId, {
+                    kind: "video",
+                    url,
+                    originContentId: contentId ?? undefined,
+                });
+                if (assetId) {
+                    // Placed from the library row, so the clip carries the
+                    // assetId — which is what lets the inspector find the
+                    // transcript and the shot list again later.
+                    const clip = clipFromAsset({
+                        id: assetId,
+                        kind: "video",
+                        source: "upload",
+                        url,
+                        createdAt: Date.now(),
+                    });
+                    await timeline.save(appendClip(baseComposition(), clip));
+                }
+                track("content_brief_submitted", {
+                    approach: "footage",
+                    has_refs: true,
+                    settings_changed: true,
+                });
+                if (!assetId) {
+                    // No library row means no ingest: the footage is placed and
+                    // trimmable, but there is nothing for the AI to read.
+                    setError(
+                        "We couldn't file that video, so the AI can't read it. It's on the timeline — trim it by hand, or try the upload again."
+                    );
+                    return;
+                }
+                setReadTimedOut(false);
+                setReading({ assetId, brief });
+            } catch {
+                setError("We couldn't start that. Please try again.");
+            } finally {
+                setBriefBusy(false);
+            }
+        },
+        [brandId, contentId, timeline, baseComposition]
+    );
+
+    /**
+     * Hand the waiting brief over once the footage has been read.
+     *
+     * Also hands it over on a FAILED ingest and after a few minutes of nothing,
+     * because the AI is still useful on a video it cannot read — it just has to
+     * be told so rather than left to discover an empty transcript.
+     */
+    useEffect(() => {
+        if (!reading || !onSubmitBrief) return;
+        const status = readingAsset?.ingest?.status;
+        if (status !== "done" && status !== "failed" && !readTimedOut) return;
+
+        // Said to the model as a NOTE on the brief rather than folded into the
+        // user's own words: it is instruction about how to act, and the user did
+        // not write it.
+        const notes = [
+            `The footage is on this content's timeline as asset ${reading.assetId}. ` +
+                "Read it with get_footage, then cut it with cut_footage — keep the lines that " +
+                "carry the message and drop the dead air.",
+        ];
+        if (status !== "done") {
+            notes.push(
+                "Its transcript is not ready yet. Say so plainly, and cut from the shot list if " +
+                    "there is one rather than guessing at the words."
+            );
+        }
+        setReading(null);
+        onSubmitBrief?.({ ...reading.brief, notes });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [reading, readingAsset?.ingest?.status, readTimedOut, onSubmitBrief]);
+
+    // A stuck ingest must not leave the brief waiting forever.
+    useEffect(() => {
+        if (!reading) return;
+        const t = setTimeout(() => setReadTimedOut(true), READ_TIMEOUT_MS);
+        return () => clearTimeout(t);
+    }, [reading]);
+
+    /** Everything else is a brief for the AI, exactly as before. */
+    const submitBrief = useCallback(
+        (brief: ComposerBrief) => {
+            if (brief.approach === "genvideo") {
+                void startGeneratedClip(brief);
+                return;
+            }
+            if (brief.approach === "footage") {
+                void startFootageCut(brief);
+                return;
+            }
+            onSubmitBrief?.(brief);
+        },
+        [startGeneratedClip, startFootageCut, onSubmitBrief]
+    );
 
     // Picking the upload lane goes straight to the picker — a card that opens a
     // panel with one more button in it is a wasted step. Backing out of the
@@ -741,6 +1040,20 @@ const MediaStage: React.FC<MediaStageProps> = ({
             body = renderDesignCanvas(designPreview);
         } else if (hasMedia) {
             body = renderedView();
+        } else if (reading) {
+            // Waiting for the footage to be READ. Named for what it is rather
+            // than a generic spinner: the whole promise of this approach is
+            // that the AI reads the video first, and the wait is the reading.
+            body = (
+                <View style={styles.generating} accessibilityLiveRegion="polite">
+                    <ActivityIndicator size="small" color={colors.primary} />
+                    <Text style={styles.generatingStep}>Reading your footage…</Text>
+                    <Text style={styles.generatingHint}>
+                        Measuring it, transcribing what's said and describing each shot. A minute or
+                        two — it's already on the timeline, so you can start trimming it by hand.
+                    </Text>
+                </View>
+            );
         } else if (briefPending) {
             // The brief is with the AI.
             //
@@ -783,8 +1096,9 @@ const MediaStage: React.FC<MediaStageProps> = ({
             body = (
                 <Composer
                     contentType={contentType}
-                    onSubmit={onSubmitBrief}
-                    disabled={readOnly}
+                    onSubmit={submitBrief}
+                    videoModels={videoModels}
+                    disabled={readOnly || briefBusy}
                 />
             );
         } else {

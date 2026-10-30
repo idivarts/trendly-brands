@@ -21,21 +21,28 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { ApproachSpec } from "./approach-spec";
+import { ApproachSpec, ComingSoon } from "./approach-spec";
 
 interface Props {
     approach: ApproachSpec;
+    /**
+     * What to say. Defaults to the approach's own copy; passed in when the
+     * approach IS built and something else is in the way — AI video with no
+     * model enabled for the workspace reads exactly like a feature that has not
+     * shipped, from where the user sits, and the interest signal is as useful.
+     */
+    comingSoon?: ComingSoon;
     /** Whether the user had already typed a prompt before landing here. */
     hadPrompt: boolean;
 }
 
-const ComingSoonPanel: React.FC<Props> = ({ approach, hadPrompt }) => {
+const ComingSoonPanel: React.FC<Props> = ({ approach, comingSoon, hadPrompt }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useStyles(colors);
     const [registered, setRegistered] = useState(false);
 
-    const soon = approach.comingSoon;
+    const soon = comingSoon ?? approach.comingSoon;
     if (!soon) return null;
 
     const register = () => {
