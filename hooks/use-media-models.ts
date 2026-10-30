@@ -64,29 +64,5 @@ export function useMediaModels(kind: "video" | "image"): UseMediaModelsReturn {
     return { models, loading };
 }
 
-/**
- * The lengths a model will actually make, as the composer's chips.
- *
- * Read from the model rather than from a fixed list, because asking for 30s
- * from a model that caps at 8 is refused — and a control offering a value that
- * is always rejected is worse than one that offers three that work.
- */
-export function durationOptionsFor(model: IMediaModel | undefined): string[] {
-    if (!model) return [];
-    const min = model.minDurationS && model.minDurationS > 0 ? model.minDurationS : 1;
-    const max = model.maxDurationS && model.maxDurationS > 0 ? model.maxDurationS : min;
-    const out: string[] = [];
-    for (const secs of [4, 5, 6, 8, 10, 15, 20, 30]) {
-        if (secs >= min && secs <= max) out.push(`${secs}s`);
-    }
-    // A model with a single supported length still needs one chip, or the
-    // request goes out with no duration at all.
-    if (!out.length) out.push(`${min}s`);
-    return out;
-}
-
-/** "8s" → 8. The composer stores the label; the API takes seconds. */
-export function secondsOf(label: string | undefined): number {
-    const n = Number.parseInt(String(label ?? "").replace(/[^0-9]/g, ""), 10);
-    return Number.isFinite(n) && n > 0 ? n : 0;
-}
+// Re-exported so the composer keeps one import for "what can this model do".
+export { durationOptionsFor, secondsOf } from "./media-model-options";
