@@ -15,6 +15,13 @@ import {
     View,
 } from "react-native";
 import { fs } from "@/constants/Typography";
+import {
+    ANCHOR_GAP,
+    AnchorRect,
+    DROPDOWN_MAX_HEIGHT,
+    DROPDOWN_WIDTH,
+    dropdownPositionFor,
+} from "./dropdown-position";
 
 interface Props {
     models: AIModel[];
@@ -34,17 +41,6 @@ interface Props {
     surface: AiSurface;
     task: string;
 }
-
-interface AnchorRect {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-}
-
-const DROPDOWN_WIDTH = 240;
-const DROPDOWN_MAX_HEIGHT = 320;
-const ANCHOR_GAP = 6;
 
 const AIModelSelector: React.FC<Props> = ({
     models,
@@ -112,22 +108,10 @@ const AIModelSelector: React.FC<Props> = ({
         setOpen(false);
     };
 
-    // Anchor the dropdown to the chip. Flip above when there isn't room below
-    // and clamp horizontally so it never spills off-screen.
-    const dropdownPosition = useMemo(() => {
-        if (!anchor) return null;
-        const screen = Dimensions.get("window");
-        const spaceBelow = screen.height - (anchor.y + anchor.height);
-        const showAbove = spaceBelow < DROPDOWN_MAX_HEIGHT + ANCHOR_GAP + 16;
-        let left = anchor.x;
-        if (left + DROPDOWN_WIDTH > screen.width - 8) {
-            left = Math.max(8, screen.width - DROPDOWN_WIDTH - 8);
-        }
-        const top = showAbove
-            ? Math.max(8, anchor.y - ANCHOR_GAP - DROPDOWN_MAX_HEIGHT)
-            : anchor.y + anchor.height + ANCHOR_GAP;
-        return { top, left };
-    }, [anchor]);
+    const dropdownPosition = useMemo(
+        () => (anchor ? dropdownPositionFor(anchor, Dimensions.get("window")) : null),
+        [anchor]
+    );
 
     return (
         <>
@@ -238,7 +222,10 @@ const makeStyles = (colors: any, compact: boolean) =>
             elevation: 12,
             overflow: "hidden",
         },
-        dropdownScroll: { maxHeight: DROPDOWN_MAX_HEIGHT },
+        // No maxHeight here on purpose — the container's is computed from the
+        // real space available, and a second, larger cap on the scroll view
+        // would quietly win back the height the container just gave up.
+        dropdownScroll: {},
         dropdownContent: { padding: 6 },
         row: {
             flexDirection: "row",
