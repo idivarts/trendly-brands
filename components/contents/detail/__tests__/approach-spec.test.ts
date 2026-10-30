@@ -5,6 +5,7 @@ import {
     defaultSettings,
     settingsFor,
 } from "../composer/approach-spec";
+import { ContentType } from "@/components/content-calendar/types";
 
 describe("approachesFor", () => {
     it("offers the image approaches for image types", () => {
@@ -114,6 +115,31 @@ describe("defaultSettings", () => {
                     expect(values[key]).toBeDefined();
                 }
             }
+        }
+    });
+});
+
+describe("which approaches are live", () => {
+    // Stock photography shipped in Phase 4 and its placeholder resolution in
+    // 4b, but the tab stayed behind a coming-soon panel because nothing
+    // removed the flag — the feature was built and unreachable. This test is
+    // the tripwire for that happening again.
+    it("has the stock approach live, not coming soon", () => {
+        expect(APPROACHES.stock.comingSoon).toBeUndefined();
+        expect(APPROACHES.stock.briefLead).toMatch(/stock/i);
+    });
+
+    it("keeps generated video and footage editing behind coming-soon", () => {
+        // These are genuinely not built. When they are, the flag comes off
+        // here and this expectation flips with them.
+        expect(APPROACHES.genvideo.comingSoon).toBeDefined();
+        expect(APPROACHES.footage.comingSoon).toBeDefined();
+    });
+
+    it("offers a live image approach for every image content type", () => {
+        for (const type of ["post", "carousel", "story"] as ContentType[]) {
+            const live = approachesFor(type).filter((a) => !a.comingSoon);
+            expect(live.length).toBeGreaterThan(0);
         }
     });
 });
