@@ -285,6 +285,11 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
     // decided (or connected) where it will go.
     const canSubmit = title.trim().length > 0;
 
+    // The posting date is optional in the `contents` flow, and without one the
+    // piece never lands on the calendar — so "Add to Calendar" would promise
+    // something that doesn't happen. Say what the button actually does.
+    const submitLabel = date ? "Add to Calendar" : "Add Content";
+
     return (
         <>
             <Modal
@@ -625,7 +630,9 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
                                 onPress={handleAdd}
                                 disabled={!canSubmit}
                             >
-                                <Text style={styles.addBtnText}>Add to Calendar</Text>
+                                <Text style={styles.addBtnText}>
+                                    {submitLabel}
+                                </Text>
                             </Pressable>
                         </View>
                     </View>
