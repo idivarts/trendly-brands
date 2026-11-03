@@ -1,24 +1,28 @@
 import DateField, { formatDateForWebInput, parseWebInputDate } from "@/components/modals/DateField";
-import { SOCIAL_PLATFORM_MAP, SOCIAL_PLATFORMS } from "@/constants/Socials";
+import { SOCIAL_PLATFORM_MAP } from "@/constants/Socials";
+import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useBrandSocialContext } from "@/contexts/brand-social-context.provider";
 import {
     ALL_CONTENT_FORMATS,
+    formatsForPlatform,
     isFormatPlatformCompatible,
-    platformsForFormat,
 } from "@/shared-libs/firestore/trendly-pro/constants/content-format";
-import { Platform } from "@/shared-libs/firestore/trendly-pro/constants/platform";
+import { ALL_PLATFORMS, Platform } from "@/shared-libs/firestore/trendly-pro/constants/platform";
 import Colors from "@/shared-uis/constants/Colors";
 import TitleTooltip from "@/components/contents/TitleTooltip";
 import {
     faCalendarDays,
     faCheck,
     faCircleInfo,
+    faPlus,
     faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useEffect, useMemo, useState } from "react";
+import { useRouter } from "expo-router";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+    ActivityIndicator,
     KeyboardAvoidingView,
     Modal,
     Platform as RNPlatform,
@@ -30,7 +34,7 @@ import {
     View,
 } from "react-native";
 import { CalendarItem, CONTENT_TYPE_LABELS, ContentType } from "./types";
-import { fs } from "@/constants/Typography";
+import { fs, lh } from "@/constants/Typography";
 
 /** Extra (non-CalendarItem) fields the modal collects for a new content piece. */
 export interface AddContentExtras {
@@ -54,8 +58,6 @@ interface AddContentModalProps {
     onAdd: (item: Omit<CalendarItem, "id">, extras: AddContentExtras) => void;
 }
 
-const TYPES: ContentType[] = ALL_CONTENT_FORMATS;
-
 const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function addDays(d: Date, n: number) {
@@ -77,6 +79,15 @@ function weekDaysFrom(start: Date) {
     return Array.from({ length: 7 }, (_, i) => addDays(start, i));
 }
 
+/**
+ * The format a freshly opened modal starts on: `reel` when the brand can post
+ * one, otherwise the first format its connected platforms do support.
+ */
+function pickDefaultType(available: ContentType[]): ContentType {
+    if (available.includes("reel")) return "reel";
+    return available[0] ?? "reel";
+}
+
 function formatLongDate(d: Date) {
     return d.toLocaleDateString("en-IN", {
         day: "2-digit",
@@ -95,23 +106,42 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useStyles(colors);
-    const { socialAccounts } = useBrandSocialContext();
+    const router = useRouter();
+    const { socialAccounts, isFetchingSocials } = useBrandSocialContext();
+    const { hasCapability } = useBrandContext();
+    const canConnectSocials = hasCapability("connect_socials");
 
-    // Platforms the brand has actually connected — used to seed a sensible
-    // default target set for new content.
-    const connectedPlatforms = useMemo<Platform[]>(
-        () => Array.from(new Set(socialAccounts.map((a) => a.platform))),
-        [socialAccounts]
-    );
+    // The only platforms offered here are the ones the brand has actually
+    // connected — ordered canonically so the chips keep a stable position no
+    // matter what order Firestore hands the accounts back in. A platform may
+    // have several accounts; it still gets a single chip.
+    const connectedPlatforms = useMemo<Platform[]>(() => {
+        const connected = new Set<string>(socialAccounts.map((a) => a.platform));
+        return ALL_PLATFORMS.filter((p) => connected.has(p));
+    }, [socialAccounts]);
 
-    // The default target platforms for a given format: the brand's connected
-    // platforms that support the format, falling back to every platform that
-    // supports it when the brand has none of them connected.
-    const defaultPlatformsFor = (t: ContentType): Platform[] => {
-        const supported = platformsForFormat(t);
-        const fromConnected = connectedPlatforms.filter((p) => supported.includes(p));
-        return fromConnected.length ? fromConnected : supported;
-    };
+    const hasConnectedPlatforms = connectedPlatforms.length > 0;
+    // Stable dependency for the effects below — `connectedPlatforms` is a fresh
+    // array on every socialAccounts snapshot even when the set is unchanged.
+    const connectedKey = connectedPlatforms.join(",");
+
+    // Only formats at least one connected platform can carry are offered. With
+    // nothing connected we fall back to the full list: content can be planned
+    // before any account is linked.
+    const availableTypes = useMemo<ContentType[]>(() => {
+        if (!connectedPlatforms.length) return ALL_CONTENT_FORMATS;
+        const supported = new Set<ContentType>(
+            connectedPlatforms.flatMap((p) => formatsForPlatform(p))
+        );
+        return ALL_CONTENT_FORMATS.filter((t) => supported.has(t));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [connectedKey]);
+
+    // The default target platforms for a given format: every connected platform
+    // that supports it. Empty when the brand has connected nothing — platforms
+    // are optional, so that is a valid state to submit in.
+    const defaultPlatformsFor = (t: ContentType): Platform[] =>
+        connectedPlatforms.filter((p) => isFormatPlatformCompatible(t, p));
 
     // The days shown as pills in the weekly view: the 7 days starting at the
     // tapped week's start (or today's week when opened from the header).
@@ -137,23 +167,34 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
     };
 
     const [date, setDate] = useState<Date | null>(() => computeInitialDate());
-    const [type, setType] = useState<ContentType>("reel");
-    const [platforms, setPlatforms] = useState<Platform[]>(() => defaultPlatformsFor("reel"));
+    const [type, setType] = useState<ContentType>(() => pickDefaultType(availableTypes));
+    const [platforms, setPlatforms] = useState<Platform[]>(() =>
+        defaultPlatformsFor(pickDefaultType(availableTypes))
+    );
     const [title, setTitle] = useState("");
     const [idea, setIdea] = useState("");
 
-    // Switching format prunes any now-incompatible platforms; if that empties
-    // the selection, fall back to the format's default target set.
+    // Whether the user has hand-picked the platform chips. Until they do, the
+    // selection is just a default and is re-seeded as the format changes or the
+    // brand's connected accounts arrive; afterwards it is theirs to keep — an
+    // empty selection included.
+    const platformsTouched = useRef(false);
+
+    // Switching format prunes any now-incompatible platforms. An untouched
+    // selection is re-seeded from the new format's defaults instead (handled by
+    // the effect below), so moving from Story to Post can widen it back out.
     const handleTypeChange = (t: ContentType) => {
         setType(t);
-        setPlatforms((prev) => {
-            const pruned = prev.filter((p) => isFormatPlatformCompatible(t, p));
-            return pruned.length ? pruned : defaultPlatformsFor(t);
-        });
+        if (platformsTouched.current) {
+            setPlatforms((prev) =>
+                prev.filter((p) => isFormatPlatformCompatible(t, p))
+            );
+        }
     };
 
     const togglePlatform = (p: Platform) => {
         if (!isFormatPlatformCompatible(type, p)) return; // disabled chip
+        platformsTouched.current = true;
         setPlatforms((prev) =>
             prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]
         );
@@ -175,17 +216,39 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
         if (!visible) return;
         setDate(computeInitialDate());
         setShowOptionalDate(false);
-        setPlatforms(defaultPlatformsFor(type));
+        platformsTouched.current = false;
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [visible, initialDate, source]);
 
+    // The brand's socials stream in from Firestore, so they can land after the
+    // modal is already open — and switching brands changes them outright. Drop
+    // a format the connected platforms can no longer carry.
+    useEffect(() => {
+        if (!visible) return;
+        setType((prev) =>
+            availableTypes.includes(prev) ? prev : availableTypes[0] ?? prev
+        );
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [visible, connectedKey]);
+
+    // Keep an untouched selection in step with the format and with the accounts
+    // that are actually connected. Runs on open, on every format change, and
+    // when the socials snapshot changes — but never once the user has picked.
+    useEffect(() => {
+        if (!visible || platformsTouched.current) return;
+        setPlatforms(defaultPlatformsFor(type));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [visible, connectedKey, type]);
+
     const reset = () => {
+        const nextType = pickDefaultType(availableTypes);
         setDate(computeInitialDate());
-        setType("reel");
-        setPlatforms(defaultPlatformsFor("reel"));
+        setType(nextType);
+        setPlatforms(defaultPlatformsFor(nextType));
         setTitle("");
         setIdea("");
         setShowOptionalDate(false);
+        platformsTouched.current = false;
     };
 
     const handleClose = () => {
@@ -193,8 +256,16 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
         onClose();
     };
 
+    // Platforms are optional, but the connect link only makes sense for someone
+    // who is allowed to add an account. Close first — the modal would otherwise
+    // sit on top of the page we navigate to.
+    const handleConnectAccounts = () => {
+        handleClose();
+        router.push("/connected-accounts" as any);
+    };
+
     const handleAdd = () => {
-        if (!title.trim() || platforms.length === 0) return;
+        if (!title.trim()) return;
         onAdd(
             {
                 title: title.trim(),
@@ -210,7 +281,9 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
         onClose();
     };
 
-    const canSubmit = title.trim().length > 0 && platforms.length > 0;
+    // Only the title is required — a piece can be planned before the brand has
+    // decided (or connected) where it will go.
+    const canSubmit = title.trim().length > 0;
 
     return (
         <>
@@ -373,7 +446,7 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
 
                             <Text style={styles.label}>Content Type</Text>
                             <View style={styles.typeRow}>
-                                {TYPES.map((t) => (
+                                {availableTypes.map((t) => (
                                     <Pressable
                                         key={t}
                                         style={({ pressed }) => [
@@ -397,73 +470,118 @@ const AddContentModal: React.FC<AddContentModalProps> = ({
 
                             <View style={styles.labelRow}>
                                 <Text style={styles.labelInline}>Platforms</Text>
-                                <TitleTooltip text="Options not supported by the selected content type are disabled.">
-                                    <Pressable
-                                        onPress={() => setShowPlatformHint((v) => !v)}
-                                        hitSlop={8}
-                                        style={styles.infoBtn}
-                                        accessibilityLabel="Why are some platforms disabled?"
-                                    >
-                                        <FontAwesomeIcon
-                                            icon={faCircleInfo}
-                                            size={13}
-                                            color={colors.textSecondary}
-                                        />
-                                    </Pressable>
-                                </TitleTooltip>
-                                <Text style={styles.selectAllHint}>Select all that apply</Text>
+                                {hasConnectedPlatforms && (
+                                    <>
+                                        <TitleTooltip text="Only your connected accounts are listed. Ones the selected content type can't be posted to are disabled.">
+                                            <Pressable
+                                                onPress={() => setShowPlatformHint((v) => !v)}
+                                                hitSlop={8}
+                                                style={styles.infoBtn}
+                                                accessibilityLabel="Why are some platforms disabled?"
+                                            >
+                                                <FontAwesomeIcon
+                                                    icon={faCircleInfo}
+                                                    size={13}
+                                                    color={colors.textSecondary}
+                                                />
+                                            </Pressable>
+                                        </TitleTooltip>
+                                        <Text style={styles.selectAllHint}>
+                                            Optional — select all that apply
+                                        </Text>
+                                    </>
+                                )}
                             </View>
-                            {showPlatformHint && (
+                            {hasConnectedPlatforms && showPlatformHint && (
                                 <Text style={styles.helperText}>
-                                    Options not supported by the selected content type are
+                                    Only your connected accounts are listed. Ones the
+                                    selected content type can&apos;t be posted to are
                                     disabled.
                                 </Text>
                             )}
-                            <View style={styles.typeRow}>
-                                {SOCIAL_PLATFORMS.map((meta) => {
-                                    const p = meta.key as Platform;
-                                    const compatible = isFormatPlatformCompatible(type, p);
-                                    const selected = platforms.includes(p);
-                                    return (
-                                        <Pressable
-                                            key={p}
-                                            disabled={!compatible}
-                                            style={({ pressed }) => [
-                                                styles.platformChip,
-                                                selected && styles.typeChipActive,
-                                                !compatible && styles.typeChipDisabled,
-                                                pressed && compatible && styles.typeChipPressed,
-                                            ]}
-                                            onPress={() => togglePlatform(p)}
-                                        >
-                                            <FontAwesomeIcon
-                                                icon={meta.icon}
-                                                size={14}
-                                                color={
-                                                    selected
-                                                        ? colors.onPrimary
-                                                        : colors[meta.colorKey]
-                                                }
-                                            />
-                                            <Text
-                                                style={[
-                                                    styles.typeChipText,
-                                                    selected && styles.typeChipTextActive,
+                            {!hasConnectedPlatforms ? (
+                                isFetchingSocials ? (
+                                    <ActivityIndicator
+                                        color={colors.primary}
+                                        style={styles.platformsLoader}
+                                    />
+                                ) : (
+                                    <View style={styles.noSocials}>
+                                        <Text style={styles.noSocialsText}>
+                                            No social accounts connected yet. You can still
+                                            plan this content and choose platforms later.
+                                        </Text>
+                                        {canConnectSocials && (
+                                            <Pressable
+                                                onPress={handleConnectAccounts}
+                                                style={({ pressed }) => [
+                                                    styles.connectLink,
+                                                    pressed && styles.connectLinkPressed,
                                                 ]}
+                                                accessibilityRole="link"
+                                                accessibilityLabel="Connect a social account"
                                             >
-                                                {SOCIAL_PLATFORM_MAP[p]?.label ?? meta.label}
-                                            </Text>
-                                            {selected && (
                                                 <FontAwesomeIcon
-                                                    icon={faCheck}
+                                                    icon={faPlus}
                                                     size={11}
-                                                    color={colors.onPrimary}
+                                                    color={colors.primary}
                                                 />
-                                            )}
-                                        </Pressable>
-                                    );
-                                })}
-                            </View>
+                                                <Text style={styles.connectLinkText}>
+                                                    Connect an account
+                                                </Text>
+                                            </Pressable>
+                                        )}
+                                    </View>
+                                )
+                            ) : (
+                                <View style={styles.typeRow}>
+                                    {connectedPlatforms.map((p) => {
+                                        const meta = SOCIAL_PLATFORM_MAP[p];
+                                        const compatible = isFormatPlatformCompatible(type, p);
+                                        const selected = platforms.includes(p);
+                                        return (
+                                            <Pressable
+                                                key={p}
+                                                disabled={!compatible}
+                                                style={({ pressed }) => [
+                                                    styles.platformChip,
+                                                    selected && styles.typeChipActive,
+                                                    !compatible && styles.typeChipDisabled,
+                                                    pressed && compatible && styles.typeChipPressed,
+                                                ]}
+                                                onPress={() => togglePlatform(p)}
+                                            >
+                                                {meta && (
+                                                    <FontAwesomeIcon
+                                                        icon={meta.icon}
+                                                        size={14}
+                                                        color={
+                                                            selected
+                                                                ? colors.onPrimary
+                                                                : colors[meta.colorKey]
+                                                        }
+                                                    />
+                                                )}
+                                                <Text
+                                                    style={[
+                                                        styles.typeChipText,
+                                                        selected && styles.typeChipTextActive,
+                                                    ]}
+                                                >
+                                                    {meta?.label ?? p}
+                                                </Text>
+                                                {selected && (
+                                                    <FontAwesomeIcon
+                                                        icon={faCheck}
+                                                        size={11}
+                                                        color={colors.onPrimary}
+                                                    />
+                                                )}
+                                            </Pressable>
+                                        );
+                                    })}
+                                </View>
+                            )}
 
                             <Text style={styles.label}>Title</Text>
                             <TextInput
@@ -743,6 +861,43 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     color: colors.textSecondary,
                     marginBottom: 8,
                     marginTop: -2,
+                },
+                platformsLoader: {
+                    alignSelf: "flex-start",
+                    marginVertical: 10,
+                },
+                noSocials: {
+                    gap: 4,
+                    alignItems: "flex-start",
+                    backgroundColor: colors.tag,
+                    borderRadius: 10,
+                    paddingHorizontal: 14,
+                    paddingVertical: 12,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 3,
+                    shadowOpacity: 0.04,
+                    elevation: 1,
+                },
+                noSocialsText: {
+                    fontSize: fs(12),
+                    lineHeight: lh(18),
+                    color: colors.textSecondary,
+                },
+                connectLink: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    paddingVertical: 4,
+                },
+                connectLinkPressed: {
+                    opacity: 0.6,
+                },
+                connectLinkText: {
+                    fontSize: fs(13),
+                    fontWeight: "700",
+                    color: colors.primary,
+                    textDecorationLine: "underline",
                 },
                 typeChipText: {
                     fontSize: fs(13),
