@@ -1,6 +1,9 @@
 import { useBrandContext } from '@/contexts/brand-context.provider'
 import { useOrganizationContext } from '@/contexts/organization-context.provider'
 import { useBreakpoints } from '@/hooks'
+// One formatter for the wallet meter AND the plan cards below it, so the
+// two can never disagree about what the same allotment is called.
+import { formatTokens } from '@/hooks/use-entitlements'
 import { IOrgTokenWallet } from '@/shared-libs/firestore/trendly-pro/models/organizations'
 import { ModelStatus } from '@/shared-libs/firestore/trendly-pro/models/status'
 import { FirestoreDB } from '@/shared-libs/utils/firebase/firestore'
@@ -282,13 +285,6 @@ interface TokenUsageCardProps {
     wallet: IOrgTokenWallet;
     colors: ReturnType<typeof Colors>;
     isMobile: boolean;
-}
-
-// formatTokens renders large AI-token counts compactly (1.2M, 350K, 980).
-function formatTokens(n: number): string {
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`;
-    if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
-    return `${n}`;
 }
 
 const TokenUsageCard: React.FC<TokenUsageCardProps> = ({ wallet, colors, isMobile }) => {

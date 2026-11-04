@@ -3,6 +3,8 @@ import BillingStatusBanner from '@/components/billing/BillingStatusBanner'
 import { useBrandContext } from '@/contexts/brand-context.provider'
 import { useOrganizationContext } from '@/contexts/organization-context.provider'
 import { useBreakpoints } from '@/hooks'
+import { formatTokens } from '@/hooks/use-entitlements'
+import { PLAN_MONTHLY_TOKENS } from '@/constants/PlanPricing'
 import { ModelStatus } from '@/shared-libs/firestore/trendly-pro/models/status'
 import { track } from "@/shared-libs/utils/analytics";
 import Toaster from '@/shared-uis/components/toaster/Toaster'
@@ -17,19 +19,37 @@ import {
 import { IapPackage, IapPlanKey } from '@/utils/iap/types'
 import { useTheme } from '@react-navigation/native'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { PRIVACY_URL, TERMS_URL } from '@/constants/App'
+import { fs, lh } from '@/constants/Typography'
 
 /** wa.me expects digits only (country code + number, no + or spaces). */
 const WHATSAPP_NUMBER_DIGITS = '917604007156'
 
+// Feature lines mirror the web paywall (components/paywall/plans/PlanWrapper).
+// The token allowance is rendered through the same PLAN_MONTHLY_TOKENS +
+// formatTokens pair the wallet meter uses, so a store listing can never quote
+// an allowance the app then contradicts.
 const PLAN_META: Record<IapPlanKey, { name: string; features: string[] }> = {
     pro: {
         name: 'Pro',
-        features: ['1 brand workspace', '2 seats', 'Full scheduling · standard analytics', 'AI content & planning'],
+        features: [
+            '1 brand workspace',
+            '2 seats',
+            `${formatTokens(PLAN_MONTHLY_TOKENS.pro)} AI tokens / month`,
+            'Unlimited scheduling · inbox replies',
+            'Standard analytics · Canva editing',
+        ],
     },
     team: {
         name: 'Team',
-        features: ['Up to 3 brand workspaces', '5 seats', 'Approvals & campaigns', 'Full analytics + team reporting'],
+        features: [
+            'Up to 3 brand workspaces',
+            '5 seats',
+            `${formatTokens(PLAN_MONTHLY_TOKENS.team)} AI tokens / month`,
+            'Approvals & campaigns',
+            'Full analytics + team reporting',
+        ],
     },
 }
 
@@ -49,6 +69,9 @@ const PayWallComponent = () => {
     const [restoring, setRestoring] = useState(false)
 
     const configured = isIapConfigured()
+    // Named explicitly rather than "your app store": the disclosure has to
+    // point the user at the place that actually holds the subscription.
+    const storeName = Platform.OS === 'ios' ? 'App Store' : 'Google Play'
 
     const currentPlanKey = selectedOrgBilling?.planKey as IapPlanKey | 'free' | undefined
     const provider = selectedOrgBilling?.provider
@@ -306,6 +329,42 @@ const PayWallComponent = () => {
                             <Text style={styles.linkText}>{restoring ? 'Restoring…' : 'Restore purchases'}</Text>
                         </Pressable>
                     </View>
+
+                    {/* Subscription terms. App Review guideline 3.1.2 wants the
+                        auto-renew disclosure AND functional Terms/Privacy links on
+                        the purchase screen itself — having them only in the App
+                        Store Connect subscription metadata is what gets a build
+                        rejected. Rendered outside the `!managedOnWeb` branch so it
+                        is present whenever anything is buyable here, including the
+                        top-up-only case. */}
+                    <View style={styles.legalWrap}>
+                        <Text style={styles.legalText}>
+                            Subscriptions renew automatically each month until cancelled. Manage or
+                            cancel anytime in your {storeName} account settings. Token top-ups are
+                            one-time purchases and do not renew.
+                        </Text>
+                        <View style={styles.legalLinks}>
+                            <Pressable
+                                onPress={() => Linking.openURL(TERMS_URL)}
+                                accessibilityRole="link"
+                                accessibilityLabel="Terms of Use"
+                                hitSlop={10}
+                                style={({ pressed }) => [styles.legalLinkHit, pressed && styles.pressed]}
+                            >
+                                <Text style={styles.legalLink}>Terms of Use</Text>
+                            </Pressable>
+                            <Text style={styles.legalSep}>·</Text>
+                            <Pressable
+                                onPress={() => Linking.openURL(PRIVACY_URL)}
+                                accessibilityRole="link"
+                                accessibilityLabel="Privacy Policy"
+                                hitSlop={10}
+                                style={({ pressed }) => [styles.legalLinkHit, pressed && styles.pressed]}
+                            >
+                                <Text style={styles.legalLink}>Privacy Policy</Text>
+                            </Pressable>
+                        </View>
+                    </View>
                 </>
             )}
         </ScrollView>
@@ -433,6 +492,20 @@ function createStyles(colors: ReturnType<typeof Colors>) {
         },
 
         linkRow: { marginTop: 18, alignItems: 'center' },
+
+        legalWrap: { marginTop: 24, marginBottom: 8, gap: 10, alignItems: 'center' },
+        legalText: {
+            color: colors.textSecondary,
+            fontSize: fs(12),
+            lineHeight: lh(18),
+            textAlign: 'center',
+        },
+        legalLinks: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+        // Vertical padding rather than a bare Text: these have to be comfortably
+        // tappable, and a 12px line of type is not a 44px target on its own.
+        legalLinkHit: { paddingVertical: 10, paddingHorizontal: 4 },
+        legalLink: { color: colors.primary, fontWeight: '700', fontSize: fs(12), lineHeight: lh(18) },
+        legalSep: { color: colors.textSecondary, fontSize: fs(12) },
         linkText: { color: colors.primary, fontWeight: '700', fontSize: 14 },
         footerRow: { marginTop: 8, gap: 4 },
     })

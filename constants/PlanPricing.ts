@@ -44,3 +44,29 @@ export const planValueUSD = (planKey?: string): number | undefined => {
     const value = PLAN_MONTHLY_USD[planKey as PlanKey];
     return value ? value : undefined;
 };
+
+/**
+ * Monthly AI-token allotment per plan, for display on the pricing/paywall
+ * cards only.
+ *
+ * The authority is the backend `PlanLimitsMap` (`internal/models/
+ * trendlymodels/organization.go`), and the org you are actually on reads its
+ * real number off `org.tokenWallet.monthlyAllotment` — never this map. But a
+ * comparison table has to name the allowance of plans you are NOT on, which
+ * no org doc can supply, so those figures live here and nowhere else.
+ *
+ * Render them with `formatTokens` (hooks/use-entitlements) so a card says
+ * exactly what the wallet meter says: "5M", not "600".
+ *
+ * ⚠️ Keep in step with PlanLimitsMap whenever the allotments are re-tuned
+ * (Phase-1 values are still provisional).
+ *
+ * Agency is contract-sized; 20M is the floor the backend resolves it to, and
+ * the card sells it as "custom" rather than printing the number.
+ */
+export const PLAN_MONTHLY_TOKENS: Record<PlanKey, number> = {
+    free: 200_000,
+    pro: 2_000_000,
+    team: 5_000_000,
+    agency: 20_000_000,
+};

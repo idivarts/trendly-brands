@@ -12,6 +12,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { goToBilling } from "@/utils/billing-navigation";
 import {
     ActivityIndicator,
+    Linking,
     Modal,
     Platform,
     Pressable,
@@ -19,6 +20,7 @@ import {
     Text,
     View,
 } from "react-native";
+import { PRIVACY_URL, TERMS_URL } from "@/constants/App";
 import { fs, lh } from "@/constants/Typography";
 
 // The proactive subscribe nudge (Notion: "Prompting to Subscribe to In-app
@@ -32,10 +34,13 @@ import { fs, lh } from "@/constants/Typography";
 // Purchase target is platform-specific: native runs the RevenueCat flow
 // in-sheet; web routes to the Razorpay-backed billing screen.
 
+// Kept honest: AI is metered on every plan, so the paid promise is a bigger
+// allowance, not an unlimited one. "Unlimited" here used to be flatly untrue
+// against a wallet the same app shows draining.
 const BENEFITS = [
-    "Unlimited AI content generation",
+    "10× the monthly AI tokens",
     "Full analytics & audience insights",
-    "More brands, seats & scheduling",
+    "Unlimited scheduling, more brands & seats",
 ];
 
 interface Props {
@@ -147,6 +152,41 @@ const SubscribeNudgeSheet: React.FC<Props> = ({ trigger, onDismiss, onConverted 
                             <Text style={styles.ctaText}>{ctaLabel}</Text>
                         )}
                     </Pressable>
+
+                    {/* When this sheet is itself the purchase screen (native IAP),
+                        it carries the same guideline-3.1.2 disclosure the full
+                        paywall does — renewal terms plus functional Terms/Privacy
+                        links. On web the CTA only routes to the billing screen, so
+                        the disclosure belongs there, not here. */}
+                    {isNativeIap && proPackage ? (
+                        <View style={styles.legalWrap}>
+                            <Text style={styles.legalText}>
+                                Renews automatically each month until cancelled. Cancel anytime in
+                                your {Platform.OS === "ios" ? "App Store" : "Google Play"} account settings.
+                            </Text>
+                            <View style={styles.legalLinks}>
+                                <Pressable
+                                    onPress={() => Linking.openURL(TERMS_URL)}
+                                    accessibilityRole="link"
+                                    accessibilityLabel="Terms of Use"
+                                    hitSlop={10}
+                                    style={({ pressed }) => [styles.legalLinkHit, pressed && styles.pressed]}
+                                >
+                                    <Text style={styles.legalLink}>Terms of Use</Text>
+                                </Pressable>
+                                <Text style={styles.legalSep}>·</Text>
+                                <Pressable
+                                    onPress={() => Linking.openURL(PRIVACY_URL)}
+                                    accessibilityRole="link"
+                                    accessibilityLabel="Privacy Policy"
+                                    hitSlop={10}
+                                    style={({ pressed }) => [styles.legalLinkHit, pressed && styles.pressed]}
+                                >
+                                    <Text style={styles.legalLink}>Privacy Policy</Text>
+                                </Pressable>
+                            </View>
+                        </View>
+                    ) : null}
                 </Pressable>
             </Pressable>
         </Modal>
@@ -240,6 +280,24 @@ function useStyles(colors: ReturnType<typeof Colors>, xl: boolean) {
                     elevation: 4,
                 },
                 ctaText: { fontSize: fs(15), fontWeight: "700", color: colors.white },
+
+                legalWrap: { marginTop: 14, gap: 6, alignItems: "center" },
+                legalText: {
+                    fontSize: fs(11),
+                    lineHeight: lh(16),
+                    color: colors.textSecondary,
+                    textAlign: "center",
+                },
+                legalLinks: { flexDirection: "row", alignItems: "center", gap: 8 },
+                // Padded so a line of fine print is still a comfortable tap target.
+                legalLinkHit: { paddingVertical: 8, paddingHorizontal: 4 },
+                legalLink: {
+                    fontSize: fs(11),
+                    lineHeight: lh(16),
+                    fontWeight: "700",
+                    color: colors.primary,
+                },
+                legalSep: { fontSize: fs(11), color: colors.textSecondary },
             }),
         [colors, xl]
     );
