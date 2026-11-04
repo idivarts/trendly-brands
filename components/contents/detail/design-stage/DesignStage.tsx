@@ -320,6 +320,40 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
         ...renderTarget,
     });
     const hasDesign = !!html;
+    /**
+     * Is there WORK on this screen — something to render, inspect and publish?
+     *
+     * Not the same question as `hasDesign`, and conflating the two is what
+     * made the Studio useless for a generated clip. An AI clip has no design
+     * html, so `hasDesign` is false and every header action keyed to it
+     * vanished: no Render button, no inspector, no way to remove the clip on
+     * desktop — while the stage underneath said "the render puts the whole
+     * timeline together". `renderTarget` above has handled a composition from
+     * the start; nothing on screen could reach it.
+     *
+     * The design-only actions stay on `hasDesign`, because they mean it: the
+     * virality score reads a design, and Revert walks a design's history.
+     */
+    const hasWork = hasDesign || timeline.authored;
+    /**
+     * The first reason this timeline cannot be rendered, if there is one.
+     *
+     * Unlocking the button above makes this necessary: a generated clip is on
+     * the timeline from the moment it is queued, and `validateComposition`
+     * already calls an unlanded one fatal ("This generated clip hasn't
+     * finished yet"). Nothing consulted it, because with the button locked to
+     * `hasDesign` the case could not arise. The button stays visible and goes
+     * dead rather than disappearing — a control that vanishes teaches nothing,
+     * and the strip and preview are both already saying why.
+     *
+     * Only for an AUTHORED timeline. Every design carries a derived one-clip
+     * composition too, and letting its problems reach this button would be a
+     * new way for an ordinary design to become unrenderable — a regression
+     * bought for a case that cannot occur there.
+     */
+    const renderBlocked = timeline.authored
+        ? timeline.problems.find((p) => p.fatal)
+        : undefined;
 
     // Fit the design into the measured canvas area, preserving aspect ratio AND
     // reserving room for the on-canvas controls (video scrubber / slide nav) so a
@@ -497,7 +531,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
     scrubHandlersRef.current = scrubHandlers;
 
     const saveRender = () => {
-        if (!hasDesign) return;
+        if (!hasWork || renderBlocked) return;
         render.startRender();
     };
 
@@ -682,11 +716,17 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                             />
                         </Pressable>
                     ) : null}
-                    {hasDesign && !readOnly ? (
+                    {hasWork && !readOnly ? (
                         <Pressable
                             onPress={saveRender}
-                            style={({ pressed }) => [styles.renderBtn, pressed && styles.pressed]}
-                            disabled={capturing}
+                            style={({ pressed }) => [
+                                styles.renderBtn,
+                                !!renderBlocked && styles.renderBtnDisabled,
+                                pressed && styles.pressed,
+                            ]}
+                            disabled={capturing || !!renderBlocked}
+                            accessibilityRole="button"
+                            accessibilityLabel={renderBlocked ? renderBlocked.message : render.label}
                         >
                             {capturing ? (
                                 renderFrac != null ? (
@@ -756,7 +796,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                 Not on a phone, where the canvas needs the whole width and the
                 floating toolbar is the right affordance for touch. */}
             <View style={styles.bodyRow}>
-            {xl && hasDesign ? (
+            {xl && hasWork ? (
                 <InspectorPanel
                     selection={selected}
                     clipSection={clipInspector}
@@ -1315,6 +1355,7 @@ const useStyles = (colors: any, topInset: number) =>
                 },
                 menuContent: { backgroundColor: colors.modalBackground, borderRadius: 12 },
                 menuItemText: { fontSize: fs(14), fontWeight: "500", color: colors.text },
+                renderBtnDisabled: { opacity: 0.45 },
                 renderBtn: {
                     paddingHorizontal: 16,
                     paddingVertical: 9,
