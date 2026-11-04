@@ -74,15 +74,15 @@ export interface NudgeCopy {
 export const NUDGE_COPY: Record<NudgeTriggerKey, NudgeCopy> = {
     open_count: {
         headline: "Plan your whole month in minutes",
-        body: "Upgrade to unlock unlimited AI content, full analytics, and more brands — all in one place.",
+        body: "Upgrade for 10× the monthly AI tokens, full analytics, and more brands — all in one place.",
     },
     session_time: {
         headline: "Getting the hang of it?",
-        body: "Pro unlocks unlimited AI generations, team seats, and full posting — no caps to plan around.",
+        body: "Pro adds 10× the AI tokens, a second seat, and unlimited posting — no caps to plan around.",
     },
     aha_moment: {
         headline: "Nice — your first post is in motion",
-        body: "Keep the momentum going: Pro gives you unlimited AI content and posting, so nothing slows you down.",
+        body: "Keep the momentum going: Pro gives you 10× the AI tokens and unlimited posting, so nothing slows you down.",
     },
     consumption_threshold: {
         headline: "You're halfway through this month's AI tokens",

@@ -1,10 +1,11 @@
 //  import pricingPage from "@/app/(landing)/pricing-page";
-import { PLAN_MONTHLY_USD } from "@/constants/PlanPricing";
+import { PLAN_MONTHLY_TOKENS, PLAN_MONTHLY_USD } from "@/constants/PlanPricing";
 import { track } from "@/shared-libs/utils/analytics";
 import { useAuthContext } from "@/contexts";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useOrganizationContext } from "@/contexts/organization-context.provider";
 import { useBreakpoints } from "@/hooks";
+import { formatTokens } from "@/hooks/use-entitlements";
 import { ModelStatus } from "@/shared-libs/firestore/trendly-pro/models/status";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import { useMyNavigation } from "@/shared-libs/utils/router";
@@ -32,26 +33,36 @@ export type BillingCycle = "yearly" | "monthly";
 // New USD, org-level, monthly-only plans (see the Credit System ticket). Value
 // metric = brand workspaces per org; everything metered draws from one monthly
 // token wallet.
+//
+// Every number below comes from the backend's PlanLimitsMap, via
+// PLAN_MONTHLY_TOKENS + formatTokens — the same formatter the wallet meter at
+// the top of this screen uses. That is deliberate: the cards used to carry
+// hand-written allowances ("600 tokens / month") directly above a meter
+// reading "of 5M", which is the one contradiction a pricing page cannot
+// afford. Seats and workspaces are prose because they are single digits, but
+// they track MaxSeats / MaxBrands all the same.
+const tokenLine = (plan: PlanKey) => `${formatTokens(PLAN_MONTHLY_TOKENS[plan])} AI tokens / month`
+
 const freeFeatures = [
     "1 brand workspace",
     "1 seat",
-    "20 tokens / month",
-    "10 creator lookups / month",
-    "Basic scheduling & analytics",
+    tokenLine("free"),
+    "AI content calendar & strategy",
+    "Starter scheduling · analytics preview",
 ]
 
 const proFeatures = [
     "1 brand workspace",
     "2 seats",
-    "200 tokens / month",
-    "Creator lookups from your token balance",
-    "Full scheduling · standard analytics",
+    tokenLine("pro"),
+    "Unlimited scheduling · inbox replies",
+    "Standard analytics · Canva editing",
 ]
 
 const teamFeatures = [
     "Up to 3 brand workspaces",
     "5 seats",
-    "600 tokens / month",
+    tokenLine("team"),
     "Approvals & campaigns",
     "Full analytics + team reporting",
 ]
@@ -60,7 +71,7 @@ const agencyFeatures = [
     "Custom brand workspaces",
     "Custom seats",
     "Custom monthly token allowance",
-    "Unlimited creator lookups",
+    "Everything in Team",
     "Priority support & onboarding",
 ]
 const PLANS: { key: PlanKey, name: string, monthly: number, features: string[], preferred: boolean, custom?: boolean }[] = [
