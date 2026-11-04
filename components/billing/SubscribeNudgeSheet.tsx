@@ -174,7 +174,13 @@ const SubscribeNudgeSheet: React.FC<Props> = ({ trigger, onDismiss, onConverted 
                                 >
                                     <Text style={styles.legalLink}>Terms of Use</Text>
                                 </Pressable>
-                                <Text style={styles.legalSep}>·</Text>
+                                <Text
+                                    style={styles.legalSep}
+                                    accessibilityElementsHidden
+                                    importantForAccessibility="no-hide-descendants"
+                                >
+                                    ·
+                                </Text>
                                 <Pressable
                                     onPress={() => Linking.openURL(PRIVACY_URL)}
                                     accessibilityRole="link"

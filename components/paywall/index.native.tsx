@@ -336,7 +336,11 @@ const PayWallComponent = () => {
                         Store Connect subscription metadata is what gets a build
                         rejected. Rendered outside the `!managedOnWeb` branch so it
                         is present whenever anything is buyable here, including the
-                        top-up-only case. */}
+                        top-up-only case — but NOT when the screen has nothing to
+                        sell at all (a web-managed plan with no top-up packages),
+                        where renewal terms would describe a flow that isn't on
+                        screen. */}
+                    {(!managedOnWeb || topups.length > 0) && (
                     <View style={styles.legalWrap}>
                         <Text style={styles.legalText}>
                             Subscriptions renew automatically each month until cancelled. Manage or
@@ -353,7 +357,13 @@ const PayWallComponent = () => {
                             >
                                 <Text style={styles.legalLink}>Terms of Use</Text>
                             </Pressable>
-                            <Text style={styles.legalSep}>·</Text>
+                            <Text
+                                style={styles.legalSep}
+                                accessibilityElementsHidden
+                                importantForAccessibility="no-hide-descendants"
+                            >
+                                ·
+                            </Text>
                             <Pressable
                                 onPress={() => Linking.openURL(PRIVACY_URL)}
                                 accessibilityRole="link"
@@ -365,6 +375,7 @@ const PayWallComponent = () => {
                             </Pressable>
                         </View>
                     </View>
+                    )}
                 </>
             )}
         </ScrollView>
