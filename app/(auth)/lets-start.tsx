@@ -42,7 +42,15 @@ const TrendlyScreen = () => {
             if (!cancelled) setResolved(true)
         }
 
-        resolve()
+        // A rejection here must still end in a rendered page. `resolved` is
+        // only ever set on the success path, so an unhandled throw — from a
+        // router call, or from anything added to `resolve` later — would leave
+        // the app's entry route showing `null` forever, with no retry and no
+        // error. Failing open costs at worst a missed gate; failing closed is a
+        // white screen on the one route every visitor lands on.
+        resolve().catch(() => {
+            if (!cancelled) setResolved(true)
+        })
         return () => { cancelled = true }
         // `xl` is deliberately not a dependency: this runs once, on entry. A
         // viewport that crosses the breakpoint mid-session (desktop window

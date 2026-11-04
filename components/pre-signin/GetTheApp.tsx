@@ -17,7 +17,7 @@ import {
 import { withAlpha } from "@/utils/color";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "@react-navigation/native";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
     Image,
     Linking,
