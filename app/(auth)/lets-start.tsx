@@ -3,13 +3,15 @@ import LetsStartWeb from "@/components/pre-signin/LetsStartWeb";
 import { useBreakpoints } from "@/hooks";
 import { PersistentStorage } from "@/shared-libs/utils/persistent-storage";
 import { useMyNavigation } from "@/shared-libs/utils/router";
-import { hasChosenWeb, isGateableViewport } from "@/utils/app-download-gate";
+import { chooseWeb, hasChosenWeb, isGateableViewport, isWebBypassParam } from "@/utils/app-download-gate";
+import { useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { Platform } from "react-native";
 
 const TrendlyScreen = () => {
     const { xl } = useBreakpoints()
     const { resetAndNavigate } = useMyNavigation()
+    const { web } = useLocalSearchParams<{ web?: string }>()
 
     // Both gates below need a storage read, so nothing can render until they
     // resolve: painting the page first and redirecting a tick later shows the
@@ -20,6 +22,15 @@ const TrendlyScreen = () => {
         let cancelled = false
 
         const resolve = async () => {
+            // `?web=1` is an explicit "I want the browser" — the website's
+            // /download page puts it on its "Open the web app" link, where the
+            // visitor has just read a page about the apps and picked the
+            // browser anyway. Record it up front rather than as its own exit:
+            // the gate below already defers to `hasChosenWeb()`, so this needs
+            // no second branch, and the choice still lands when the sign-out
+            // redirect takes over on the very next line.
+            if (isWebBypassParam(web)) await chooseWeb().catch(() => { })
+
             // Signing out sets this (15-minute TTL), so an existing user who just
             // logged out goes straight back to the auth card. They have already
             // chosen their platform — don't sell them the app on the way out.
@@ -52,10 +63,10 @@ const TrendlyScreen = () => {
             if (!cancelled) setResolved(true)
         })
         return () => { cancelled = true }
-        // `xl` is deliberately not a dependency: this runs once, on entry. A
-        // viewport that crosses the breakpoint mid-session (desktop window
-        // resized down) should not suddenly bounce the user out of the page
-        // they are already using.
+        // `xl` and `web` are deliberately not dependencies: this runs once, on
+        // entry. A viewport that crosses the breakpoint mid-session (desktop
+        // window resized down) should not suddenly bounce the user out of the
+        // page they are already using.
     }, [])
 
     if (!resolved) return null
