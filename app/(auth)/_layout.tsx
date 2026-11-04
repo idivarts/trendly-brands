@@ -19,6 +19,7 @@ const FULL_BLEED_AUTH_ROUTES = [
     "/login",
     "/forgot-password",
     "/lets-start",
+    "/get-the-app",
 ] as const;
 
 const AuthLayout = () => {
