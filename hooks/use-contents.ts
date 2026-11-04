@@ -98,12 +98,16 @@ function toIContent(
         ? new Date(item.date + "T00:00:00Z").getTime()
         : undefined;
 
-    // Target platforms come from the create flow (extra.platforms). Clamp them to
-    // those that actually support the chosen format; fall back to every platform
-    // that supports the format when none were supplied.
-    const requested = normalizePlatforms(extra.platforms ?? []);
-    const compatible = requested.filter((p) => isFormatPlatformCompatible(item.type, p));
-    const platforms = compatible.length ? compatible : platformsForFormat(item.type);
+    // Target platforms come from the create flow (extra.platforms), clamped to
+    // those that actually support the chosen format. An EXPLICIT empty list is
+    // meaningful — a brand can plan a piece before deciding (or connecting)
+    // where it goes — so only a caller that supplies no `platforms` key at all
+    // falls back to every platform supporting the format.
+    const platforms = extra.platforms
+        ? normalizePlatforms(extra.platforms).filter((p) =>
+            isFormatPlatformCompatible(item.type, p)
+        )
+        : platformsForFormat(item.type);
 
     const doc: IContent = {
         title: item.title,
