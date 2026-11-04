@@ -167,6 +167,7 @@ const AssetsPanel: React.FC<Props> = ({
                     <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
+                        style={styles.tabsScroll}
                         contentContainerStyle={styles.tabs}
                     >
                         {TABS.map((t) => {
@@ -371,7 +372,13 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
                     shadowOpacity: 0.22,
                     elevation: 12,
                 },
-                head: { flexDirection: "row", alignItems: "center", gap: 4 },
+                // The sheet is capped at 86% of the viewport, and on web every
+                // ScrollView arrives with flexShrink: 1 over a min-content height
+                // of 0 — so the tab strip was free to give up its entire height to
+                // the overflowing grid, and did, leaving a sliver of the active
+                // pill. The grid is the only child allowed to absorb that
+                // shortfall; everything framing it holds its height.
+                head: { flexDirection: "row", alignItems: "center", flexShrink: 0, gap: 4 },
                 title: {
                     flex: 1,
                     fontSize: fs(16),
@@ -380,7 +387,8 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
                     color: colors.text,
                 },
                 close: { padding: 4 },
-                tabs: { flexDirection: "row", gap: 4, paddingRight: 8 },
+                tabsScroll: { flexGrow: 0, flexShrink: 0 },
+                tabs: { flexDirection: "row", alignItems: "center", gap: 4, paddingRight: 8 },
                 tab: {
                     paddingVertical: 6,
                     paddingHorizontal: 12,
@@ -395,7 +403,9 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
                     color: colors.textSecondary,
                 },
                 tabTextActive: { color: colors.onPrimary },
-                body: { flexGrow: 0 },
+                // flexGrow stays 0 so a handful of assets still shrink-wraps the
+                // sheet instead of standing at the full 86%.
+                body: { flexGrow: 0, flexShrink: 1, minHeight: 0 },
                 grid: {
                     flexDirection: "row",
                     flexWrap: "wrap",
@@ -493,7 +503,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
                     lineHeight: lh(15),
                     color: colors.toastError,
                 },
-                footer: { flexDirection: "row", alignItems: "center", gap: 10 },
+                footer: { flexDirection: "row", alignItems: "center", flexShrink: 0, gap: 10 },
                 footerHint: {
                     flex: 1,
                     fontSize: fs(11),
