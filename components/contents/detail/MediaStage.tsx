@@ -84,7 +84,11 @@ import {
     patchFootage,
 } from "./design-stage/composition-edits";
 import { durationOptionsFor, secondsOf, useMediaModels } from "@/hooks/use-media-models";
-import { Composition } from "@/shared-libs/design/composition-runtime";
+import {
+    Composition,
+    GenVideoClipSource,
+    tracksOfKind,
+} from "@/shared-libs/design/composition-runtime";
 import { HttpError, HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { COMPOSITION_FPS } from "./design-stage/use-content-composition";
@@ -215,22 +219,6 @@ const MediaStage: React.FC<MediaStageProps> = ({
 
     const hasMedia = attachments.length > 0;
 
-    /**
-     * Has the design on screen been turned into a publishable asset?
-     *
-     * `renderUrl` is written onto the REVISION when it is rendered, and
-     * `designRef.revisionId` points at the current one — so an empty renderUrl
-     * means this exact design has never been exported, even when the content
-     * still carries attachments captured from an earlier revision. That second
-     * case ("stale") is the one worth catching: it looks completely finished and
-     * would publish a version that doesn't match the canvas.
-     */
-    const designRenderState: DesignRenderState | null = useMemo(() => {
-        if (!designPreview) return null;
-        if (designPreview.renderUrl) return "current";
-        return hasMedia ? "stale" : "never";
-    }, [designPreview, hasMedia]);
-
     // The design is passed so the hook can derive the implicit one-clip timeline
     // every video already has: appending a generated clip to a content that has
     // a design has to put the design FIRST, not replace it.
@@ -253,6 +241,74 @@ const MediaStage: React.FC<MediaStageProps> = ({
         ]
     );
     const timeline = useContentComposition(contentId, compositionRef, timelineDesign);
+
+    /**
+     * What the generated clips on this timeline are doing.
+     *
+     * A generated clip is written to the timeline BEFORE its job is submitted,
+     * so the finished url has a clip to land on (startGeneratedClip explains
+     * why that order). The ordering is right; what it cost is this page, which
+     * from the moment the button was pressed described a finished video that
+     * did not exist yet — for the several minutes the job ran. `url` is the
+     * difference between the two, and it is the same signal the Studio's strip
+     * and ClipPreview have keyed off all along. The content page simply never
+     * looked.
+     *
+     * `soleUrl` is set only when the whole timeline IS that one landed clip.
+     * Several clips become one video only once they are rendered together, so
+     * playing the first of them here would show a fragment and present it as
+     * the post.
+     */
+    const genVideo = useMemo(() => {
+        // The VIDEO track only. Counting every track would let a soundtrack or
+        // an overlay make `clips.length` 2 and quietly drop the preview back to
+        // the summary card — a clip is no less the whole video for having music
+        // under it.
+        const clips = (timeline.composition ? tracksOfKind(timeline.composition, "video") : [])
+            .flatMap((t) => t.clips ?? []);
+        const gen = clips.filter((c) => c.source?.kind === "genvideo");
+        const pending = gen.filter((c) => !(c.source as GenVideoClipSource).url).length;
+        const first = gen[0]?.source as GenVideoClipSource | undefined;
+        return {
+            pending,
+            soleUrl: clips.length === 1 && gen.length === 1 ? first?.url : undefined,
+        };
+    }, [timeline.composition]);
+
+    /**
+     * Has what is on screen been turned into a publishable asset?
+     *
+     * `renderUrl` is written onto the REVISION when it is rendered, and the
+     * content's pointer names the current one — so an empty renderUrl means
+     * this exact version has never been exported, even when the content still
+     * carries attachments captured from an earlier one. That second case
+     * ("stale") is the one worth catching: it looks completely finished and
+     * would publish something that doesn't match what is here.
+     *
+     * The authored timeline is asked FIRST, and that is what makes a generated
+     * clip publishable at all. This used to return null whenever there was no
+     * `designPreview`, so the render bar never mounted for a composition with
+     * no design behind it — while `renderTarget` below was already built to
+     * render exactly that. The capability was complete and nothing on either
+     * screen could reach it.
+     *
+     * A clip still generating is offered no render, because there is nothing
+     * yet to render — null unmounts the bar rather than disabling it, which
+     * also drops the "stale" warning for those minutes. That is covered above
+     * instead: the generating strip says in words that the preview on screen
+     * is the last render. The publish gate has its own check and does not
+     * depend on this.
+     */
+    const designRenderState: DesignRenderState | null = useMemo(() => {
+        if (timeline.authored && timeline.revision) {
+            if (genVideo.pending > 0) return null;
+            if (timeline.revision.renderUrl) return "current";
+            return hasMedia ? "stale" : "never";
+        }
+        if (!designPreview) return null;
+        if (designPreview.renderUrl) return "current";
+        return hasMedia ? "stale" : "never";
+    }, [timeline.authored, timeline.revision, genVideo.pending, designPreview, hasMedia]);
     const renderTarget = timeline.authored && timeline.revision
         ? ({
               targetKind: "composition" as const,
@@ -1009,16 +1065,33 @@ const MediaStage: React.FC<MediaStageProps> = ({
 
     // Clear only. The design lane's primary action moved onto the canvas itself
     // (see renderDesignCanvas) and the other lanes never had one here.
+    /**
+     * What Clear is called here.
+     *
+     * A timeline with no design resolves to the "design" lane, whose label is
+     * "Clear canvas" — words for something the user painted, offered over a
+     * clip the AI made. Clearing drops the whole composition either way, so
+     * the plural says so rather than implying one clip of several goes.
+     */
+    const clearLabel =
+        timeline.authored && !designPreview
+            ? timeline.clipCount === 1
+                ? "Delete this clip"
+                : "Delete these clips"
+            : lane
+                ? clearLabelFor(lane, contentType)
+                : "";
+
     const laneActions = () => (
         <View style={styles.laneActionRow}>
             <Pressable
                 style={({ pressed }) => [styles.clearBtn, pressed && styles.pressed]}
                 onPress={handleClear}
                 accessibilityRole="button"
-                accessibilityLabel={clearLabelFor(lane!, contentType)}
+                accessibilityLabel={clearLabel}
             >
                 <FontAwesomeIcon icon={faTrashCan} size={11} color={colors.textSecondary} />
-                <Text style={styles.clearBtnText}>{clearLabelFor(lane!, contentType)}</Text>
+                <Text style={styles.clearBtnText}>{clearLabel}</Text>
             </Pressable>
         </View>
     );
@@ -1059,6 +1132,9 @@ const MediaStage: React.FC<MediaStageProps> = ({
         const paired = designPreview && hasMedia && designRenderState === "current";
 
         let body: React.ReactNode;
+        // Set when the generating state IS the body, so the strip below does
+        // not say the same thing twice.
+        let generatingOwnsBody = false;
         if (paired && designPreview) {
             // A multi-slide render is a horizontal strip: it wants WIDTH, not a
             // half column. Squeezed into one it showed ~3 of 7 tiles against a
@@ -1138,8 +1214,66 @@ const MediaStage: React.FC<MediaStageProps> = ({
                     </Text>
                 </View>
             );
+        } else if (timeline.authored && genVideo.pending > 0) {
+            generatingOwnsBody = true;
+            // A generated clip is on the timeline and its job has not landed.
+            //
+            // This is the state the summary card below used to swallow whole.
+            // The clip is saved before the job is submitted, so "One clip on
+            // the timeline · 8.0s" was true, and finished-looking, while the
+            // generation still had minutes to run — and the only honest report
+            // of the wait lived inside the Studio, on a screen the user had no
+            // reason to open yet.
+            body = (
+                <View style={styles.generating} accessibilityLiveRegion="polite">
+                    <ActivityIndicator size="small" color={colors.primary} />
+                    <Text style={styles.generatingStep}>
+                        {genVideo.pending === 1
+                            ? "Generating your clip…"
+                            : `Generating ${genVideo.pending} clips…`}
+                    </Text>
+                    <Text style={styles.generatingHint}>
+                        A few minutes. You can leave this page — it lands here on its own, and you
+                        can write the caption while you wait.
+                    </Text>
+                </View>
+            );
+        } else if (timeline.authored && genVideo.soleUrl) {
+            // One generated clip, landed. Played HERE rather than behind a
+            // trip to the Studio: for a clip the AI made whole, watching it is
+            // the entire next step, and the Studio asks for a navigation to
+            // show the same file plus editing tools nobody opened it for.
+            const clipAspect = previewAspect(contentType);
+            const clipWidth = Math.min(
+                stageWidth || MAX_PREVIEW_H * clipAspect,
+                MAX_PREVIEW_H * clipAspect
+            );
+            body = (
+                <View style={styles.clipLanded}>
+                    <View style={[styles.clipFrame, { width: clipWidth, aspectRatio: clipAspect }]}>
+                        <VideoSurface
+                            source={{ uri: genVideo.soleUrl }}
+                            style={styles.clipFill}
+                            resizeMode={ResizeMode.CONTAIN}
+                            useNativeControls
+                            isLooping={false}
+                        />
+                    </View>
+                    <Pressable
+                        style={({ pressed }) => [styles.clipOpen, pressed && styles.pressed]}
+                        onPress={onOpenDesign}
+                        accessibilityRole="button"
+                        accessibilityLabel="Open the Studio to edit this clip"
+                    >
+                        <FontAwesomeIcon icon={faFilm} size={13} color={colors.primary} />
+                        <Text style={styles.clipOpenText}>
+                            Trim it, add clips or change the sound in the Studio
+                        </Text>
+                    </Pressable>
+                </View>
+            );
         } else if (timeline.authored && timeline.clipCount > 0) {
-            // A timeline and no design — a generated clip, or a cut of footage.
+            // A timeline and no design — several clips, or a cut of footage.
             // It is a whole video, so it gets a summary and a way in rather
             // than the composer, which would ask what to make next to media
             // that already exists.
@@ -1207,11 +1341,36 @@ const MediaStage: React.FC<MediaStageProps> = ({
         // the AI turn — so the one action on screen was a no-op dressed as a
         // cancel. Nothing is better than a button that lies. A real cancel needs
         // to abort the turn, which belongs with the generating stage.
-        const nothingYet = !hasMedia && !designPreview && !designRef?.revisionId;
+        // An authored timeline counts. It did not, which is why a generated
+        // clip had no way to be removed: this returned early, taking the lane
+        // actions — and with them the only Clear on the page — with it. The
+        // clear itself always worked; `handleClearMedia` deletes the
+        // compositionRef along with the design. Nothing ever rendered the
+        // button.
+        const nothingYet =
+            !hasMedia && !designPreview && !designRef?.revisionId && !timeline.authored;
         if (nothingYet) return body;
 
         return (
             <>
+                {/* A generation in flight, when something else already owns the
+                    stage — a rendered export, or a design the new clip was
+                    appended to. Those branches come first and should: taking a
+                    finished preview away to show a spinner loses more than it
+                    tells. But saying nothing is how a re-generate onto a
+                    rendered timeline left the OLD video on screen, current-
+                    looking, for the minutes the new clip took. */}
+                {timeline.authored && genVideo.pending > 0 && !generatingOwnsBody ? (
+                    <View style={styles.genStrip} accessibilityLiveRegion="polite">
+                        <ActivityIndicator size="small" color={colors.primary} />
+                        <Text style={styles.genStripText}>
+                            {genVideo.pending === 1
+                                ? "A new clip is generating"
+                                : `${genVideo.pending} new clips are generating`}
+                            {" — what's above is the last render until it lands."}
+                        </Text>
+                    </View>
+                ) : null}
                 {body}
                 {designRenderState ? (
                     <DesignRenderBar
@@ -1470,6 +1629,44 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.card,
         },
         timelineBody: { flex: 1, gap: 4 },
+        genStrip: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+            padding: 12,
+            borderRadius: 12,
+            backgroundColor: colors.tag,
+        },
+        genStripText: {
+            flex: 1,
+            fontSize: fs(12),
+            lineHeight: lh(17),
+            color: colors.textSecondary,
+        },
+        clipLanded: { gap: 10 },
+        clipFrame: {
+            alignSelf: "center",
+            borderRadius: 12,
+            overflow: "hidden",
+            backgroundColor: colors.black ?? "#000",
+        },
+        clipFill: { width: "100%", height: "100%" },
+        clipOpen: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 8,
+            alignSelf: "flex-start",
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderRadius: 10,
+            backgroundColor: colors.tag,
+        },
+        clipOpenText: {
+            fontSize: fs(12),
+            lineHeight: lh(17),
+            fontWeight: "600",
+            color: colors.primary,
+        },
         timelineTitle: {
             fontSize: fs(14),
             lineHeight: lh(19),

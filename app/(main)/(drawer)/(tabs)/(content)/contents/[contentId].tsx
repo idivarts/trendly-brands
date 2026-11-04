@@ -1062,10 +1062,23 @@ const CreateContentScreen = () => {
     // A design that hasn't been rendered (or was edited since) is not
     // publishable, even when stale attachments make it look like it is.
     const designRenderState = useMemo(() => {
+        // A composition is asked FIRST, and it has to be: this returned
+        // undefined whenever there was no design, which told publish-readiness
+        // "not a design, skip the stale rule" — so a timeline that gained or
+        // regenerated a clip since its last render passed the attachment check
+        // on the OLD export and posted the previous video. Harmless while a
+        // composition could not be rendered at all; reachable now that it can.
+        // Each revision is saved WITHOUT a renderUrl, which is exactly the
+        // signal: a pointer with none has never been exported.
+        const composition = seedItem?.compositionRef;
+        if (composition?.revisionId) {
+            if (composition.renderUrl) return "current" as const;
+            return attachments.length > 0 ? ("stale" as const) : ("never" as const);
+        }
         if (!designPreview) return undefined;
         if (designPreview.renderUrl) return "current" as const;
         return attachments.length > 0 ? ("stale" as const) : ("never" as const);
-    }, [designPreview, attachments.length]);
+    }, [seedItem?.compositionRef, designPreview, attachments.length]);
 
     const publishReadiness: PublishReadinessInput = useMemo(
         () => ({
