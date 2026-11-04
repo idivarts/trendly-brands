@@ -290,8 +290,14 @@ const MediaStage: React.FC<MediaStageProps> = ({
      * `designPreview`, so the render bar never mounted for a composition with
      * no design behind it — while `renderTarget` below was already built to
      * render exactly that. The capability was complete and nothing on either
-     * screen could reach it. A clip still generating is offered no render,
-     * because there is nothing yet to render.
+     * screen could reach it.
+     *
+     * A clip still generating is offered no render, because there is nothing
+     * yet to render — null unmounts the bar rather than disabling it, which
+     * also drops the "stale" warning for those minutes. That is covered above
+     * instead: the generating strip says in words that the preview on screen
+     * is the last render. The publish gate has its own check and does not
+     * depend on this.
      */
     const designRenderState: DesignRenderState | null = useMemo(() => {
         if (timeline.authored && timeline.revision) {
@@ -1126,6 +1132,9 @@ const MediaStage: React.FC<MediaStageProps> = ({
         const paired = designPreview && hasMedia && designRenderState === "current";
 
         let body: React.ReactNode;
+        // Set when the generating state IS the body, so the strip below does
+        // not say the same thing twice.
+        let generatingOwnsBody = false;
         if (paired && designPreview) {
             // A multi-slide render is a horizontal strip: it wants WIDTH, not a
             // half column. Squeezed into one it showed ~3 of 7 tiles against a
@@ -1206,6 +1215,7 @@ const MediaStage: React.FC<MediaStageProps> = ({
                 </View>
             );
         } else if (timeline.authored && genVideo.pending > 0) {
+            generatingOwnsBody = true;
             // A generated clip is on the timeline and its job has not landed.
             //
             // This is the state the summary card below used to swallow whole.
@@ -1343,6 +1353,24 @@ const MediaStage: React.FC<MediaStageProps> = ({
 
         return (
             <>
+                {/* A generation in flight, when something else already owns the
+                    stage — a rendered export, or a design the new clip was
+                    appended to. Those branches come first and should: taking a
+                    finished preview away to show a spinner loses more than it
+                    tells. But saying nothing is how a re-generate onto a
+                    rendered timeline left the OLD video on screen, current-
+                    looking, for the minutes the new clip took. */}
+                {timeline.authored && genVideo.pending > 0 && !generatingOwnsBody ? (
+                    <View style={styles.genStrip} accessibilityLiveRegion="polite">
+                        <ActivityIndicator size="small" color={colors.primary} />
+                        <Text style={styles.genStripText}>
+                            {genVideo.pending === 1
+                                ? "A new clip is generating"
+                                : `${genVideo.pending} new clips are generating`}
+                            {" — what's above is the last render until it lands."}
+                        </Text>
+                    </View>
+                ) : null}
                 {body}
                 {designRenderState ? (
                     <DesignRenderBar
@@ -1601,6 +1629,20 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             backgroundColor: colors.card,
         },
         timelineBody: { flex: 1, gap: 4 },
+        genStrip: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 10,
+            padding: 12,
+            borderRadius: 12,
+            backgroundColor: colors.tag,
+        },
+        genStripText: {
+            flex: 1,
+            fontSize: fs(12),
+            lineHeight: lh(17),
+            color: colors.textSecondary,
+        },
         clipLanded: { gap: 10 },
         clipFrame: {
             alignSelf: "center",

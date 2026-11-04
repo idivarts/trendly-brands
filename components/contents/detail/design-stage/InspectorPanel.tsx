@@ -51,6 +51,16 @@ interface Props {
     slide: number;
     slideCount: number;
     isVideo: boolean;
+    /**
+     * Whether there is a canvas to tap at all.
+     *
+     * False for a timeline with no design — a generated clip, a cut of
+     * footage. The panel used to mount only alongside a design, so its empty
+     * state could safely say "tap the canvas"; now that it also serves a
+     * design-less timeline, that sentence points at something that is not on
+     * screen and leaves the strip, which IS, undiscovered.
+     */
+    hasCanvas?: boolean;
     readOnly?: boolean;
     /** Write the text back through the frame bridge. */
     onSetText: (id: string, text: string) => void;
@@ -67,6 +77,7 @@ const InspectorPanel: React.FC<Props> = ({
     slide,
     slideCount,
     isVideo,
+    hasCanvas = true,
     readOnly = false,
     onSetText,
     onAskAI,
@@ -114,7 +125,9 @@ const InspectorPanel: React.FC<Props> = ({
 
                 {!selection ? (
                     <Text style={styles.empty}>
-                        Tap anything on the canvas to edit it here.
+                        {hasCanvas
+                            ? "Tap anything on the canvas to edit it here."
+                            : "Pick a clip on the timeline below to edit it here."}
                     </Text>
                 ) : (
                     <>

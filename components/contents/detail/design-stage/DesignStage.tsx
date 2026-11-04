@@ -803,6 +803,7 @@ const DesignStage: React.FC<DesignStageProps> = (props) => {
                     slide={slide}
                     slideCount={slideCount}
                     isVideo={isVideoDesign}
+                    hasCanvas={hasDesign}
                     readOnly={readOnly}
                     onSetText={(id, text) => {
                         frameRef.current?.setText(id, text);
