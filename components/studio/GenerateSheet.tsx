@@ -115,17 +115,28 @@ const GenerateSheet: React.FC<GenerateSheetProps> = ({
                         </View>
                     ) : running ? (
                         <View style={styles.blockCard}>
+                            {/* Counts rather than "scene 3 of 6": several are
+                                designed at once now, so a single ordinal would
+                                be a number the user cannot match to anything on
+                                the rail. */}
                             <Text style={styles.blockTitle}>
                                 {progress
-                                    ? `Designing scene ${Math.min(progress.done + 1, progress.total)} of ${progress.total}`
+                                    ? `Designed ${progress.done} of ${progress.total}`
                                     : "Planning the scenes…"}
                             </Text>
                             <Text style={styles.note}>
-                                Each scene appears on the rail as it lands. You can stop at any
-                                point — the scenes already designed are kept.
+                                {progress && progress.activeSceneIds.length > 1
+                                    ? `Designing ${progress.activeSceneIds.length} at once. Each appears on the rail as it lands.`
+                                    : "Each scene appears on the rail as it lands."}
+                                {progress && progress.failedSceneIds.length > 0
+                                    ? ` ${progress.failedSceneIds.length} didn't come back — regenerate those from the rail.`
+                                    : ""}
                             </Text>
                             <Pressable style={styles.secondary} onPress={onCancel}>
-                                <Text style={styles.secondaryText}>Stop after this scene</Text>
+                                {/* Not "after this scene": stopping halts
+                                    DISPATCH, and whatever is already in flight
+                                    is paid for and allowed to land. */}
+                                <Text style={styles.secondaryText}>Stop starting new ones</Text>
                             </Pressable>
                         </View>
                     ) : (
