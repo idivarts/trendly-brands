@@ -19,6 +19,7 @@
  * have to decline help to get a canvas.
  */
 import { fs, lh, fbox } from "@/constants/Typography";
+import { IStudioScene } from "@/shared-libs/firestore/trendly-pro/models/studio";
 import { TokenMeterBar } from "@/components/billing/TokenMeter";
 import CastSheet from "@/components/studio/CastSheet";
 import DirectorSheet from "@/components/studio/DirectorSheet";
@@ -140,24 +141,44 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
      * so the pick-up is a button rather than something that happens because
      * the screen mounted.
      */
+    /**
+     * Whether a pending scene can be picked up by the fill WITHOUT destroying
+     * anything.
+     *
+     * ⚠️ A GENERATE IS A REPLACEMENT, NOT AN ADDITION. `SetSceneLayers` writes
+     * the new layer list over the old one and diffs the media ids, so running
+     * the fill over a scene that already holds a clip drops that clip from the
+     * scene AND releases its refcount. Two conditions therefore disqualify a
+     * scene, and both of them really occur in an approved plan:
+     *
+     *  - IT ALREADY HAS LAYERS. A plan that reuses footage the brand owns and
+     *    asks for a type overlay on top leaves the scene with the clip in it
+     *    and an overlay brief on `gen`. The only endpoint that consumes that
+     *    brief replaces the clip with the overlay — so picking it up would
+     *    silently throw away the footage the plan chose.
+     *  - THE PLANNER CHOSE VIDEO (`gen.model`). The fill asks for a designed
+     *    document, so this would produce a motion graphic where a person
+     *    approved footage, and charge for it. Such a scene also needs its cast
+     *    and location to hold one face across clips, and `ApproveRun` does not
+     *    put those on the scene — there is nothing to send even if the video
+     *    endpoint were called.
+     *
+     * Both are counted and said out loud rather than swept in.
+     */
+    const canPickUp = (sc: IStudioScene) =>
+        !sc.gen?.model && (sc.layers?.length ?? 0) === 0;
+
     const stranded = useMemo(
-        () => (generate.running ? [] : scenes.filter((sc) => sc.pending && !sc.gen?.model).map((sc) => sc.id)),
+        () =>
+            generate.running
+                ? []
+                : scenes.filter((sc) => sc.pending && canPickUp(sc)).map((sc) => sc.id),
         [scenes, generate.running]
     );
 
-    /**
-     * Pending scenes the planner chose AI VIDEO for, which this cannot pick up.
-     *
-     * ⚠️ DELIBERATELY NOT SWEPT INTO THE FILL. `gen.model` set means the plan
-     * asked for a generated clip, and the fill asks for a designed document —
-     * running it over these would quietly produce a motion graphic where a
-     * person approved footage, and charge for it. The scene also needs its
-     * cast and location to keep one face across clips, and `ApproveRun` does
-     * not yet put those on the scene, so there is nothing here to send even if
-     * the endpoint were called. Counted separately and said out loud instead.
-     */
+    /** Pending scenes that need a decision per scene — see `canPickUp`. */
     const strandedVideo = useMemo(
-        () => (generate.running ? [] : scenes.filter((sc) => sc.pending && !!sc.gen?.model)),
+        () => (generate.running ? [] : scenes.filter((sc) => sc.pending && !canPickUp(sc))),
         [scenes, generate.running]
     );
 
@@ -603,8 +624,8 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
                             {strandedVideo.length === 0
                                 ? "They were planned and approved, but the run stopped before they were designed. Picking up costs the same as making them the first time."
                                 : stranded.length === 0
-                                  ? "They were planned and approved, but the run stopped. These ones are AI video — open each scene and generate its clip from the video panel."
-                                  : `They were planned and approved, but the run stopped. ${stranded.length} can be picked up here; the other ${strandedVideo.length} are AI video and need their clips generated from each scene's video panel.`}
+                                  ? "They were planned and approved, but the run stopped. These ones need a decision each — open the scene to make its clip, or to replace what the plan already put in it."
+                                  : `They were planned and approved, but the run stopped. ${stranded.length} can be picked up here; the other ${strandedVideo.length} need a decision each, so open those scenes individually.`}
                         </Text>
                     </View>
                     {stranded.length > 0 ? (
@@ -661,7 +682,7 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
                     // running the fill over them would be worse than leaving
                     // them pending.
                     void generate.fill(
-                        pendingScenes.filter((sc) => !sc.gen?.model).map((sc) => sc.id)
+                        pendingScenes.filter(canPickUp).map((sc) => sc.id)
                     );
                 }}
                 onUseSimpleFlow={() => {
