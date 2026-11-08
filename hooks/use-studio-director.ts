@@ -93,8 +93,31 @@ export function useStudioDirector(
                 wait = Math.min(wait * 1.4, 8_000);
                 try {
                     const res = await HttpWrapper.fetch(`${base()}/runs/${runId}`);
-                    const run = (await res.json()) as DirectorPlan & { status?: string };
-                    if (run?.status && run.status !== "planning") return run;
+                    // ⚠️ GET …/runs/:id answers `{ run: {...} }`, and the run
+                    // carries `id`, not `runId`. Casting the response straight
+                    // to DirectorPlan reads `status` as undefined, so the loop
+                    // never finishes: a plan that was ready in six seconds
+                    // still spun to the cap and then claimed to be "still
+                    // working". Unwrapped and mapped here, once.
+                    const json = (await res.json()) as {
+                        run?: {
+                            id?: string;
+                            status?: string;
+                            storyboard?: string;
+                            problems?: RunProblem[];
+                            estCostUsd?: number;
+                        };
+                    };
+                    const run = json?.run;
+                    if (run?.status && run.status !== "planning") {
+                        return {
+                            runId: run.id ?? runId,
+                            status: run.status,
+                            storyboard: run.storyboard ?? "",
+                            problems: run.problems ?? [],
+                            estCostUsd: run.estCostUsd ?? 0,
+                        };
+                    }
                 } catch {
                     // A failed poll is not a failed plan — the plan is being
                     // made elsewhere. Keep waiting until the deadline.
