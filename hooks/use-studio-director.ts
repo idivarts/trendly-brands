@@ -69,6 +69,54 @@ export function useStudioDirector(
         [brandId, contentId, studioId]
     );
 
+    /**
+     * Wait for a queued plan by reading the run back.
+     *
+     * Polling rather than a Firestore subscription on purpose: runs are NOT
+     * client-readable for writes and the storyboard already reads through the
+     * API, so one mechanism is enough. The interval starts tight and backs off
+     * — a cheap plan can land in a few seconds and should feel immediate,
+     * while a slow one should not cost dozens of requests.
+     *
+     * The ceiling is a real decision, not a guard: `studio_sqs` has a 900s
+     * budget, but a user watching a spinner for fifteen minutes is not being
+     * served. At the cap we stop WATCHING, not planning — the run keeps going
+     * and a reopened storyboard finds it finished, which is why the message
+     * says it is still working rather than that it failed.
+     */
+    const pollRun = useCallback(
+        async (runId: string): Promise<DirectorPlan> => {
+            const deadline = Date.now() + 180_000;
+            let wait = 1_500;
+            while (Date.now() < deadline) {
+                await new Promise((r) => setTimeout(r, wait));
+                wait = Math.min(wait * 1.4, 8_000);
+                try {
+                    const res = await HttpWrapper.fetch(`${base()}/runs/${runId}`);
+                    const run = (await res.json()) as DirectorPlan & { status?: string };
+                    if (run?.status && run.status !== "planning") return run;
+                } catch {
+                    // A failed poll is not a failed plan — the plan is being
+                    // made elsewhere. Keep waiting until the deadline.
+                }
+            }
+            // Still planning at the cap. Returned as a real DirectorPlan with
+            // one warning rather than an error: nothing failed, and `problems`
+            // is where the storyboard already looks for things to tell the
+            // user. Status stays "planning", so `refused` is false and no
+            // Approve button appears for a plan that does not exist yet.
+            return {
+                runId,
+                status: "planning",
+                storyboard:
+                    "The director is still working on this. Reopen it in a moment to see the plan.",
+                problems: [],
+                estCostUsd: 0,
+            };
+        },
+        [base]
+    );
+
     const makePlan = useCallback(
         async ({
             brief,
@@ -90,7 +138,26 @@ export function useStudioDirector(
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ brief, mode, targetSeconds }),
                 });
-                setPlan((await res.json()) as DirectorPlan);
+                const started = (await res.json()) as DirectorPlan & {
+                    status?: string;
+                    message?: string;
+                };
+
+                // 202 + "planning": the plan is being made on the queue.
+                //
+                // ⚠️ It CANNOT come back in the response. API Gateway's
+                // integration timeout is 29 seconds and is not configurable,
+                // while a plan is one or two frontier-model calls emitting a
+                // whole storyboard — it returned 504 at 30s against dev, cold
+                // and warm. So the run row is the answer, and we poll it.
+                //
+                // A run with no id is the "nothing is switched on" reply, which
+                // carries a message and no plan to wait for.
+                if (started?.status === "planning" && started?.runId) {
+                    setPlan(await pollRun(started.runId));
+                } else {
+                    setPlan(started);
+                }
             } catch (e) {
                 const err = e as { status?: number; data?: Record<string, unknown> };
                 if (err?.status === 402) {
@@ -109,7 +176,7 @@ export function useStudioDirector(
                 setPlanning(false);
             }
         },
-        [base, brandId, contentId, studioId]
+        [base, brandId, contentId, studioId, pollRun]
     );
 
     const approve = useCallback(async (): Promise<boolean> => {
