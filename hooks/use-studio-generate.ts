@@ -184,6 +184,12 @@ export function useStudioGenerate(
                             body: JSON.stringify({ approach }),
                         }
                     );
+                    // 202 — the scene is QUEUED, not made. Taken from the
+                    // response anyway, because the scene now reads as queued
+                    // with a `queuedAt`, and that is what tells the rail this
+                    // one is being worked on rather than abandoned. The design
+                    // itself arrives over the Firestore subscription.
+                    //
                     // ⚠️ Only THIS scene is taken from the response. See the
                     // file header: the response is a whole-studio snapshot,
                     // and adopting it would roll back whatever a sibling
@@ -207,8 +213,8 @@ export function useStudioGenerate(
                     failed.push(sceneId);
                     setError(
                         failed.length === 1
-                            ? "One scene didn't come back. You can regenerate it on its own."
-                            : `${failed.length} scenes didn't come back. You can regenerate them individually.`
+                            ? "One scene couldn't be started. You can try it again on its own."
+                            : `${failed.length} scenes couldn't be started. You can try them again individually.`
                     );
                 },
             });
