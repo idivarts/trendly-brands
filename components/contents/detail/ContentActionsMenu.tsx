@@ -5,6 +5,7 @@ import {
     faEllipsisVertical,
     faShareNodes,
     faTrashCan,
+    faWandMagicSparkles,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
@@ -22,6 +23,16 @@ interface ContentActionsMenuProps {
     onDuplicate?: () => void;
     /** Destructive — the caller must confirm before deleting. Omit to hide. */
     onDelete?: () => void;
+    /**
+     * Opens the new Design Studio at its own route.
+     *
+     * ⚠️ It sits BESIDE the existing design surface rather than replacing it.
+     * The studio is being built phase by phase and does not yet do everything
+     * the old path does — swapping the entry point now would take working
+     * capability away. The old path is removed in the cutover phase, once the
+     * studio can do all of it.
+     */
+    onOpenStudio?: () => void;
 }
 
 /**
@@ -38,6 +49,7 @@ const ContentActionsMenu: React.FC<ContentActionsMenuProps> = ({
     onShare,
     onDuplicate,
     onDelete,
+    onOpenStudio,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -86,6 +98,20 @@ const ContentActionsMenu: React.FC<ContentActionsMenuProps> = ({
                     titleStyle={styles.itemText}
                     leadingIcon={() => (
                         <FontAwesomeIcon icon={faShareNodes} size={15} color={colors.text} />
+                    )}
+                />
+            ) : null}
+            {onOpenStudio ? (
+                <Menu.Item
+                    onPress={run(onOpenStudio)}
+                    title="Open design studio"
+                    titleStyle={styles.itemText}
+                    leadingIcon={() => (
+                        <FontAwesomeIcon
+                            icon={faWandMagicSparkles}
+                            size={15}
+                            color={colors.primary}
+                        />
                     )}
                 />
             ) : null}
