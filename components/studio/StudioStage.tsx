@@ -62,10 +62,12 @@ export interface StudioStageHandle {
     /**
      * Rewrite one text element of one html layer.
      *
-     * Fire-and-forget: the frame answers with its whole new document on
-     * `onLayerHtml`, so there is nothing to await here.
+     * The frame answers with its whole new document on `onLayerHtml`, so there
+     * is nothing to await. Returns whether a frame actually TOOK the call: a
+     * caller that arms itself to receive the answer must not stay armed when
+     * nothing was asked, or it claims an unrelated save later.
      */
-    setLayerText: (layerId: string, elementId: string, text: string) => void;
+    setLayerText: (layerId: string, elementId: string, text: string) => boolean;
 }
 
 export interface StudioStageProps {
@@ -127,7 +129,10 @@ const StudioStage = forwardRef<StudioStageHandle, StudioStageProps>(({
 
     useImperativeHandle(ref, () => ({
         setLayerText: (layerId, elementId, text) => {
-            frames.current[layerId]?.setText(elementId, text);
+            const frame = frames.current[layerId];
+            if (!frame) return false;
+            frame.setText(elementId, text);
+            return true;
         },
     }), []);
 

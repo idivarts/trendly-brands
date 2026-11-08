@@ -297,8 +297,18 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
 
     const commitText = useCallback(() => {
         if (!textEdit) return;
-        pendingText.current = { sceneId: textEdit.sceneId, layerId: textEdit.layerId };
-        stageRef.current?.setLayerText(textEdit.layerId, textEdit.elementId, textDraft);
+        // Armed only if a frame took the call. Arming first left the handler
+        // waiting for an answer nobody was going to send, and the next `html`
+        // message for that layer — a save the user made and cancelled out of —
+        // would have been written against this scene instead.
+        const taken = stageRef.current?.setLayerText(
+            textEdit.layerId,
+            textEdit.elementId,
+            textDraft
+        );
+        pendingText.current = taken
+            ? { sceneId: textEdit.sceneId, layerId: textEdit.layerId }
+            : null;
         setTextEdit(null);
     }, [textEdit, textDraft]);
 
@@ -531,7 +541,7 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
                             previousScene={previousScene}
                             video={video}
                             onOpenCast={() => setCastOpen(true)}
-                            onPatchStudio={(input) => void studioState.patchStudio(input as never)}
+                            onPatchStudio={(input) => void studioState.patchStudio(input)}
                             onPickMedia={() => selectedScene && setPickerFor(selectedScene.id)}
                             selectedLayerId={selectedLayerId}
                             onSelectLayer={setSelectedLayerId}
@@ -676,9 +686,7 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
                                     setInspectorOpen(false);
                                     setCastOpen(true);
                                 }}
-                                onPatchStudio={(input) =>
-                                    void studioState.patchStudio(input as never)
-                                }
+                                onPatchStudio={(input) => void studioState.patchStudio(input)}
                                 onPickMedia={() => {
                                     setInspectorOpen(false);
                                     if (selectedScene) setPickerFor(selectedScene.id);

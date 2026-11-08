@@ -27,7 +27,7 @@ import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Colors from "@/shared-uis/constants/Colors";
 import { withAlpha } from "@/utils/color";
 import { useTheme } from "@react-navigation/native";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 interface Voice {
@@ -102,6 +102,13 @@ const StudioSoundPanel: React.FC<StudioSoundPanelProps> = ({
     const offered = !!request && !request.dismissed && !music;
     const [applying, setApplying] = useState(false);
     const [requestError, setRequestError] = useState<string | null>(null);
+    // ⚠️ A bed is PAID FOR before anything records it: the generation call
+    // meters the wallet, and only the patch that follows attaches the lane and
+    // clears the request. If that patch fails, the offer is still standing —
+    // and without this the next tap would generate, and bill, a second bed the
+    // brand already owns and cannot see. So the row we paid for is held here
+    // and a retry reuses it.
+    const paidFor = useRef<string | null>(null);
 
     const laneFor = useCallback(
         (mediaId: string): IAudioLane => ({
@@ -117,19 +124,37 @@ const StudioSoundPanel: React.FC<StudioSoundPanelProps> = ({
         []
     );
 
+    // Put a row on the music lane and retire the request, in one write —
+    // `musicRequest: undefined` drops the key, and the backend replaces the
+    // whole audio object, so the request is gone rather than merged back.
+    const attach = useCallback(
+        (mediaId: string) => {
+            onPatch({
+                audio: {
+                    ...studio.audio,
+                    lanes: [...lanes, laneFor(mediaId)],
+                    musicRequest: undefined,
+                },
+            });
+        },
+        [studio.audio, lanes, laneFor, onPatch]
+    );
+
     const applyRequest = useCallback(async () => {
         if (!request) return;
         setRequestError(null);
 
         if (request.approach === "reuse") {
+            // Costs nothing, so there is nothing to remember.
             if (!request.mediaId) return;
-            onPatch({
-                audio: {
-                    ...studio.audio,
-                    lanes: [...lanes, laneFor(request.mediaId)],
-                    musicRequest: undefined,
-                },
-            });
+            attach(request.mediaId);
+            return;
+        }
+
+        // A bed already paid for in a previous attempt: attach that one rather
+        // than buying another.
+        if (paidFor.current) {
+            attach(paidFor.current);
             return;
         }
 
@@ -166,19 +191,16 @@ const StudioSoundPanel: React.FC<StudioSoundPanelProps> = ({
                 setRequestError("The bed generated but wasn't filed. Pick it from your media.");
                 return;
             }
-            onPatch({
-                audio: {
-                    ...studio.audio,
-                    lanes: [...lanes, laneFor(json.mediaId)],
-                    musicRequest: undefined,
-                },
-            });
+            // Remembered BEFORE the patch, which is the whole point: from here
+            // on the money is spent, and a retry must not spend it again.
+            paidFor.current = json.mediaId;
+            attach(json.mediaId);
         } catch {
             setRequestError("The bed didn't generate. Try again in a moment.");
         } finally {
             setApplying(false);
         }
-    }, [request, studio.audio, lanes, laneFor, onPatch, brandId, totalMs]);
+    }, [request, attach, brandId, totalMs]);
 
     const dismissRequest = useCallback(() => {
         if (!request) return;
