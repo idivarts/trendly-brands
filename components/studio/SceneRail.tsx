@@ -107,6 +107,17 @@ const SceneRail: React.FC<SceneRailProps> = ({
 
                 {scenes.map((scene, index) => (
                     <React.Fragment key={scene.id}>
+                        {/* A run's scenes read as ONE batch. Six scenes the AI
+                            planned used to be indistinguishable from six the
+                            user added one at a time, which made "regenerate
+                            the run" and "this one is mine" impossible to tell
+                            apart on the only screen that shows them. The band
+                            is drawn at the START of each run only, so it reads
+                            as a bracket rather than a label repeated six
+                            times. */}
+                        {runStartsHere(scenes, index) ? (
+                            <RunBand colors={colors} count={runLength(scenes, index)} />
+                        ) : null}
                         <SceneCard
                             scene={scene}
                             index={index}
@@ -146,6 +157,51 @@ const SceneRail: React.FC<SceneRailProps> = ({
         </View>
     );
 };
+
+/**
+ * Whether a new run begins at this index.
+ *
+ * Consecutive-only on purpose. `runId` groups scenes, but the rail's order is
+ * the user's and they may have dragged a hand-made scene into the middle of a
+ * batch — which SPLITS it, visually and truthfully. Drawing one bracket around
+ * scenes 1-3 and 5-6 is honest about what they would get if they regenerated
+ * the run; drawing one bracket from 1 to 6 would claim scene 4 belonged to it.
+ */
+function runStartsHere(scenes: IStudioScene[], index: number): boolean {
+    const id = scenes[index]?.runId;
+    if (!id) return false;
+    return scenes[index - 1]?.runId !== id;
+}
+
+/** How many consecutive scenes from this index share the run. */
+function runLength(scenes: IStudioScene[], index: number): number {
+    const id = scenes[index]?.runId;
+    if (!id) return 0;
+    let n = 0;
+    while (index + n < scenes.length && scenes[index + n].runId === id) n++;
+    return n;
+}
+
+/**
+ * The bracket that opens a run on the rail.
+ *
+ * A thin vertical accent plus a count, not a border around the group: the rail
+ * scrolls horizontally and a box would have to be measured against cards whose
+ * widths are proportional to their durations. The accent is a sibling View, per
+ * the project's no-borders rule.
+ */
+const RunBand: React.FC<{
+    colors: ReturnType<typeof Colors>;
+    count: number;
+}> = ({ colors, count }) => (
+    <View style={railStatics.runBand}>
+        <View style={[railStatics.runStripe, { backgroundColor: withAlpha(colors.primary, 0.55) }]} />
+        <Text style={[railStatics.runLabel, { color: colors.text }]} numberOfLines={1}>
+            AI batch
+        </Text>
+        <Text style={[railStatics.runCount, { color: colors.textSecondary }]}>{count}</Text>
+    </View>
+);
 
 const InsertGap: React.FC<{ colors: ReturnType<typeof Colors>; onPress: () => void }> = ({
     colors,
@@ -327,6 +383,18 @@ function firstAssetOf(
 }
 
 const railStatics = StyleSheet.create({
+    // The run bracket. A stripe View rather than a border, per the project's
+    // no-borders rule, and narrow so it costs the rail almost no width.
+    runBand: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        paddingHorizontal: 4,
+        alignSelf: "stretch",
+    },
+    runStripe: { width: 3, alignSelf: "stretch", borderRadius: 2, minHeight: fbox(40) },
+    runLabel: { fontSize: fs(9), lineHeight: lh(12), fontWeight: "700" },
+    runCount: { fontSize: fs(9), lineHeight: lh(12), fontWeight: "600" },
     card: {
         borderRadius: 10,
         padding: 6,

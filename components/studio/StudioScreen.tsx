@@ -96,7 +96,9 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
         brandId,
         contentId,
         studio?.id,
-        studioState.applyState
+        studioState.applyState,
+        // One scene at a time, merged — the parallel fill depends on it.
+        (state, sceneId) => studioState.applyScenesFrom(state, [sceneId])
     );
     const video = useSceneVideo(brandId, contentId, studio?.id, studioState.applyState);
     // The director plans the whole video: the scene list, the cast, the sound

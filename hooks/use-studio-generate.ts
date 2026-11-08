@@ -3,33 +3,65 @@
  *
  * ── Why the client does the walking ─────────────────────────────────────────
  * One call plans the scenes and writes them all empty; the client then asks for
- * one scene's design at a time. That looks like extra work for the client and it
- * buys three things nothing else does:
+ * the designs. That looks like extra work for the client and it buys three
+ * things nothing else does:
  *
  *  - The RAIL FILLS VISIBLY. Six scenes appear in about a second, then become
- *    designs one by one. A single "generate everything" call is minutes behind
- *    a spinner with no idea whether it is working.
- *  - YOU CAN STOP. `cancel` stops before the next scene, so a user who does not
- *    like scene two does not pay for scenes three to six.
+ *    designs as they land. A single "generate everything" call is minutes
+ *    behind a spinner with no idea whether it is working.
+ *  - YOU CAN STOP. `cancel` stops dispatching, so a user who does not like
+ *    scene two does not pay for scenes five and six.
  *  - A FAILURE COSTS ONE SCENE. The run continues and the broken scene is
  *    visibly broken, rather than the whole attempt being lost.
  *
  * Each request also stays comfortably inside the backend's own timeout, which a
  * whole-run call would not.
+ *
+ * ── Why THREE at a time ─────────────────────────────────────────────────────
+ * It was one at a time, and six scenes took six sequential model calls — about
+ * a minute of waiting for a thing whose shape was on screen in a second. The
+ * work is entirely independent: each scene is its own document, its own model
+ * call, its own charge.
+ *
+ * The cap is not politeness. Unbounded, six scenes are six concurrent model
+ * calls, a wallet that can be overdrawn six times before the first 402 comes
+ * back, and a rail that goes from empty to full in one jump with nothing to
+ * watch. Three keeps something always landing, keeps the overspend on a
+ * refusal to at most two extra scenes, and is low enough that `cancel` still
+ * means something.
+ *
+ * ⚠️ THE RESPONSES MUST BE MERGED, NOT ADOPTED. Every generate call answers
+ * with the whole studio as of when it finished. Three in flight means three
+ * overlapping snapshots, and adopting the last to arrive erases the siblings
+ * that finished after it was taken — work that is safe in Firestore but has
+ * visibly vanished from the screen. `applyScenesFrom` takes only the scene a
+ * call was about, which makes arrival order irrelevant.
  */
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { runPool } from "@/utils/pool";
 import { StudioState } from "@/utils/studio-api";
 import { useCallback, useRef, useState } from "react";
 
 export type GenerateApproach = "motion" | "composite";
 
+/**
+ * How many scene generations may be in flight at once.
+ *
+ * Three. See the file header for why this is a cap rather than politeness: it
+ * bounds how far a wallet can be overdrawn past a refusal, keeps something
+ * always landing so the rail stays watchable, and keeps `cancel` meaningful.
+ */
+const MAX_PARALLEL = 3;
+
 export interface GenerateProgress {
     /** How many scenes the plan produced. */
     total: number;
-    /** How many have a design so far. */
+    /** How many have landed, successfully or not. */
     done: number;
-    /** The scene being worked on, for the rail to highlight. */
-    currentSceneId: string | null;
+    /** The scenes being worked on right now — up to MAX_PARALLEL of them. */
+    activeSceneIds: string[];
+    /** The ones that came back broken, so the rail can offer each a retry. */
+    failedSceneIds: string[];
 }
 
 export interface UseStudioGenerateResult {
@@ -53,14 +85,21 @@ export function useStudioGenerate(
     brandId: string | undefined,
     contentId: string | undefined,
     studioId: string | undefined,
-    onState: (state: StudioState) => void
+    onState: (state: StudioState) => void,
+    /**
+     * Fold in ONE scene from a response and leave the rest of local state
+     * alone. Required for the parallel fill — see the file header. Without it
+     * (and the sequential walk it replaced), three overlapping whole-studio
+     * snapshots mean the last to land erases its siblings' designs.
+     */
+    applyScene: (state: StudioState, sceneId: string) => void
 ): UseStudioGenerateResult {
     const [running, setRunning] = useState(false);
     const [progress, setProgress] = useState<GenerateProgress | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [blocked, setBlocked] = useState<"tokens_exhausted" | "plan_locked" | null>(null);
 
-    /** Set by cancel(), checked between scenes. */
+    /** Set by cancel(); checked before each dispatch, never mid-request. */
     const cancelled = useRef(false);
 
     const base = useCallback(
@@ -105,13 +144,43 @@ export function useStudioGenerate(
                 // pending. A studio the user had already built scenes in must
                 // not have those regenerated out from under them.
                 const queue = planned.scenes.filter((s) => s.pending).map((s) => s.id);
-                setProgress({ total: queue.length, done: 0, currentSceneId: null });
+                const total = queue.length;
 
-                for (let i = 0; i < queue.length; i++) {
-                    if (cancelled.current) break;
-                    const sceneId = queue[i];
-                    setProgress({ total: queue.length, done: i, currentSceneId: sceneId });
-                    try {
+                // Live counters rather than state, because the pool reads and
+                // writes them between renders and `setProgress` is async —
+                // driving dispatch off React state would have workers deciding
+                // what to do next from a snapshot one tick stale.
+                let done = 0;
+                let stop = false;
+                const active = new Set<string>();
+                const failed: string[] = [];
+                const publish = () =>
+                    setProgress({
+                        total,
+                        done,
+                        activeSceneIds: [...active],
+                        failedSceneIds: [...failed],
+                    });
+                publish();
+
+                // The pool is `utils/pool`, where its behaviour is asserted on
+                // directly: the cap, one failure costing one item, and stopping
+                // dispatch without aborting what is in flight. It used to be an
+                // inline loop here, which made all of that untestable without
+                // mounting a component.
+                await runPool(queue, {
+                    limit: MAX_PARALLEL,
+                    shouldStop: () => stop || cancelled.current,
+                    onStart: (sceneId) => {
+                        active.add(sceneId);
+                        publish();
+                    },
+                    onSettle: (sceneId) => {
+                        active.delete(sceneId);
+                        done += 1;
+                        publish();
+                    },
+                    run: async (sceneId) => {
                         const res = await HttpWrapper.fetch(
                             `${base()}/scenes/${sceneId}/generate`,
                             {
@@ -120,22 +189,34 @@ export function useStudioGenerate(
                                 body: JSON.stringify({ approach }),
                             }
                         );
-                        onState((await res.json()) as StudioState);
-                    } catch (e) {
+                        // ⚠️ Only THIS scene is taken from the response. See the
+                        // file header: the response is a whole-studio snapshot,
+                        // and adopting it would roll back whatever a sibling
+                        // finished after it was taken.
+                        applyScene((await res.json()) as StudioState, sceneId);
+                    },
+                    onError: (e, sceneId) => {
                         const b = readBlock(e);
                         if (b) {
-                            // Out of money mid-run. Stop rather than hammer
-                            // the remaining scenes against a 402 each.
+                            // Out of money mid-run. Stop DISPATCHING; the
+                            // requests already in flight are paid for, so
+                            // letting them land is strictly better than
+                            // throwing their results away.
                             setBlocked(b);
-                            break;
+                            stop = true;
+                            return;
                         }
-                        // One scene failed. The run continues; that scene
-                        // stays visibly unfinished, which is more useful than
-                        // abandoning the four that would have worked.
-                        setError("One scene didn't come back. You can regenerate it on its own.");
-                    }
-                    setProgress({ total: queue.length, done: i + 1, currentSceneId: null });
-                }
+                        // One scene failed. The run continues; that scene stays
+                        // visibly unfinished, which is more useful than
+                        // abandoning the ones that worked.
+                        failed.push(sceneId);
+                        setError(
+                            failed.length === 1
+                                ? "One scene didn't come back. You can regenerate it on its own."
+                                : `${failed.length} scenes didn't come back. You can regenerate them individually.`
+                        );
+                    },
+                });
             } catch (e) {
                 const b = readBlock(e);
                 if (b) setBlocked(b);
@@ -145,7 +226,7 @@ export function useStudioGenerate(
                 setProgress(null);
             }
         },
-        [base, brandId, contentId, studioId, onState]
+        [base, brandId, contentId, studioId, onState, applyScene]
     );
 
     const regenerate = useCallback(

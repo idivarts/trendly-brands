@@ -74,6 +74,21 @@ export interface UseStudioResult {
      * lands.
      */
     applyState: (state: api.StudioState | null) => void;
+    /**
+     * Fold in ONLY the named scenes from a response, leaving the rest alone.
+     *
+     * ⚠️ THIS IS WHAT MAKES CONCURRENT GENERATION SAFE. Every generate call
+     * answers with the WHOLE studio as it was when that call finished, and
+     * `applyState` replaces the scene map with it. Run three at once and the
+     * last response to land wins: a snapshot taken before its siblings
+     * finished erases their designs from the screen. The scenes are still in
+     * Firestore, so the user sees finished work vanish and come back on
+     * reload, which is the single most alarming way for an editor to behave.
+     *
+     * Taking only the scene a call was about makes the responses commutative,
+     * so the order they arrive in stops mattering.
+     */
+    applyScenesFrom: (state: api.StudioState | null, sceneIds: string[]) => void;
 }
 
 export function useStudio(
@@ -270,6 +285,26 @@ export function useStudio(
         for (const s of state.scenes) map[s.id] = s;
         setSceneMap(map);
     }, []);
+
+    const applyScenesFrom = useCallback(
+        (state: api.StudioState | null, sceneIds: string[]) => {
+            if (!state || sceneIds.length === 0) return;
+            const wanted = new Set(sceneIds);
+            const incoming = state.scenes.filter((s) => wanted.has(s.id));
+            if (incoming.length === 0) return;
+            setSceneMap((prev) => {
+                const next = { ...prev };
+                for (const s of incoming) next[s.id] = s;
+                return next;
+            });
+            // The studio document is NOT taken from here. Its sceneOrder is the
+            // one field a concurrent response could roll back, and generating a
+            // scene never changes the order — so the safe thing is to leave it
+            // to the planning response that created the scenes and to the
+            // subscription.
+        },
+        []
+    );
 
     const addScene = useCallback(
         async (input: api.AddSceneInput = {}) => {
@@ -470,5 +505,6 @@ export function useStudio(
         setCast,
         refresh,
         applyState,
+        applyScenesFrom,
     };
 }
