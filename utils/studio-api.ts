@@ -20,7 +20,7 @@
  * timelines that disagreed about what scene 3 was.
  */
 import {
-    IAudioLane,
+    IStudioAudio,
     ICastMember,
     IStudio,
     IStudioLayer,
@@ -87,7 +87,14 @@ export interface PatchStudioInput {
     format?: StudioFormat;
     fps?: number;
     transitionPreset?: TransitionPreset;
-    audio?: { lanes: IAudioLane[]; voiceId?: string };
+    /**
+     * The WHOLE audio object. The server replaces it rather than merging, so a
+     * caller sending only the field it changed deletes the others — which is
+     * how the director's parked bed vanished the first time somebody picked a
+     * voice. Typed as `IStudioAudio` so a new field cannot go missing here
+     * while still reaching the server by structural passthrough.
+     */
+    audio?: IStudioAudio;
     cast?: ICastMember[];
     locations?: IStudioLocation[];
 }

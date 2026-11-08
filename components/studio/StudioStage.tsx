@@ -12,6 +12,18 @@
  * renderer composites. The common mistake it prevents: a full-frame media layer
  * placed ABOVE type covers the type completely, and the preview is the only
  * place anyone would notice before paying for a render.
+ *
+ * ── Text editing: this file RELAYS, it does not edit ────────────────────────
+ * An html layer renders inside a frame that already knows how to be edited —
+ * it reports what was tapped and rewrites its own document on `setText`. So
+ * tapping a headline here raises `onTapText` and the editor itself lives in the
+ * screen above, which is the only level that can show a sheet and save.
+ *
+ * The frame hands back the WHOLE rewritten document rather than the new string,
+ * which is the important part: the html is the truth, and reconstructing it on
+ * this side from a text diff would eventually disagree with what the render
+ * worker loads. So `onLayerHtml` carries the document the frame produced,
+ * verbatim.
  */
 import { fs, lh } from "@/constants/Typography";
 import {
@@ -27,9 +39,36 @@ import DesignFrame from "@/components/contents/detail/design-stage/DesignFrame";
 import { ResizeMode } from "expo-av";
 import { faFilm, faImage, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
+import { DesignFrameHandle } from "@/components/contents/detail/design-stage/bridge";
 import { useTheme } from "@react-navigation/native";
-import React, { useMemo } from "react";
+import React, {
+    forwardRef,
+    useCallback,
+    useImperativeHandle,
+    useMemo,
+    useRef,
+} from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+
+/** A text element the frame reported, in the frame's own coordinates. */
+export interface TappedText {
+    layerId: string;
+    /** The frame's `data-el` id, which is what `setText` addresses. */
+    elementId: string;
+    text: string;
+}
+
+export interface StudioStageHandle {
+    /**
+     * Rewrite one text element of one html layer.
+     *
+     * The frame answers with its whole new document on `onLayerHtml`, so there
+     * is nothing to await. Returns whether a frame actually TOOK the call: a
+     * caller that arms itself to receive the answer must not stay armed when
+     * nothing was asked, or it claims an unrelated save later.
+     */
+    setLayerText: (layerId: string, elementId: string, text: string) => boolean;
+}
 
 export interface StudioStageProps {
     scene: IStudioScene | null;
@@ -51,9 +90,14 @@ export interface StudioStageProps {
     onSelectLayer?: (layerId: string | null) => void;
     /** Shown on an empty scene, so the gap is actionable rather than a void. */
     onFillEmpty?: () => void;
+
+    /** A text element inside an html layer was tapped and can be edited. */
+    onTapText?: (tapped: TappedText) => void;
+    /** An html layer's document after an edit. Persist it verbatim. */
+    onLayerHtml?: (layerId: string, html: string) => void;
 }
 
-const StudioStage: React.FC<StudioStageProps> = ({
+const StudioStage = forwardRef<StudioStageHandle, StudioStageProps>(({
     scene,
     canvasWidth,
     canvasHeight,
@@ -64,7 +108,9 @@ const StudioStage: React.FC<StudioStageProps> = ({
     selectedLayerId,
     onSelectLayer,
     onFillEmpty,
-}) => {
+    onTapText,
+    onLayerHtml,
+}, ref) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const ratio = canvasWidth > 0 ? canvasHeight / canvasWidth : 16 / 9;
@@ -72,6 +118,23 @@ const StudioStage: React.FC<StudioStageProps> = ({
     const styles = useStyles(colors, displayWidth, displayHeight);
 
     const layers = useMemo(() => scene?.layers ?? [], [scene]);
+
+    // One frame handle per html layer. A plain object rather than state: these
+    // are imperative handles, and re-rendering when one attaches would be a
+    // render loop for no gain.
+    const frames = useRef<Record<string, DesignFrameHandle | null>>({});
+    const registerFrame = useCallback((layerId: string, handle: DesignFrameHandle | null) => {
+        frames.current[layerId] = handle;
+    }, []);
+
+    useImperativeHandle(ref, () => ({
+        setLayerText: (layerId, elementId, text) => {
+            const frame = frames.current[layerId];
+            if (!frame) return false;
+            frame.setText(elementId, text);
+            return true;
+        },
+    }), []);
 
     if (!scene) {
         return (
@@ -114,12 +177,17 @@ const StudioStage: React.FC<StudioStageProps> = ({
                         selected={selectedLayerId === layer.id}
                         onSelect={() => onSelectLayer?.(layer.id)}
                         colors={colors}
+                        registerFrame={registerFrame}
+                        onTapText={onTapText}
+                        onLayerHtml={onLayerHtml}
                     />
                 ))
             )}
         </Pressable>
     );
-};
+});
+
+StudioStage.displayName = "StudioStage";
 
 interface LayerViewProps {
     layer: IStudioLayer;
@@ -134,6 +202,9 @@ interface LayerViewProps {
     selected: boolean;
     onSelect: () => void;
     colors: ReturnType<typeof Colors>;
+    registerFrame: (layerId: string, handle: DesignFrameHandle | null) => void;
+    onTapText?: (tapped: TappedText) => void;
+    onLayerHtml?: (layerId: string, html: string) => void;
 }
 
 const LayerView: React.FC<LayerViewProps> = ({
@@ -148,6 +219,9 @@ const LayerView: React.FC<LayerViewProps> = ({
     selected,
     onSelect,
     colors,
+    registerFrame,
+    onTapText,
+    onLayerHtml,
 }) => {
     const rect = slotRect(layer.slot, layer.rect);
     const box = {
@@ -164,6 +238,7 @@ const LayerView: React.FC<LayerViewProps> = ({
         if (layer.kind === "html") {
             return (
                 <DesignFrame
+                    ref={(h) => registerFrame(layer.id, h)}
                     html={layer.html ?? ""}
                     width={canvasWidth}
                     height={canvasHeight}
@@ -171,7 +246,18 @@ const LayerView: React.FC<LayerViewProps> = ({
                     // half-width slot gets half the display width and the
                     // document inside it stays correctly proportioned.
                     displayWidth={Math.round(rect.w * displayWidth)}
-                    onMessage={() => undefined}
+                    onMessage={(msg) => {
+                        // `editable: false` is a block with children — editing
+                        // it would flatten its structure, so the frame says so
+                        // and the tap only selects the layer.
+                        if (msg.type === "tap" && msg.editable) {
+                            onTapText?.({ layerId: layer.id, elementId: msg.id, text: msg.text });
+                            return;
+                        }
+                        if (msg.type === "html") {
+                            onLayerHtml?.(layer.id, msg.html);
+                        }
+                    }}
                 />
             );
         }

@@ -26,7 +26,10 @@ import GenerateSheet from "@/components/studio/GenerateSheet";
 import MediaPickerSheet from "@/components/studio/MediaPickerSheet";
 import SceneInspector from "@/components/studio/SceneInspector";
 import SceneRail from "@/components/studio/SceneRail";
-import StudioStage from "@/components/studio/StudioStage";
+import StudioStage, {
+    StudioStageHandle,
+    TappedText,
+} from "@/components/studio/StudioStage";
 import StudioTransport from "@/components/studio/StudioTransport";
 import { useBrandContext } from "@/contexts/brand-context.provider";
 import { useEntitlements } from "@/hooks/use-entitlements";
@@ -58,6 +61,7 @@ import {
     Pressable,
     StyleSheet,
     Text,
+    TextInput,
     View,
 } from "react-native";
 
@@ -268,6 +272,65 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
         [selectedScene, studioState]
     );
 
+    // ── Click-to-edit text on a motion scene ────────────────────────────────
+    //
+    // The frame reports what was tapped; this holds the editor over it and
+    // asks the frame to rewrite itself on save. The scene id is captured AT
+    // TAP TIME rather than read from `selectedScene` when the save lands,
+    // because the playhead can move a selection between the two and the edit
+    // belongs to the scene the user was looking at.
+    const stageRef = useRef<StudioStageHandle>(null);
+    const [textEdit, setTextEdit] = useState<(TappedText & { sceneId: string }) | null>(null);
+    const [textDraft, setTextDraft] = useState("");
+    // Which layer of which scene is waiting for the frame's rewritten
+    // document. Without it, any `html` message would be treated as an edit to
+    // persist — including one arriving after the user cancelled.
+    const pendingText = useRef<{ sceneId: string; layerId: string } | null>(null);
+
+    const handleTapText = useCallback((tapped: TappedText) => {
+        if (!shownScene) return;
+        setTextEdit({ ...tapped, sceneId: shownScene.id });
+        setTextDraft(tapped.text);
+        // Editing while the clip plays under your hands is unusable.
+        setPlaying(false);
+    }, [shownScene]);
+
+    const commitText = useCallback(() => {
+        if (!textEdit) return;
+        // Armed only if a frame took the call. Arming first left the handler
+        // waiting for an answer nobody was going to send, and the next `html`
+        // message for that layer — a save the user made and cancelled out of —
+        // would have been written against this scene instead.
+        const taken = stageRef.current?.setLayerText(
+            textEdit.layerId,
+            textEdit.elementId,
+            textDraft
+        );
+        pendingText.current = taken
+            ? { sceneId: textEdit.sceneId, layerId: textEdit.layerId }
+            : null;
+        setTextEdit(null);
+    }, [textEdit, textDraft]);
+
+    const handleLayerHtml = useCallback(
+        (layerId: string, html: string) => {
+            const pending = pendingText.current;
+            if (!pending || pending.layerId !== layerId) return;
+            pendingText.current = null;
+
+            // Written against the scene the edit started on, found by id — the
+            // optimistic copy in `scenes` is the one the rail is drawing, so
+            // its layer list is the right base for the patch.
+            const scene = scenes.find((s) => s.id === pending.sceneId);
+            if (!scene) return;
+            const next = (scene.layers ?? []).map((l) =>
+                l.id === layerId ? { ...l, html } : l
+            );
+            void studioState.setLayers(scene.id, next);
+        },
+        [scenes, studioState]
+    );
+
     const removeLayer = useCallback(
         (layerId: string) => {
             if (!selectedScene) return;
@@ -400,6 +463,7 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
                 <View style={styles.stageColumn}>
                     <View style={styles.stageCenter}>
                         <StudioStage
+                            ref={stageRef}
                             scene={shownScene}
                             canvasWidth={studio.width}
                             canvasHeight={studio.height}
@@ -412,6 +476,8 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
                             onFillEmpty={() =>
                                 shownScene ? setPickerFor(shownScene.id) : undefined
                             }
+                            onTapText={handleTapText}
+                            onLayerHtml={handleLayerHtml}
                         />
                     </View>
 
@@ -447,6 +513,7 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
                             scene={selectedScene}
                             media={media}
                             busy={saving}
+                            totalMs={totalMs}
                             onSetDuration={(ms) =>
                                 selectedScene && studioState.setDuration(selectedScene.id, ms)
                             }
@@ -474,7 +541,7 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
                             previousScene={previousScene}
                             video={video}
                             onOpenCast={() => setCastOpen(true)}
-                            onPatchStudio={(input) => void studioState.patchStudio(input as never)}
+                            onPatchStudio={(input) => void studioState.patchStudio(input)}
                             onPickMedia={() => selectedScene && setPickerFor(selectedScene.id)}
                             selectedLayerId={selectedLayerId}
                             onSelectLayer={setSelectedLayerId}
@@ -588,6 +655,7 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
                                 scene={selectedScene}
                                 media={media}
                                 busy={saving}
+                                totalMs={totalMs}
                                 onSetDuration={(ms) =>
                                     selectedScene && studioState.setDuration(selectedScene.id, ms)
                                 }
@@ -618,9 +686,7 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
                                     setInspectorOpen(false);
                                     setCastOpen(true);
                                 }}
-                                onPatchStudio={(input) =>
-                                    void studioState.patchStudio(input as never)
-                                }
+                                onPatchStudio={(input) => void studioState.patchStudio(input)}
                                 onPickMedia={() => {
                                     setInspectorOpen(false);
                                     if (selectedScene) setPickerFor(selectedScene.id);
@@ -635,6 +701,44 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
                     </View>
                 </Modal>
             ) : null}
+
+            {/* The text editor. Deliberately a sheet rather than editing in
+                place inside the frame: the frame is a scaled preview, so typing
+                into it would put the caret and the keyboard at the wrong size
+                on a phone, and on native it is a WebView the keyboard cannot
+                reliably reach. */}
+            <Modal
+                visible={!!textEdit}
+                animationType="fade"
+                transparent
+                onRequestClose={() => setTextEdit(null)}
+            >
+                <Pressable style={styles.sheetBackdrop} onPress={() => setTextEdit(null)}>
+                    <Pressable style={styles.textSheet} onPress={() => undefined}>
+                        <Text style={styles.textSheetTitle}>Edit text</Text>
+                        <TextInput
+                            style={styles.textSheetInput}
+                            value={textDraft}
+                            onChangeText={setTextDraft}
+                            multiline
+                            autoFocus
+                            placeholder="The words on screen"
+                            placeholderTextColor={colors.textSecondary}
+                        />
+                        <View style={styles.textSheetRow}>
+                            <Pressable
+                                style={styles.textSheetGhost}
+                                onPress={() => setTextEdit(null)}
+                            >
+                                <Text style={styles.textSheetGhostLabel}>Cancel</Text>
+                            </Pressable>
+                            <Pressable style={styles.textSheetSave} onPress={commitText}>
+                                <Text style={styles.textSheetSaveLabel}>Save</Text>
+                            </Pressable>
+                        </View>
+                    </Pressable>
+                </Pressable>
+            </Modal>
         </View>
     );
 };
@@ -706,6 +810,65 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
                     elevation: 8,
                 },
                 sheetBackdrop: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.45)" },
+                textSheet: {
+                    backgroundColor: colors.background,
+                    borderTopLeftRadius: 18,
+                    borderTopRightRadius: 18,
+                    padding: 18,
+                    gap: 12,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: -6 },
+                    shadowRadius: 18,
+                    shadowOpacity: 0.18,
+                    elevation: 12,
+                },
+                textSheetTitle: {
+                    color: colors.text,
+                    fontSize: fs(15),
+                    lineHeight: lh(21),
+                    fontWeight: "600",
+                },
+                textSheetInput: {
+                    minHeight: fbox(96),
+                    color: colors.text,
+                    fontSize: fs(14),
+                    lineHeight: lh(20),
+                    // Background contrast rather than a border, which is how
+                    // every other input in this app signals it is editable.
+                    backgroundColor: colors.tag,
+                    borderRadius: 12,
+                    padding: 12,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 3,
+                    shadowOpacity: 0.04,
+                    elevation: 1,
+                },
+                textSheetRow: { flexDirection: "row", justifyContent: "flex-end", gap: 10 },
+                textSheetGhost: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 10 },
+                textSheetGhostLabel: {
+                    color: colors.textSecondary,
+                    fontSize: fs(13),
+                    lineHeight: lh(19),
+                    fontWeight: "600",
+                },
+                textSheetSave: {
+                    paddingVertical: 10,
+                    paddingHorizontal: 18,
+                    borderRadius: 10,
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowRadius: 12,
+                    shadowOpacity: 0.35,
+                    elevation: 4,
+                },
+                textSheetSaveLabel: {
+                    color: colors.white,
+                    fontSize: fs(13),
+                    lineHeight: lh(19),
+                    fontWeight: "700",
+                },
                 sheet: {
                     maxHeight: "80%",
                     backgroundColor: colors.background,

@@ -18,12 +18,16 @@
 import { fs, lh, fbox } from "@/constants/Typography";
 import { TokenMeterNotice } from "@/components/billing/TokenMeter";
 import { useEntitlements } from "@/hooks/use-entitlements";
-import { IAudioLane, IStudio } from "@/shared-libs/firestore/trendly-pro/models/studio";
+import {
+    IAudioLane,
+    IStudio,
+    IStudioAudio,
+} from "@/shared-libs/firestore/trendly-pro/models/studio";
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Colors from "@/shared-uis/constants/Colors";
 import { withAlpha } from "@/utils/color";
 import { useTheme } from "@react-navigation/native";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 interface Voice {
@@ -36,13 +40,22 @@ export interface StudioSoundPanelProps {
     brandId: string;
     studio: IStudio;
     busy?: boolean;
-    onPatch: (input: { audio: { lanes: IAudioLane[]; voiceId?: string } }) => void;
+    /** The timeline's length, so a generated bed is asked for at the right size. */
+    totalMs?: number;
+    /**
+     * ⚠️ The audio object is REPLACED by this, not merged. So every caller here
+     * spreads `studio.audio` first — a patch that sends only the field it
+     * changed deletes the others, which is how the director's parked music
+     * disappeared the first time somebody picked a voice.
+     */
+    onPatch: (input: { audio: IStudioAudio }) => void;
 }
 
 const StudioSoundPanel: React.FC<StudioSoundPanelProps> = ({
     brandId,
     studio,
     busy,
+    totalMs,
     onPatch,
 }) => {
     const theme = useTheme();
@@ -75,16 +88,134 @@ const StudioSoundPanel: React.FC<StudioSoundPanelProps> = ({
 
     const setVoice = useCallback(
         (voiceId: string) => {
-            onPatch({ audio: { lanes, voiceId } });
+            onPatch({ audio: { ...studio.audio, lanes, voiceId } });
         },
-        [lanes, onPatch]
+        [lanes, studio.audio, onPatch]
     );
+
+    // ── The bed the director planned ────────────────────────────────────────
+    //
+    // Parked at approval rather than applied, because generating costs money
+    // the user has not agreed to spend and a studio may already have a bed.
+    // Offered here, once, in one tap.
+    const request = studio.audio?.musicRequest;
+    const offered = !!request && !request.dismissed && !music;
+    const [applying, setApplying] = useState(false);
+    const [requestError, setRequestError] = useState<string | null>(null);
+    // ⚠️ A bed is PAID FOR before anything records it: the generation call
+    // meters the wallet, and only the patch that follows attaches the lane and
+    // clears the request. If that patch fails, the offer is still standing —
+    // and without this the next tap would generate, and bill, a second bed the
+    // brand already owns and cannot see. So the row we paid for is held here
+    // and a retry reuses it.
+    const paidFor = useRef<string | null>(null);
+
+    const laneFor = useCallback(
+        (mediaId: string): IAudioLane => ({
+            id: `music-${Date.now()}`,
+            kind: "music",
+            mediaId,
+            // A bed runs from the top of the document by definition.
+            fromStart: true,
+            // Ducking on by default: a bed at full level under a voice is the
+            // single commonest reason a render sounds amateur.
+            duckMusic: true,
+        }),
+        []
+    );
+
+    // Put a row on the music lane and retire the request, in one write —
+    // `musicRequest: undefined` drops the key, and the backend replaces the
+    // whole audio object, so the request is gone rather than merged back.
+    const attach = useCallback(
+        (mediaId: string) => {
+            onPatch({
+                audio: {
+                    ...studio.audio,
+                    lanes: [...lanes, laneFor(mediaId)],
+                    musicRequest: undefined,
+                },
+            });
+        },
+        [studio.audio, lanes, laneFor, onPatch]
+    );
+
+    const applyRequest = useCallback(async () => {
+        if (!request) return;
+        setRequestError(null);
+
+        if (request.approach === "reuse") {
+            // Costs nothing, so there is nothing to remember.
+            if (!request.mediaId) return;
+            attach(request.mediaId);
+            return;
+        }
+
+        // A bed already paid for in a previous attempt: attach that one rather
+        // than buying another.
+        if (paidFor.current) {
+            attach(paidFor.current);
+            return;
+        }
+
+        setApplying(true);
+        try {
+            const res = await HttpWrapper.fetch(`/api/media/brands/${brandId}/audio/music`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    prompt: request.prompt,
+                    // The bed is asked for at the timeline's length. A bed
+                    // shorter than the video is the giveaway that nobody
+                    // listened to the export.
+                    lengthMs: totalMs && totalMs > 0 ? totalMs : undefined,
+                    instrumental: true,
+                    title: "Director's bed",
+                }),
+            });
+            if (!res.ok) {
+                // 402 is the wallet, and the meter above already says so —
+                // this line is for everything else.
+                setRequestError(
+                    res.status === 402
+                        ? "That needs tokens you don't have yet."
+                        : "The bed didn't generate. Try again in a moment."
+                );
+                return;
+            }
+            const json = (await res.json()) as { mediaId?: string; id?: string };
+            // `mediaId` is the library row. `id` is the generated-audio
+            // document, which is NOT what a lane may reference — so a response
+            // without a media id is a failure, not a fallback.
+            if (!json.mediaId) {
+                setRequestError("The bed generated but wasn't filed. Pick it from your media.");
+                return;
+            }
+            // Remembered BEFORE the patch, which is the whole point: from here
+            // on the money is spent, and a retry must not spend it again.
+            paidFor.current = json.mediaId;
+            attach(json.mediaId);
+        } catch {
+            setRequestError("The bed didn't generate. Try again in a moment.");
+        } finally {
+            setApplying(false);
+        }
+    }, [request, attach, brandId, totalMs]);
+
+    const dismissRequest = useCallback(() => {
+        if (!request) return;
+        // Marked rather than deleted: the judgement behind "builds at 0:18" is
+        // worth keeping even once it has been turned down.
+        onPatch({
+            audio: { ...studio.audio, lanes, musicRequest: { ...request, dismissed: true } },
+        });
+    }, [request, studio.audio, lanes, onPatch]);
 
     const setDucking = useCallback(
         (duck: boolean) => {
             onPatch({
                 audio: {
-                    voiceId: studio.audio?.voiceId,
+                    ...studio.audio,
                     lanes: lanes.map((l) =>
                         l.kind === "music" ? { ...l, duckMusic: duck } : l
                     ),
@@ -131,6 +262,39 @@ const StudioSoundPanel: React.FC<StudioSoundPanelProps> = ({
             </Text>
 
             <Text style={styles.label}>Music under it</Text>
+            {offered && request ? (
+                <View style={styles.offer}>
+                    <Text style={styles.offerTitle}>The director asked for a bed</Text>
+                    <Text style={styles.offerBody}>
+                        {request.approach === "generate"
+                            ? request.prompt
+                            : "A track already in your media."}
+                    </Text>
+                    {requestError ? <Text style={styles.offerError}>{requestError}</Text> : null}
+                    <View style={styles.offerRow}>
+                        <Pressable
+                            style={styles.offerPrimary}
+                            onPress={() => void applyRequest()}
+                            disabled={busy || applying}
+                        >
+                            {applying ? (
+                                <ActivityIndicator color={colors.white} size="small" />
+                            ) : (
+                                <Text style={styles.offerPrimaryLabel}>
+                                    {request.approach === "generate" ? "Generate it" : "Use it"}
+                                </Text>
+                            )}
+                        </Pressable>
+                        <Pressable
+                            style={styles.offerGhost}
+                            onPress={dismissRequest}
+                            disabled={busy || applying}
+                        >
+                            <Text style={styles.offerGhostLabel}>Not this one</Text>
+                        </Pressable>
+                    </View>
+                </View>
+            ) : null}
             {music ? (
                 <>
                     <Text style={styles.note}>A bed is attached and runs from the top.</Text>
@@ -163,6 +327,13 @@ const StudioSoundPanel: React.FC<StudioSoundPanelProps> = ({
                     one can be reused across posts.
                 </Text>
             )}
+            {/* Said plainly while it is true, and deleted the day the render
+                carries sound. A bed that plays here and vanishes in the export
+                is worse than no bed, because nobody checks an export they
+                already heard. */}
+            <Text style={styles.warn}>
+                Sound plays in the studio only — the exported video is silent for now.
+            </Text>
         </View>
     );
 };
@@ -201,6 +372,48 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
                 },
                 toggleOn: { backgroundColor: withAlpha(colors.primary, 0.18) },
                 note: { color: colors.textSecondary, fontSize: fs(10), lineHeight: lh(15) },
+                warn: { color: colors.orange, fontSize: fs(10), lineHeight: lh(15) },
+                offer: {
+                    gap: 6,
+                    padding: 10,
+                    borderRadius: 12,
+                    // Background contrast marks it as a card, never a border.
+                    backgroundColor: withAlpha(colors.primary, 0.1),
+                },
+                offerTitle: {
+                    color: colors.text,
+                    fontSize: fs(12),
+                    lineHeight: lh(18),
+                    fontWeight: "700",
+                },
+                offerBody: { color: colors.textSecondary, fontSize: fs(11), lineHeight: lh(17) },
+                offerError: { color: colors.red, fontSize: fs(10), lineHeight: lh(15) },
+                offerRow: { flexDirection: "row", gap: 8, alignItems: "center" },
+                offerPrimary: {
+                    minHeight: fbox(30),
+                    paddingHorizontal: 14,
+                    justifyContent: "center",
+                    borderRadius: 9,
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 10,
+                    shadowOpacity: 0.35,
+                    elevation: 3,
+                },
+                offerPrimaryLabel: {
+                    color: colors.white,
+                    fontSize: fs(11),
+                    lineHeight: lh(17),
+                    fontWeight: "700",
+                },
+                offerGhost: { paddingHorizontal: 10, paddingVertical: 7 },
+                offerGhostLabel: {
+                    color: colors.textSecondary,
+                    fontSize: fs(11),
+                    lineHeight: lh(17),
+                    fontWeight: "600",
+                },
             }),
         [colors]
     );

@@ -14,6 +14,7 @@
 import { fs, lh, fbox } from "@/constants/Typography";
 import {
     IStudio,
+    IStudioAudio,
     IStudioLayer,
     IStudioScene,
     NarrationSource,
@@ -62,6 +63,8 @@ export interface SceneInspectorProps {
     scene: IStudioScene | null;
     media: Record<string, IAsset>;
     busy?: boolean;
+    /** The whole timeline's length, for the sound panel's generated bed. */
+    totalMs?: number;
 
     /** The layer whose controls to show, if one is selected on the canvas. */
     selectedLayerId?: string | null;
@@ -78,7 +81,7 @@ export interface SceneInspectorProps {
     onDuplicate: () => void;
     onPickMedia: () => void;
     /** Document-level settings — the voice and the bed. */
-    onPatchStudio?: (input: { audio: { lanes: never[]; voiceId?: string } }) => void;
+    onPatchStudio?: (input: { audio: IStudioAudio }) => void;
     /**
      * Design this one scene again.
      *
@@ -101,6 +104,7 @@ const SceneInspector: React.FC<SceneInspectorProps> = ({
     scene,
     media,
     busy,
+    totalMs,
     onSetDuration,
     onSetTransition,
     onSetNarration,
@@ -380,7 +384,8 @@ const SceneInspector: React.FC<SceneInspectorProps> = ({
                         brandId={brandId}
                         studio={studio}
                         busy={busy}
-                        onPatch={onPatchStudio as never}
+                        totalMs={totalMs}
+                        onPatch={onPatchStudio}
                     />
                 </Section>
             ) : null}
