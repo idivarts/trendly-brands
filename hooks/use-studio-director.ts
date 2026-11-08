@@ -18,6 +18,7 @@
  * not a failure to retry.
  */
 import { HttpWrapper } from "@/shared-libs/utils/http-wrapper";
+import { IStudioScene } from "@/shared-libs/firestore/trendly-pro/models/studio";
 import { StudioState } from "@/utils/studio-api";
 import { useCallback, useState } from "react";
 
@@ -48,7 +49,17 @@ export interface UseStudioDirectorResult {
     refused: boolean;
 
     makePlan: (input: { brief: string; mode: DirectorMode; targetSeconds?: number }) => Promise<void>;
-    approve: () => Promise<boolean>;
+    /**
+     * Approve the plan and return the scenes it created, ready to be filled.
+     *
+     * The IDS, not a boolean, because approval is only half of the job:
+     * `ApproveRun` writes the scenes pending and hands off to the per-scene
+     * generate endpoints, and the caller needs the scenes themselves — how a
+     * scene gets made depends on what the planner chose for it.
+     * Reading them from state instead would race the render that applies this
+     * very response. Null means the approval itself failed.
+     */
+    approve: () => Promise<IStudioScene[] | null>;
     reset: () => void;
 }
 
@@ -206,26 +217,32 @@ export function useStudioDirector(
         [base, brandId, contentId, studioId, pollRun]
     );
 
-    const approve = useCallback(async (): Promise<boolean> => {
-        if (!brandId || !contentId || !studioId || !plan?.runId) return false;
+    const approve = useCallback(async (): Promise<IStudioScene[] | null> => {
+        if (!brandId || !contentId || !studioId || !plan?.runId) return null;
         setApproving(true);
         setError(null);
         try {
             const res = await HttpWrapper.fetch(`${base()}/runs/${plan.runId}/approve`, {
                 method: "POST",
             });
-            const json = await res.json();
+            const json = (await res.json()) as StudioState;
             // Approval answers with the whole studio, so the rail fills from
             // this response rather than waiting for the subscription.
-            if (json?.studio) onState(json as StudioState);
-            return true;
+            if (json?.studio) onState(json);
+            // The scenes that still have to be MADE. A plan that reused what
+            // the brand already owns leaves those scenes finished on arrival,
+            // and asking for them again would charge for work already done.
+            // The SCENES, not their ids: the caller has to look at each one to
+            // decide how it gets made, and reading them back out of state
+            // would race the render that applies this very response.
+            return (json?.scenes ?? []).filter((sc) => sc.pending);
         } catch (e) {
             const err = e as { status?: number; data?: { message?: string } };
             setError(
                 err?.data?.message ??
                     "We couldn't approve that plan. Please try planning it again."
             );
-            return false;
+            return null;
         } finally {
             setApproving(false);
         }

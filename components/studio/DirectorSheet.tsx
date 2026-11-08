@@ -23,6 +23,7 @@ import { fs, lh, fbox } from "@/constants/Typography";
 import { TokenMeterNotice } from "@/components/billing/TokenMeter";
 import { useEntitlements } from "@/hooks/use-entitlements";
 import { DirectorMode, UseStudioDirectorResult } from "@/hooks/use-studio-director";
+import { IStudioScene } from "@/shared-libs/firestore/trendly-pro/models/studio";
 import Colors from "@/shared-uis/constants/Colors";
 import { withAlpha } from "@/utils/color";
 import { goToBilling } from "@/utils/billing-navigation";
@@ -63,8 +64,12 @@ export interface DirectorSheetProps {
     visible: boolean;
     director: UseStudioDirectorResult;
     onClose: () => void;
-    /** Called after a plan has been approved and the scenes exist. */
-    onApproved: () => void;
+    /**
+     * Called after a plan has been approved, with the scenes it created that
+     * still have to be made. The caller starts the fill — approval only
+     * writes the scenes.
+     */
+    onApproved: (pendingScenes: IStudioScene[]) => void;
     /**
      * Switch to the simpler motion-only flow.
      *
@@ -205,7 +210,8 @@ const DirectorSheet: React.FC<DirectorSheetProps> = ({
                                     <Pressable
                                         style={[styles.primary, approving && styles.off]}
                                         onPress={async () => {
-                                            if (await director.approve()) onApproved();
+                                            const made = await director.approve();
+                                            if (made) onApproved(made);
                                         }}
                                         disabled={approving}
                                     >
