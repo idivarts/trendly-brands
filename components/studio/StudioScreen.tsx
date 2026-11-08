@@ -69,6 +69,13 @@ import {
 /** How often the playhead advances while playing. */
 const TICK_MS = 100;
 
+/**
+ * The studio queue worker's own ceiling (900s), which is the longest a scene
+ * can legitimately be mid-generation. Past it with no outcome written, the
+ * scene is stranded rather than slow.
+ */
+const WORKER_CEILING_MS = 15 * 60 * 1000;
+
 export interface StudioScreenProps {
     contentId: string;
 }
@@ -142,6 +149,25 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
      * the screen mounted.
      */
     /**
+     * Whether something is actually making this scene right now.
+     *
+     * A generation runs on the studio queue, whose worker has 900 seconds, and
+     * the scene says `queued` the whole time. So "pending" alone cannot tell a
+     * scene a worker is holding from one abandoned hours ago — those looked
+     * identical, and offering to pick up the first would queue and charge for
+     * a second design of a scene already being made.
+     *
+     * ⚠️ A QUEUED SCENE WITH NO `queuedAt` IS STRANDED. It predates the queue,
+     * which is exactly the state the stuck run on dev is in: `pending` with
+     * `status: "queued"` and nothing coming. Treating a missing timestamp as
+     * "in flight" would make those permanently un-pick-up-able.
+     */
+    const beingMade = (sc: IStudioScene) =>
+        sc.gen?.status === "queued" &&
+        !!sc.gen.queuedAt &&
+        Date.now() - sc.gen.queuedAt < WORKER_CEILING_MS;
+
+    /**
      * Whether a pending scene can be picked up by the fill WITHOUT destroying
      * anything.
      *
@@ -166,7 +192,7 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
      * Both are counted and said out loud rather than swept in.
      */
     const canPickUp = (sc: IStudioScene) =>
-        !sc.gen?.model && (sc.layers?.length ?? 0) === 0;
+        !sc.gen?.model && (sc.layers?.length ?? 0) === 0 && !beingMade(sc);
 
     const stranded = useMemo(
         () =>
@@ -176,9 +202,18 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
         [scenes, generate.running]
     );
 
-    /** Pending scenes that need a decision per scene — see `canPickUp`. */
+    /**
+     * Pending scenes that need a decision per scene — see `canPickUp`.
+     *
+     * Scenes a worker is currently making are excluded: they need no decision,
+     * they need a minute. Counting them here would put "6 scenes were never
+     * made" over a studio that is busy making them.
+     */
     const strandedVideo = useMemo(
-        () => (generate.running ? [] : scenes.filter((sc) => sc.pending && !canPickUp(sc))),
+        () =>
+            generate.running
+                ? []
+                : scenes.filter((sc) => sc.pending && !canPickUp(sc) && !beingMade(sc)),
         [scenes, generate.running]
     );
 
