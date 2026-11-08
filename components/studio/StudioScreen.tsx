@@ -126,6 +126,41 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
 
     const timed = studio ? isTimedFormat(studio.format) : true;
 
+    /**
+     * Scenes left marked "Making…" that nothing is making.
+     *
+     * A fill only lives as long as the tab that started it: the work is a
+     * per-scene request driven from here, so closing the studio halfway leaves
+     * the rest pending with nobody coming back for them. Reopening used to
+     * show those scenes spinning forever — there was no way to tell a scene
+     * being worked on from one abandoned hours ago.
+     *
+     * ⚠️ OFFERED, NOT AUTOMATIC. Each scene costs money. Approving a plan is
+     * an agreement to spend on that run; opening a studio days later is not,
+     * so the pick-up is a button rather than something that happens because
+     * the screen mounted.
+     */
+    const stranded = useMemo(
+        () => (generate.running ? [] : scenes.filter((sc) => sc.pending && !sc.gen?.model).map((sc) => sc.id)),
+        [scenes, generate.running]
+    );
+
+    /**
+     * Pending scenes the planner chose AI VIDEO for, which this cannot pick up.
+     *
+     * ⚠️ DELIBERATELY NOT SWEPT INTO THE FILL. `gen.model` set means the plan
+     * asked for a generated clip, and the fill asks for a designed document —
+     * running it over these would quietly produce a motion graphic where a
+     * person approved footage, and charge for it. The scene also needs its
+     * cast and location to keep one face across clips, and `ApproveRun` does
+     * not yet put those on the scene, so there is nothing here to send even if
+     * the endpoint were called. Counted separately and said out loud instead.
+     */
+    const strandedVideo = useMemo(
+        () => (generate.running ? [] : scenes.filter((sc) => sc.pending && !!sc.gen?.model)),
+        [scenes, generate.running]
+    );
+
     // ── The playhead ───────────────────────────────────────────────────────
     const tick = useRef<ReturnType<typeof setInterval> | null>(null);
     useEffect(() => {
@@ -555,6 +590,34 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
                 ) : null}
             </View>
 
+            {stranded.length + strandedVideo.length > 0 ? (
+                <View style={styles.strandedBar}>
+                    <View style={styles.strandedStripe} />
+                    <View style={styles.strandedBody}>
+                        <Text style={styles.strandedTitle}>
+                            {stranded.length + strandedVideo.length === 1
+                                ? "1 scene was never made"
+                                : `${stranded.length + strandedVideo.length} scenes were never made`}
+                        </Text>
+                        <Text style={styles.strandedNote}>
+                            {strandedVideo.length === 0
+                                ? "They were planned and approved, but the run stopped before they were designed. Picking up costs the same as making them the first time."
+                                : stranded.length === 0
+                                  ? "They were planned and approved, but the run stopped. These ones are AI video — open each scene and generate its clip from the video panel."
+                                  : `They were planned and approved, but the run stopped. ${stranded.length} can be picked up here; the other ${strandedVideo.length} are AI video and need their clips generated from each scene's video panel.`}
+                        </Text>
+                    </View>
+                    {stranded.length > 0 ? (
+                        <Pressable
+                            style={styles.strandedAction}
+                            onPress={() => void generate.fill(stranded)}
+                        >
+                            <Text style={styles.strandedActionText}>Pick up</Text>
+                        </Pressable>
+                    ) : null}
+                </View>
+            ) : null}
+
             <SceneRail
                 studio={studio}
                 scenes={scenes}
@@ -575,11 +638,31 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
                 visible={directorOpen}
                 director={director}
                 onClose={() => setDirectorOpen(false)}
-                onApproved={() => {
+                onApproved={(pendingScenes) => {
                     // The scenes exist and are pending. Closing takes the user
                     // straight to the rail, which is where the filling happens.
                     setDirectorOpen(false);
                     director.reset();
+                    // ⚠️ AND THEN SOMEBODY HAS TO MAKE THEM. `ApproveRun`
+                    // writes the scenes and marks them pending; its own header
+                    // says the per-scene endpoints fill them, driven by the
+                    // client. This IS that client. Without this line approval
+                    // produced a rail of scenes that said "Making…" and stayed
+                    // that way — approved, planned, paid for at the planning
+                    // step, and never made.
+                    //
+                    // No confirmation: approving a plan that priced itself IS
+                    // the agreement to spend.
+                    // Only the scenes this can actually make, read off the
+                    // approve response rather than off `scenes` — that state
+                    // has not re-rendered yet, so it does not know these
+                    // scenes exist. A plan that asked for AI video leaves
+                    // those to the video panel; see `strandedVideo` for why
+                    // running the fill over them would be worse than leaving
+                    // them pending.
+                    void generate.fill(
+                        pendingScenes.filter((sc) => !sc.gen?.model).map((sc) => sc.id)
+                    );
                 }}
                 onUseSimpleFlow={() => {
                     setDirectorOpen(false);
@@ -750,6 +833,51 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
         () =>
             StyleSheet.create({
                 root: { flex: 1, backgroundColor: colors.background },
+
+                // The pick-up strip for a run nothing is finishing. Sits on
+                // the surface with a shadow and an accent stripe rather than a
+                // border, same as the other callouts in the app.
+                strandedBar: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    overflow: "hidden",
+                    borderRadius: 10,
+                    marginHorizontal: 12,
+                    marginBottom: 8,
+                    backgroundColor: colors.card,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.07,
+                    elevation: 3,
+                },
+                strandedStripe: { width: 4, alignSelf: "stretch", backgroundColor: colors.primary },
+                strandedBody: { flex: 1, paddingVertical: 10, paddingHorizontal: 12, gap: 2 },
+                strandedTitle: {
+                    color: colors.text,
+                    fontSize: fs(13),
+                    lineHeight: lh(18),
+                    fontWeight: "600",
+                },
+                strandedNote: { color: colors.textSecondary, fontSize: fs(12), lineHeight: lh(17) },
+                strandedAction: {
+                    marginRight: 12,
+                    paddingVertical: 8,
+                    paddingHorizontal: 14,
+                    borderRadius: 8,
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowRadius: 12,
+                    shadowOpacity: 0.35,
+                    elevation: 4,
+                },
+                strandedActionText: {
+                    color: colors.onPrimary,
+                    fontSize: fs(13),
+                    lineHeight: lh(18),
+                    fontWeight: "600",
+                },
                 center: {
                     flex: 1,
                     alignItems: "center",
@@ -866,7 +994,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
                     elevation: 4,
                 },
                 textSheetSaveLabel: {
-                    color: colors.white,
+                    color: colors.onPrimary,
                     fontSize: fs(13),
                     lineHeight: lh(19),
                     fontWeight: "700",

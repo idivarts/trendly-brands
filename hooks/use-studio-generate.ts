@@ -76,6 +76,13 @@ export interface UseStudioGenerateResult {
         sceneCount?: number;
         approach?: GenerateApproach;
     }) => Promise<void>;
+    /**
+     * Fill scenes that already exist, without planning first.
+     *
+     * What the director's approve hands off to, and what a resume uses. See
+     * `walk` for why this way in has to exist.
+     */
+    fill: (sceneIds: string[], approach?: GenerateApproach) => Promise<void>;
     /** Regenerate one scene on its own. */
     regenerate: (sceneId: string, input?: { brief?: string; approach?: GenerateApproach }) => Promise<void>;
     cancel: () => void;
@@ -114,6 +121,128 @@ export function useStudioGenerate(
         return err.data?.reason === "plan_locked" ? "plan_locked" : "tokens_exhausted";
     };
 
+    /**
+     * Walk a list of scenes, three at a time, asking for each one's design.
+     *
+     * The whole of the filling, with no opinion about where the scenes came
+     * from — which is the point. It is reached two ways:
+     *
+     *  - `generate`, which plans the scenes first (the simple flow), and
+     *  - `fill`, which is handed scenes somebody else already created (the
+     *    director's approve, and resuming a run that was stranded).
+     *
+     * ⚠️ IT USED TO BE REACHABLE ONE WAY ONLY. `ApproveRun` materialises a
+     * plan into pending scenes and hands off — its own header says the
+     * per-scene endpoints fill them, driven by the client — and the client
+     * had no way in that did not re-plan first. So an approved plan wrote
+     * seven scenes marked "Making…" and nothing ever made them. Keep this
+     * reachable without planning.
+     */
+    const walk = useCallback(
+        async (queue: string[], approach: GenerateApproach) => {
+            const total = queue.length;
+            // Live counters rather than state, because the pool reads and
+            // writes them between renders and `setProgress` is async —
+            // driving dispatch off React state would have workers deciding
+            // what to do next from a snapshot one tick stale.
+            let done = 0;
+            let stop = false;
+            const active = new Set<string>();
+            const failed: string[] = [];
+            const publish = () =>
+                setProgress({
+                    total,
+                    done,
+                    activeSceneIds: [...active],
+                    failedSceneIds: [...failed],
+                });
+            publish();
+
+            // The pool is `utils/pool`, where its behaviour is asserted on
+            // directly: the cap, one failure costing one item, and stopping
+            // dispatch without aborting what is in flight. It used to be an
+            // inline loop here, which made all of that untestable without
+            // mounting a component.
+            await runPool(queue, {
+                limit: MAX_PARALLEL,
+                shouldStop: () => stop || cancelled.current,
+                onStart: (sceneId) => {
+                    active.add(sceneId);
+                    publish();
+                },
+                onSettle: (sceneId) => {
+                    active.delete(sceneId);
+                    done += 1;
+                    publish();
+                },
+                run: async (sceneId) => {
+                    const res = await HttpWrapper.fetch(
+                        `${base()}/scenes/${sceneId}/generate`,
+                        {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ approach }),
+                        }
+                    );
+                    // ⚠️ Only THIS scene is taken from the response. See the
+                    // file header: the response is a whole-studio snapshot,
+                    // and adopting it would roll back whatever a sibling
+                    // finished after it was taken.
+                    applyScene((await res.json()) as StudioState, sceneId);
+                },
+                onError: (e, sceneId) => {
+                    const b = readBlock(e);
+                    if (b) {
+                        // Out of money mid-run. Stop DISPATCHING; the
+                        // requests already in flight are paid for, so
+                        // letting them land is strictly better than
+                        // throwing their results away.
+                        setBlocked(b);
+                        stop = true;
+                        return;
+                    }
+                    // One scene failed. The run continues; that scene stays
+                    // visibly unfinished, which is more useful than
+                    // abandoning the ones that worked.
+                    failed.push(sceneId);
+                    setError(
+                        failed.length === 1
+                            ? "One scene didn't come back. You can regenerate it on its own."
+                            : `${failed.length} scenes didn't come back. You can regenerate them individually.`
+                    );
+                },
+            });
+        },
+        [base, applyScene]
+    );
+
+    /**
+     * Fill scenes that already exist — the director's approve, and resuming.
+     *
+     * Takes the ids explicitly rather than reading state, because the caller
+     * knows which scenes it means: approve means the ones that run just
+     * created, and a resume means the ones left pending. Reading "whatever is
+     * pending right now" from inside here would also sweep up a scene the user
+     * is separately regenerating.
+     */
+    const fill = useCallback(
+        async (sceneIds: string[], approach: GenerateApproach = "motion") => {
+            if (!brandId || !contentId || !studioId || sceneIds.length === 0) return;
+            cancelled.current = false;
+            setRunning(true);
+            setError(null);
+            setBlocked(null);
+            setProgress(null);
+            try {
+                await walk(sceneIds, approach);
+            } finally {
+                setRunning(false);
+                setProgress(null);
+            }
+        },
+        [brandId, contentId, studioId, walk]
+    );
+
     const generate = useCallback(
         async ({
             brief,
@@ -143,80 +272,10 @@ export function useStudioGenerate(
                 // Fill only the scenes this run planned — the ones marked
                 // pending. A studio the user had already built scenes in must
                 // not have those regenerated out from under them.
-                const queue = planned.scenes.filter((s) => s.pending).map((s) => s.id);
-                const total = queue.length;
-
-                // Live counters rather than state, because the pool reads and
-                // writes them between renders and `setProgress` is async —
-                // driving dispatch off React state would have workers deciding
-                // what to do next from a snapshot one tick stale.
-                let done = 0;
-                let stop = false;
-                const active = new Set<string>();
-                const failed: string[] = [];
-                const publish = () =>
-                    setProgress({
-                        total,
-                        done,
-                        activeSceneIds: [...active],
-                        failedSceneIds: [...failed],
-                    });
-                publish();
-
-                // The pool is `utils/pool`, where its behaviour is asserted on
-                // directly: the cap, one failure costing one item, and stopping
-                // dispatch without aborting what is in flight. It used to be an
-                // inline loop here, which made all of that untestable without
-                // mounting a component.
-                await runPool(queue, {
-                    limit: MAX_PARALLEL,
-                    shouldStop: () => stop || cancelled.current,
-                    onStart: (sceneId) => {
-                        active.add(sceneId);
-                        publish();
-                    },
-                    onSettle: (sceneId) => {
-                        active.delete(sceneId);
-                        done += 1;
-                        publish();
-                    },
-                    run: async (sceneId) => {
-                        const res = await HttpWrapper.fetch(
-                            `${base()}/scenes/${sceneId}/generate`,
-                            {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ approach }),
-                            }
-                        );
-                        // ⚠️ Only THIS scene is taken from the response. See the
-                        // file header: the response is a whole-studio snapshot,
-                        // and adopting it would roll back whatever a sibling
-                        // finished after it was taken.
-                        applyScene((await res.json()) as StudioState, sceneId);
-                    },
-                    onError: (e, sceneId) => {
-                        const b = readBlock(e);
-                        if (b) {
-                            // Out of money mid-run. Stop DISPATCHING; the
-                            // requests already in flight are paid for, so
-                            // letting them land is strictly better than
-                            // throwing their results away.
-                            setBlocked(b);
-                            stop = true;
-                            return;
-                        }
-                        // One scene failed. The run continues; that scene stays
-                        // visibly unfinished, which is more useful than
-                        // abandoning the ones that worked.
-                        failed.push(sceneId);
-                        setError(
-                            failed.length === 1
-                                ? "One scene didn't come back. You can regenerate it on its own."
-                                : `${failed.length} scenes didn't come back. You can regenerate them individually.`
-                        );
-                    },
-                });
+                await walk(
+                    planned.scenes.filter((sc) => sc.pending).map((sc) => sc.id),
+                    approach
+                );
             } catch (e) {
                 const b = readBlock(e);
                 if (b) setBlocked(b);
@@ -226,7 +285,7 @@ export function useStudioGenerate(
                 setProgress(null);
             }
         },
-        [base, brandId, contentId, studioId, onState, applyScene]
+        [base, brandId, contentId, studioId, onState, walk]
     );
 
     const regenerate = useCallback(
@@ -263,5 +322,5 @@ export function useStudioGenerate(
         cancelled.current = true;
     }, []);
 
-    return { running, progress, error, blocked, generate, regenerate, cancel };
+    return { running, progress, error, blocked, generate, fill, regenerate, cancel };
 }
