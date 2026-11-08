@@ -157,6 +157,36 @@ ${SHARED_RUNTIME}
     vReport(ms);
   }
 
+  // The document as it should be SAVED, which is not the document being
+  // displayed.
+  //
+  // The frame adds two things to the design in order to show it: a style
+  // carrying the preview's scale and the selection outlines, and this script.
+  // Both are the editor's, not the design's. Serialising the live document
+  // persisted them — and the scale is the dangerous one, because the server
+  // render would then draw the design at a fraction of its size in the corner
+  // of the frame, from a saved file that looks correct in the preview it came
+  // from.
+  //
+  // Done on a CLONE so the live document is untouched: mutating it to produce
+  // clean output means every save flickers the editor's own affordances off
+  // and back on, and a save that throws half way leaves them off for good.
+  function serialize(){
+    var clone = document.documentElement.cloneNode(true);
+    var junk = clone.querySelectorAll('[data-frame-chrome],[data-frame-bridge]');
+    for (var i = 0; i < junk.length; i++){
+      if (junk[i].parentNode) junk[i].parentNode.removeChild(junk[i]);
+    }
+    // The hover and selection marks are transient too, and they outlive a
+    // reload as a permanent outline if they are saved.
+    var marked = clone.querySelectorAll('.__el-selected, .__el-hover');
+    for (var j = 0; j < marked.length; j++){
+      marked[j].classList.remove('__el-selected');
+      marked[j].classList.remove('__el-hover');
+    }
+    return '<!doctype html>' + clone.outerHTML;
+  }
+
   function handle(payload){
     var msg; try { msg = JSON.parse(payload); } catch(e){ return; }
     if (msg.type === 'play'){ play(); return; }
@@ -166,16 +196,7 @@ ${SHARED_RUNTIME}
     if (msg.type === 'setText'){
       var el = document.querySelector('[data-el="'+msg.id+'"]');
       if (el){ el.textContent = msg.text; }
-      // Strip the transient editor selection/hover classes so they never get
-      // persisted into the saved HTML revision (they'd otherwise render as a
-      // permanent outline on reload).
-      var savedSel = selectedEl, savedHover = hoverEl;
-      if (selectedEl) selectedEl.classList.remove('__el-selected');
-      if (hoverEl) hoverEl.classList.remove('__el-hover');
-      var outHtml = '<!doctype html>'+document.documentElement.outerHTML;
-      if (savedSel) savedSel.classList.add('__el-selected');
-      if (savedHover) savedHover.classList.add('__el-hover');
-      send({type:'html', html: outHtml});
+      send({type:'html', html: serialize()});
     } else if (msg.type === 'showSlide'){
       showSlide(msg.index, msg.slideWidth);
     }
@@ -272,7 +293,9 @@ ${SHARED_RUNTIME}
 
 /** Inject the bridge <script> just before </body> (or append). */
 export function injectBridge(html: string): string {
-    const tag = `<script>${BRIDGE_SCRIPT}</script>`;
+    // Tagged so the frame can take it back out again before handing the
+    // document to anyone. See `serialize` in the bridge script.
+    const tag = `<script data-frame-bridge>${BRIDGE_SCRIPT}</script>`;
     const i = html.toLowerCase().lastIndexOf("</body>");
     if (i === -1) return html + tag;
     return html.slice(0, i) + tag + html.slice(i);
@@ -290,7 +313,11 @@ export function injectChrome(html: string, scale: number, slideW: number, slideH
     const dw = Math.round(slideW * scale);
     const dh = Math.round(slideH * scale);
     const style =
-        `<style>` +
+        // Tagged, like the bridge script, so `serialize` can strip it. This
+        // style carries the PREVIEW's scale — baked into a saved document it
+        // would make the server render the design at a fraction of its size,
+        // in the top-left corner, with no clue as to why.
+        `<style data-frame-chrome>` +
         `html{width:${dw}px;height:${dh}px;overflow:hidden;margin:0;}` +
         `body{width:${slideW}px;height:${slideH}px;overflow:hidden;margin:0;transform:scale(${scale});transform-origin:top left;}` +
         `[data-carousel]{display:flex;will-change:transform;}` +
