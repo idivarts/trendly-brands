@@ -196,7 +196,12 @@ const DirectorSheet: React.FC<DirectorSheetProps> = ({
                                 {/* No Approve button on a refused plan. The
                                     API refuses it too, so this is for the
                                     user's benefit rather than for safety. */}
-                                {refused ? null : (
+                                {/* Also requires a plan that EXISTS. `refused`
+                                    is computed from fatal problems, so a run
+                                    still being planned has none and would read
+                                    as approvable — the 180s polling cap
+                                    returns exactly that shape. */}
+                                {refused || plan.status !== "planned" ? null : (
                                     <Pressable
                                         style={[styles.primary, approving && styles.off]}
                                         onPress={async () => {

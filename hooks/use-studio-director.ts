@@ -123,11 +123,15 @@ export function useStudioDirector(
                     // made elsewhere. Keep waiting until the deadline.
                 }
             }
-            // Still planning at the cap. Returned as a real DirectorPlan with
-            // one warning rather than an error: nothing failed, and `problems`
-            // is where the storyboard already looks for things to tell the
-            // user. Status stays "planning", so `refused` is false and no
-            // Approve button appears for a plan that does not exist yet.
+            // Still planning at the cap. Returned as a real DirectorPlan
+            // rather than an error: nothing failed.
+            //
+            // ⚠️ Status stays "planning", and that is what the Approve button
+            // must key off — NOT `refused`, which is computed from fatal
+            // problems and is therefore false for a run that has none yet. The
+            // button is gated on status === "planned" in DirectorSheet; the API
+            // refuses an unfinished run with 409 as well, because a client
+            // cannot be trusted to hide a button.
             return {
                 runId,
                 status: "planning",
