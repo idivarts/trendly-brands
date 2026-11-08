@@ -162,7 +162,13 @@ export function useStudio(
             // A failed subscription is not a failed studio: the open call
             // already returned its state. Losing live updates is worth a
             // console line, not an error screen over working content.
-            () => undefined
+            //
+            // ⚠️ It MUST be a line, though. Swallowing this silently is what
+            // makes the one failure mode here unreadable: with no rules
+            // deployed, reads are denied, every optimistic edit appears to
+            // land and then vanishes on reload, and nothing anywhere says
+            // permission-denied.
+            (err) => console.warn("[studio] studio subscription lost:", err?.message ?? err)
         );
         return () => unsub();
     }, [brandId, contentId, studioId, clearOverlay]);
@@ -190,7 +196,7 @@ export function useStudio(
                 setSceneMap(map);
                 clearOverlay();
             },
-            () => undefined
+            (err) => console.warn("[studio] scenes subscription lost:", err?.message ?? err)
         );
         return () => unsub();
     }, [brandId, contentId, studioId, clearOverlay]);
