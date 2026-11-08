@@ -327,12 +327,16 @@ const StudioSoundPanel: React.FC<StudioSoundPanelProps> = ({
                     one can be reused across posts.
                 </Text>
             )}
-            {/* Said plainly while it is true, and deleted the day the render
-                carries sound. A bed that plays here and vanishes in the export
-                is worse than no bed, because nobody checks an export they
-                already heard. */}
+            {/* The export carries sound now. What it says is the OPPOSITE of
+                what stood here before, which claimed sound played in the studio
+                and not in the export — and was wrong twice over, because the
+                studio stage has never played audio at all. The direction of the
+                gap matters: a bed you hear and then lose is a broken promise,
+                whereas one you cannot hear until you export is merely a missing
+                convenience. Delete this line the day the stage plays it. */}
             <Text style={styles.warn}>
-                Sound plays in the studio only — the exported video is silent for now.
+                The export carries your sound. The stage above does not play it yet — press
+                Render to hear it.
             </Text>
         </View>
     );
