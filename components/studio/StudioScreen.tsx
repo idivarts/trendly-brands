@@ -27,6 +27,9 @@ import GenerateSheet from "@/components/studio/GenerateSheet";
 import MediaPickerSheet from "@/components/studio/MediaPickerSheet";
 import SceneInspector from "@/components/studio/SceneInspector";
 import SceneRail from "@/components/studio/SceneRail";
+// One definition, shared with the rail: its pill and this screen's
+// "never made" banner are two renderings of the same question.
+import { beingMade } from "@/components/studio/scene-progress";
 import StudioStage, {
     StudioStageHandle,
     TappedText,
@@ -80,12 +83,6 @@ const TICK_MS = 100;
 /** Breathing room around the canvas, and what a fit measurement subtracts. */
 const STAGE_PAD = 16;
 
-/**
- * The studio queue worker's own ceiling (900s), which is the longest a scene
- * can legitimately be mid-generation. Past it with no outcome written, the
- * scene is stranded rather than slow.
- */
-const WORKER_CEILING_MS = 15 * 60 * 1000;
 
 export interface StudioScreenProps {
     contentId: string;
@@ -194,10 +191,6 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
      * `status: "queued"` and nothing coming. Treating a missing timestamp as
      * "in flight" would make those permanently un-pick-up-able.
      */
-    const beingMade = (sc: IStudioScene) =>
-        sc.gen?.status === "queued" &&
-        !!sc.gen.queuedAt &&
-        Date.now() - sc.gen.queuedAt < WORKER_CEILING_MS;
 
     /**
      * Whether a pending scene can be picked up by the fill WITHOUT destroying
