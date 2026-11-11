@@ -51,7 +51,7 @@ import Colors from "@/shared-uis/constants/Colors";
 import { withAlpha } from "@/utils/color";
 import VideoSurface from "@/components/shared/VideoSurface";
 import DesignFrame from "@/components/contents/detail/design-stage/DesignFrame";
-import { ResizeMode } from "expo-av";
+import { ResizeMode, Video } from "expo-av";
 import { faFilm, faImage, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { DesignFrameHandle } from "@/components/contents/detail/design-stage/bridge";
@@ -263,6 +263,52 @@ const LayerView: React.FC<LayerViewProps> = ({
      */
     const [ready, setReady] = useState(0);
 
+    /**
+     * Where this layer's footage should be, on the CLIP's own clock.
+     *
+     * `trimInMs` is the whole point: one generated clip can serve two scenes,
+     * the second starting four seconds in. The planner relies on it — an
+     * 8-second generation is written as two 4-second beats — and the export
+     * honours it (`inMs` in `studioToComposition`).
+     */
+    const clipMs = Math.max(0, (layer.trimInMs ?? 0) + positionMs);
+    const video = useRef<Video | null>(null);
+    const clipMsRef = useRef(clipMs);
+    clipMsRef.current = clipMs;
+    const playingRef = useRef(playing);
+    playingRef.current = playing;
+
+    /**
+     * Seed the element the moment it has loaded.
+     *
+     * ⚠️ `positionMillis` IS NOT A SEEK. On expo-av it is part of the INITIAL
+     * status, so changing the prop later moves nothing — which is why a scene
+     * showing the back half of a shared clip played the front half instead,
+     * and why two scenes off one 8-second generation looked like the same four
+     * seconds twice. Reported from the app; the stored `trimInMs` was correct
+     * all along and so was the export.
+     */
+    const seedVideo = useCallback(() => {
+        void video.current?.setStatusAsync({
+            positionMillis: clipMsRef.current,
+            shouldPlay: playingRef.current,
+        });
+    }, []);
+
+    // Starting play seeks once, then lets the element run at wall-clock speed.
+    // Seeking it on every 100 ms tick instead would stutter the picture.
+    useEffect(() => {
+        if (!playing) return;
+        void video.current?.setStatusAsync({ positionMillis: clipMsRef.current, shouldPlay: true });
+    }, [playing]);
+
+    // Stopped: every playhead move is a seek, so a scrubbed frame is the frame
+    // the renderer would export for that instant.
+    useEffect(() => {
+        if (playing) return;
+        void video.current?.setStatusAsync({ positionMillis: clipMs, shouldPlay: false });
+    }, [playing, clipMs]);
+
     // Play, or hold still at the playhead. Two effects, not one: `positionMs`
     // advances every 100 ms while playing, and a single effect watching both
     // would restart the animation from vBase ten times a second.
@@ -336,13 +382,23 @@ const LayerView: React.FC<LayerViewProps> = ({
         if (asset.kind === "video") {
             return (
                 <VideoSurface
+                    // Keyed by the clip AND its offset: two scenes off one
+                    // generation differ only by `trimInMs`, so without the
+                    // offset in the key React would reuse the element that is
+                    // already parked on the front half.
+                    key={`${layer.mediaId}:${layer.trimInMs ?? 0}`}
+                    ref={video}
                     source={{ uri: asset.url }}
                     resizeMode={resize}
-                    shouldPlay={playing}
+                    // shouldPlay is NOT driven by the prop. The effects above
+                    // own play, pause and position together, so the element
+                    // cannot start rolling from zero before its seek lands —
+                    // which is what left the opening scene blank.
+                    shouldPlay={false}
+                    onLoad={seedVideo}
                     isMuted={(layer.volume ?? 1) === 0}
                     volume={layer.volume ?? 1}
                     isLooping={false}
-                    positionMillis={Math.max(0, (layer.trimInMs ?? 0) + positionMs)}
                     style={stageStatics.fill}
                 />
             );
