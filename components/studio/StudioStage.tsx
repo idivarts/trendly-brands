@@ -24,6 +24,21 @@
  * this side from a text diff would eventually disagree with what the render
  * worker loads. So `onLayerHtml` carries the document the frame produced,
  * verbatim.
+ *
+ * ── Playback: ONE clock, and it is the transport's ──────────────────────────
+ * `playing` used to reach the video layers only. An html layer is a document
+ * with its own CSS animations, which run on load — so an animated scene played
+ * itself through the moment it was opened, and Play then did nothing to it.
+ * Both halves of that are the same omission: the frame was never driven.
+ *
+ * It is driven here, and only from the transport:
+ *   • `holdAtStart` pins frame 0 inside the document before it paints,
+ *   • Play hands the scene to the browser's own animation clock (pinning it
+ *     per tick would show the 100 ms playhead as 10 fps),
+ *   • every playhead move while stopped is a seek, so a scrubbed frame is the
+ *     one the renderer would export for that instant.
+ * Only when `timeline` is set — a still or a carousel has no transport, and a
+ * design that flies in from opacity:0 would hold on an empty frame forever.
  */
 import { fs, lh } from "@/constants/Typography";
 import {
@@ -44,9 +59,11 @@ import { useTheme } from "@react-navigation/native";
 import React, {
     forwardRef,
     useCallback,
+    useEffect,
     useImperativeHandle,
     useMemo,
     useRef,
+    useState,
 } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -81,10 +98,15 @@ export interface StudioStageProps {
     /** Media rows for the layers' `mediaId`s. */
     media: Record<string, IAsset>;
 
-    /** Whether video layers should be playing. */
+    /** Whether video layers and animated designs should be playing. */
     playing?: boolean;
-    /** Scene-relative position, for seeking video layers. */
+    /** Scene-relative position, for seeking video layers and animated designs. */
     positionMs?: number;
+    /**
+     * A transport owns the clock, so an animated design opens paused on its
+     * first frame and moves only when the playhead does.
+     */
+    timeline?: boolean;
 
     selectedLayerId?: string | null;
     onSelectLayer?: (layerId: string | null) => void;
@@ -105,6 +127,7 @@ const StudioStage = forwardRef<StudioStageHandle, StudioStageProps>(({
     media,
     playing = false,
     positionMs = 0,
+    timeline = false,
     selectedLayerId,
     onSelectLayer,
     onFillEmpty,
@@ -174,6 +197,7 @@ const StudioStage = forwardRef<StudioStageHandle, StudioStageProps>(({
                         displayHeight={displayHeight}
                         playing={playing}
                         positionMs={positionMs}
+                        timeline={timeline}
                         selected={selectedLayerId === layer.id}
                         onSelect={() => onSelectLayer?.(layer.id)}
                         colors={colors}
@@ -199,6 +223,7 @@ interface LayerViewProps {
     displayHeight: number;
     playing: boolean;
     positionMs: number;
+    timeline: boolean;
     selected: boolean;
     onSelect: () => void;
     colors: ReturnType<typeof Colors>;
@@ -216,6 +241,7 @@ const LayerView: React.FC<LayerViewProps> = ({
     displayHeight,
     playing,
     positionMs,
+    timeline,
     selected,
     onSelect,
     colors,
@@ -223,6 +249,34 @@ const LayerView: React.FC<LayerViewProps> = ({
     onTapText,
     onLayerHtml,
 }) => {
+    // This layer's own frame handle, so the transport can drive it. Registered
+    // upward as well — the screen above still addresses it for text edits.
+    const frame = useRef<DesignFrameHandle | null>(null);
+    /**
+     * Bumped on every `ready`.
+     *
+     * A counter rather than a flag, because a frame can become ready MORE THAN
+     * ONCE: switching scene swaps the html and the document reloads. With a
+     * flag the effects below had already run, so a scene opened mid-playback
+     * loaded, pinned itself at frame 0, and sat there while the rest of the
+     * studio played on.
+     */
+    const [ready, setReady] = useState(0);
+
+    // Play, or hold still at the playhead. Two effects, not one: `positionMs`
+    // advances every 100 ms while playing, and a single effect watching both
+    // would restart the animation from vBase ten times a second.
+    useEffect(() => {
+        if (!timeline || !ready || !playing) return;
+        frame.current?.play();
+    }, [timeline, ready, playing]);
+
+    useEffect(() => {
+        if (!timeline || !ready || playing) return;
+        // Also stops the frame's own loop, so this covers pausing too.
+        frame.current?.seek(positionMs);
+    }, [timeline, ready, playing, positionMs]);
+
     const rect = slotRect(layer.slot, layer.rect);
     const box = {
         position: "absolute" as const,
@@ -238,15 +292,23 @@ const LayerView: React.FC<LayerViewProps> = ({
         if (layer.kind === "html") {
             return (
                 <DesignFrame
-                    ref={(h) => registerFrame(layer.id, h)}
+                    ref={(h) => {
+                        frame.current = h;
+                        registerFrame(layer.id, h);
+                    }}
                     html={layer.html ?? ""}
                     width={canvasWidth}
                     height={canvasHeight}
+                    holdAtStart={timeline}
                     // The frame scales itself from the canvas size, so a
                     // half-width slot gets half the display width and the
                     // document inside it stays correctly proportioned.
                     displayWidth={Math.round(rect.w * displayWidth)}
                     onMessage={(msg) => {
+                        if (msg.type === "ready") {
+                            setReady((n) => n + 1);
+                            return;
+                        }
                         // `editable: false` is a block with children — editing
                         // it would flatten its structure, so the frame says so
                         // and the tap only selects the layer.

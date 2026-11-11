@@ -12,11 +12,14 @@ import { WebView } from "react-native-webview";
 import { buildFrameHtml, DesignFrameHandle, DesignFrameProps, FrameOutMsg } from "./bridge";
 
 const DesignFrameNative = forwardRef<DesignFrameHandle, DesignFrameProps>(
-    ({ html, width, height, displayWidth, onMessage }, ref) => {
+    ({ html, width, height, displayWidth, holdAtStart = false, onMessage }, ref) => {
         const webRef = useRef<WebView | null>(null);
         const scale = width > 0 ? displayWidth / width : 1;
         const displayHeight = height * scale;
-        const source = useMemo(() => ({ html: buildFrameHtml(html, scale, width, height) }), [html, scale, width, height]);
+        const source = useMemo(
+            () => ({ html: buildFrameHtml(html, scale, width, height, holdAtStart) }),
+            [html, scale, width, height, holdAtStart]
+        );
 
         const send = (msg: object) => {
             const js = `window.__cmd(${JSON.stringify(JSON.stringify(msg))}); true;`;

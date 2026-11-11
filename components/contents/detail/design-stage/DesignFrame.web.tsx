@@ -10,11 +10,14 @@ import { View } from "react-native";
 import { buildFrameHtml, DesignFrameHandle, DesignFrameProps, FrameOutMsg } from "./bridge";
 
 const DesignFrameWeb = forwardRef<DesignFrameHandle, DesignFrameProps>(
-    ({ html, width, height, displayWidth, onMessage }, ref) => {
+    ({ html, width, height, displayWidth, holdAtStart = false, onMessage }, ref) => {
         const iframeRef = useRef<HTMLIFrameElement | null>(null);
         const scale = width > 0 ? displayWidth / width : 1;
         const displayHeight = height * scale;
-        const srcDoc = useMemo(() => buildFrameHtml(html, scale, width, height), [html, scale, width, height]);
+        const srcDoc = useMemo(
+            () => buildFrameHtml(html, scale, width, height, holdAtStart),
+            [html, scale, width, height, holdAtStart]
+        );
 
         const post = (msg: object) => {
             iframeRef.current?.contentWindow?.postMessage(JSON.stringify(msg), "*");

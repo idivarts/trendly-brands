@@ -624,6 +624,10 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
                             media={media}
                             playing={playing}
                             positionMs={current.sceneMs}
+                            // A timed format has the transport below; a still
+                            // or a carousel does not, so an animated design in
+                            // one of those is left to settle on its own.
+                            timeline={timed}
                             selectedLayerId={selectedLayerId}
                             onSelectLayer={setSelectedLayerId}
                             onFillEmpty={() =>
