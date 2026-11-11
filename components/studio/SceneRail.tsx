@@ -28,6 +28,7 @@ import {
 } from "@/shared-libs/firestore/trendly-pro/models/studio";
 import { IAsset } from "@/shared-libs/firestore/trendly-pro/models/asset";
 import { previewFidelity } from "@/shared-libs/design/studio-runtime";
+import { beingMade } from "@/components/studio/scene-progress";
 import Colors from "@/shared-uis/constants/Colors";
 import { withAlpha } from "@/utils/color";
 import {
@@ -93,8 +94,76 @@ const SceneRail: React.FC<SceneRailProps> = ({
     const styles = useStyles(colors);
     const timed = isTimedFormat(studio.format);
 
+    const selectedIndex = scenes.findIndex((s) => s.id === selectedSceneId);
+    const selectedScene = selectedIndex >= 0 ? scenes[selectedIndex] : null;
+
     return (
         <View style={styles.wrap}>
+            {/* ── The selected scene's actions ────────────────────────────────
+                Above the strip, not on the card, and that is the whole point.
+                A card is drawn to its DURATION: a 1.5s scene is 56px wide and
+                44px of that is usable, while five 20px buttons and their gaps
+                need 112px. The card clips, so the actions were simply cut in
+                half on exactly the short clips people cut shortest.
+                Widening a selected card would have fixed it by breaking the
+                rail's one good idea — that width means time. Here there is as
+                much room as the screen has, so the targets are 44px rather
+                than 20px, which is also the first time they meet the minimum
+                for a touch target. */}
+            {selectedScene ? (
+                <View style={styles.toolbar}>
+                    <Text style={styles.toolbarLabel} numberOfLines={1}>
+                        Scene {selectedIndex + 1}
+                        {timed ? ` · ${(effectiveSceneMs(selectedScene) / 1000).toFixed(1)}s` : ""}
+                    </Text>
+                    <View style={styles.toolbarActions}>
+                        <RailAction
+                            icon={faArrowLeft}
+                            label="Move earlier"
+                            disabled={selectedIndex <= 0 || busy}
+                            onPress={() => onMove(selectedScene.id, selectedIndex - 1)}
+                            colors={colors}
+                        />
+                        <RailAction
+                            icon={faArrowRight}
+                            label="Move later"
+                            disabled={selectedIndex >= scenes.length - 1 || busy}
+                            onPress={() => onMove(selectedScene.id, selectedIndex + 1)}
+                            colors={colors}
+                        />
+                        <RailAction
+                            icon={faClone}
+                            label="Duplicate"
+                            disabled={busy}
+                            onPress={() => onDuplicate(selectedScene.id)}
+                            colors={colors}
+                        />
+                        <RailAction
+                            icon={faScissors}
+                            label="Split"
+                            // Splitting an animation leaves the second half
+                            // starting mid-movement. The inspector explains it
+                            // and offers duplicate instead.
+                            disabled={
+                                selectedScene.primaryKind === "motion" ||
+                                selectedScene.primaryKind === "composite" ||
+                                busy
+                            }
+                            onPress={() => onSplit(selectedScene.id)}
+                            colors={colors}
+                        />
+                        <RailAction
+                            icon={faTrash}
+                            label="Delete"
+                            disabled={busy}
+                            onPress={() => onDelete(selectedScene.id)}
+                            colors={colors}
+                            danger
+                        />
+                    </View>
+                </View>
+            ) : null}
+
             <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -121,18 +190,11 @@ const SceneRail: React.FC<SceneRailProps> = ({
                         <SceneCard
                             scene={scene}
                             index={index}
-                            total={scenes.length}
                             timed={timed}
                             asset={firstAssetOf(scene, media)}
                             selected={selectedSceneId === scene.id}
                             colors={colors}
-                            busy={busy}
                             onSelect={() => onSelect(scene.id)}
-                            onDelete={() => onDelete(scene.id)}
-                            onDuplicate={() => onDuplicate(scene.id)}
-                            onSplit={() => onSplit(scene.id)}
-                            onMoveLeft={() => onMove(scene.id, index - 1)}
-                            onMoveRight={() => onMove(scene.id, index + 1)}
                         />
                         <InsertGap colors={colors} onPress={() => onInsertAt(index + 1)} />
                     </React.Fragment>
@@ -218,47 +280,30 @@ const InsertGap: React.FC<{ colors: ReturnType<typeof Colors>; onPress: () => vo
 interface SceneCardProps {
     scene: IStudioScene;
     index: number;
-    total: number;
     timed: boolean;
     asset?: IAsset;
     selected: boolean;
     colors: ReturnType<typeof Colors>;
-    busy?: boolean;
     onSelect: () => void;
-    onDelete: () => void;
-    onDuplicate: () => void;
-    onSplit: () => void;
-    onMoveLeft: () => void;
-    onMoveRight: () => void;
 }
 
 const SceneCard: React.FC<SceneCardProps> = ({
     scene,
     index,
-    total,
     timed,
     asset,
     selected,
     colors,
-    busy,
     onSelect,
-    onDelete,
-    onDuplicate,
-    onSplit,
-    onMoveLeft,
-    onMoveRight,
 }) => {
     const ms = effectiveSceneMs(scene);
     const width = timed
         ? Math.max(MIN_CARD_WIDTH, Math.min(MAX_CARD_WIDTH, (ms / 1000) * PX_PER_SECOND))
         : 104;
 
-    // Splitting an animation leaves the second half starting mid-movement, so
-    // it is not offered. The inspector explains and offers duplicate instead.
-    const splittable = scene.primaryKind !== "motion" && scene.primaryKind !== "composite";
-
     const transition = scene.transitionIn;
     const fidelity = transition ? previewFidelity(transition.kind) : "faithful";
+    const working = beingMade(scene);
 
     return (
         <Pressable
@@ -298,10 +343,21 @@ const SceneCard: React.FC<SceneCardProps> = ({
                         />
                     </View>
                 )}
+                {/* ⚠️ `pending` means the scene has no content, NOT that
+                    anything is making it. Printing "Making…" off it alone is
+                    how six scenes an approved plan never submitted looked
+                    exactly like six a worker was busy with — the failure read
+                    as slowness, and nobody went looking for an hour. */}
                 {scene.pending ? (
-                    <View style={[railStatics.pendingPill, { backgroundColor: withAlpha(colors.primary, 0.9) }]}>
-                        <Text style={[railStatics.pendingText, { color: colors.white }]}>Making…</Text>
-                    </View>
+                    working ? (
+                        <View style={[railStatics.pendingPill, { backgroundColor: withAlpha(colors.primary, 0.9) }]}>
+                            <Text style={[railStatics.pendingText, { color: colors.white }]}>Making…</Text>
+                        </View>
+                    ) : (
+                        <View style={[railStatics.pendingPill, { backgroundColor: withAlpha(colors.text, 0.75) }]}>
+                            <Text style={[railStatics.pendingText, { color: colors.background }]}>Not made</Text>
+                        </View>
+                    )
                 ) : null}
             </View>
 
@@ -323,38 +379,28 @@ const SceneCard: React.FC<SceneCardProps> = ({
                 ) : null}
             </View>
 
-            {selected ? (
-                <View style={railStatics.actions}>
-                    <RailAction icon={faArrowLeft} disabled={index === 0 || busy} onPress={onMoveLeft} colors={colors} />
-                    <RailAction
-                        icon={faArrowRight}
-                        disabled={index === total - 1 || busy}
-                        onPress={onMoveRight}
-                        colors={colors}
-                    />
-                    <RailAction icon={faClone} disabled={busy} onPress={onDuplicate} colors={colors} />
-                    <RailAction icon={faScissors} disabled={!splittable || busy} onPress={onSplit} colors={colors} />
-                    <RailAction icon={faTrash} disabled={busy} onPress={onDelete} colors={colors} danger />
-                </View>
-            ) : null}
         </Pressable>
     );
 };
 
 const RailAction: React.FC<{
     icon: IconDefinition;
+    /** Said out loud. An icon-only control is unreadable to a screen reader. */
+    label: string;
     onPress: () => void;
     colors: ReturnType<typeof Colors>;
     disabled?: boolean;
     danger?: boolean;
-}> = ({ icon, onPress, colors, disabled, danger }) => (
+}> = ({ icon, label, onPress, colors, disabled, danger }) => (
     <Pressable
         style={[railStatics.action, { backgroundColor: withAlpha(colors.text, 0.06) }, disabled && railStatics.actionOff]}
         onPress={onPress}
         disabled={disabled}
-        hitSlop={4}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ disabled: !!disabled }}
     >
-        <FontAwesomeIcon icon={icon} size={10} color={danger ? colors.red : colors.text} />
+        <FontAwesomeIcon icon={icon} size={14} color={danger ? colors.red : colors.text} />
     </Pressable>
 );
 
@@ -415,11 +461,12 @@ const railStatics = StyleSheet.create({
     pendingText: { fontSize: fs(9), lineHeight: lh(12), fontWeight: "600" },
     meta: { flexDirection: "row", justifyContent: "space-between", gap: 4 },
     position: { fontSize: fs(10), lineHeight: lh(14) },
-    actions: { flexDirection: "row", gap: 3, justifyContent: "center" },
     action: {
-        width: fbox(20),
-        height: fbox(20),
-        borderRadius: 6,
+        // 44 square: the minimum anyone should have to hit, and three times
+        // the area of the 20px buttons this replaces.
+        width: fbox(44),
+        height: fbox(44),
+        borderRadius: 10,
         alignItems: "center",
         justifyContent: "center",
     },
@@ -451,6 +498,22 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
                     elevation: 4,
                 },
                 strip: { paddingHorizontal: 12, alignItems: "center", gap: 0 },
+                toolbar: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 10,
+                    paddingHorizontal: 12,
+                    paddingBottom: 6,
+                },
+                toolbarLabel: {
+                    flexShrink: 1,
+                    color: colors.textSecondary,
+                    fontSize: fs(11),
+                    lineHeight: lh(15),
+                    fontWeight: "600",
+                },
+                toolbarActions: { flexDirection: "row", alignItems: "center", gap: 4 },
                 addCard: {
                     marginLeft: 4,
                     paddingHorizontal: 14,
