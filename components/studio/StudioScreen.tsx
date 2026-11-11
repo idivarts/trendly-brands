@@ -51,7 +51,14 @@ import {
 import Colors from "@/shared-uis/constants/Colors";
 import useBreakpoints from "@/shared-libs/utils/use-breakpoints";
 import { withAlpha } from "@/utils/color";
-import { faChevronLeft, faSliders } from "@fortawesome/free-solid-svg-icons";
+import {
+    faChevronDown,
+    faChevronLeft,
+    faChevronUp,
+    faCompress,
+    faExpand,
+    faSliders,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
@@ -60,6 +67,7 @@ import {
     ActivityIndicator,
     Modal,
     Pressable,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -68,6 +76,9 @@ import {
 
 /** How often the playhead advances while playing. */
 const TICK_MS = 100;
+
+/** Breathing room around the canvas, and what a fit measurement subtracts. */
+const STAGE_PAD = 16;
 
 /**
  * The studio queue worker's own ceiling (900s), which is the longest a scene
@@ -128,6 +139,27 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
     const [generateOpen, setGenerateOpen] = useState(false);
     const [directorOpen, setDirectorOpen] = useState(false);
     const [castOpen, setCastOpen] = useState(false);
+    /**
+     * Fit the whole frame in the space there is, or draw it at full size and
+     * let the stage scroll.
+     *
+     * Fit is the default because the complaint it answers is that a portrait
+     * canvas ran off the bottom of the screen: 420 wide at 9:16 is 747 tall,
+     * which does not fit under a header and over a rail on most laptops, and
+     * what fell off the bottom was the half of the frame nobody had seen.
+     */
+    const [fitStage, setFitStage] = useState(true);
+    /** The rail folds away when the canvas needs the room more than it does. */
+    const [railOpen, setRailOpen] = useState(true);
+    /**
+     * The stage viewport, measured rather than computed.
+     *
+     * Everything above and below it — the header, an error line, the stranded
+     * banner, the transport, the rail, and whether the rail is open — changes
+     * how much height is left. Adding those up here would be a second layout
+     * engine that disagrees with the first one the moment anything moves.
+     */
+    const [stageBox, setStageBox] = useState({ width: 0, height: 0 });
     const [castError, setCastError] = useState<string | null>(null);
     /** Set while the media picker is choosing an anchor for a cast member. */
     const [anchorFor, setAnchorFor] = useState<string | null>(null);
@@ -524,7 +556,21 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
         );
     }
 
-    const stageWidth = xl ? 420 : 320;
+    /**
+     * How wide to draw the canvas.
+     *
+     * Zoomed is the old fixed width, and the stage scrolls under it. Fit takes
+     * the smaller of the two constraints, so a portrait canvas is bounded by
+     * the height and a landscape one by the width. Before the first layout
+     * there is nothing to fit to, so it falls back to the fixed width rather
+     * than flashing a 1px stage.
+     */
+    const zoomWidth = xl ? 420 : 320;
+    const canvasRatio = studio.width > 0 ? studio.height / studio.width : 16 / 9;
+    const stageWidth =
+        fitStage && stageBox.height > 0
+            ? Math.max(160, Math.floor(Math.min(stageBox.width, stageBox.height / canvasRatio)))
+            : zoomWidth;
 
     return (
         <View style={styles.root}>
@@ -554,7 +600,21 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
 
             <View style={xl ? styles.bodyWide : styles.body}>
                 <View style={styles.stageColumn}>
-                    <View style={styles.stageCenter}>
+                    <ScrollView
+                        style={styles.stageViewport}
+                        contentContainerStyle={styles.stageCenter}
+                        // Only needed when the frame is bigger than the space;
+                        // fitting it makes the content exactly fit, so this
+                        // costs nothing in that mode.
+                        showsVerticalScrollIndicator={!fitStage}
+                        onLayout={(e) => {
+                            const { width, height } = e.nativeEvent.layout;
+                            setStageBox({
+                                width: Math.max(0, width - STAGE_PAD * 2),
+                                height: Math.max(0, height - STAGE_PAD * 2),
+                            });
+                        }}
+                    >
                         <StudioStage
                             ref={stageRef}
                             scene={shownScene}
@@ -572,7 +632,23 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
                             onTapText={handleTapText}
                             onLayerHtml={handleLayerHtml}
                         />
-                    </View>
+                    </ScrollView>
+
+                    <Pressable
+                        style={styles.fitToggle}
+                        onPress={() => setFitStage((f) => !f)}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                            fitStage ? "Show the frame at full size" : "Fit the whole frame on screen"
+                        }
+                    >
+                        <FontAwesomeIcon
+                            icon={fitStage ? faExpand : faCompress}
+                            size={12}
+                            color={colors.text}
+                        />
+                    </Pressable>
 
                     <StudioTransport
                         studio={studio}
@@ -674,21 +750,44 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
                 </View>
             ) : null}
 
-            <SceneRail
-                studio={studio}
-                scenes={scenes}
-                media={media}
-                selectedSceneId={selectedSceneId}
-                busy={saving}
-                onSelect={handleSelect}
-                onAdd={() => void studioState.addScene()}
-                onInsertAt={(index) => void studioState.insertSceneAt(index)}
-                onDelete={(id) => void studioState.deleteScene(id)}
-                onDuplicate={(id) => void studioState.duplicateScene(id)}
-                onSplit={handleSplit}
-                onMove={(id, to) => void studioState.moveScene(id, to)}
-                onAskAI={() => setDirectorOpen(true)}
-            />
+            <Pressable
+                style={styles.railToggle}
+                onPress={() => setRailOpen((r) => !r)}
+                accessibilityRole="button"
+                accessibilityLabel={railOpen ? "Hide the scenes" : "Show the scenes"}
+            >
+                <FontAwesomeIcon
+                    icon={railOpen ? faChevronDown : faChevronUp}
+                    size={11}
+                    color={colors.textSecondary}
+                />
+                {/* Named rather than a bare chevron: folded away, the rail
+                    leaves no trace of itself, and a lone arrow at the foot of
+                    the screen does not say what it would bring back. */}
+                <Text style={styles.railToggleText}>
+                    {railOpen
+                        ? "Hide scenes"
+                        : `${scenes.length} ${scenes.length === 1 ? "scene" : "scenes"}`}
+                </Text>
+            </Pressable>
+
+            {railOpen ? (
+                <SceneRail
+                    studio={studio}
+                    scenes={scenes}
+                    media={media}
+                    selectedSceneId={selectedSceneId}
+                    busy={saving}
+                    onSelect={handleSelect}
+                    onAdd={() => void studioState.addScene()}
+                    onInsertAt={(index) => void studioState.insertSceneAt(index)}
+                    onDelete={(id) => void studioState.deleteScene(id)}
+                    onDuplicate={(id) => void studioState.duplicateScene(id)}
+                    onSplit={handleSplit}
+                    onMove={(id, to) => void studioState.moveScene(id, to)}
+                    onAskAI={() => setDirectorOpen(true)}
+                />
+            ) : null}
 
             <DirectorSheet
                 visible={directorOpen}
@@ -980,10 +1079,53 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
                     fontWeight: "700",
                 },
                 headerMeta: { color: colors.textSecondary, fontSize: fs(11), lineHeight: lh(15) },
-                body: { flex: 1 },
-                bodyWide: { flex: 1, flexDirection: "row" },
-                stageColumn: { flex: 1 },
-                stageCenter: { flex: 1, alignItems: "center", justifyContent: "center", padding: 16 },
+                // ⚠️ `minHeight: 0` on all three, and it is load-bearing. A
+                // flex child's default minimum is its CONTENT, so a 747px-tall
+                // portrait canvas stretched the column past the viewport and
+                // pushed the rail off the bottom of the screen — which is the
+                // bug the fit toggle answers. Without this, measuring the
+                // viewport and fitting to it would also oscillate: shrink the
+                // frame, the parent shrinks, the frame grows again.
+                body: { flex: 1, minHeight: 0 },
+                bodyWide: { flex: 1, flexDirection: "row", minHeight: 0 },
+                stageColumn: { flex: 1, minHeight: 0 },
+                stageViewport: { flex: 1, minHeight: 0 },
+                stageCenter: {
+                    flexGrow: 1,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: STAGE_PAD,
+                },
+                fitToggle: {
+                    position: "absolute",
+                    top: 12,
+                    right: 12,
+                    width: fbox(28),
+                    height: fbox(28),
+                    borderRadius: 14,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: colors.card,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.12,
+                    elevation: 3,
+                },
+                railToggle: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    paddingVertical: 6,
+                    backgroundColor: colors.background,
+                },
+                railToggleText: {
+                    color: colors.textSecondary,
+                    fontSize: fs(11),
+                    lineHeight: lh(15),
+                    fontWeight: "600",
+                },
                 inspectorPanel: {
                     width: 320,
                     backgroundColor: colors.background,
