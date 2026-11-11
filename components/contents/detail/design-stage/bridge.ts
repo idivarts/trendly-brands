@@ -70,6 +70,13 @@ const SHARED_RUNTIME = Object.keys(RUNTIME_FNS)
     .map((name) => `var ${name} = ${RUNTIME_FNS[name].toString()};`)
     .join("\n");
 
+/**
+ * ⚠️ EVERYTHING BELOW IS A STRING, COMMENTS INCLUDED. TypeScript checks none
+ * of it. A backtick inside it ends the literal and a `$`+`{` becomes an
+ * interpolation — the first of those has already happened, in a comment, and
+ * the compiler reported it two hundred lines away as "',' expected".
+ * `__tests__/bridge.test.ts` compiles this script for exactly that reason.
+ */
 export const BRIDGE_SCRIPT = `
 (function(){
 ${SHARED_RUNTIME}
@@ -287,15 +294,50 @@ ${SHARED_RUNTIME}
       send({type:'deselect'});
     }
   });
+  // ── Opening paused ───────────────────────────────────────────────────────
+  // A design's CSS animations run from the moment the document loads. So an
+  // animated scene used to play itself through, once, the instant it was
+  // opened — nobody asked it to, and the transport's Play button could then
+  // only replay something the viewer had already missed.
+  //
+  // Pinning happens HERE rather than on a message from RN because this script
+  // runs at the end of parse, before the first paint: there is nothing to
+  // correct, so there is no flash of animation to correct it. A round trip
+  // through postMessage would be a few frames late every time.
+  //
+  // Opt-in, because holding is only right where something can start it again.
+  // A still design has no transport, and one whose type flies in from
+  // opacity:0 would hold on an empty frame for good.
+  if (window.__frameHold){
+    try { seek(0); } catch(e){}
+    // Again on the first frame, with the measurement dropped: an animation
+    // the browser has not resolved style for yet is not in getAnimations()
+    // at end-of-parse, and offsetWidth read before layout can be 0. Skipped
+    // if playback has already started, so it cannot stomp a play().
+    requestAnimationFrame(function(){
+      if (vRaf || vStartWall) return;
+      vMeasure = null;
+      try { seek(vBaseMs); } catch(e){}
+    });
+  }
+
   send({type:'ready'});
 })();
 `;
 
-/** Inject the bridge <script> just before </body> (or append). */
-export function injectBridge(html: string): string {
+/**
+ * Inject the bridge <script> just before </body> (or append).
+ *
+ * `holdAtStart` is read by the script as `window.__frameHold`, set in the same
+ * tag so it is defined before the IIFE runs. It must travel in the DOCUMENT
+ * rather than arrive as a message — see the note at the foot of the script.
+ */
+export function injectBridge(html: string, holdAtStart = false): string {
     // Tagged so the frame can take it back out again before handing the
     // document to anyone. See `serialize` in the bridge script.
-    const tag = `<script data-frame-bridge>${BRIDGE_SCRIPT}</script>`;
+    const tag =
+        `<script data-frame-bridge>window.__frameHold=${holdAtStart ? "true" : "false"};` +
+        `${BRIDGE_SCRIPT}</script>`;
     const i = html.toLowerCase().lastIndexOf("</body>");
     if (i === -1) return html + tag;
     return html.slice(0, i) + tag + html.slice(i);
@@ -334,8 +376,14 @@ export function injectChrome(html: string, scale: number, slideW: number, slideH
 }
 
 /** Build the final frame document: chromed + bridged. */
-export function buildFrameHtml(html: string, scale: number, slideW: number, slideH: number): string {
-    return injectBridge(injectChrome(html, scale, slideW, slideH));
+export function buildFrameHtml(
+    html: string,
+    scale: number,
+    slideW: number,
+    slideH: number,
+    holdAtStart = false
+): string {
+    return injectBridge(injectChrome(html, scale, slideW, slideH), holdAtStart);
 }
 
 export type FrameOutMsg =
@@ -366,5 +414,14 @@ export interface DesignFrameProps {
     height: number;
     /** Display width in px; the frame scales the design to fit. */
     displayWidth: number;
+    /**
+     * Open on the first frame, paused, instead of letting the design's own CSS
+     * animations run on load.
+     *
+     * For a frame a transport drives. Leave it off where nothing can press
+     * play: a design that animates in from nothing would hold on an empty
+     * frame and look broken.
+     */
+    holdAtStart?: boolean;
     onMessage: (msg: FrameOutMsg) => void;
 }
