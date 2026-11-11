@@ -82,3 +82,69 @@ jobs:
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+    # ── Stop the app shell being cached across a deploy ──────────────────────
+    #
+    # Nothing was setting Cache-Control on anything: `aws s3api head-object` on
+    # index.html and on the entry bundle both returned `CacheControl: null`.
+    # With no Cache-Control a browser falls back to HEURISTIC caching, holding
+    # the HTML for roughly a tenth of its age — hours, a day after a deploy.
+    #
+    # That is fatal here specifically because this is a single-page app whose
+    # script is CONTENT-HASHED. Every deploy emits a new `entry-<hash>.js` and
+    # deletes the old one, so a browser still holding yesterday's shell asks
+    # for a bundle that no longer exists, gets a 404, and renders NOTHING: a
+    # white page, an empty <div id="root">, no console error worth the name and
+    # no Sentry event, because a 404 on a <script> is a silent network failure.
+    # It is per-URL, because the cache entry is — which is why it presents as
+    # "one page is blank and the rest are fine" rather than as an outage.
+    #
+    # Caught on dev on 12 Nov: one Design Studio URL was blank on every cold
+    # load while two others were fine, and the same URL rendered perfectly with
+    # a cache-busting query string.
+    #
+    # Only index.html is touched, and deliberately:
+    #   • It is the ONLY html object — Lift's single-page-app rewrites every
+    #     404 to it, which is why /design-studio/<id> serves the same 1,233
+    #     bytes as /. One object, so no recursive copy and no chance of
+    #     flattening every asset's Content-Type, which a `cp --recursive
+    #     --metadata-directive REPLACE` would do.
+    #   • The hashed assets under /_expo are safe to cache heuristically: their
+    #     names change when their contents do, so a stale one is never asked
+    #     for once the shell revalidates. Marking them `immutable` is a real
+    #     improvement but needs a per-file Content-Type pass; it is not
+    #     smuggled in here.
+    #
+    # The invalidation is for the EDGE, so CloudFront serves the new metadata
+    # at once. It cannot reach a browser cache: anyone already holding a stale
+    # shell stays broken until their heuristic TTL lapses or they hard-reload.
+    # This stops the next deploy doing it again, it does not undo the last one.
+    - name: Make the app shell revalidate
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_DEFAULT_REGION: us-east-1
+      run: |
+        set -euo pipefail
+        STACK="trendly-brands-${STAGE}"
+        outputs() {
+          aws cloudformation describe-stacks --stack-name "$STACK" \
+            --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" --output text
+        }
+        BUCKET=$(outputs trendlyBrandsBucketName01B9621F)
+        DIST=$(outputs trendlyBrandsDistributionIdF8511D14)
+        if [ -z "$BUCKET" ] || [ "$BUCKET" = "None" ]; then
+          echo "::error::could not resolve the site bucket from $STACK — the Lift output key may have changed"
+          exit 1
+        fi
+        echo "shell: s3://$BUCKET/index.html  ·  distribution: $DIST"
+        aws s3 cp "s3://$BUCKET/index.html" "s3://$BUCKET/index.html" \
+          --metadata-directive REPLACE \
+          --content-type "text/html" \
+          --cache-control "no-cache"
+        if [ -n "$DIST" ] && [ "$DIST" != "None" ]; then
+          aws cloudfront create-invalidation --distribution-id "$DIST" \
+            --paths "/" "/index.html" >/dev/null
+        fi
+        aws s3api head-object --bucket "$BUCKET" --key index.html \
+          --query "{CacheControl:CacheControl,ContentType:ContentType}" --output json
