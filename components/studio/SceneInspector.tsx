@@ -188,7 +188,9 @@ const SceneInspector: React.FC<SceneInspectorProps> = ({
     const splittable = !scene || (scene.primaryKind !== "motion" && scene.primaryKind !== "composite");
     const spoken = narrationMs(line);
     const effective = scene ? effectiveSceneMs(scene) : 0;
-    const overruns = spoken > 0 && !fit && spoken > effective * 1.15;
+    // `!!scene` matters: with no selection `effective` is 0, and without the
+    // guard any drafted line would "overrun" a scene that does not exist.
+    const overruns = !!scene && spoken > 0 && !fit && spoken > effective * 1.15;
 
     const canRegenerate =
         !!onRegenerate &&
@@ -523,7 +525,13 @@ const SceneInspector: React.FC<SceneInspectorProps> = ({
                                 Every line has to say where it came from. An invented example is
                                 fine — it just gets marked as one.
                             </Text>
+                        </Section>
 
+                        {/* Outside both sections, because it commits all three
+                            things — the line, the provenance and the fit. Inside
+                            "Where it came from" it read as saving only that, and
+                            the fit toggle is two sections up. */}
+                        <View style={styles.saveRow}>
                             <Pressable
                                 style={styles.primaryBtn}
                                 onPress={() => onSetNarration(line, source, fit)}
@@ -531,7 +539,11 @@ const SceneInspector: React.FC<SceneInspectorProps> = ({
                             >
                                 <Text style={styles.primaryBtnText}>Save narration</Text>
                             </Pressable>
-                        </Section>
+                            <Text style={styles.note}>
+                                Saves the line, where it came from, and whether the scene
+                                stretches to fit it.
+                            </Text>
+                        </View>
 
                         {/* Saved narration is what gets spoken, not the draft above —
                             generating from an unsaved line would record something the
@@ -662,6 +674,7 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
                 dotAlert: { backgroundColor: colors.red },
                 dotOnActive: { backgroundColor: colors.white },
                 scroll: { flex: 1, minHeight: 0 },
+                saveRow: { gap: 8 },
                 body: { padding: 16, gap: 22 },
                 empty: {
                     padding: 20,
