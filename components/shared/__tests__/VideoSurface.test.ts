@@ -8,6 +8,11 @@
  * `<Video style={fill} />` looks wrong, and it was wrong in four places.
  *
  * `VideoSurface` always sets `videoStyle`. This keeps it the only way in.
+ *
+ * ⚠️ If this fired on you: you probably wanted expo-av's `Video` only to NAME
+ * A TYPE, for a ref. Import `VideoSurfaceHandle` from `VideoSurface` instead —
+ * same type, and this file stays the only one reaching into expo-av. That is
+ * exactly how it fired the first time, in `StudioStage`.
  */
 import { readFileSync, readdirSync, statSync } from "fs";
 import { join, relative } from "path";
