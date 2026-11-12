@@ -98,6 +98,21 @@ describe("tabFlag", () => {
         expect(tabFlag("scene", scene({ layers: [], primaryKind: "empty" }))).toBe("alert");
     });
 
+    it("also alerts on Create for an empty scene", () => {
+        // The way forward for an empty scene lives in Create (pick a lane, give
+        // a prompt). Marking only Scene would point at the tab whose sole offer
+        // is picking a file by hand.
+        expect(tabFlag("create", scene({ layers: [], primaryKind: "empty" }))).toBe("alert");
+    });
+
+    it("prefers the failure over the emptiness on Create", () => {
+        // Both are true after a generation that failed before writing a layer.
+        // "alert" either way, but via the branch that has an error to show.
+        expect(
+            tabFlag("create", scene({ layers: [], primaryKind: "empty", gen: { status: "failed" } as any }))
+        ).toBe("alert");
+    });
+
     it("does NOT alert on an empty scene a worker is on", () => {
         // Still empty, but not the user's problem yet.
         expect(

@@ -110,6 +110,10 @@ export function tabFlag(tab: InspectorTab, scene: IStudioScene | null): TabFlag 
             // sections down a scroll.
             if (scene.gen?.status === "failed") return "alert";
             if (beingMade(scene)) return "quiet";
+            // An empty scene's way forward lives in this tab, so the dot that
+            // marks it belongs here too — not only on Scene, where the only
+            // offer is picking a file by hand.
+            if ((scene.layers?.length ?? 0) === 0) return "alert";
             return "none";
 
         case "narration":

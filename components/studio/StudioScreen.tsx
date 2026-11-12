@@ -699,9 +699,9 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
                                 selectedScene && studioState.duplicateScene(selectedScene.id)
                             }
                             onVoiceoverReady={handleVoiceoverReady}
-                            onRegenerate={(brief) =>
+                            onRegenerate={(brief, approach) =>
                                 selectedScene &&
-                                void generate.regenerate(selectedScene.id, { brief })
+                                void generate.regenerate(selectedScene.id, { brief, approach })
                             }
                             regenerating={generate.running}
                             previousScene={previousScene}
