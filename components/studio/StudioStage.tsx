@@ -49,9 +49,12 @@ import { IAsset } from "@/shared-libs/firestore/trendly-pro/models/asset";
 import { slotRect } from "@/shared-libs/design/studio-runtime";
 import Colors from "@/shared-uis/constants/Colors";
 import { withAlpha } from "@/utils/color";
-import VideoSurface from "@/components/shared/VideoSurface";
+import VideoSurface, { VideoSurfaceHandle } from "@/components/shared/VideoSurface";
 import DesignFrame from "@/components/contents/detail/design-stage/DesignFrame";
-import { ResizeMode, Video } from "expo-av";
+// `Video` itself is NOT imported here on purpose — `VideoSurface` is the only
+// file allowed to reach into expo-av for it, and the ref's type comes from
+// there. `__tests__/VideoSurface.test.ts` enforces that.
+import { ResizeMode } from "expo-av";
 import { faFilm, faImage, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { DesignFrameHandle } from "@/components/contents/detail/design-stage/bridge";
@@ -272,7 +275,7 @@ const LayerView: React.FC<LayerViewProps> = ({
      * honours it (`inMs` in `studioToComposition`).
      */
     const clipMs = Math.max(0, (layer.trimInMs ?? 0) + positionMs);
-    const video = useRef<Video | null>(null);
+    const video = useRef<VideoSurfaceHandle | null>(null);
     const clipMsRef = useRef(clipMs);
     clipMsRef.current = clipMs;
     const playingRef = useRef(playing);

@@ -27,6 +27,18 @@ import { StyleSheet } from "react-native";
 
 type VideoProps = React.ComponentProps<typeof Video>;
 
+/**
+ * What a `ref` on a VideoSurface gives you — `setStatusAsync`, `playAsync` and
+ * the rest of expo-av's imperative handle.
+ *
+ * Exported because a call site that needs the handle would otherwise have to
+ * `import { Video } from "expo-av"` purely to name its type, which defeats the
+ * guard in `__tests__/VideoSurface.test.ts` for no benefit: the type is not the
+ * dangerous part, the element is. Take the type from here and the only file
+ * reaching into expo-av stays this one.
+ */
+export type VideoSurfaceHandle = Video;
+
 const VideoSurface = React.forwardRef<Video, VideoProps>(({ videoStyle, ...props }, ref) => (
     <Video ref={ref} {...props} videoStyle={[styles.fill, videoStyle]} />
 ));
