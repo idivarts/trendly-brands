@@ -48,6 +48,14 @@ import {
     tabAvailable,
     tabFlag,
 } from "@/components/studio/inspector-tabs";
+import {
+    SceneLane,
+    isEmptyScene,
+    laneDef,
+    resolveLane,
+    sceneLanes,
+} from "@/components/studio/scene-types";
+import type { GenerateApproach } from "@/hooks/use-studio-generate";
 import { previewFidelity, slotLabel } from "@/shared-libs/design/studio-runtime";
 import { IAsset } from "@/shared-libs/firestore/trendly-pro/models/asset";
 import Colors from "@/shared-uis/constants/Colors";
@@ -109,8 +117,12 @@ export interface SceneInspectorProps {
      * The thing the old studio could not do at all: a scene was a node inside
      * one HTML document, so "regenerate scene 4" meant regenerating every
      * scene and losing the three the user was happy with.
+     *
+     * `approach` is what makes an EMPTY scene designable: the endpoint has
+     * always taken `"motion"` or `"composite"`, and the panel never passed it,
+     * so every design silently went down the motion path.
      */
-    onRegenerate?: (brief?: string) => void;
+    onRegenerate?: (brief?: string, approach?: GenerateApproach) => void;
     regenerating?: boolean;
     /** The scene before this one, for chaining. */
     previousScene?: IStudioScene | null;
@@ -156,6 +168,11 @@ const SceneInspector: React.FC<SceneInspectorProps> = ({
     // The tab the user last chose, which is NOT necessarily the one rendered —
     // see `resolveTab`. Kept across selection changes on purpose.
     const [wantedTab, setWantedTab] = useState<InspectorTab>("scene");
+    // The lane the user picked, or null for "whatever this scene already is".
+    // Reset on a selection change, unlike the tab: a lane is a statement about
+    // ONE scene, and carrying scene 3's choice onto scene 4 would offer to
+    // overwrite scene 4 the way scene 3 was made.
+    const [laneChoice, setLaneChoice] = useState<SceneLane | null>(null);
 
     // Reset the draft when the selection moves, or editing scene 2 silently
     // carries scene 1's line into it.
@@ -168,6 +185,7 @@ const SceneInspector: React.FC<SceneInspectorProps> = ({
         setSource(scene?.narration?.source ?? "paraphrase");
         setFit(scene?.narration?.fitToNarration ?? true);
         setRegenBrief(scene?.gen?.prompt ?? "");
+        setLaneChoice(null);
     }, [sceneId, scene]);
 
     const tab = resolveTab(wantedTab, scene);
@@ -192,11 +210,19 @@ const SceneInspector: React.FC<SceneInspectorProps> = ({
     // guard any drafted line would "overrun" a scene that does not exist.
     const overruns = !!scene && spoken > 0 && !fit && spoken > effective * 1.15;
 
-    const canRegenerate =
-        !!onRegenerate &&
-        !!scene &&
-        (scene.primaryKind === "motion" || scene.primaryKind === "composite" || !!scene.gen);
     const canVideo = !!video && !!onOpenCast && timed;
+    // The lanes, and the one on show. `canRegenerate` used to gate the design
+    // controls on the scene ALREADY being a design, which is precisely why an
+    // empty scene had no way to become one.
+    const empty = isEmptyScene(scene);
+    // Only the design lanes carry an `approach`, so this drops exactly those
+    // when the screen did not wire up a regenerate handler.
+    const lanes = sceneLanes({ canFootage: canVideo }).filter((l) => !l.approach || !!onRegenerate);
+    const lane = resolveLane(laneChoice, scene, lanes);
+    // A regenerate with no brief re-runs the prompt stored on the scene. An
+    // empty scene has none, so the same press would buy a generation from a
+    // model with nothing to go on.
+    const briefRequired = empty && !regenBrief.trim() && !scene?.gen?.prompt;
 
     return (
         <View style={styles.wrap}>
@@ -390,10 +416,118 @@ const SceneInspector: React.FC<SceneInspectorProps> = ({
 
                 {scene && tab === "create" ? (
                     <>
+                        <Section
+                            title={empty ? "What should this scene be?" : "How this scene is made"}
+                            colors={colors}
+                        >
+                            {empty ? (
+                                // The sentence an empty scene never had. There was
+                                // no path at all from "nothing" to "designed" — the
+                                // regenerate controls were gated on the scene
+                                // already being a design.
+                                <Text style={styles.note}>
+                                    This scene is empty. Pick how to make it, then say what
+                                    should be on it.
+                                </Text>
+                            ) : null}
+                            {lanes.map((l) => {
+                                const on = l.key === lane;
+                                return (
+                                    <Pressable
+                                        key={l.key}
+                                        style={[styles.sourceRow, on && styles.sourceRowOn]}
+                                        onPress={() => setLaneChoice(l.key)}
+                                        disabled={busy}
+                                        accessibilityRole="radio"
+                                        accessibilityState={{ selected: on }}
+                                    >
+                                        <Text style={[styles.sourceLabel, on && styles.chipTextOn]}>
+                                            {l.label}
+                                        </Text>
+                                        <Text style={styles.sourceHint}>{l.blurb}</Text>
+                                    </Pressable>
+                                );
+                            })}
+                            {/* The lanes overwrite each other, which is not obvious
+                                when they are four rows in a list. Said once, here,
+                                rather than discovered by losing a design. */}
+                            {!empty ? (
+                                <Text style={styles.note}>
+                                    Making it a different way replaces what is in it now.
+                                </Text>
+                            ) : null}
+                        </Section>
+
+                        {/* ── the chosen lane's own controls ───────────────────── */}
+
+                        {lane === "motion" || lane === "composite" ? (
+                            <Section
+                                title={empty ? "What should be on it" : "Design it again"}
+                                colors={colors}
+                            >
+                                <TextInput
+                                    style={styles.input}
+                                    value={regenBrief}
+                                    onChangeText={setRegenBrief}
+                                    placeholder={
+                                        lane === "composite"
+                                            ? "What the frame should say and show"
+                                            : "What should happen in this scene?"
+                                    }
+                                    placeholderTextColor={colors.textSecondary}
+                                    multiline
+                                />
+                                {scene.gen?.status === "failed" ? (
+                                    <Text style={styles.warn}>
+                                        {scene.gen.error || "The last attempt didn't come back."}
+                                    </Text>
+                                ) : null}
+                                <Pressable
+                                    style={[
+                                        styles.primaryBtn,
+                                        (busy || regenerating || briefRequired) && styles.btnOff,
+                                    ]}
+                                    onPress={() =>
+                                        onRegenerate?.(
+                                            regenBrief.trim() || undefined,
+                                            laneDef(lane)?.approach
+                                        )
+                                    }
+                                    disabled={busy || regenerating || briefRequired}
+                                >
+                                    <Text style={styles.primaryBtnText}>
+                                        {regenerating
+                                            ? "Designing…"
+                                            : empty
+                                              ? "Design this scene"
+                                              : "Design it again"}
+                                    </Text>
+                                </Pressable>
+                                {briefRequired ? (
+                                    // On a scene that already has a design, an empty
+                                    // brief re-runs the prompt stored on it. An empty
+                                    // scene has no stored prompt, so the same button
+                                    // would spend tokens on a model with nothing to
+                                    // go on.
+                                    <Text style={styles.note}>
+                                        Say what should be on it first — there is no earlier
+                                        prompt on this scene to fall back to.
+                                    </Text>
+                                ) : null}
+                                {/* Said plainly, because the alternative in the old studio
+                                    was regenerating everything and losing the scenes the
+                                    user was happy with. */}
+                                <Text style={styles.note}>
+                                    Only this scene changes. The rest of the timeline is left
+                                    alone.
+                                </Text>
+                            </Section>
+                        ) : null}
+
                         {/* "AI footage", not "AI video" — the Video TAB is the whole
                             document, and two things called video in one panel is how
                             the confusion started. */}
-                        {canVideo ? (
+                        {lane === "footage" && canVideo ? (
                             <Section title="AI footage" colors={colors}>
                                 <SceneVideoPanel
                                     studio={studio}
@@ -406,55 +540,27 @@ const SceneInspector: React.FC<SceneInspectorProps> = ({
                             </Section>
                         ) : null}
 
-                        {canRegenerate ? (
-                            <Section title="Design it again" colors={colors}>
-                                <TextInput
-                                    style={styles.input}
-                                    value={regenBrief}
-                                    onChangeText={setRegenBrief}
-                                    placeholder="What should be on this scene?"
-                                    placeholderTextColor={colors.textSecondary}
-                                    multiline
-                                />
-                                {scene.gen?.status === "failed" ? (
-                                    <Text style={styles.warn}>
-                                        {scene.gen.error || "The last attempt didn't come back."}
-                                    </Text>
-                                ) : null}
+                        {lane === "own" ? (
+                            <Section title="Your own media" colors={colors}>
                                 <Pressable
-                                    style={[
-                                        styles.primaryBtn,
-                                        (busy || regenerating) && styles.btnOff,
-                                    ]}
-                                    onPress={() =>
-                                        onRegenerate?.(regenBrief.trim() || undefined)
-                                    }
-                                    disabled={busy || regenerating}
+                                    style={styles.primaryBtn}
+                                    onPress={onPickMedia}
+                                    disabled={busy}
                                 >
                                     <Text style={styles.primaryBtnText}>
-                                        {regenerating ? "Designing…" : "Regenerate this scene"}
+                                        {layers.length ? "Replace what's in it" : "Pick something"}
                                     </Text>
                                 </Pressable>
-                                {/* Said plainly, because the alternative in the old studio
-                                    was regenerating everything and losing the scenes the
-                                    user was happy with. */}
-                                <Text style={styles.note}>
-                                    Only this scene changes. The rest of the timeline is left
-                                    alone.
-                                </Text>
                             </Section>
                         ) : null}
 
-                        {!canVideo && !canRegenerate ? (
-                            // An empty tab reads as a broken tab, so it says what
-                            // it cannot do and where the equivalent lives.
-                            <Section title="Nothing to make here" colors={colors}>
-                                <Text style={styles.note}>
-                                    This scene holds media you chose yourself, so there is no
-                                    generation to run again. Swap what is in it from the Scene
-                                    tab.
-                                </Text>
-                            </Section>
+                        {lane === null ? (
+                            // An empty scene opens with nothing chosen on purpose:
+                            // guessing would put a prompt box in front of someone
+                            // who has not said they want a design.
+                            <Text style={styles.note}>
+                                Nothing chosen yet — pick one above.
+                            </Text>
                         ) : null}
                     </>
                 ) : null}
@@ -651,12 +757,11 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
                 },
                 tab: {
                     flex: 1,
-                    flexDirection: "row",
+                    position: "relative",
                     alignItems: "center",
                     justifyContent: "center",
-                    gap: 2,
                     paddingVertical: 7,
-                    paddingHorizontal: 6,
+                    paddingHorizontal: 5,
                     borderRadius: 9,
                     backgroundColor: colors.tag,
                 },
@@ -669,7 +774,11 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
                     color: colors.textSecondary,
                 },
                 tabTextOn: { color: colors.white },
-                dot: { width: 6, height: 6, borderRadius: 3, marginLeft: 3 },
+                // Out of flow, in the corner. In flow it competed with the
+                // label for the ~60px a quarter of a 320px panel gives you,
+                // and "Narration" came out as "Narrati…" on dev the moment
+                // the scene had a line in it.
+                dot: { position: "absolute", top: 4, right: 4, width: 6, height: 6, borderRadius: 3 },
                 dotQuiet: { backgroundColor: colors.textSecondary },
                 dotAlert: { backgroundColor: colors.red },
                 dotOnActive: { backgroundColor: colors.white },
