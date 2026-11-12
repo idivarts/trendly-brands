@@ -33,6 +33,7 @@ import { useTheme } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import {
     ActivityIndicator,
+    Image,
     Modal,
     Pressable,
     ScrollView,
@@ -41,6 +42,16 @@ import {
     TextInput,
     View,
 } from "react-native";
+import {
+    BriefAttachment,
+    MAX_ATTACHMENTS,
+    insertHandle,
+    matchHandles,
+    mentionQuery,
+    nextHandle,
+    unresolvedHandles,
+} from "@/components/studio/brief-attachments";
+import { UseStudioUploadResult } from "@/hooks/use-studio-upload";
 
 const MODES: { value: DirectorMode; label: string; hint: string }[] = [
     {
@@ -79,6 +90,14 @@ export interface DirectorSheetProps {
      * director run would mean paying a planner to arrive at it.
      */
     onUseSimpleFlow?: () => void;
+    /**
+     * The studio's uploader, so a brief can carry files.
+     *
+     * Passed in rather than hooked here for the same reason `director` is: the
+     * screen already owns one, and a second would have its own `uploading`
+     * flag that nothing else could see.
+     */
+    upload?: UseStudioUploadResult;
 }
 
 const DirectorSheet: React.FC<DirectorSheetProps> = ({
@@ -87,6 +106,7 @@ const DirectorSheet: React.FC<DirectorSheetProps> = ({
     onClose,
     onApproved,
     onUseSimpleFlow,
+    upload,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -96,6 +116,51 @@ const DirectorSheet: React.FC<DirectorSheetProps> = ({
     const [brief, setBrief] = useState("");
     const [mode, setMode] = useState<DirectorMode>("balanced");
     const [seconds, setSeconds] = useState(30);
+
+    // ── Attachments ──
+    const [attachments, setAttachments] = useState<BriefAttachment[]>([]);
+    // The caret, tracked only so `@` can tell where it is being typed. A
+    // TextInput does not otherwise tell you.
+    const [caret, setCaret] = useState(0);
+    // A one-shot forced selection, cleared as soon as it has been applied.
+    // Rewriting `value` to insert a handle does NOT move the real caret —
+    // it lands at the end of the text — so without this, picking a suggestion
+    // mid-sentence throws the user to the bottom of their own brief. Same
+    // pattern as `components/shared/MentionInput.tsx`, which solved this
+    // already.
+    const [pendingSelection, setPendingSelection] = useState<
+        { start: number; end: number } | undefined
+    >(undefined);
+
+    const mention = mentionQuery(brief, caret);
+    const suggestions = mention ? matchHandles(attachments, mention.query) : [];
+    const unresolved = unresolvedHandles(brief, attachments);
+    const full = attachments.length >= MAX_ATTACHMENTS;
+
+    const attach = async () => {
+        if (!upload || full) return;
+        const picked = await upload.pickAndUpload("all");
+        if (!picked) return;
+        setAttachments((prev) => [
+            ...prev,
+            {
+                // Allocated off the existing handles, never off the count —
+                // see `nextHandle`. A handle is never reused.
+                ref: nextHandle(prev),
+                mediaId: picked.mediaId,
+                url: picked.url,
+                kind: picked.kind,
+            },
+        ]);
+    };
+
+    const pickSuggestion = (ref: string) => {
+        if (!mention) return;
+        const next = insertHandle(brief, mention, caret, ref);
+        setBrief(next.text);
+        setCaret(next.caret);
+        setPendingSelection({ start: next.caret, end: next.caret });
+    };
 
     const { plan, planning, approving, blocked, error, refused } = director;
     const warnings = (plan?.problems ?? []).filter((p) => !p.fatal);
@@ -235,11 +300,123 @@ const DirectorSheet: React.FC<DirectorSheetProps> = ({
                             <TextInput
                                 style={styles.input}
                                 value={brief}
-                                onChangeText={setBrief}
+                                onChangeText={(t) => setBrief(t)}
+                                selection={pendingSelection}
+                                onSelectionChange={(e) => {
+                                    setCaret(e.nativeEvent.selection.end);
+                                    // Released as soon as it has landed, or the
+                                    // input is stuck and cannot be clicked into.
+                                    if (pendingSelection) setPendingSelection(undefined);
+                                }}
                                 placeholder="What should this video be? A sentence or two is plenty — it reads your script, your brand and what you already own."
                                 placeholderTextColor={colors.textSecondary}
                                 multiline
                             />
+
+                            {/* The @ list. Directly under the box rather than
+                                floating over the caret: an overlay positioned
+                                against a multiline TextInput's caret is not
+                                something React Native will tell you where to
+                                put, on any of the three platforms. */}
+                            {mention && suggestions.length > 0 ? (
+                                <View style={styles.suggestions}>
+                                    {suggestions.map((a) => (
+                                        <Pressable
+                                            key={a.ref}
+                                            style={styles.suggestion}
+                                            onPress={() => pickSuggestion(a.ref)}
+                                            accessibilityRole="button"
+                                            accessibilityLabel={`Insert @${a.ref}`}
+                                        >
+                                            <Image
+                                                source={{ uri: a.url }}
+                                                style={styles.suggestionThumb}
+                                            />
+                                            <Text style={styles.suggestionText}>@{a.ref}</Text>
+                                        </Pressable>
+                                    ))}
+                                </View>
+                            ) : null}
+
+                            {upload ? (
+                                <View style={styles.attachRow}>
+                                    <Pressable
+                                        style={[
+                                            styles.attachBtn,
+                                            (full || upload.uploading) && styles.off,
+                                        ]}
+                                        onPress={() => void attach()}
+                                        disabled={full || upload.uploading}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Attach a file to this brief"
+                                    >
+                                        <Text style={styles.attachBtnText}>
+                                            {upload.uploading ? "Uploading…" : "Attach"}
+                                        </Text>
+                                    </Pressable>
+                                    {attachments.map((a) => (
+                                        <View key={a.ref} style={styles.chip2}>
+                                            <Image
+                                                source={{ uri: a.url }}
+                                                style={styles.chipThumb}
+                                            />
+                                            <Text style={styles.chipLabel}>@{a.ref}</Text>
+                                            <Pressable
+                                                onPress={() =>
+                                                    // Deliberately does NOT edit the
+                                                    // brief. Reaching into someone's
+                                                    // prose to delete words they typed
+                                                    // is worse than a handle that stops
+                                                    // resolving — and the line below
+                                                    // tells them it has.
+                                                    setAttachments((prev) =>
+                                                        prev.filter((x) => x.ref !== a.ref)
+                                                    )
+                                                }
+                                                accessibilityRole="button"
+                                                accessibilityLabel={`Remove @${a.ref}`}
+                                                style={styles.chipX}
+                                            >
+                                                <FontAwesomeIcon
+                                                    icon={faXmark}
+                                                    size={11}
+                                                    color={colors.textSecondary}
+                                                />
+                                            </Pressable>
+                                        </View>
+                                    ))}
+                                </View>
+                            ) : null}
+
+                            {upload?.error ? (
+                                <Text style={styles.error}>{upload.error}</Text>
+                            ) : null}
+
+                            {attachments.length > 0 && !unresolved.length ? (
+                                <Text style={styles.note}>
+                                    Point at one in the brief by typing @ — &quot;@
+                                    {attachments[0].ref} is the face of the video&quot;.
+                                </Text>
+                            ) : null}
+
+                            {full ? (
+                                <Text style={styles.note}>
+                                    That is the most you can attach to one brief.
+                                </Text>
+                            ) : null}
+
+                            {/* Said before Plan is pressed, because the backend
+                                treats an unresolved handle as fatal — rightly,
+                                but learning that from a refused run two minutes
+                                later is a worse way to hear it. */}
+                            {unresolved.length > 0 ? (
+                                <Text style={styles.error}>
+                                    {unresolved.map((r) => "@" + r).join(", ")}
+                                    {unresolved.length === 1
+                                        ? " is not attached any more. Attach it again or take it out of the brief — a plan will be refused while it points at nothing."
+                                        : " are not attached any more. Attach them again or take them out of the brief — a plan will be refused while they point at nothing."}
+                                </Text>
+                            ) : null}
 
                             <Text style={styles.label}>How freely it may spend</Text>
                             {MODES.map((m) => (
@@ -283,15 +460,29 @@ const DirectorSheet: React.FC<DirectorSheetProps> = ({
                             {error ? <Text style={styles.error}>{error}</Text> : null}
 
                             <Pressable
-                                style={[styles.primary, !brief.trim() && styles.off]}
+                                style={[
+                                    styles.primary,
+                                    (!brief.trim() || unresolved.length > 0) && styles.off,
+                                ]}
                                 onPress={() =>
                                     director.makePlan({
                                         brief: brief.trim(),
                                         mode,
                                         targetSeconds: seconds,
+                                        // Handle and id only. Everything else
+                                        // about the file is read from the
+                                        // library row server-side.
+                                        attachments: attachments.map((a) => ({
+                                            ref: a.ref,
+                                            mediaId: a.mediaId,
+                                        })),
                                     })
                                 }
-                                disabled={!brief.trim()}
+                                // Held back on an unresolved handle rather than
+                                // letting the request go and be refused: the
+                                // refusal is correct but costs a round trip to
+                                // learn something already visible here.
+                                disabled={!brief.trim() || unresolved.length > 0}
                             >
                                 <Text style={styles.primaryText}>Plan it</Text>
                             </Pressable>
@@ -402,6 +593,67 @@ const useStyles = (colors: ReturnType<typeof Colors>) =>
                 price: { color: colors.text, fontSize: fs(12), lineHeight: lh(17), fontWeight: "600" },
                 note: { color: colors.textSecondary, fontSize: fs(11), lineHeight: lh(16) },
                 error: { color: colors.red, fontSize: fs(11), lineHeight: lh(16) },
+
+                // ── Attachments ──
+                attachRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
+                attachBtn: {
+                    paddingHorizontal: 13,
+                    paddingVertical: 8,
+                    borderRadius: 9,
+                    backgroundColor: colors.tag,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 3,
+                    shadowOpacity: 0.04,
+                    elevation: 1,
+                },
+                attachBtnText: {
+                    color: colors.text,
+                    fontSize: fs(12),
+                    lineHeight: lh(17),
+                    fontWeight: "600",
+                },
+                chip2: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    paddingLeft: 4,
+                    paddingRight: 6,
+                    paddingVertical: 4,
+                    borderRadius: 9,
+                    backgroundColor: colors.tag,
+                },
+                // A thumbnail is an image, not a text box, so these stay
+                // unwrapped by fbox.
+                chipThumb: { width: 24, height: 24, borderRadius: 6 },
+                chipLabel: { color: colors.text, fontSize: fs(11), lineHeight: lh(15) },
+                chipX: { padding: 3 },
+                suggestions: {
+                    gap: 2,
+                    padding: 4,
+                    borderRadius: 10,
+                    backgroundColor: colors.tag,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.07,
+                    elevation: 3,
+                },
+                suggestion: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    paddingHorizontal: 8,
+                    paddingVertical: 6,
+                    borderRadius: 7,
+                },
+                suggestionThumb: { width: 22, height: 22, borderRadius: 5 },
+                suggestionText: {
+                    color: colors.text,
+                    fontSize: fs(12),
+                    lineHeight: lh(17),
+                    fontWeight: "600",
+                },
                 problems: {
                     gap: 5,
                     backgroundColor: withAlpha(colors.red, 0.08),

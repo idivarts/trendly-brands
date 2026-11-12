@@ -789,6 +789,7 @@ const StudioScreen: React.FC<StudioScreenProps> = ({ contentId }) => {
             <DirectorSheet
                 visible={directorOpen}
                 director={director}
+                upload={upload}
                 onClose={() => setDirectorOpen(false)}
                 onApproved={(pendingScenes) => {
                     // The scenes exist and are pending. Closing takes the user

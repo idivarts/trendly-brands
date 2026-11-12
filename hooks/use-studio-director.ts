@@ -48,7 +48,17 @@ export interface UseStudioDirectorResult {
     /** True when the plan came back unrunnable, so no Approve button is shown. */
     refused: boolean;
 
-    makePlan: (input: { brief: string; mode: DirectorMode; targetSeconds?: number }) => Promise<void>;
+    makePlan: (input: {
+        brief: string;
+        mode: DirectorMode;
+        targetSeconds?: number;
+        /**
+         * Files the user attached, each with the handle they wrote in the
+         * brief. Handle and media id only — everything else about the file is
+         * read from the library row server-side.
+         */
+        attachments?: { ref: string; mediaId: string }[];
+    }) => Promise<void>;
     /**
      * Approve the plan and return the scenes it created, ready to be filled.
      *
@@ -160,10 +170,12 @@ export function useStudioDirector(
             brief,
             mode,
             targetSeconds,
+            attachments,
         }: {
             brief: string;
             mode: DirectorMode;
             targetSeconds?: number;
+            attachments?: { ref: string; mediaId: string }[];
         }) => {
             if (!brandId || !contentId || !studioId) return;
             setPlanning(true);
@@ -174,7 +186,14 @@ export function useStudioDirector(
                 const res = await HttpWrapper.fetch(`${base()}/plan`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ brief, mode, targetSeconds }),
+                    body: JSON.stringify({
+                        brief,
+                        mode,
+                        targetSeconds,
+                        // Sent even when empty, so the field's absence never
+                        // has to mean two things.
+                        attachments: attachments ?? [],
+                    }),
                 });
                 const started = (await res.json()) as DirectorPlan & {
                     status?: string;
