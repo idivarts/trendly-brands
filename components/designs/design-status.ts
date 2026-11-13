@@ -13,6 +13,13 @@
 
 export type DesignRenderStatus = "queued" | "rendering" | "done" | "failed";
 export type DesignAuthorStatus = "queued" | "writing" | "done" | "failed";
+export type DesignPreviewStatus = "queued" | "running" | "done" | "failed";
+
+/** One still from the film, and where in it the frame is. */
+export interface DesignPreviewFrame {
+    url: string;
+    timeMs: number;
+}
 
 /** The shape these rules need. Both screens' row/detail types satisfy it. */
 export interface DesignStatusFields {
@@ -21,6 +28,9 @@ export interface DesignStatusFields {
     projectPrefix?: string;
     authorStatus?: DesignAuthorStatus;
     authorError?: string;
+    previewStatus?: DesignPreviewStatus;
+    previewError?: string;
+    previewFrames?: DesignPreviewFrame[];
     renderStatus?: DesignRenderStatus;
     renderError?: string;
     renderUrl?: string;
@@ -31,6 +41,21 @@ export const isAuthoring = (d: DesignStatusFields | null | undefined): boolean =
 
 export const isRendering = (d: DesignStatusFields | null | undefined): boolean =>
     d?.renderStatus === "queued" || d?.renderStatus === "rendering";
+
+export const isPreviewing = (d: DesignStatusFields | null | undefined): boolean =>
+    d?.previewStatus === "queued" || d?.previewStatus === "running";
+
+/**
+ * Whether the user has actually SEEN this design.
+ *
+ * The question Phase 3 exists to answer. Rendering is the expensive step, and
+ * approving something you have not looked at is not approval — so the Render
+ * button leads with the preview until there is something to have looked at.
+ * A design that has already been rendered counts: the film itself is on
+ * screen, which is a better look than any filmstrip.
+ */
+export const hasBeenSeen = (d: DesignStatusFields | null | undefined): boolean =>
+    (d?.previewFrames?.length ?? 0) > 0 || !!d?.renderUrl;
 
 export interface DesignStatus {
     /** One short line, for a list row. */
@@ -70,10 +95,32 @@ export function designStatus(d: DesignStatusFields | null | undefined): DesignSt
     if (d.renderStatus === "done") {
         return { text: "Ready", detail: "Ready.", busy: false, bad: false };
     }
+
+    // Preview ranks BELOW the render, unlike authoring, because it is not on
+    // the way to anything: a design with a finished render does not become
+    // more interesting for having a filmstrip too. It ranks above the
+    // written-but-unrendered line, since taking frames is what the user is
+    // waiting on at that point.
+    if (isPreviewing(d)) {
+        return { text: "Previewing…", detail: "Taking a look at the film…", busy: true, bad: false };
+    }
+    if (d.previewStatus === "failed") {
+        const why = d.previewError || "We could not preview this design.";
+        return { text: "Preview failed", detail: why, busy: false, bad: true };
+    }
+
     if (!d.projectPrefix) {
         return {
             text: "Empty",
             detail: "Nothing in it yet — describe the film below.",
+            busy: false,
+            bad: false,
+        };
+    }
+    if ((d.previewFrames?.length ?? 0) > 0) {
+        return {
+            text: "Previewed",
+            detail: "Have a look, then render it when you're happy.",
             busy: false,
             bad: false,
         };

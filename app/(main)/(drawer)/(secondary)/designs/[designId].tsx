@@ -6,7 +6,9 @@ import { useBrandContext } from "@/contexts/brand-context.provider";
 import {
     designAspect,
     designStatus,
+    hasBeenSeen,
     isAuthoring,
+    isPreviewing,
     isRendering,
     resolveDesignGate,
     type DesignStatusFields,
@@ -22,6 +24,7 @@ import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
+    Image,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -130,7 +133,7 @@ const DesignDetail = () => {
     // "ready" does not need a request every five seconds for as long as the
     // screen is open.
     useEffect(() => {
-        if (!isAuthoring(design) && !isRendering(design)) return;
+        if (!isAuthoring(design) && !isRendering(design) && !isPreviewing(design)) return;
         const t = setInterval(load, POLL_MS);
         return () => clearInterval(t);
     }, [design, load]);
@@ -166,6 +169,23 @@ const DesignDetail = () => {
         }
     }, [brandId, designId, brief, submitting, load]);
 
+    const preview = useCallback(async () => {
+        if (!brandId || !designId || submitting) return;
+        setSubmitting(true);
+        try {
+            await HttpWrapper.fetch(`/api/design/brands/${brandId}/designs/${designId}/preview`, {
+                method: "POST",
+            });
+            await load();
+        } catch {
+            // No 402 branch: a preview is deliberately free, so the only way
+            // this fails is a real fault.
+            Toaster.error("Couldn't start the preview", "Please try again.");
+        } finally {
+            setSubmitting(false);
+        }
+    }, [brandId, designId, submitting, load]);
+
     const render = useCallback(async () => {
         if (!brandId || !designId || submitting) return;
         setSubmitting(true);
@@ -198,6 +218,12 @@ const DesignDetail = () => {
     const status = designStatus(design);
     const effectiveGate = resolveDesignGate(gate, tokens.state);
     const aspect = designAspect(design);
+    const frames = design?.previewFrames ?? [];
+    const written = !!design?.projectPrefix;
+    // Approving something you have not looked at is not approval. So until
+    // there is something to have looked at, the second button offers the free
+    // look rather than the paid render.
+    const seen = hasBeenSeen(design);
 
     return (
         <AppLayout>
@@ -234,6 +260,35 @@ const DesignDetail = () => {
                         </View>
                     )}
                 </View>
+
+                {/* The filmstrip: what this design looks like, captured
+                    without charging for it. It is shown even once a render
+                    exists, because it is the cheap way to check a REWRITE
+                    before paying to render it again. */}
+                {frames.length > 0 && (
+                    <>
+                        <Text style={styles.label}>
+                            {design?.renderUrl ? "Frames from the last preview" : "How it looks"}
+                        </Text>
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.strip}
+                        >
+                            {frames.map((f) => (
+                                <View key={`${f.url}-${f.timeMs}`} style={styles.frameWrap}>
+                                    <Image
+                                        source={{ uri: f.url }}
+                                        style={[styles.frame, { aspectRatio: aspect }]}
+                                        resizeMode="cover"
+                                        accessibilityLabel={`Frame at ${(f.timeMs / 1000).toFixed(1)} seconds`}
+                                    />
+                                    <Text style={styles.frameTime}>{(f.timeMs / 1000).toFixed(1)}s</Text>
+                                </View>
+                            ))}
+                        </ScrollView>
+                    </>
+                )}
 
                 {/* The real reason goes in the body, not the header. A
                     validator message ("index.html has no root composition")
@@ -298,29 +353,64 @@ const DesignDetail = () => {
                                 </Text>
                             </Pressable>
 
+                            {/* The second button is the free look until there
+                                has been one. Rendering is the step that costs,
+                                and approving a film you have not seen is not
+                                approval — so the cheap step leads, and Render
+                                appears once there is something to judge. */}
+                            {!seen ? (
+                                <Pressable
+                                    onPress={preview}
+                                    disabled={submitting || isPreviewing(design) || !written}
+                                    style={({ pressed }) => [
+                                        styles.secondaryBtn,
+                                        (pressed || submitting || isPreviewing(design) || !written) &&
+                                            styles.btnDim,
+                                    ]}
+                                    accessibilityRole="button"
+                                >
+                                    <Text style={styles.secondaryLabel}>
+                                        {isPreviewing(design) ? "Looking…" : "Preview — free"}
+                                    </Text>
+                                </Pressable>
+                            ) : (
+                                <Pressable
+                                    onPress={render}
+                                    disabled={submitting || isRendering(design) || !written}
+                                    style={({ pressed }) => [
+                                        styles.secondaryBtn,
+                                        (pressed || submitting || isRendering(design) || !written) &&
+                                            styles.btnDim,
+                                    ]}
+                                    accessibilityRole="button"
+                                >
+                                    <Text style={styles.secondaryLabel}>
+                                        {isRendering(design) ? "Rendering…" : "Render"}
+                                    </Text>
+                                </Pressable>
+                            )}
+                        </View>
+
+                        {/* Once seen, the preview stays reachable: it is the
+                            cheap way to check a REWRITE before paying to
+                            render it again. */}
+                        {seen && written && (
                             <Pressable
-                                onPress={render}
-                                disabled={submitting || isRendering(design) || !design?.projectPrefix}
-                                style={({ pressed }) => [
-                                    styles.secondaryBtn,
-                                    (pressed ||
-                                        submitting ||
-                                        isRendering(design) ||
-                                        !design?.projectPrefix) &&
-                                        styles.btnDim,
-                                ]}
+                                onPress={preview}
+                                disabled={submitting || isPreviewing(design)}
+                                style={({ pressed }) => [pressed && styles.btnDim]}
                                 accessibilityRole="button"
                             >
-                                <Text style={styles.secondaryLabel}>
-                                    {isRendering(design) ? "Rendering…" : "Render"}
+                                <Text style={styles.linkAction}>
+                                    {isPreviewing(design) ? "Taking frames…" : "Preview again — free"}
                                 </Text>
                             </Pressable>
-                        </View>
+                        )}
 
                         {(tokens.state === "critical" || tokens.state === "low") && (
                             <Text style={styles.linkNote}>
-                                Running low on AI tokens — writing and rendering both spend from
-                                the same wallet.
+                                Running low on AI tokens — writing and rendering spend from the
+                                same wallet. Previewing does not.
                             </Text>
                         )}
                     </>
@@ -415,6 +505,21 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 },
                 secondaryLabel: { fontSize: fs(14), lineHeight: lh(20), fontWeight: "700", color: colors.text },
                 btnDim: { opacity: 0.6 },
+                strip: { gap: 8, paddingVertical: 2 },
+                frameWrap: { alignItems: "center", gap: 4 },
+                frame: {
+                    width: 92,
+                    borderRadius: 10,
+                    backgroundColor: colors.tag,
+                },
+                frameTime: { fontSize: fs(10), lineHeight: lh(14), color: colors.textSecondary },
+                linkAction: {
+                    fontSize: fs(12),
+                    lineHeight: lh(18),
+                    fontWeight: "600",
+                    color: colors.primary,
+                    textAlign: "center",
+                },
                 linkNote: { fontSize: fs(11), lineHeight: lh(16), color: colors.textSecondary, textAlign: "center" },
             }),
         [colors]
