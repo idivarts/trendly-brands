@@ -10,16 +10,20 @@
  */
 import { UpgradeInline } from "@/components/billing/EntitlementGate";
 import { fs, lh } from "@/constants/Typography";
+import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { withAlpha } from "@/utils/color";
 import { useTheme } from "@react-navigation/native";
 import React, { useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import * as Clipboard from "expo-clipboard";
+import { Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import type { DesignGate, DesignStatus } from "./design-status";
 
 export interface StudioBriefPanelProps {
     brief: string;
+    /** The finished film, once there is one. */
+    renderUrl?: string;
     onBriefChange: (text: string) => void;
     status: DesignStatus;
     gate: DesignGate;
@@ -40,6 +44,7 @@ export interface StudioBriefPanelProps {
 
 const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
     brief,
+    renderUrl,
     onBriefChange,
     status,
     gate,
@@ -169,6 +174,36 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
                             </Pressable>
                         )}
 
+                        {/* The export. A linked design also lands on its post
+                            automatically, but the file itself is what a
+                            standalone design has, so it is reachable here
+                            either way rather than only through the post. */}
+                        {!!renderUrl && (
+                            <View style={styles.row}>
+                                <Pressable
+                                    onPress={() => {
+                                        Clipboard.setStringAsync(renderUrl);
+                                        Toaster.success("Link copied", "The film's URL is on your clipboard.");
+                                    }}
+                                    style={({ pressed }) => [styles.exportBtn, pressed && styles.dim]}
+                                    accessibilityRole="button"
+                                >
+                                    <Text style={styles.exportLabel}>Copy link</Text>
+                                </Pressable>
+                                <Pressable
+                                    onPress={() => Linking.openURL(renderUrl)}
+                                    style={({ pressed }) => [styles.exportBtn, pressed && styles.dim]}
+                                    accessibilityRole="button"
+                                >
+                                    <Text style={styles.exportLabel}>Open file</Text>
+                                </Pressable>
+                            </View>
+                        )}
+
+                        {linkedToContent && !!renderUrl && (
+                            <Text style={styles.note}>Added to the linked post.</Text>
+                        )}
+
                         {(tokenState === "critical" || tokenState === "low") && (
                             <Text style={styles.note}>
                                 Running low on AI tokens — writing and rendering spend from the
@@ -272,6 +307,19 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     color: colors.text,
                 },
                 dim: { opacity: 0.55 },
+                exportBtn: {
+                    flex: 1,
+                    alignItems: "center",
+                    paddingVertical: 10,
+                    borderRadius: 999,
+                    backgroundColor: withAlpha(colors.primary, 0.12),
+                },
+                exportLabel: {
+                    fontSize: fs(12),
+                    lineHeight: lh(18),
+                    fontWeight: "700",
+                    color: colors.primary,
+                },
                 linkAction: {
                     fontSize: fs(11),
                     lineHeight: lh(17),

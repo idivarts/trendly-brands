@@ -275,6 +275,7 @@ const DesignDetail = () => {
     const briefPanel = (
         <StudioBriefPanel
             brief={brief}
+            renderUrl={design?.renderUrl}
             onBriefChange={(t) => {
                 briefRef.current = t;
                 setBrief(t);
