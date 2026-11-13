@@ -78,6 +78,23 @@ const StudioStage: React.FC<StudioStageProps> = ({
 
     const frame = useMemo(() => frameAt(frames, positionMs), [frames, positionMs]);
 
+    // ── Never open on frame 0 ─────────────────────────────────────────────
+    // A paused video shows its first frame, and frame 0 of these films is the
+    // state BEFORE anything has animated in — for a dark design that is a
+    // black rectangle, which reads as "broken" rather than "not started". The
+    // authoring contract warns about exactly this ("frame 0 is the thumbnail
+    // social players use").
+    //
+    // So the poster is a preview still from a quarter of the way in, where
+    // the entrances have landed. The render's own poster wins when there is
+    // one, since it came from the film itself.
+    const poster = useMemo(() => {
+        if (posterUrl) return posterUrl;
+        const sorted = [...(frames ?? [])].sort((a, b) => a.timeMs - b.timeMs);
+        if (sorted.length === 0) return undefined;
+        return (frameAt(sorted, totalMs * 0.25) ?? sorted[Math.min(1, sorted.length - 1)]).url;
+    }, [posterUrl, frames, totalMs]);
+
     // ── Fit the film inside the pane, in BOTH directions ──────────────────
     // `aspectRatio` with maxWidth/maxHeight is not a fit: flex gives the box
     // the full width and the aspect ratio then decides a height, which for a
@@ -140,8 +157,8 @@ const StudioStage: React.FC<StudioStageProps> = ({
                             isLooping={loop}
                             shouldPlay={playing}
                             resizeMode={ResizeMode.CONTAIN}
-                            usePoster={!!posterUrl}
-                            posterSource={posterUrl ? { uri: posterUrl } : undefined}
+                            usePoster={!!poster}
+                            posterSource={poster ? { uri: poster } : undefined}
                             onPlaybackStatusUpdate={onStatus}
                             style={styles.video}
                         />

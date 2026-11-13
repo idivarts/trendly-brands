@@ -17,6 +17,7 @@ import {
     timelineDurationMs,
     type DesignScene,
 } from "@/components/designs/studio-layout";
+import { useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapsed-context";
 import PageHeader from "@/components/ui/page-header";
 import { fs, lh } from "@/constants/Typography";
 import { useBrandContext } from "@/contexts/brand-context.provider";
@@ -111,6 +112,27 @@ const DesignDetail = () => {
     // lands while they are typing into what rendered as an empty box.
     const briefSeeded = useRef(false);
     const briefRef = useRef("");
+
+    // ── Give the editor the width ─────────────────────────────────────────
+    // Three panes and a timeline need room, and the expanded rail costs 280px
+    // of it. Collapsed on arrival, and the user's own setting is PUT BACK on
+    // the way out — quietly keeping a sidebar closed because they once opened
+    // a design would be us deciding something that is theirs to decide.
+    //
+    // Desktop only: on a phone the rail is an overlay, so there is nothing to
+    // reclaim and collapsing it would just change state behind their back.
+    const { isCollapsed, setCollapsed } = useSidebarCollapsed();
+    const collapsedOnArrival = useRef(isCollapsed);
+    useEffect(() => {
+        if (!xl) return;
+        collapsedOnArrival.current = isCollapsed;
+        setCollapsed(true);
+        return () => setCollapsed(collapsedOnArrival.current);
+        // Deliberately once per visit: re-running when `isCollapsed` changes
+        // would fight the user if they expanded the rail while reading, and
+        // would overwrite the state we are holding for them.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [xl]);
 
     const load = useCallback(async () => {
         if (!brandId || !designId) return;
