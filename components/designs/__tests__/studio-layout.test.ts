@@ -216,6 +216,46 @@ describe("toLayerTree", () => {
         expect(tree[2].depth).toBe(1);
     });
 
+    /**
+     * The shape authoring ACTUALLY emits. A single-document design has every
+     * scene as a section of index.html, so `src` is "" — and the tree used to
+     * offer a disclosure triangle that opened a bullet, a blank name and the
+     * word "scene". The fixture above is the sub-composition shape, which is
+     * why every test here passed while every real design on dev showed it.
+     */
+    describe("a single-document design, where a scene has no file", () => {
+        const flat: DesignScene[] = [
+            { id: "hook", src: "", startMs: 0, durationMs: 3000, trackIndex: 0 },
+            { id: "cta", src: "", startMs: 3000, durationMs: 3000, trackIndex: 0 },
+        ];
+
+        it("offers no triangle, because there is nothing to open", () => {
+            const tree = toLayerTree(flat, new Set());
+            expect(tree.map((n) => n.hasChildren)).toEqual([false, false]);
+        });
+
+        it("folds out nothing even when asked to", () => {
+            const tree = toLayerTree(flat, new Set(["hook", "cta"]));
+            expect(tree.map((n) => n.id)).toEqual(["hook", "cta"]);
+            // The assertion that would have caught the bug: no node is nameless.
+            expect(tree.every((n) => n.label.length > 0)).toBe(true);
+        });
+
+        // "compositions/" with nothing after it is not a file either.
+        it("treats a bare directory as no file", () => {
+            const tree = toLayerTree(
+                [{ id: "hook", src: "compositions/", startMs: 0, durationMs: 1000, trackIndex: 0 }],
+                new Set(["hook"])
+            );
+            expect(tree).toHaveLength(1);
+            expect(tree[0].hasChildren).toBe(false);
+        });
+    });
+
+    it("still marks a sub-composition scene as expandable", () => {
+        expect(toLayerTree(scenes, new Set()).every((n) => n.hasChildren)).toBe(true);
+    });
+
     it("handles no scenes", () => {
         expect(toLayerTree(undefined, new Set())).toEqual([]);
     });
