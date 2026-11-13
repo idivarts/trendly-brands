@@ -2,6 +2,7 @@ import {
     designAspect,
     designFormatLabel,
     designStatus,
+    hasBeenSeen,
     isAuthoring,
     isRendering,
     resolveDesignGate,
@@ -128,5 +129,80 @@ describe("resolveDesignGate", () => {
 
     it("keeps tokens_exhausted distinct, since a top-up fixes it and an upgrade need not", () => {
         expect(resolveDesignGate("tokens_exhausted", "healthy")).toBe("tokens_exhausted");
+    });
+});
+
+describe("preview state", () => {
+    const written = { projectPrefix: "design-projects/b/d" };
+
+    it("reports previewing while frames are being captured", () => {
+        expect(designStatus({ ...written, previewStatus: "running" }).busy).toBe(true);
+        expect(designStatus({ ...written, previewStatus: "queued" }).busy).toBe(true);
+    });
+
+    it("surfaces the preview's own error", () => {
+        const s = designStatus({ ...written, previewStatus: "failed", previewError: "No root composition." });
+        expect(s.bad).toBe(true);
+        expect(s.detail).toBe("No root composition.");
+    });
+
+    /**
+     * Preview ranks BELOW the render, unlike authoring. A design that has
+     * already rendered does not become more interesting for having a
+     * filmstrip, and showing "Previewed" over a finished film would read as
+     * a step backwards.
+     */
+    it("a finished render outranks a finished preview", () => {
+        const s = designStatus({
+            ...written,
+            previewStatus: "done",
+            previewFrames: [{ url: "a.png", timeMs: 0 }],
+            renderStatus: "done",
+            renderUrl: "https://cdn/x.mp4",
+        });
+        expect(s.text).toBe("Ready");
+    });
+
+    it("but it outranks written-but-unrendered, which is what the user is waiting on", () => {
+        expect(designStatus({ ...written, previewStatus: "running" }).text).toBe("Previewing…");
+        expect(
+            designStatus({ ...written, previewFrames: [{ url: "a.png", timeMs: 0 }] }).text
+        ).toBe("Previewed");
+    });
+
+    it("a failed write still outranks everything, since there is nothing to preview", () => {
+        const s = designStatus({
+            ...written,
+            authorStatus: "failed",
+            authorError: "The model returned no files.",
+            previewFrames: [{ url: "a.png", timeMs: 0 }],
+        });
+        expect(s.text).toBe("Writing failed");
+    });
+});
+
+describe("hasBeenSeen", () => {
+    /**
+     * The question Phase 3 exists to answer: approving something you have not
+     * looked at is not approval, so the Render button leads with the preview
+     * until this is true.
+     */
+    it("is false for a written design nobody has looked at", () => {
+        expect(hasBeenSeen({ projectPrefix: "p" })).toBe(false);
+        expect(hasBeenSeen({ projectPrefix: "p", previewFrames: [] })).toBe(false);
+    });
+
+    it("is true once there are frames", () => {
+        expect(hasBeenSeen({ projectPrefix: "p", previewFrames: [{ url: "a.png", timeMs: 0 }] })).toBe(true);
+    });
+
+    // A rendered film on screen is a better look than any filmstrip, so a
+    // re-render is not forced back through the preview.
+    it("is true for an already-rendered design, filmstrip or not", () => {
+        expect(hasBeenSeen({ projectPrefix: "p", renderUrl: "https://cdn/x.mp4" })).toBe(true);
+    });
+
+    it("tolerates a missing design", () => {
+        expect(hasBeenSeen(null)).toBe(false);
     });
 });
