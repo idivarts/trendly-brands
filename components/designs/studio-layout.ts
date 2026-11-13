@@ -189,12 +189,26 @@ export function rulerTicks(totalMs: number, maxTicks = 10): number[] {
  * children are what the document actually knows: where it is and how long it
  * lasts. Shown rather than hidden because an empty disclosure triangle is a
  * promise the panel cannot keep.
+ *
+ * ── A scene does not always HAVE a file ───────────────────────────────────
+ * The child row names the scene's own document, and a scene only has one in
+ * the sub-composition shape (`data-composition-src`). Authoring emits a
+ * SINGLE document, where every scene is a section of index.html and `src` is
+ * "" — so the row rendered as a bullet, a blank label and the word "scene",
+ * under a triangle that promised something to open.
+ *
+ * `hasChildren` is what the panel draws the triangle from, so the promise and
+ * the thing it opens are decided in one place. The earlier tests all used the
+ * sub-composition shape, which is why they passed while every real design on
+ * dev showed the empty row.
  */
 export interface LayerNode {
     id: string;
     label: string;
     detail: string;
     depth: number;
+    /** Depth 0 only: whether this scene has anything to fold out. */
+    hasChildren?: boolean;
 }
 
 export function toLayerTree(
@@ -203,16 +217,20 @@ export function toLayerTree(
 ): LayerNode[] {
     const out: LayerNode[] = [];
     for (const s of scenes ?? []) {
+        // Trimmed before it is tested, so "compositions/" on its own counts as
+        // no file rather than as a child with an empty name.
+        const file = (s.src ?? "").replace(/^compositions\//, "").trim();
         out.push({
             id: s.id,
             label: s.id,
             detail: `${formatClock(s.startMs)} · ${(s.durationMs / 1000).toFixed(1)}s`,
             depth: 0,
+            hasChildren: file !== "",
         });
-        if (expanded.has(s.id)) {
+        if (file !== "" && expanded.has(s.id)) {
             out.push({
                 id: `${s.id}::src`,
-                label: s.src.replace(/^compositions\//, ""),
+                label: file,
                 detail: s.trackKind ?? "scene",
                 depth: 1,
             });

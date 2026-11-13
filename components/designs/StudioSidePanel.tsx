@@ -137,7 +137,7 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
                                                 accessibilityRole="button"
                                                 accessibilityLabel={node.label}
                                             >
-                                                {isScene ? (
+                                                {isScene && node.hasChildren ? (
                                                     <Pressable
                                                         onPress={() => toggle(node.id)}
                                                         hitSlop={8}
@@ -150,6 +150,11 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
                                                             color={colors.textSecondary}
                                                         />
                                                     </Pressable>
+                                                ) : isScene ? (
+                                                    // A scene with nothing to fold out keeps the
+                                                    // indent, so the names still line up, but
+                                                    // offers no triangle to open.
+                                                    <View style={styles.chevronSpacer} />
                                                 ) : (
                                                     <View style={styles.leafDot} />
                                                 )}
@@ -282,6 +287,10 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     paddingVertical: 7,
                 },
                 rowOn: { backgroundColor: withAlpha(colors.primary, 0.14) },
+                // Matches the chevron's 10px glyph so a scene without one does
+                // not shift its name left of the scenes that have it.
+                chevronSpacer: { width: 10 },
+
                 leafDot: {
                     width: 5,
                     height: 5,
