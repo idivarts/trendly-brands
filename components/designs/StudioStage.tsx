@@ -150,6 +150,10 @@ const StudioStage: React.FC<StudioStageProps> = ({
         [scrubWidth, totalMs, onSeek]
     );
 
+    // One source of truth for "the player is up", used both to mount it and
+    // to stand our own transport down.
+    const liveActive = !!live && !!previewUrl;
+
     const progress: `${number}%` = `${totalMs > 0 ? Math.min(Math.max(positionMs / totalMs, 0), 1) * 100 : 0}%`;
 
     return (
@@ -167,7 +171,7 @@ const StudioStage: React.FC<StudioStageProps> = ({
 
                     Web only. 776 KB of JavaScript, and a React Native WebView
                     has never been tried with it; a phone keeps the stills. */}
-                {live && previewUrl ? (
+                {liveActive ? (
                     <View style={styles.liveFill}>
                         {React.createElement("iframe", {
                             src: previewUrl,
@@ -210,6 +214,17 @@ const StudioStage: React.FC<StudioStageProps> = ({
                 )}
             </View>
 
+            {/* ── One transport at a time ───────────────────────────────
+                The live player draws its own controls inside the iframe, and
+                every control below drives the <Video> element — which is not
+                even mounted while the player is up. Showing both gave the
+                stage two play buttons side by side, of which ours was the
+                dead one.
+
+                Hiding ours is the honest half of the fix: the player's
+                controls work. Driving the player from this bar instead means
+                talking to it across the frame, which is Phase 9's job. */}
+            {!liveActive && (
             <View style={styles.transport}>
                 <Pressable
                     onPress={onPlayPause}
@@ -267,6 +282,7 @@ const StudioStage: React.FC<StudioStageProps> = ({
                     <FontAwesomeIcon icon={faExpand} size={12} color={withAlpha(colors.white, 0.6)} />
                 </Pressable>
             </View>
+            )}
         </View>
     );
 };
