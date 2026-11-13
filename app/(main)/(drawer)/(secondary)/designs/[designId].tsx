@@ -80,9 +80,13 @@ const DesignDetail = () => {
     // What the BACKEND said when it refused, which outranks the local read:
     // the wallet may have emptied since this screen hydrated.
     const [gate, setGate] = useState<string | null>(null);
-    // The stored brief is seeded into the box ONCE. Re-seeding on every poll
-    // would overwrite what the user is typing while a render runs.
+    // The stored brief is seeded into the box ONCE, and never over text the
+    // user has already typed. Two separate hazards: re-seeding on every poll
+    // would clobber their edits mid-render, and seeding at all would clobber
+    // them if the first GET lands while they are already typing into what
+    // rendered as an empty box.
     const briefSeeded = useRef(false);
+    const briefRef = useRef("");
 
     const load = useCallback(async () => {
         if (!brandId || !designId) return;
@@ -94,8 +98,13 @@ const DesignDetail = () => {
             if (data?.design) {
                 const next = data.design as Design;
                 setDesign(next);
-                if (!briefSeeded.current && next.brief) {
+                // briefRef, not the `brief` state: this closure captures the
+                // value from the render that created it, which is "" for the
+                // first load even after the user has typed. The ref is read
+                // at the moment the response lands, so their text wins.
+                if (!briefSeeded.current && next.brief && !briefRef.current) {
                     briefSeeded.current = true;
+                    briefRef.current = next.brief;
                     setBrief(next.brief);
                 }
             }
@@ -240,7 +249,10 @@ const DesignDetail = () => {
                 <Text style={styles.label}>What should this film be?</Text>
                 <TextInput
                     value={brief}
-                    onChangeText={setBrief}
+                    onChangeText={(t) => {
+                        briefRef.current = t;
+                        setBrief(t);
+                    }}
                     placeholder="A 10-second vertical reel for our cold brew: a hook, three benefits, a sign-off."
                     placeholderTextColor={colors.textSecondary}
                     multiline

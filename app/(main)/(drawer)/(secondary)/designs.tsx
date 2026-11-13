@@ -10,8 +10,8 @@ import Toaster from "@/shared-uis/components/toaster/Toaster";
 import { faFilm, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import { router } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 
 /**
@@ -44,6 +44,8 @@ const DesignStudioIndex = () => {
 
     const [designs, setDesigns] = useState<DesignRow[] | null>(null);
     const [creating, setCreating] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
+    const [failed, setFailed] = useState(false);
 
     const load = useCallback(async () => {
         if (!brandId) return;
@@ -51,17 +53,37 @@ const DesignStudioIndex = () => {
             const res = await HttpWrapper.fetch(`/api/design/brands/${brandId}/designs`, { method: "GET" });
             const data = await res.json();
             setDesigns(Array.isArray(data?.designs) ? data.designs : []);
+            setFailed(false);
         } catch {
-            // An empty list and a failed read look identical on screen
-            // otherwise, and "you have no designs" is the more damaging of
-            // the two to say wrongly.
-            setDesigns([]);
+            // NOT an empty list. "You have no designs" and "we couldn't read
+            // your designs" are different sentences, and saying the first when
+            // the second is true tells a user with a dozen designs that their
+            // work is gone. The rows already loaded stay on screen; only the
+            // empty state is replaced, and that by a retry rather than a
+            // wrongly cheerful invitation to start over.
+            setFailed(true);
             Toaster.error("Couldn't load your designs", "Check your connection and try again.");
         }
     }, [brandId]);
 
-    useEffect(() => {
-        load();
+    // useFocusEffect, not useEffect: Expo Router's Stack keeps this screen
+    // mounted while the detail screen sits on top of it, so a plain mount
+    // effect would never re-run. The list has no polling, so without this a
+    // row that said "Rendering…" when the user left keeps saying it long
+    // after the render finished.
+    useFocusEffect(
+        useCallback(() => {
+            load();
+        }, [load])
+    );
+
+    const refresh = useCallback(async () => {
+        setRefreshing(true);
+        try {
+            await load();
+        } finally {
+            setRefreshing(false);
+        }
     }, [load]);
 
     const createDesign = useCallback(async () => {
@@ -78,13 +100,24 @@ const DesignStudioIndex = () => {
             });
             const data = await res.json();
             const id = data?.design?.id;
-            if (id) router.push(`/designs/${id}`);
+            if (id) {
+                router.push(`/designs/${id}`);
+            } else {
+                // The design was created — this answered 2xx — but the id did
+                // not come back, so there is nowhere to send the user. Saying
+                // so beats a button that un-dims and does nothing: a silent
+                // dead press gets pressed again, and every press leaves
+                // another "Untitled design" behind. The list is reloaded so
+                // the one that WAS created is at least visible.
+                Toaster.error("Created, but we couldn't open it", "Pull down to refresh and open it from the list.");
+                await load();
+            }
         } catch {
             Toaster.error("Couldn't create a design", "Please try again.");
         } finally {
             setCreating(false);
         }
-    }, [brandId, creating]);
+    }, [brandId, creating, load]);
 
     const actionButtons = useMemo(
         () => [
@@ -148,7 +181,24 @@ const DesignStudioIndex = () => {
                 mobileActions="all"
                 actionButtons={actionButtons}
             />
-            {designs === null ? (
+            {designs === null && failed ? (
+                // Nothing loaded AND the read failed: a retry, not an
+                // invitation to start over. The user may well have designs.
+                <View style={styles.centered}>
+                    <FontAwesomeIcon icon={faFilm} size={28} color={colors.textSecondary} />
+                    <Text style={styles.emptyTitle}>Couldn&apos;t load your designs</Text>
+                    <Text style={styles.emptyBody}>
+                        This is a connection problem, not an empty shelf — your designs are safe.
+                    </Text>
+                    <Pressable
+                        onPress={load}
+                        style={({ pressed }) => [styles.cta, pressed && styles.ctaPressed]}
+                        accessibilityRole="button"
+                    >
+                        <Text style={styles.ctaLabel}>Try again</Text>
+                    </Pressable>
+                </View>
+            ) : designs === null ? (
                 <View style={styles.centered}>
                     <ActivityIndicator color={colors.primary} />
                 </View>
@@ -174,8 +224,8 @@ const DesignStudioIndex = () => {
                     keyExtractor={(d) => d.id}
                     renderItem={renderRow}
                     contentContainerStyle={styles.list}
-                    onRefresh={load}
-                    refreshing={false}
+                    onRefresh={refresh}
+                    refreshing={refreshing}
                 />
             )}
         </AppLayout>
