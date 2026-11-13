@@ -238,3 +238,26 @@ export function toLayerTree(
     }
     return out;
 }
+
+/**
+ * How far the app's playhead may sit from the player's last reported time and
+ * still count as the same moment.
+ *
+ * The player reports `timeupdate` roughly every frame, each one landing in the
+ * app as a changed position. Sending those back as seeks would have the app
+ * and the film fighting over the clock — the film would stutter, because each
+ * seek lands a frame behind where it already is.
+ *
+ * So a position within one tick of what the player just said is the player's
+ * own, and anything further is a real seek: a click in the Layers panel, on
+ * the timeline, or the scrub bar. 150 ms is comfortably more than a tick at
+ * 30fps (33 ms) and far less than the smallest deliberate jump — a scene
+ * boundary, seconds away.
+ */
+export const PLAYER_ECHO_MS = 150;
+
+/** True when `positionMs` is just the player's own clock coming back. */
+export function isPlayerEcho(lastFromPlayerMs: number | null, positionMs: number): boolean {
+    if (lastFromPlayerMs === null) return false;
+    return Math.abs(lastFromPlayerMs - positionMs) <= PLAYER_ECHO_MS;
+}

@@ -5,6 +5,8 @@ import {
     rulerTicks,
     sceneAt,
     timelineDurationMs,
+    isPlayerEcho,
+    PLAYER_ECHO_MS,
     toLayerTree,
     toTracks,
     type DesignScene,
@@ -258,5 +260,35 @@ describe("toLayerTree", () => {
 
     it("handles no scenes", () => {
         expect(toLayerTree(undefined, new Set())).toEqual([]);
+    });
+});
+
+/**
+ * The app and the live player each have a clock, and both write to the same
+ * playhead. This is the rule that stops them fighting over it.
+ */
+describe("isPlayerEcho", () => {
+    it("is false before the player has said anything", () => {
+        expect(isPlayerEcho(null, 4000)).toBe(false);
+    });
+
+    it("treats the player's own tick as its own", () => {
+        expect(isPlayerEcho(4000, 4000)).toBe(true);
+        expect(isPlayerEcho(4000, 4000 + PLAYER_ECHO_MS)).toBe(true);
+        expect(isPlayerEcho(4000, 4000 - PLAYER_ECHO_MS)).toBe(true);
+    });
+
+    it("lets a real seek through", () => {
+        // Clicking a scene three seconds away is nobody's rounding error.
+        expect(isPlayerEcho(4000, 7000)).toBe(false);
+        expect(isPlayerEcho(4000, 0)).toBe(false);
+        expect(isPlayerEcho(4000, 4000 + PLAYER_ECHO_MS + 1)).toBe(false);
+    });
+
+    // A tick at 30fps is 33ms; the window must swallow one without swallowing
+    // a deliberate jump.
+    it("is wider than a frame and narrower than a scene", () => {
+        expect(PLAYER_ECHO_MS).toBeGreaterThan(1000 / 30);
+        expect(PLAYER_ECHO_MS).toBeLessThan(1000);
     });
 });

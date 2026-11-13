@@ -24,7 +24,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { ResizeMode, type AVPlaybackStatus } from "expo-av";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Image,
@@ -36,7 +36,7 @@ import {
 } from "react-native";
 
 import type { DesignPreviewFrame } from "./design-status";
-import { formatClock, frameAt } from "./studio-layout";
+import { formatClock, frameAt, isPlayerEcho } from "./studio-layout";
 
 export interface StudioStageProps {
     renderUrl?: string;
@@ -154,6 +154,54 @@ const StudioStage: React.FC<StudioStageProps> = ({
     // to stand our own transport down.
     const liveActive = !!live && !!previewUrl;
 
+    // ── Driving the film across the frame ─────────────────────────────────
+    // The player is served from the CDN and the app is not, so its seek() is
+    // out of reach: a click in the Layers panel or on the timeline moved our
+    // playhead and left the film where it was. player.html carries a small
+    // bridge (pkg/hfproject/player.go) and this is the other end of it.
+    const playerFrame = useRef<HTMLIFrameElement | null>(null);
+
+    // The last position the PLAYER told us. Without it, echoing that position
+    // back as a seek would fight the film's own clock on every tick.
+    const fromPlayer = useRef<number | null>(null);
+
+    const postToPlayer = useCallback(
+        (type: "seek" | "play" | "pause" | "hello", timeMs?: number) => {
+            const frame = playerFrame.current;
+            if (!frame?.contentWindow || !previewUrl) return;
+            try {
+                frame.contentWindow.postMessage(
+                    { source: "trendly-studio", type, timeMs },
+                    new URL(previewUrl).origin
+                );
+            } catch {
+                // A malformed previewUrl is not worth failing the stage over.
+            }
+        },
+        [previewUrl]
+    );
+
+    // The playhead coming back, so the timeline follows the film.
+    useEffect(() => {
+        if (!liveActive || typeof window === "undefined" || !window.addEventListener) return;
+        const onMessage = (e: MessageEvent) => {
+            const d = e.data as { source?: string; timeMs?: number } | null;
+            if (!d || d.source !== "trendly-player" || typeof d.timeMs !== "number") return;
+            fromPlayer.current = d.timeMs;
+            onPositionFromVideo(d.timeMs);
+        };
+        window.addEventListener("message", onMessage);
+        return () => window.removeEventListener("message", onMessage);
+    }, [liveActive, onPositionFromVideo]);
+
+    // Seeks going out. Only the ones that did NOT come from the player: its
+    // own ticks arrive here as a changed positionMs and must not bounce back.
+    useEffect(() => {
+        if (!liveActive) return;
+        if (isPlayerEcho(fromPlayer.current, positionMs)) return;
+        postToPlayer("seek", positionMs);
+    }, [liveActive, positionMs, postToPlayer]);
+
     const progress: `${number}%` = `${totalMs > 0 ? Math.min(Math.max(positionMs / totalMs, 0), 1) * 100 : 0}%`;
 
     return (
@@ -174,6 +222,8 @@ const StudioStage: React.FC<StudioStageProps> = ({
                 {liveActive ? (
                     <View style={styles.liveFill}>
                         {React.createElement("iframe", {
+                            ref: playerFrame,
+                            onLoad: () => postToPlayer("hello"),
                             src: previewUrl,
                             style: {
                                 width: "100%",
