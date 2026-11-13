@@ -21,6 +21,7 @@ import {
     faChevronRight,
     faChevronUp,
     faCreditCard,
+    faFilm,
     faInbox,
     faLayerGroup,
     faPalette,
@@ -91,11 +92,27 @@ const BOTTOM_MENU_ITEMS = (
         },
     ];
 
-const PLAYGROUND_ITEM = (): Tab => ({
-    href: "/playground",
-    icon: ({ focused }) => <DrawerIcon href="/playground" icon={faWandMagicSparkles} focused={focused} />,
-    label: "Playground",
-});
+// The Playground section: the two places you talk to the AI without starting
+// from a post.
+//
+// The section takes the old item's name and the item takes what it actually
+// is. "Playground" described a chat; it now describes a pair, and calling the
+// chat "AI Chat" is what makes room for the second one to be understood as a
+// sibling rather than a surprise.
+const PLAYGROUND_ITEMS = (): Tab[] => [
+    {
+        // The route is unchanged. Renaming the label is a product decision;
+        // renaming the path would break every link anyone has saved.
+        href: "/playground",
+        icon: ({ focused }) => <DrawerIcon href="/playground" icon={faWandMagicSparkles} focused={focused} />,
+        label: "AI Chat",
+    },
+    {
+        href: "/designs",
+        icon: ({ focused }) => <DrawerIcon href="/designs" icon={faFilm} focused={focused} />,
+        label: "Design Studio",
+    },
+];
 
 const CONTENT_MENU_ITEMS = (theme: Theme): Tab[] => [
     {
@@ -577,7 +594,7 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
     if (isCollapsed) {
         // Gather all visible sections as flat groups for the collapsed view
         const groups: { items: Tab[]; proLockMap?: Record<number, boolean> }[] = [
-            { items: [PLAYGROUND_ITEM()] },
+            { items: PLAYGROUND_ITEMS() },
             { items: contentItems },
             { items: manageItems },
             { items: growthItems },
@@ -951,10 +968,13 @@ const DrawerMenuContentWeb: React.FC<DrawerMenuContentWebProps> = () => {
                         contentContainerStyle={styles.scrollContent}
                         showsVerticalScrollIndicator={false}
                     >
-                        {/* 0. PLAYGROUND — unified AI hub (sits just below the brand header) */}
+                        {/* 0. PLAYGROUND — the AI surfaces that do not start from a post */}
                         <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>Playground</Text>
                             <View style={styles.menuItems}>
-                                <DrawerMenuItem tab={PLAYGROUND_ITEM()} />
+                                {PLAYGROUND_ITEMS().map((tab, idx) => (
+                                    <DrawerMenuItem key={`playground-${idx}`} tab={tab} />
+                                ))}
                             </View>
                         </View>
 

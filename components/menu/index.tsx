@@ -27,6 +27,7 @@ import {
     faGem,
     faHandshake,
     faLock,
+    faFilm,
     faPalette,
     faPenToSquare,
     faPeopleGroup,
@@ -364,11 +365,24 @@ const Menu = () => {
 
             {/* Quick actions */}
             <View style={styles.quickRow}>
+                {/* Renamed to match the web drawer, where "Playground" is now
+                    the SECTION holding both AI surfaces rather than the name
+                    of the chat itself. */}
                 <QuickChip
                     icon={faWandMagicSparkles}
-                    label="Playground"
+                    label="AI Chat"
                     theme={theme}
                     onPress={() => navigate("/playground")}
+                />
+                {/* "Design", not "Design Studio": four chips share one row at
+                    flex: 1, so on a 375pt screen each gets about 85pt and the
+                    longer label wraps to two lines against three single-line
+                    neighbours. The web drawer has room for the full name. */}
+                <QuickChip
+                    icon={faFilm}
+                    label="Design"
+                    theme={theme}
+                    onPress={() => navigate("/designs")}
                 />
                 <QuickChip
                     icon={faComment}
