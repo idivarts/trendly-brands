@@ -37,6 +37,7 @@ import {
 
 import type { DesignPreviewFrame } from "./design-status";
 import { formatClock, frameAt, isPlayerEcho } from "./studio-layout";
+import { selectionFrom, type Selection } from "./selection";
 
 export interface StudioStageProps {
     renderUrl?: string;
@@ -44,6 +45,10 @@ export interface StudioStageProps {
     previewUrl?: string;
     /** True while the user is watching the live player rather than the file. */
     live?: boolean;
+    /** The element the user picked in the player, so it can be ringed. */
+    selection?: Selection | null;
+    /** Told when a click in the player resolves to an element, or to none. */
+    onSelectElement?: (sel: Selection | null) => void;
     posterUrl?: string;
     frames: DesignPreviewFrame[] | undefined;
     aspect: number;
@@ -63,6 +68,8 @@ const StudioStage: React.FC<StudioStageProps> = ({
     renderUrl,
     previewUrl,
     live,
+    selection,
+    onSelectElement,
     posterUrl,
     frames,
     aspect,
@@ -166,12 +173,12 @@ const StudioStage: React.FC<StudioStageProps> = ({
     const fromPlayer = useRef<number | null>(null);
 
     const postToPlayer = useCallback(
-        (type: "seek" | "play" | "pause" | "hello", timeMs?: number) => {
+        (type: "seek" | "play" | "pause" | "hello" | "highlight", timeMs?: number, elementId?: string) => {
             const frame = playerFrame.current;
             if (!frame?.contentWindow || !previewUrl) return;
             try {
                 frame.contentWindow.postMessage(
-                    { source: "trendly-studio", type, timeMs },
+                    { source: "trendly-studio", type, timeMs, elementId },
                     new URL(previewUrl).origin
                 );
             } catch {
@@ -185,14 +192,29 @@ const StudioStage: React.FC<StudioStageProps> = ({
     useEffect(() => {
         if (!liveActive || typeof window === "undefined" || !window.addEventListener) return;
         const onMessage = (e: MessageEvent) => {
-            const d = e.data as { source?: string; timeMs?: number } | null;
-            if (!d || d.source !== "trendly-player" || typeof d.timeMs !== "number") return;
+            const d = e.data as { source?: string; type?: string; timeMs?: number } | null;
+            if (!d || d.source !== "trendly-player") return;
+            // A click arrives on the same channel as the clock. Resolved
+            // here rather than in the screen so there is one place that
+            // knows what the player's messages mean.
+            if (d.type === "select") {
+                onSelectElement?.(selectionFrom(d));
+                return;
+            }
+            if (typeof d.timeMs !== "number") return;
             fromPlayer.current = d.timeMs;
             onPositionFromVideo(d.timeMs);
         };
         window.addEventListener("message", onMessage);
         return () => window.removeEventListener("message", onMessage);
-    }, [liveActive, onPositionFromVideo]);
+    }, [liveActive, onPositionFromVideo, onSelectElement]);
+
+    // The ring follows the selection, including when it is cleared — a
+    // ring left behind after the user clicked away is worse than none.
+    useEffect(() => {
+        if (!liveActive) return;
+        postToPlayer("highlight", undefined, selection?.elementId ?? "");
+    }, [liveActive, selection, postToPlayer]);
 
     // Seeks going out. Only the ones that did NOT come from the player: its
     // own ticks arrive here as a changed positionMs and must not bounce back.

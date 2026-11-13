@@ -29,6 +29,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 
 import type { DesignPreviewFrame } from "./design-status";
 import { formatClock, toLayerTree, type DesignScene } from "./studio-layout";
+import { sceneHoldsSelection, selectionLabel, type Selection } from "./selection";
 
 type MainTab = "media" | "script";
 type MediaTab = "files" | "captions" | "inspirations" | "layers";
@@ -38,6 +39,8 @@ export interface StudioSidePanelProps {
     frames: DesignPreviewFrame[] | undefined;
     brief: string;
     selectedSceneId?: string | null;
+    /** The element picked inside the player, shown under the scene tree. */
+    selection?: Selection | null;
     onSelectScene: (sceneId: string) => void;
     onSeek: (ms: number) => void;
 }
@@ -47,6 +50,7 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
     frames,
     brief,
     selectedSceneId,
+    selection,
     onSelectScene,
     onSeek,
 }) => {
@@ -132,7 +136,10 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
                                                 style={[
                                                     styles.row,
                                                     { paddingLeft: 10 + node.depth * 18 },
-                                                    isScene && node.id === selectedSceneId && styles.rowOn,
+                                                    isScene &&
+                                                        (node.id === selectedSceneId ||
+                                                            sceneHoldsSelection(node.id, selection ?? null)) &&
+                                                        styles.rowOn,
                                                 ]}
                                                 accessibilityRole="button"
                                                 accessibilityLabel={node.label}
@@ -169,6 +176,29 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
                                     })
                                 )}
                             </ScrollView>
+
+                            {/* ── The inspector ────────────────────────────
+                                Read-only in this phase on purpose. Selection
+                                is the foundation three later phases stand on,
+                                and shipping it without a write path means it
+                                cannot damage a design while it is proved. */}
+                            <View style={styles.inspector}>
+                                <Text style={styles.inspectorHead}>
+                                    {selection ? "Selected" : "Nothing selected"}
+                                </Text>
+                                <Text style={styles.inspectorLabel} numberOfLines={2}>
+                                    {selection
+                                        ? selectionLabel(selection)
+                                        : "Click something in the player."}
+                                </Text>
+                                {selection && (
+                                    <Text style={styles.inspectorMeta} numberOfLines={1}>
+                                        {[selection.tag && `<${selection.tag}>`, selection.elementId, selection.sceneId]
+                                            .filter(Boolean)
+                                            .join(" · ")}
+                                    </Text>
+                                )}
+                            </View>
                         </>
                     )}
 
@@ -290,6 +320,30 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 // Matches the chevron's 10px glyph so a scene without one does
                 // not shift its name left of the scenes that have it.
                 chevronSpacer: { width: 10 },
+
+                inspector: {
+                    paddingHorizontal: 12,
+                    paddingVertical: 10,
+                    gap: 3,
+                    backgroundColor: withAlpha(colors.text, 0.03),
+                },
+                inspectorHead: {
+                    fontSize: fs(10),
+                    lineHeight: lh(14),
+                    letterSpacing: 0.6,
+                    textTransform: "uppercase",
+                    color: withAlpha(colors.text, 0.5),
+                },
+                inspectorLabel: {
+                    fontSize: fs(12),
+                    lineHeight: lh(17),
+                    color: colors.text,
+                },
+                inspectorMeta: {
+                    fontSize: fs(10),
+                    lineHeight: lh(14),
+                    color: withAlpha(colors.text, 0.45),
+                },
 
                 leafDot: {
                     width: 5,
