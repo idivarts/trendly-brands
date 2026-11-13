@@ -29,6 +29,7 @@ import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { withAlpha } from "@/utils/color";
 import { useTheme } from "@react-navigation/native";
+import type { Selection } from "@/components/designs/selection";
 import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
@@ -106,6 +107,10 @@ const DesignDetail = () => {
     const [playing, setPlaying] = useState(false);
     const [loop, setLoop] = useState(true);
     const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
+    // What the user clicked inside the player. Owned here because three
+    // panels read it — the scene tree highlights its scene, the inspector
+    // shows it, and from Phase 14 the AI panel scopes an edit to it.
+    const [selection, setSelection] = useState<Selection | null>(null);
     const [pane, setPane] = useState<MobilePane>("stage");
     // Watching the live composition rather than the rendered file. Web only:
     // the player is 776 KB of JavaScript and a React Native WebView has never
@@ -273,6 +278,14 @@ const DesignDetail = () => {
     // The scene under the playhead, unless the user picked one explicitly.
     const activeSceneId = selectedSceneId ?? sceneAt(scenes, positionMs)?.id ?? null;
 
+    // Choosing a scene by hand clears the element. They are two answers to
+    // "what are we looking at", and leaving a stale element selected while
+    // the user moves to another scene makes the inspector lie.
+    const onSelectScene = useCallback((id: string | null) => {
+        setSelectedSceneId(id);
+        setSelection(null);
+    }, []);
+
     const onSeek = useCallback((ms: number) => {
         setPositionMs(ms);
         setSelectedSceneId(null);
@@ -314,6 +327,8 @@ const DesignDetail = () => {
         <StudioStage
             previewUrl={design?.previewUrl}
             live={showLive}
+            selection={selection}
+            onSelectElement={setSelection}
             renderUrl={design?.renderUrl}
             posterUrl={design?.posterUrl}
             frames={design?.previewFrames}
@@ -337,7 +352,8 @@ const DesignDetail = () => {
             frames={design?.previewFrames}
             brief={brief}
             selectedSceneId={activeSceneId}
-            onSelectScene={setSelectedSceneId}
+            selection={selection}
+            onSelectScene={onSelectScene}
             onSeek={setPositionMs}
         />
     );
@@ -397,7 +413,7 @@ const DesignDetail = () => {
                         positionMs={positionMs}
                         selectedSceneId={activeSceneId}
                         onSeek={onSeek}
-                        onSelectScene={setSelectedSceneId}
+                        onSelectScene={onSelectScene}
                     />
                 </View>
             ) : (
@@ -430,7 +446,7 @@ const DesignDetail = () => {
                             positionMs={positionMs}
                             selectedSceneId={activeSceneId}
                             onSeek={onSeek}
-                            onSelectScene={setSelectedSceneId}
+                            onSelectScene={onSelectScene}
                         />
                     )}
                 </View>
