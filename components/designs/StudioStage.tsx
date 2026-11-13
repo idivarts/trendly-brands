@@ -155,18 +155,21 @@ const StudioStage: React.FC<StudioStageProps> = ({
     return (
         <View style={styles.root}>
             <View style={styles.stageArea} onLayout={onStageLayout}>
-                <View style={[styles.frame, frameSize]}>
-                    {live && previewUrl ? (
-                        // ── The live film, in an iframe ────────────────────
-                        // Hyperframes' own player over the project's own HTML,
-                        // so this is the composition itself rather than a
-                        // recording of it — scrubbing here costs nothing and
-                        // needs no render.
-                        //
-                        // Web only. The player is 776 KB of JavaScript and a
-                        // React Native WebView has never been tried with it;
-                        // a phone keeps the stills, which work.
-                        React.createElement("iframe", {
+                {/* ── The live film, in an iframe ───────────────────────
+                    Hyperframes' own player over the project's own HTML, so
+                    this is the composition itself rather than a recording of
+                    it: scrubbing costs nothing and needs no render.
+
+                    It fills the stage directly rather than going through the
+                    measured frame below. The player letterboxes the film
+                    itself, and the frame is 0×0 until onLayout has fired —
+                    which left the iframe present in the DOM and invisible.
+
+                    Web only. 776 KB of JavaScript, and a React Native WebView
+                    has never been tried with it; a phone keeps the stills. */}
+                {live && previewUrl ? (
+                    <View style={styles.liveFill}>
+                        {React.createElement("iframe", {
                             src: previewUrl,
                             style: {
                                 width: "100%",
@@ -177,8 +180,11 @@ const StudioStage: React.FC<StudioStageProps> = ({
                             },
                             title: "Live preview",
                             allow: "autoplay",
-                        })
-                    ) : renderUrl ? (
+                        })}
+                    </View>
+                ) : (
+                <View style={[styles.frame, frameSize]}>
+                    {renderUrl ? (
                         <VideoSurface
                             ref={video}
                             source={{ uri: renderUrl }}
@@ -201,6 +207,7 @@ const StudioStage: React.FC<StudioStageProps> = ({
                         </View>
                     )}
                 </View>
+                )}
             </View>
 
             <View style={styles.transport}>
@@ -283,6 +290,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     backgroundColor: withAlpha(colors.white, 0.04),
                 },
                 video: { width: "100%", height: "100%" },
+                liveFill: { width: "100%", height: "100%" },
                 blank: { flex: 1, alignItems: "center", justifyContent: "center", gap: 8 },
                 blankText: {
                     fontSize: fs(11),
