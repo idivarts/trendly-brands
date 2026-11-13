@@ -1,0 +1,222 @@
+/**
+ * The arithmetic behind the Design Studio editor: tracks, clip geometry, and
+ * the clock.
+ *
+ * ── Why a module ──────────────────────────────────────────────────────────
+ * A timeline is a pile of small conversions — milliseconds to pixels, a
+ * playhead to the scene under it, scenes to the rows they sit on — and every
+ * one of them fails *quietly*. A clip two pixels wide, a playhead that drifts,
+ * a scene drawn on the wrong row: all of them render perfectly and are simply
+ * wrong. This app has jest but no React Native renderer (importing a screen
+ * pulls in the whole RN tree), so the arithmetic lives here where it can be
+ * tested, beside the components that use it — like the studio's own
+ * scene-progress module.
+ */
+
+import type { DesignPreviewFrame } from "./design-status";
+
+export interface DesignScene {
+    id: string;
+    src: string;
+    startMs: number;
+    durationMs: number;
+    trackIndex: number;
+    trackKind?: string;
+}
+
+/** One row of the timeline, with the clips that sit on it. */
+export interface TimelineTrack {
+    index: number;
+    /** What the row is called down the left-hand side. */
+    label: string;
+    kind: string;
+    scenes: DesignScene[];
+}
+
+/**
+ * The film's length.
+ *
+ * `durationMs` off the document is the root composition's own `data-duration`
+ * and is authoritative — it is what the renderer cuts to and what the wallet
+ * charged for. The scenes are only consulted when it is missing, because a
+ * timeline with no width draws nothing at all and that is a worse answer than
+ * an estimate.
+ */
+export function timelineDurationMs(
+    durationMs: number | undefined,
+    scenes: DesignScene[] | undefined
+): number {
+    if (durationMs && durationMs > 0) return durationMs;
+    let end = 0;
+    for (const s of scenes ?? []) {
+        end = Math.max(end, (s.startMs || 0) + (s.durationMs || 0));
+    }
+    return end;
+}
+
+/**
+ * Group the scenes into the rows they are drawn on.
+ *
+ * Hyperframes' own `data-track-index` decides the row, so the timeline shows
+ * the structure the renderer will render rather than one this app invented.
+ * Rows come back in index order, and a project that sets no track index puts
+ * everything on row 0 — which is correct for the single-track films the AI
+ * writes today.
+ */
+export function toTracks(scenes: DesignScene[] | undefined): TimelineTrack[] {
+    const byIndex = new Map<number, DesignScene[]>();
+    for (const s of scenes ?? []) {
+        const i = Number.isFinite(s.trackIndex) ? s.trackIndex : 0;
+        const list = byIndex.get(i);
+        if (list) list.push(s);
+        else byIndex.set(i, [s]);
+    }
+
+    return [...byIndex.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .map(([index, list]) => {
+            const kind = list.find((s) => s.trackKind)?.trackKind ?? "scene";
+            return {
+                index,
+                kind,
+                // The kind reads better as a row label than "Track 1" does,
+                // and it is what Hyperframes itself shows.
+                label: titleCase(kind),
+                scenes: [...list].sort((a, b) => a.startMs - b.startMs),
+            };
+        });
+}
+
+function titleCase(s: string): string {
+    if (!s) return "Scene";
+    return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/**
+ * Where a clip sits on a row, as fractions of the timeline's width.
+ *
+ * Fractions rather than pixels so the caller can lay out with percentages and
+ * the timeline reflows with the pane. Both are clamped into [0, 1]: a scene
+ * whose duration runs past the root's — which the authoring contract permits
+ * and the renderer simply cuts — would otherwise draw a clip wider than the
+ * track and push the whole row out of alignment.
+ */
+export function clipGeometry(
+    scene: DesignScene,
+    totalMs: number
+): { left: number; width: number } {
+    if (totalMs <= 0) return { left: 0, width: 0 };
+    const left = clamp01((scene.startMs || 0) / totalMs);
+    const rawWidth = (scene.durationMs || 0) / totalMs;
+    // Never wider than what is left of the track after `left`.
+    const width = Math.max(0, Math.min(rawWidth, 1 - left));
+    return { left, width };
+}
+
+function clamp01(n: number): number {
+    if (!Number.isFinite(n)) return 0;
+    return Math.min(Math.max(n, 0), 1);
+}
+
+/** The scene under the playhead, or null in a gap. */
+export function sceneAt(scenes: DesignScene[] | undefined, positionMs: number): DesignScene | null {
+    for (const s of scenes ?? []) {
+        const start = s.startMs || 0;
+        const end = start + (s.durationMs || 0);
+        // Half-open: at exactly the boundary the NEXT scene is on screen,
+        // which is what the renderer does. Closed intervals would make two
+        // scenes both claim the frame at a cut.
+        if (positionMs >= start && positionMs < end) return s;
+    }
+    return null;
+}
+
+/**
+ * The preview frame to show at a given moment.
+ *
+ * The LAST frame at or before the playhead, not the nearest. Frames are
+ * sampled every couple of seconds, so "nearest" would show the upcoming scene
+ * while the playhead is still in the previous one — the picture would change
+ * before the cut does.
+ */
+export function frameAt(
+    frames: DesignPreviewFrame[] | undefined,
+    positionMs: number
+): DesignPreviewFrame | null {
+    let best: DesignPreviewFrame | null = null;
+    for (const f of frames ?? []) {
+        if (f.timeMs <= positionMs && (!best || f.timeMs > best.timeMs)) best = f;
+    }
+    // Before the first sample, the first frame is still the better answer
+    // than an empty stage.
+    if (!best && (frames?.length ?? 0) > 0) {
+        best = [...frames!].sort((a, b) => a.timeMs - b.timeMs)[0];
+    }
+    return best;
+}
+
+/** "0:04" / "1:23" — the transport clock. */
+export function formatClock(ms: number): string {
+    const safe = Number.isFinite(ms) && ms > 0 ? ms : 0;
+    const total = Math.floor(safe / 1000);
+    const m = Math.floor(total / 60);
+    const s = total % 60;
+    return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+/**
+ * The ruler's tick marks.
+ *
+ * Spaced so a short film is not crowded and a long one is not bare, and
+ * always ending on a tick at or before the end — a tick past the end would
+ * label time the film does not have.
+ */
+export function rulerTicks(totalMs: number, maxTicks = 10): number[] {
+    if (totalMs <= 0) return [];
+    const seconds = totalMs / 1000;
+    const steps = [1, 2, 5, 10, 15, 30, 60, 120, 300];
+    const step = steps.find((s) => seconds / s <= maxTicks) ?? steps[steps.length - 1];
+    const ticks: number[] = [];
+    for (let t = 0; t <= seconds + 1e-9; t += step) ticks.push(Math.round(t * 1000));
+    return ticks;
+}
+
+/**
+ * The layer tree the right-hand panel shows.
+ *
+ * One node per scene, with its clip's own children folded underneath. v3 does
+ * not parse the compositions themselves — only the root — so a scene's
+ * children are what the document actually knows: where it is and how long it
+ * lasts. Shown rather than hidden because an empty disclosure triangle is a
+ * promise the panel cannot keep.
+ */
+export interface LayerNode {
+    id: string;
+    label: string;
+    detail: string;
+    depth: number;
+}
+
+export function toLayerTree(
+    scenes: DesignScene[] | undefined,
+    expanded: ReadonlySet<string>
+): LayerNode[] {
+    const out: LayerNode[] = [];
+    for (const s of scenes ?? []) {
+        out.push({
+            id: s.id,
+            label: s.id,
+            detail: `${formatClock(s.startMs)} · ${(s.durationMs / 1000).toFixed(1)}s`,
+            depth: 0,
+        });
+        if (expanded.has(s.id)) {
+            out.push({
+                id: `${s.id}::src`,
+                label: s.src.replace(/^compositions\//, ""),
+                detail: s.trackKind ?? "scene",
+                depth: 1,
+            });
+        }
+    }
+    return out;
+}
