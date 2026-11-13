@@ -27,10 +27,11 @@ import AppLayout from "@/layouts/app-layout";
 import { HttpError, HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
+import { withAlpha } from "@/utils/color";
 import { useTheme } from "@react-navigation/native";
 import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 /**
  * Design Studio — one design, as an editor.
@@ -76,6 +77,7 @@ interface Design extends DesignStatusFields {
     name: string;
     contentId?: string;
     posterUrl?: string;
+    previewUrl?: string;
     brief?: string;
     scenes?: DesignScene[];
 }
@@ -105,6 +107,10 @@ const DesignDetail = () => {
     const [loop, setLoop] = useState(true);
     const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
     const [pane, setPane] = useState<MobilePane>("stage");
+    // Watching the live composition rather than the rendered file. Web only:
+    // the player is 776 KB of JavaScript and a React Native WebView has never
+    // been tried with it, so a phone keeps the stills.
+    const [live, setLive] = useState(false);
 
     // The stored brief is seeded ONCE, and never over text the user has
     // already typed: re-seeding on a poll would clobber their edits
@@ -296,8 +302,18 @@ const DesignDetail = () => {
         />
     );
 
+    // Default to the live player when nothing is rendered yet: a written
+    // design with no film is exactly the case stills were a stand-in for.
+    // Once a render exists the FILE leads, because that is what gets
+    // published, and the toggle is there to check a rewrite before paying to
+    // render it again.
+    const canGoLive = Platform.OS === "web" && !!design?.previewUrl;
+    const showLive = canGoLive && (live || !design?.renderUrl);
+
     const stage = (
         <StudioStage
+            previewUrl={design?.previewUrl}
+            live={showLive}
             renderUrl={design?.renderUrl}
             posterUrl={design?.posterUrl}
             frames={design?.previewFrames}
@@ -350,7 +366,29 @@ const DesignDetail = () => {
                 <View style={styles.desktop}>
                     <View style={styles.columns}>
                         <View style={styles.leftPane}>{briefPanel}</View>
-                        <View style={styles.centerPane}>{stage}</View>
+                        <View style={styles.centerPane}>
+                            {canGoLive && !!design?.renderUrl && (
+                                <View style={styles.sourceTabs}>
+                                    {[
+                                        { on: showLive, label: "Live", v: true },
+                                        { on: !showLive, label: "Rendered film", v: false },
+                                    ].map((t) => (
+                                        <Pressable
+                                            key={t.label}
+                                            onPress={() => setLive(t.v)}
+                                            style={[styles.sourceTab, t.on && styles.sourceTabOn]}
+                                            accessibilityRole="tab"
+                                            accessibilityState={{ selected: t.on }}
+                                        >
+                                            <Text style={[styles.sourceLabel, t.on && styles.sourceLabelOn]}>
+                                                {t.label}
+                                            </Text>
+                                        </Pressable>
+                                    ))}
+                                </View>
+                            )}
+                            {stage}
+                        </View>
                         <View style={styles.rightPane}>{sidePanel}</View>
                     </View>
                     <StudioTimeline
@@ -419,6 +457,27 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     zIndex: 2,
                 },
                 centerPane: { flex: 1 },
+                sourceTabs: {
+                    flexDirection: "row",
+                    gap: 6,
+                    paddingHorizontal: 12,
+                    paddingVertical: 8,
+                    backgroundColor: colors.black,
+                },
+                sourceTab: {
+                    paddingHorizontal: 14,
+                    paddingVertical: 6,
+                    borderRadius: 999,
+                    backgroundColor: withAlpha(colors.white, 0.1),
+                },
+                sourceTabOn: { backgroundColor: colors.primary },
+                sourceLabel: {
+                    fontSize: fs(11),
+                    lineHeight: lh(16),
+                    fontWeight: "700",
+                    color: withAlpha(colors.white, 0.75),
+                },
+                sourceLabelOn: { color: colors.onPrimary },
                 rightPane: {
                     width: 290,
                     shadowColor: "#000",

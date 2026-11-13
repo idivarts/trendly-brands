@@ -40,6 +40,10 @@ import { formatClock, frameAt } from "./studio-layout";
 
 export interface StudioStageProps {
     renderUrl?: string;
+    /** A page that PLAYS the project live, before any render. Web only. */
+    previewUrl?: string;
+    /** True while the user is watching the live player rather than the file. */
+    live?: boolean;
     posterUrl?: string;
     frames: DesignPreviewFrame[] | undefined;
     aspect: number;
@@ -57,6 +61,8 @@ export interface StudioStageProps {
 
 const StudioStage: React.FC<StudioStageProps> = ({
     renderUrl,
+    previewUrl,
+    live,
     posterUrl,
     frames,
     aspect,
@@ -150,7 +156,29 @@ const StudioStage: React.FC<StudioStageProps> = ({
         <View style={styles.root}>
             <View style={styles.stageArea} onLayout={onStageLayout}>
                 <View style={[styles.frame, frameSize]}>
-                    {renderUrl ? (
+                    {live && previewUrl ? (
+                        // ── The live film, in an iframe ────────────────────
+                        // Hyperframes' own player over the project's own HTML,
+                        // so this is the composition itself rather than a
+                        // recording of it — scrubbing here costs nothing and
+                        // needs no render.
+                        //
+                        // Web only. The player is 776 KB of JavaScript and a
+                        // React Native WebView has never been tried with it;
+                        // a phone keeps the stills, which work.
+                        React.createElement("iframe", {
+                            src: previewUrl,
+                            style: {
+                                width: "100%",
+                                height: "100%",
+                                border: "none",
+                                display: "block",
+                                background: "#000",
+                            },
+                            title: "Live preview",
+                            allow: "autoplay",
+                        })
+                    ) : renderUrl ? (
                         <VideoSurface
                             ref={video}
                             source={{ uri: renderUrl }}
