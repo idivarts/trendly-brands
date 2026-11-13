@@ -13,7 +13,7 @@ import {
     resolveDesignGate,
     type DesignStatusFields,
 } from "@/components/designs/design-status";
-import { useEntitlements } from "@/hooks/use-entitlements";
+import { formatTokens, useEntitlements } from "@/hooks/use-entitlements";
 import AppLayout from "@/layouts/app-layout";
 import { HttpError, HttpWrapper } from "@/shared-libs/utils/http-wrapper";
 import Toaster from "@/shared-uis/components/toaster/Toaster";
@@ -196,8 +196,21 @@ const DesignDetail = () => {
                 body: JSON.stringify({ quality: "delivery" }),
             });
             const data = await res.json();
-            if (data?.status === "done") Toaster.success("Already rendered", "This design is up to date.");
-            else Toaster.success("Rendering your design", "You can leave this page — we'll finish it.");
+            if (data?.status === "done") {
+                Toaster.success("Already rendered", "This design is up to date.");
+            } else if (typeof data?.refunded === "number" && data.refunded > 0) {
+                // The last attempt failed after taking tokens, and this retry
+                // gave them back. Said out loud, because a balance that
+                // dropped for nothing and quietly recovered is indistinguishable
+                // from one that was never charged — and the user who watched
+                // it drop deserves to know it was put right.
+                Toaster.success(
+                    `${formatTokens(data.refunded)} tokens returned`,
+                    "The attempt that failed has been refunded. Rendering again now."
+                );
+            } else {
+                Toaster.success("Rendering your design", "You can leave this page — we'll finish it.");
+            }
             setGate(null);
             await load();
         } catch (err: unknown) {
