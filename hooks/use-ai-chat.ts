@@ -18,7 +18,13 @@ import {
 } from "firebase/firestore";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-export type AIModule = "strategy" | "calendar" | "content" | "general" | "onboarding";
+export type AIModule =
+    | "strategy"
+    | "calendar"
+    | "content"
+    | "design"
+    | "general"
+    | "onboarding";
 
 /**
  * Which ai_config task backs a module's chat.
@@ -38,7 +44,16 @@ export type AIModule = "strategy" | "calendar" | "content" | "general" | "onboar
  * because its task is already vision-capable throughout.
  */
 export function taskForModule(module: string): string {
-    return module === "content" ? "design" : "chat";
+    // ⚠️ "design" is the Design Studio's own module, and it runs on the
+    // `design` task for the same reason `content` does — but the reasoning
+    // is worth stating, because the opposite is the obvious guess. A
+    // studio chat IS a chat, so `chat` looks right; it would silently drop
+    // the studio from Claude Opus 4.8 (which `design` leads with) to
+    // Gemini Flash (which `chat` leads with), since the backend resolves
+    // to the first allowed model the plan unlocks. TaskForModule in
+    // backend-sls internal/trendlyapis/ai/design_studio_chat.go is the
+    // other half of this and must say the same.
+    return module === "content" || module === "design" ? "design" : "chat";
 }
 
 /**

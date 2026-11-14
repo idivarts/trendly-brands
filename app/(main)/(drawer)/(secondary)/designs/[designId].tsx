@@ -1,4 +1,5 @@
 import StudioBriefPanel from "@/components/designs/StudioBriefPanel";
+import AIChatPanel from "@/components/shared/AIChatPanel";
 import StudioSidePanel from "@/components/designs/StudioSidePanel";
 import type { DesignRevision } from "@/components/designs/revisions";
 import type { ElementEdit } from "@/components/designs/inspector-edit";
@@ -40,6 +41,7 @@ import Colors from "@/shared-uis/constants/Colors";
 import { withAlpha } from "@/utils/color";
 import { useTheme } from "@react-navigation/native";
 import { selectionLabel, type Selection } from "@/components/designs/selection";
+import type { Focus } from "@/types/focus";
 import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
@@ -683,6 +685,46 @@ const DesignDetail = () => {
         </>
     );
 
+    // ── The conversation beside the film ────────────────────────────────
+    // One thread per film, on the `design` module — which runs on
+    // TaskDesign and therefore on Claude Opus 4.8, not on the chat lane's
+    // Gemini Flash. The backend's TaskForModule is the other half of that.
+    //
+    // The selection travels as a focus chip rather than as words in the
+    // message: a chip is addressed (`film-element`, with the element's own
+    // id), shown to the user before they send, and removable. "Make this
+    // bigger" typed with nothing selected is then plainly a question about
+    // the whole film rather than a guess the model has to make.
+    const focusItems = useMemo<Focus[]>(() => {
+        if (!selection || !designId) return [];
+        return [
+            {
+                id: `film:${selection.elementId}`,
+                focusText: selectionLabel(selection),
+                focusArea: {
+                    type: "film-element",
+                    designId,
+                    elementId: selection.elementId,
+                    sceneId: selection.sceneId || undefined,
+                    tag: selection.tag,
+                    text: selection.text || undefined,
+                },
+            },
+        ];
+    }, [selection, designId]);
+
+    const studioChat = (
+        <AIChatPanel
+            module="design"
+            contextId={designId}
+            title="Design Studio"
+            isCompact
+            placeholder="Ask for a change…"
+            focusItems={focusItems}
+            onRemoveFocusItem={() => setSelection(null)}
+        />
+    );
+
     const briefPanel = (
         <StudioBriefPanel
             brief={brief}
@@ -706,6 +748,7 @@ const DesignDetail = () => {
             linkedToContent={!!design?.contentId}
             onAuthor={author}
             onRender={render}
+            chat={studioChat}
         />
     );
 

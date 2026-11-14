@@ -54,9 +54,27 @@ export interface StudioBriefPanelProps {
     selectionLabel?: string | null;
     /** Asks the AI to change that element alone. */
     onAskAboutSelection?: (instruction: string) => void;
+
+    /**
+     * The conversation, once this film has one.
+     *
+     * ── Why the brief and the chat are not both on screen ────────────────
+     * They are the same question asked twice. A brief box says "what should
+     * this film be" and a chat says "what would you like to change", and a
+     * panel holding both invites someone to rewrite the brief, press
+     * nothing, and wonder why the film did not change.
+     *
+     * So: a film with nothing in it shows the brief, because a brief is how
+     * a film STARTS and there is nothing yet to have a conversation about.
+     * Once it is written the thread takes over, and the brief lives on as
+     * that thread's first message. The status line and the actions stay in
+     * both, because they are about the film rather than about the request.
+     */
+    chat?: React.ReactNode;
 }
 
 const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
+    chat,
     brief,
     renderUrl,
     onBriefChange,
@@ -95,7 +113,7 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
 
     return (
         <View style={styles.root}>
-            <ScrollView contentContainerStyle={styles.body}>
+            <View style={styles.statusStrip}>
                 <View style={styles.statusRow}>
                     <View
                         style={[
@@ -109,6 +127,15 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
                     </Text>
                 </View>
 
+            </View>
+
+            {chat && written ? (
+                // The thread fills everything between the status line and
+                // the actions. It brings its own scrolling, composer and
+                // history, so it must not be nested in the ScrollView below.
+                <View style={styles.chat}>{chat}</View>
+            ) : (
+            <ScrollView contentContainerStyle={styles.body}>
                 <Text style={styles.label}>What should this film be?</Text>
                 <TextInput
                     value={brief}
@@ -158,6 +185,7 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
                     <Text style={styles.note}>Linked to a post — the export lands on it.</Text>
                 )}
             </ScrollView>
+            )}
 
             <View style={styles.actions}>
                 {gate === "tokens_exhausted" ? (
@@ -290,6 +318,12 @@ function useStyles(colors: ReturnType<typeof Colors>) {
             StyleSheet.create({
                 root: { flex: 1, backgroundColor: colors.card },
                 body: { padding: 14, gap: 10 },
+                // The status line sits above whichever of the two fills the
+                // panel, so it reads the same in both.
+                statusStrip: { paddingHorizontal: 14, paddingTop: 14, paddingBottom: 10 },
+                // The thread brings its own scrolling; it takes the space and
+                // is never nested in a ScrollView, which would give it two.
+                chat: { flex: 1, minHeight: 0 },
                 statusRow: { flexDirection: "row", alignItems: "center", gap: 8 },
                 dot: {
                     width: 7,

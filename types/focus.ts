@@ -18,6 +18,7 @@
 
 export type FocusAreaType =
     | "design-element"
+    | "film-element"
     | "strategy-snippet"
     | "calendar-content"
     | "content"
@@ -37,6 +38,30 @@ export interface DesignElementFocusArea {
     /** "image" | "video" | "carousel" — the design doc type. */
     docType?: string;
     /** The element's visible text, if any (empty for images/containers). */
+    text?: string;
+}
+
+/**
+ * An element of a Design Studio v3 FILM.
+ *
+ * ── Why not design-element ────────────────────────────────────────────────
+ * design-element addresses an element of a CONTENT's own HTML design
+ * revision, keyed by contentId. A film is a first-class object with its own
+ * id, and putting a designId in contentId would have every reader of a
+ * focus — the prompt, the tools, the message history — believing a content
+ * exists that does not. Mirrors AIFocusArea's film-element fields in
+ * backend-sls internal/models/trendlymodels/ai_conversation.go.
+ */
+export interface FilmElementFocusArea {
+    type: "film-element";
+    designId: string;
+    /** The element's own id, which is how an edit addresses it. */
+    elementId: string;
+    /** The scene it sits in, which is how a person refers to it. */
+    sceneId?: string;
+    /** Lower-cased tag name — h1, p, img. */
+    tag?: string;
+    /** Its text, if any. */
     text?: string;
 }
 
@@ -77,6 +102,7 @@ export interface CommentFocusArea {
 
 export type FocusArea =
     | DesignElementFocusArea
+    | FilmElementFocusArea
     | StrategySnippetFocusArea
     | CalendarContentFocusArea
     | ContentFocusArea
@@ -101,6 +127,11 @@ const clip = (s: string | undefined, n = 160): string =>
  */
 export function describeFocusArea(area: FocusArea): string {
     switch (area.type) {
+        case "film-element": {
+            const where = area.sceneId?.trim() ? ` in the ${area.sceneId} scene` : "";
+            const reads = area.text?.trim() ? `, which reads: "${clip(area.text)}"` : "";
+            return `the <${area.tag || "element"}> with id ${area.elementId}${where} of film ${area.designId}${reads} — change THAT and nothing else`;
+        }
         case "design-element": {
             const where =
                 area.slideIndex != null
