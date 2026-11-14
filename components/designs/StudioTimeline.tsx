@@ -147,10 +147,16 @@ const StudioTimeline: React.FC<StudioTimelineProps> = ({
     const [laneWidth, setLaneWidth] = React.useState(0);
     const laneRef = useRef<View | null>(null);
     const laneLeft = useRef(0);
-    const measureLane = useCallback(() => {
-        laneRef.current?.measureInWindow((x, _y, w) => {
+    const measureLane = useCallback((then?: (left: number, width: number) => void) => {
+        const node = laneRef.current;
+        if (!node) {
+            then?.(laneLeft.current, 0);
+            return;
+        }
+        node.measureInWindow((x, _y, w) => {
             laneLeft.current = x;
             if (w > 0) setLaneWidth(w);
+            then?.(x, w);
         });
     }, []);
     const onLaneLayout = useCallback(
@@ -167,17 +173,20 @@ const StudioTimeline: React.FC<StudioTimelineProps> = ({
         [totalMs, laneWidth]
     );
 
-    // Located against the lane's measured box, and measured again on the
-    // way in: the page can scroll between a layout and a press, and a
-    // stale left edge is a seek a few seconds out — the kind of wrong
+    // Located against the lane's box, measured on the way IN and then
+    // used — not measured and read in the same breath, which reads the
+    // PREVIOUS measurement, because measureInWindow answers through a
+    // callback. The page can scroll between a layout and a press, and a
+    // stale left edge is a seek a second or two out: the kind of wrong
     // nobody reports because it looks like their own aim.
     const seekFromPage = useCallback(
         (pageX: number | undefined) => {
             if (totalMs <= 0) return;
-            measureLane();
-            const f = pressFraction(pageX, laneLeft.current, laneWidth);
-            if (f === null) return;
-            onSeek(Math.round(f * totalMs));
+            measureLane((left, width) => {
+                const f = pressFraction(pageX, left, width > 0 ? width : laneWidth);
+                if (f === null) return;
+                onSeek(Math.round(f * totalMs));
+            });
         },
         [laneWidth, totalMs, onSeek, measureLane]
     );
@@ -439,6 +448,8 @@ const ClipBar: React.FC<{
     live.current = props;
 
     const mode = useRef<DragMode>("move");
+    /** True when this gesture began while an edit was already in flight. */
+    const refused = useRef(false);
     const from = useRef<ClipWindow>({ startMs: clip.startMs, durationMs: clip.durationMs });
 
     const pan = useMemo(
@@ -454,6 +465,14 @@ const ClipBar: React.FC<{
                 .onBegin((e) => {
                     const p = live.current;
                     from.current = { startMs: p.clip.startMs, durationMs: p.clip.durationMs };
+                    // ⚠️ Refused, not queued, while an edit is in flight.
+                    // Two drags racing produce two revisions, and the
+                    // second is built on a document the first has already
+                    // replaced — so the first edit vanishes with nothing
+                    // said. The + and the lane tap beside this are
+                    // disabled for the same reason; a gesture has no
+                    // disabled state, so it refuses here instead.
+                    refused.current = p.busy;
                     // Where the finger LANDED, which is the only thing that
                     // can say whether this is a trim of an edge or a move:
                     // by the time a pan activates it has already travelled.
@@ -461,10 +480,12 @@ const ClipBar: React.FC<{
                     mode.current = dragModeFor(e.absoluteX - clipLeftPx, p.widthPx);
                 })
                 .onStart(() => {
+                    if (refused.current) return;
                     const p = live.current;
                     p.onDrag({ clipId: p.clip.elementId, mode: mode.current, window: from.current });
                 })
                 .onUpdate((e) => {
+                    if (refused.current) return;
                     const p = live.current;
                     p.onDrag({
                         clipId: p.clip.elementId,
@@ -473,6 +494,7 @@ const ClipBar: React.FC<{
                     });
                 })
                 .onEnd((e) => {
+                    if (refused.current) return;
                     const p = live.current;
                     const to = dragWindow(from.current, mode.current, e.translationX, p.laneWidth, p.totalMs);
                     p.onDrag(null);
@@ -669,10 +691,15 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 },
                 handleLeft: { left: 3 },
                 handleRight: { right: 3 },
+                // ── Inside the clip, not hanging off it ──────────────
+                // The lane clips its contents (overflow: "hidden"), so a
+                // badge at top:-6/right:-6 came out as a damaged
+                // half-circle — and for a clip ending at the lane's right
+                // edge, half of it was simply not there to press.
                 remove: {
                     position: "absolute",
-                    top: -6,
-                    right: -6,
+                    top: 3,
+                    right: 3,
                     width: 18,
                     height: 18,
                     borderRadius: 9,

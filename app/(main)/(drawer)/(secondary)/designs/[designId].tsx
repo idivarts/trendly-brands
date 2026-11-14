@@ -10,7 +10,7 @@ import { VOICE_PENDING, lineEdit, type ScriptLine } from "@/components/designs/s
 import StudioStage from "@/components/designs/StudioStage";
 import StudioTimeline from "@/components/designs/StudioTimeline";
 import TimelineAddBar, { type TimelineAddTarget } from "@/components/designs/TimelineAddBar";
-import { dropTypeFor, type Window as ClipWindow } from "@/components/designs/timeline-drag";
+import { type Window as ClipWindow } from "@/components/designs/timeline-drag";
 import {
     designAspect,
     designStatus,
@@ -627,6 +627,12 @@ const DesignDetail = () => {
     // clicking it in the player is still how you edit it.
     const onSelectClip = useCallback((clip: DesignClip) => {
         setPositionMs(clip.startMs ?? 0);
+        // The inspector describes the element the PLAYER reported, and
+        // picking a clip here means we are looking at something else. A
+        // stale element left in the panel is not merely untidy: an edit
+        // typed into it applies to the headline someone clicked a minute
+        // ago rather than to the clip that is plainly highlighted.
+        setSelection(null);
         if (clip.kind === "scene") {
             setSelectedClipId(null);
             return;
