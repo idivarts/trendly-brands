@@ -2,7 +2,7 @@ import StudioBriefPanel from "@/components/designs/StudioBriefPanel";
 import StudioSidePanel from "@/components/designs/StudioSidePanel";
 import type { DesignRevision } from "@/components/designs/revisions";
 import type { ElementEdit } from "@/components/designs/inspector-edit";
-import type { SceneOperation } from "@/components/designs/StudioSidePanel";
+import type { DesignAsset, MediaPlacement, SceneOperation } from "@/components/designs/StudioSidePanel";
 import { VOICE_PENDING, lineEdit, type ScriptLine } from "@/components/designs/script-lines";
 import StudioStage from "@/components/designs/StudioStage";
 import StudioTimeline from "@/components/designs/StudioTimeline";
@@ -115,6 +115,10 @@ const DesignDetail = () => {
     // it: it is derived from the project, and a copy on the document would
     // be a second thing to keep in step with the film.
     const [script, setScript] = useState<ScriptLine[]>([]);
+    // What the project directory holds. Read beside the script, and for
+    // the same reason: it is a fact about the files, not about the
+    // document, so the design cannot carry it.
+    const [assets, setAssets] = useState<DesignAsset[]>([]);
     const [positionMs, setPositionMs] = useState(0);
     const [playing, setPlaying] = useState(false);
     const [loop, setLoop] = useState(true);
@@ -197,6 +201,15 @@ const DesignDetail = () => {
                 );
                 const data = await res.json();
                 if (!cancelled && Array.isArray(data?.lines)) setScript(data.lines as ScriptLine[]);
+
+                const assetRes = await HttpWrapper.fetch(
+                    `/api/design/brands/${brandId}/designs/${designId}/assets`,
+                    { method: "GET" }
+                );
+                const assetData = await assetRes.json();
+                if (!cancelled && Array.isArray(assetData?.assets)) {
+                    setAssets(assetData.assets as DesignAsset[]);
+                }
             } catch {
                 /* The script is a view of the film; a failed read leaves
                    the last one on screen rather than emptying the panel. */
@@ -371,6 +384,30 @@ const DesignDetail = () => {
         [act]
     );
 
+    // ── Media, placed by hand ────────────────────────────────────────────
+    // A file the project already holds goes on immediately. Anything new
+    // is a declaration the next preview or render fetches, which is what
+    // `pending` in the answer means — said out loud, because the film
+    // does not have the photograph yet.
+    const addMedia = useCallback(
+        (place: MediaPlacement) =>
+            act(
+                "media",
+                place as unknown as Record<string, unknown>,
+                (data) => {
+                    if (data?.pending) {
+                        Toaster.success(
+                            "Asked for",
+                            "It will be fetched the next time this film is previewed or rendered."
+                        );
+                    }
+                },
+                "Couldn't add that",
+                (message) => Toaster.error("Couldn't add that", message)
+            ),
+        [act]
+    );
+
     const author = useCallback(() => {
         const text = brief.trim();
         if (!text) {
@@ -508,6 +545,8 @@ const DesignDetail = () => {
             currentPrefix={design?.projectPrefix}
             onRestore={restore}
             restoring={submitting}
+            assets={assets}
+            onAddMedia={addMedia}
             script={script}
             onEditLine={editLine}
             onScene={changeScenes}

@@ -45,6 +45,22 @@ type MainTab = "media" | "script" | "history";
 /** For a caller with no write path — the panel still shows what is selected. */
 const noEdit = () => {};
 
+/** A file the project holds. */
+export interface DesignAsset {
+    path: string;
+    kind: "image" | "audio" | "video";
+    name: string;
+}
+
+/** Media to put into the film, as the backend's /media takes it. */
+export interface MediaPlacement {
+    sceneId?: string;
+    elementId?: string;
+    type?: "image" | "bgm";
+    intent?: string;
+    assetPath?: string;
+}
+
 /** One change to the film's shape, as the backend's /structure takes it. */
 export interface SceneOperation {
     op: "retime" | "move" | "duplicate" | "delete" | "add";
@@ -131,6 +147,10 @@ export interface StudioSidePanelProps {
     /** Puts the film back to a revision. Absent while one is in flight. */
     onRestore?: (n: number) => void;
     restoring?: boolean;
+    /** What the project directory holds. */
+    assets?: DesignAsset[];
+    /** Adds media to a scene, or puts a file on the selected element. */
+    onAddMedia?: (place: MediaPlacement) => void;
     /** The film as words, for the Script tab. */
     script?: ScriptLine[];
     /** Writes one rewritten line. */
@@ -156,6 +176,8 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
     currentPrefix,
     onRestore,
     restoring,
+    assets,
+    onAddMedia,
     script,
     onEditLine,
     onScene,
@@ -173,6 +195,7 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
     const [main, setMain] = useState<MainTab>("media");
     const [media, setMedia] = useState<MediaTab>("layers");
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
+    const [mediaWanted, setMediaWanted] = useState("");
 
     const toggle = useCallback((id: string) => {
         setExpanded((prev) => {
@@ -443,6 +466,89 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
 
                     {media === "files" && (
                         <ScrollView contentContainerStyle={styles.filesBody}>
+                            {/* ── Asking for media ─────────────────────────
+                                What is typed here becomes a declaration in
+                                the film, which the next preview or render
+                                fetches. The panel says that, because the
+                                film does not have the photograph yet and a
+                                panel that implied otherwise would have
+                                someone render expecting it. */}
+                            {!!onAddMedia && (
+                                <View style={styles.askMedia}>
+                                    <Text style={styles.sectionLabel}>
+                                        {selectedSceneId ? `Add to ${selectedSceneId}` : "Add to the first scene"}
+                                    </Text>
+                                    <TextInput
+                                        value={mediaWanted}
+                                        onChangeText={setMediaWanted}
+                                        placeholder="A photograph of cold brew poured over ice"
+                                        placeholderTextColor={colors.textSecondary}
+                                        multiline
+                                        style={styles.scriptField}
+                                        editable={!busyScenes}
+                                        accessibilityLabel="What media to add"
+                                    />
+                                    <View style={styles.row}>
+                                        {(["image", "bgm"] as const).map((kind) => (
+                                            <Pressable
+                                                key={kind}
+                                                onPress={() => {
+                                                    const text = mediaWanted.trim();
+                                                    if (!text) return;
+                                                    setMediaWanted("");
+                                                    onAddMedia({
+                                                        sceneId: selectedSceneId ?? undefined,
+                                                        type: kind,
+                                                        intent: text,
+                                                    });
+                                                }}
+                                                disabled={!!busyScenes || mediaWanted.trim() === ""}
+                                                style={[
+                                                    styles.askBtn,
+                                                    (!!busyScenes || mediaWanted.trim() === "") && styles.dimRow,
+                                                ]}
+                                                accessibilityRole="button"
+                                            >
+                                                <Text style={styles.askLabel}>
+                                                    {kind === "image" ? "Add a picture" : "Add music"}
+                                                </Text>
+                                            </Pressable>
+                                        ))}
+                                    </View>
+                                    <Text style={styles.sceneRule}>
+                                        It is fetched the next time this film is previewed or rendered.
+                                    </Text>
+                                </View>
+                            )}
+
+                            {/* What the film already holds. */}
+                            {(assets?.length ?? 0) > 0 && (
+                                <View style={styles.askMedia}>
+                                    <Text style={styles.sectionLabel}>In this film</Text>
+                                    {assets!.map((a) => (
+                                        <View key={a.path} style={styles.assetRow}>
+                                            <Text style={styles.assetName} numberOfLines={1}>
+                                                {a.name}
+                                            </Text>
+                                            <Text style={styles.rowDetail}>{a.kind}</Text>
+                                            {!!onAddMedia && !!selection && (
+                                                <Pressable
+                                                    onPress={() =>
+                                                        onAddMedia({ elementId: selection.elementId, assetPath: a.path })
+                                                    }
+                                                    disabled={!!busyScenes}
+                                                    style={[styles.useBtn, !!busyScenes && styles.dimRow]}
+                                                    accessibilityRole="button"
+                                                    accessibilityLabel={`Put ${a.name} on the selected element`}
+                                                >
+                                                    <Text style={styles.useLabel}>Use</Text>
+                                                </Pressable>
+                                            )}
+                                        </View>
+                                    ))}
+                                </View>
+                            )}
+
                             {(frames?.length ?? 0) === 0 ? (
                                 <Text style={styles.empty}>
                                     Preview the design and its frames appear here.
@@ -601,6 +707,33 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     paddingVertical: 24,
                 },
                 soon: { flex: 1, justifyContent: "center" },
+
+                askMedia: { gap: 6, marginBottom: 14 },
+                askBtn: {
+                    flex: 1,
+                    alignItems: "center",
+                    paddingVertical: 7,
+                    borderRadius: 8,
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowRadius: 6,
+                    shadowOpacity: 0.28,
+                    elevation: 2,
+                },
+                askLabel: { fontSize: fs(10), lineHeight: lh(14), fontWeight: "700", color: colors.white },
+                assetRow: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    paddingVertical: 5,
+                    paddingHorizontal: 8,
+                    borderRadius: 8,
+                    backgroundColor: colors.tag,
+                },
+                assetName: { flex: 1, fontSize: fs(10), lineHeight: lh(15), color: colors.text },
+                useBtn: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: colors.primary },
+                useLabel: { fontSize: fs(9), lineHeight: lh(13), fontWeight: "700", color: colors.white },
 
                 scriptScene: { gap: 6, marginBottom: 14 },
                 scriptLine: { gap: 3 },
