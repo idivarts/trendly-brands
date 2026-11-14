@@ -120,7 +120,6 @@ const SnippetCommentPopover: React.FC<SnippetCommentPopoverProps> = ({
                         value={text}
                         onChangeText={setText}
                         members={members}
-                        maxLength={600}
                         autoFocus
                         dropdownPlacement="bottom"
                     />

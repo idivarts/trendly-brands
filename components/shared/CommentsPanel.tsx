@@ -96,7 +96,6 @@ export interface SharedCommentsPanelProps {
     currentUserId: string;
     // ── Compose / Empty ──────────────────────────────────────────────────────
     placeholder?: string;
-    maxLength?: number;
     emptyText?: string;
 }
 
@@ -251,7 +250,6 @@ const SharedCommentsPanel: React.FC<SharedCommentsPanelProps> = ({
     backLabel,
     currentUserId,
     placeholder = "Add a comment...",
-    maxLength = 1000,
     emptyText = "No comments yet.",
 }) => {
     const theme = useTheme();
@@ -421,6 +419,18 @@ const SharedCommentsPanel: React.FC<SharedCommentsPanelProps> = ({
                     </View>
                 )}
                 <View style={panelSty.compose}>
+                    {/* ── No length cap on a comment ──────────────────────
+                        There was a maxLength of 1000 here (and 600 on the
+                        strategy snippet popover, 500 on the calendar ones).
+                        A cap on a TextInput does the one thing a silent cap
+                        always does: a pasted comment longer than it arrives
+                        with the end missing, nothing says so, and the box
+                        looks exactly as it would if the paste had worked.
+
+                        Nothing downstream wanted it. These comments are
+                        written straight to Firestore, which neither the
+                        rules nor any binding bound, so the limit was only
+                        ever a number someone typed. */}
                     <MentionInput
                         containerStyle={panelSty.inputWrap}
                         inputStyle={panelSty.input}
@@ -429,7 +439,6 @@ const SharedCommentsPanel: React.FC<SharedCommentsPanelProps> = ({
                         value={draft}
                         onChangeText={setDraft}
                         members={mentionMembers}
-                        maxLength={maxLength}
                         dropdownPlacement="top"
                     />
                     <Pressable

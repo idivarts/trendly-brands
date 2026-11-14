@@ -77,7 +77,6 @@ const QuickCommentModal: React.FC<QuickCommentModalProps> = ({
                         value={comment}
                         onChangeText={setComment}
                         multiline
-                        maxLength={500}
                         textAlignVertical="top"
                         autoFocus
                     />
