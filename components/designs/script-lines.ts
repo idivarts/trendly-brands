@@ -47,7 +47,7 @@ export function groupScript(lines: ScriptLine[] | undefined): ScriptScene[] {
         }
         out.push({
             sceneId: line.sceneId,
-            title: sceneTitle(line.sceneId, out.length),
+            title: sceneTitle(line.sceneId, out.length, line),
             lines: [line],
         });
     }
@@ -61,10 +61,15 @@ export function groupScript(lines: ScriptLine[] | undefined): ScriptScene[] {
  * something ("hook", "benefit", "signoff"). A number where it does not —
  * never "Untitled", which tells nobody anything.
  */
-export function sceneTitle(sceneId: string, index: number): string {
+export function sceneTitle(sceneId: string, index: number, first?: ScriptLine): string {
     const name = (sceneId ?? "").trim();
-    if (name === "") return `Scene ${index + 1}`;
-    return name.charAt(0).toUpperCase() + name.slice(1);
+    if (name !== "") return name.charAt(0).toUpperCase() + name.slice(1);
+    // ── A group that belongs to no scene ─────────────────────────────────
+    // Numbering it invents a scene that does not exist. The backend now
+    // gives a voiceover written outside the sections the scene it is
+    // HEARD in, so this is the rare case of a line with no place at all —
+    // named for what it is rather than for a position it does not hold.
+    return first?.kind === "voice" ? "Voiceover" : "Elsewhere in the film";
 }
 
 /**

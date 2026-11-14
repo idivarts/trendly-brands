@@ -52,9 +52,13 @@ describe("sceneTitle", () => {
         expect(sceneTitle("sign-off", 2)).toBe("Sign-off");
     });
 
-    it("numbers a scene that has no name, rather than calling it Untitled", () => {
-        expect(sceneTitle("", 0)).toBe("Scene 1");
-        expect(sceneTitle("   ", 4)).toBe("Scene 5");
+    // Numbering a group that belongs to no scene invents a scene that
+    // does not exist — which is how a two-scene film came out of dev as
+    // "Hook", "Scene 2", "Outro", "Scene 4".
+    it("names a group with no scene for what it is", () => {
+        expect(sceneTitle("", 0, line({ elementId: "vo", kind: "voice" }))).toBe("Voiceover");
+        expect(sceneTitle("   ", 4, line({ elementId: "t" }))).toBe("Elsewhere in the film");
+        expect(sceneTitle("", 1)).toBe("Elsewhere in the film");
     });
 });
 
