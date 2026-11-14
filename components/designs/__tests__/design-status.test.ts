@@ -48,6 +48,27 @@ describe("designStatus", () => {
         expect(s.text).toBe("Writing…");
     });
 
+    // The backend writes a refused film again rather than handing the user an
+    // error. Two identical "Writing…" lines in a row read as a stall, and then
+    // a version the user never asked for appears.
+    it("says a rewrite is a fix, not a slow first pass", () => {
+        const first = designStatus({ authorStatus: "writing", authorAttempt: 1 });
+        expect(first.text).toBe("Writing…");
+
+        const rewrite = designStatus({ authorStatus: "writing", authorAttempt: 2 });
+        expect(rewrite.text).toBe("Fixing…");
+        expect(rewrite.busy).toBe(true);
+        // Being fixed is not being broken: a red row would have the user
+        // abandon a design that is on its way to working.
+        expect(rewrite.bad).toBe(false);
+    });
+
+    // Every design written before the rewrite existed has no attempt at all.
+    it("reads a missing attempt as the first pass", () => {
+        expect(designStatus({ authorStatus: "writing" }).text).toBe("Writing…");
+        expect(designStatus({ authorStatus: "queued", authorAttempt: 3 }).text).toBe("Fixing…");
+    });
+
     it("distinguishes an empty design from a written, unrendered one", () => {
         expect(designStatus({}).text).toBe("Empty");
         expect(designStatus({ projectPrefix: "design-projects/b/d" }).text).toBe("Not rendered");

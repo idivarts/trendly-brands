@@ -28,6 +28,15 @@ export interface DesignStatusFields {
     projectPrefix?: string;
     authorStatus?: DesignAuthorStatus;
     authorError?: string;
+    /**
+     * Which pass of writing this is, counting from 1.
+     *
+     * The backend writes a film again when Hyperframes' gate refuses it — a
+     * contrast ratio under the bar, two text blocks overlapping — handing the
+     * model the findings rather than handing the user an error. Absent on
+     * designs written before that existed, which read as the first pass.
+     */
+    authorAttempt?: number;
     previewStatus?: DesignPreviewStatus;
     previewError?: string;
     previewFrames?: DesignPreviewFrame[];
@@ -79,6 +88,23 @@ export function designStatus(d: DesignStatusFields | null | undefined): DesignSt
     if (!d) return { text: "", detail: "", busy: false, bad: false };
 
     if (isAuthoring(d)) {
+        // A rewrite must not read as a slow first pass. The backend writes the
+        // film again when the gate refuses it, so without this the user
+        // watches "Writing…" a second time with no way to tell progress from
+        // a stall — and then sees a new version appear that they never asked
+        // for.
+        //
+        // No total is named. How many passes the backend allows is the
+        // backend's number, and a "2 of 3" here would be a second copy of it
+        // free to disagree.
+        if ((d.authorAttempt ?? 1) > 1) {
+            return {
+                text: "Fixing…",
+                detail: "Fixing something that would have stopped it rendering…",
+                busy: true,
+                bad: false,
+            };
+        }
         return { text: "Writing…", detail: "Writing the design…", busy: true, bad: false };
     }
     if (d.authorStatus === "failed") {
