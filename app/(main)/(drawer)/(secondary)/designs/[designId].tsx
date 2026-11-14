@@ -3,6 +3,7 @@ import StudioSidePanel from "@/components/designs/StudioSidePanel";
 import type { DesignRevision } from "@/components/designs/revisions";
 import type { ElementEdit } from "@/components/designs/inspector-edit";
 import type { SceneOperation } from "@/components/designs/StudioSidePanel";
+import { VOICE_PENDING, lineEdit, type ScriptLine } from "@/components/designs/script-lines";
 import StudioStage from "@/components/designs/StudioStage";
 import StudioTimeline from "@/components/designs/StudioTimeline";
 import {
@@ -110,6 +111,10 @@ const DesignDetail = () => {
     const [gate, setGate] = useState<string | null>(null);
     // Why the last inspector edit was refused, shown beside the controls.
     const [editError, setEditError] = useState<string | null>(null);
+    // The film as words. Fetched beside the design rather than carried on
+    // it: it is derived from the project, and a copy on the document would
+    // be a second thing to keep in step with the film.
+    const [script, setScript] = useState<ScriptLine[]>([]);
     const [positionMs, setPositionMs] = useState(0);
     const [playing, setPlaying] = useState(false);
     const [loop, setLoop] = useState(true);
@@ -176,6 +181,31 @@ const DesignDetail = () => {
     useEffect(() => {
         load();
     }, [load]);
+
+    // Re-read whenever the film changes — projectPrefix moves on every
+    // revision, so this follows an edit from any of the panels, including
+    // one made in another tab.
+    const projectPrefix = design?.projectPrefix;
+    useEffect(() => {
+        if (!brandId || !designId || !projectPrefix) return;
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await HttpWrapper.fetch(
+                    `/api/design/brands/${brandId}/designs/${designId}/script`,
+                    { method: "GET" }
+                );
+                const data = await res.json();
+                if (!cancelled && Array.isArray(data?.lines)) setScript(data.lines as ScriptLine[]);
+            } catch {
+                /* The script is a view of the film; a failed read leaves
+                   the last one on screen rather than emptying the panel. */
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [brandId, designId, projectPrefix]);
 
     // A token gate the backend set has to be able to lift, or one 402 hides
     // the buttons for as long as the screen is open.
@@ -321,6 +351,26 @@ const DesignDetail = () => {
         [act]
     );
 
+    // ── A rewritten line ─────────────────────────────────────────────────
+    // Through the same endpoint the inspector uses. A voiceover is the
+    // exception that proves the rule: it writes the words to SAY rather
+    // than the words to show, and the film does not say them until the
+    // next preview or render — so the panel says so rather than letting
+    // someone believe the film already changed.
+    const editLine = useCallback(
+        (line: ScriptLine, next: string) =>
+            act(
+                "element",
+                lineEdit(line, next),
+                () => {
+                    if (line.kind === "voice") Toaster.success("Line saved", VOICE_PENDING);
+                },
+                "Couldn't change that line",
+                (message) => Toaster.error("Couldn't change that line", message)
+            ),
+        [act]
+    );
+
     const author = useCallback(() => {
         const text = brief.trim();
         if (!text) {
@@ -458,6 +508,8 @@ const DesignDetail = () => {
             currentPrefix={design?.projectPrefix}
             onRestore={restore}
             restoring={submitting}
+            script={script}
+            onEditLine={editLine}
             onScene={changeScenes}
             busyScenes={submitting}
             onEditElement={editElement}
