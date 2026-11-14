@@ -22,6 +22,7 @@ import {
 import {
     sceneAt,
     timelineDurationMs,
+    type DesignClip,
     type DesignScene,
 } from "@/components/designs/studio-layout";
 import { useSidebarCollapsed } from "@/components/drawer-layout/sidebar-collapsed-context";
@@ -88,6 +89,8 @@ interface Design extends DesignStatusFields {
     previewUrl?: string;
     brief?: string;
     scenes?: DesignScene[];
+    /** Every timed thing in the film, each on its row — the timeline. */
+    clips?: DesignClip[];
     /** Every version this film has been — see components/designs/revisions. */
     revisions?: DesignRevision[];
 }
@@ -138,6 +141,9 @@ const DesignDetail = () => {
     // panels read it — the scene tree highlights its scene, the inspector
     // shows it, and from Phase 14 the AI panel scopes an edit to it.
     const [selection, setSelection] = useState<Selection | null>(null);
+    /** A clip picked on the timeline that is not a scene — a voiceover, a
+     *  music track, a photograph. Highlighted there and nowhere else. */
+    const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
     const [pane, setPane] = useState<MobilePane>("stage");
     // Watching the live composition rather than the rendered file. Web only:
     // the player is 776 KB of JavaScript and a React Native WebView has never
@@ -514,7 +520,8 @@ const DesignDetail = () => {
     const effectiveGate = resolveDesignGate(gate, tokens.state);
     const aspect = designAspect(design);
     const scenes = design?.scenes;
-    const totalMs = timelineDurationMs(design?.durationMs, scenes);
+    const clips = design?.clips;
+    const totalMs = timelineDurationMs(design?.durationMs, scenes, clips);
     const written = !!design?.projectPrefix;
     const seen = hasBeenSeen(design);
 
@@ -527,10 +534,32 @@ const DesignDetail = () => {
     const onSelectScene = useCallback((id: string | null) => {
         setSelectedSceneId(id);
         setSelection(null);
+        setSelectedClipId(null);
     }, []);
 
     const onSeek = useCallback((ms: number) => {
         setPositionMs(ms);
+        setSelectedSceneId(null);
+        setSelectedClipId(null);
+    }, []);
+
+    // ── Clicking something on the timeline ───────────────────────────────
+    // Seeks to where it starts, which is the one thing a person always
+    // means by clicking a clip: a voiceover row tells you nothing until the
+    // film is at the moment it speaks.
+    //
+    // It does NOT populate the inspector. The inspector's properties are
+    // the element's COMPUTED style, which only the player can report, and
+    // an inspector filled in from a clip would show "unset" for a headline
+    // that is plainly navy. So a clip selects itself on the timeline, and
+    // clicking it in the player is still how you edit it.
+    const onSelectClip = useCallback((clip: DesignClip) => {
+        setPositionMs(clip.startMs ?? 0);
+        if (clip.kind === "scene") {
+            setSelectedClipId(null);
+            return;
+        }
+        setSelectedClipId(clip.elementId);
         setSelectedSceneId(null);
     }, []);
 
@@ -669,12 +698,15 @@ const DesignDetail = () => {
                         <View style={styles.rightPane}>{sidePanel}</View>
                     </View>
                     <StudioTimeline
+                        clips={clips}
                         scenes={scenes}
                         totalMs={totalMs}
                         positionMs={positionMs}
                         selectedSceneId={activeSceneId}
+                        selectedClipId={selectedClipId}
                         onSeek={onSeek}
                         onSelectScene={onSelectScene}
+                        onSelectClip={onSelectClip}
                     />
                 </View>
             ) : (
@@ -702,12 +734,15 @@ const DesignDetail = () => {
                     </View>
                     {pane === "stage" && (
                         <StudioTimeline
+                            clips={clips}
                             scenes={scenes}
                             totalMs={totalMs}
                             positionMs={positionMs}
                             selectedSceneId={activeSceneId}
+                            selectedClipId={selectedClipId}
                             onSeek={onSeek}
                             onSelectScene={onSelectScene}
+                            onSelectClip={onSelectClip}
                         />
                     )}
                 </View>

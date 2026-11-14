@@ -8,7 +8,9 @@ import {
     isPlayerEcho,
     PLAYER_ECHO_MS,
     toLayerTree,
-    toTracks,
+    clipAt,
+    timelineTracks,
+    type DesignClip,
     type DesignScene,
 } from "../studio-layout";
 
@@ -42,43 +44,104 @@ describe("timelineDurationMs", () => {
     });
 });
 
-describe("toTracks", () => {
-    it("groups by the renderer's own track index", () => {
-        const tracks = toTracks(scenes);
-        expect(tracks).toHaveLength(1);
-        expect(tracks[0].index).toBe(1);
-        expect(tracks[0].label).toBe("Graphics");
-        expect(tracks[0].scenes.map((s) => s.id)).toEqual(["hook", "benefits", "outro"]);
+describe("timelineTracks", () => {
+    const clips: DesignClip[] = [
+        { elementId: "s1", kind: "scene", trackIndex: 0, startMs: 0, durationMs: 3000, label: "hook" },
+        { elementId: "s2", kind: "scene", trackIndex: 0, startMs: 3000, durationMs: 3000, label: "benefits" },
+        { elementId: "shot", kind: "image", trackIndex: 1, startMs: 0, durationMs: 3000, label: "pour.jpg" },
+        { elementId: "vo", kind: "voice", trackIndex: 2, startMs: 0, durationMs: 6000, label: "Cold brew, cold mornings" },
+        { elementId: "score", kind: "music", trackIndex: 3, startMs: 0, durationMs: 6000, label: "bgm_001.wav" },
+        { elementId: "caps", kind: "captions", trackIndex: 4, startMs: 0, durationMs: 6000, label: "Cold brew" },
+    ];
+
+    /**
+     * The whole point of the phase. A reel with music, a voiceover and a
+     * photograph used to draw ONE row and three invisible things.
+     */
+    it("draws a row for each kind of thing in the film", () => {
+        const tracks = timelineTracks(clips, undefined);
+        expect(tracks.map((t) => t.index)).toEqual([0, 1, 2, 3, 4]);
+        expect(tracks.map((t) => t.label)).toEqual([
+            "Scenes",
+            "Pictures",
+            "Voice",
+            "Music",
+            "Captions",
+        ]);
+        expect(tracks[0].clips.map((c) => c.elementId)).toEqual(["s1", "s2"]);
     });
 
-    it("separates rows and returns them in index order", () => {
-        const two = toTracks([
-            { ...scenes[0], trackIndex: 2, trackKind: "audio" },
-            { ...scenes[1], trackIndex: 1 },
-        ]);
-        expect(two.map((t) => t.index)).toEqual([1, 2]);
-        expect(two[1].label).toBe("Audio");
-    });
-
-    /** Single-track films are what the AI writes today; they must not vanish. */
-    it("puts untracked scenes on one row", () => {
-        const t = toTracks([
-            { id: "a", src: "a.html", startMs: 0, durationMs: 1000, trackIndex: 0 },
-            { id: "b", src: "b.html", startMs: 1000, durationMs: 1000, trackIndex: 0 },
-        ]);
-        expect(t).toHaveLength(1);
-        expect(t[0].scenes).toHaveLength(2);
-        expect(t[0].label).toBe("Scene");
+    it("names a row after what most of it is, not after its number", () => {
+        // The media row normally mixes a picture and a video.
+        const mixed = timelineTracks(
+            [
+                { elementId: "a", kind: "image", trackIndex: 7, startMs: 0, durationMs: 1000 },
+                { elementId: "b", kind: "image", trackIndex: 7, startMs: 1000, durationMs: 1000 },
+                { elementId: "c", kind: "video", trackIndex: 7, startMs: 2000, durationMs: 1000 },
+            ],
+            undefined
+        );
+        expect(mixed).toHaveLength(1);
+        expect(mixed[0].index).toBe(7);
+        expect(mixed[0].label).toBe("Pictures");
+        // The video is still ON the row — the name decides nothing else.
+        expect(mixed[0].clips).toHaveLength(3);
     });
 
     it("orders clips within a row by time, whatever order they arrive in", () => {
-        const t = toTracks([scenes[2], scenes[0], scenes[1]]);
-        expect(t[0].scenes.map((s) => s.id)).toEqual(["hook", "benefits", "outro"]);
+        const t = timelineTracks([clips[1], clips[0]], undefined);
+        expect(t[0].clips.map((c) => c.elementId)).toEqual(["s1", "s2"]);
     });
 
-    it("handles no scenes", () => {
-        expect(toTracks(undefined)).toEqual([]);
-        expect(toTracks([])).toEqual([]);
+    /**
+     * Every design authored before the backend reported clips has scenes and
+     * nothing else. It must still draw its spine rather than an empty
+     * timeline, which would read as a broken studio.
+     */
+    it("falls back to the scenes for a film written before clips existed", () => {
+        const t = timelineTracks(undefined, scenes);
+        expect(t).toHaveLength(1);
+        expect(t[0].label).toBe("Scenes");
+        expect(t[0].clips.map((c) => c.elementId)).toEqual(["hook", "benefits", "outro"]);
+        expect(t[0].clips.every((c) => c.kind === "scene")).toBe(true);
+    });
+
+    it("prefers the clips when both are there", () => {
+        const t = timelineTracks(clips, scenes);
+        expect(t).toHaveLength(5);
+    });
+
+    it("drops a clip with no id, which nothing could address later", () => {
+        const t = timelineTracks(
+            [
+                { elementId: "", kind: "image", trackIndex: 1, startMs: 0, durationMs: 1000 },
+                clips[0],
+            ],
+            undefined
+        );
+        expect(t).toHaveLength(1);
+        expect(t[0].clips.map((c) => c.elementId)).toEqual(["s1"]);
+    });
+
+    it("handles nothing at all", () => {
+        expect(timelineTracks(undefined, undefined)).toEqual([]);
+        expect(timelineTracks([], [])).toEqual([]);
+    });
+});
+
+describe("clipAt", () => {
+    const clips: DesignClip[] = [
+        { elementId: "s1", kind: "scene", trackIndex: 0, startMs: 0, durationMs: 3000 },
+        { elementId: "s2", kind: "scene", trackIndex: 0, startMs: 3000, durationMs: 3000 },
+        { elementId: "score", kind: "music", trackIndex: 3, startMs: 0, durationMs: 6000 },
+    ];
+
+    it("is the scene under the playhead, never the music over it", () => {
+        expect(clipAt(clips, 1500)?.elementId).toBe("s1");
+        // Half-open at the cut: the NEXT scene owns the frame, so two clips
+        // never both claim it.
+        expect(clipAt(clips, 3000)?.elementId).toBe("s2");
+        expect(clipAt(clips, 6000)).toBeNull();
     });
 });
 
