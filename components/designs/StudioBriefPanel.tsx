@@ -30,16 +30,18 @@ export interface StudioBriefPanelProps {
     tokenState: string;
 
     written: boolean;
-    seen: boolean;
     authoring: boolean;
     rendering: boolean;
-    previewing: boolean;
+    /** True while the film is being finished: media resolved, gate run. */
+    preparing: boolean;
+    /** True when finishing the film failed and the user is stuck. */
+    preparationFailed: boolean;
     submitting: boolean;
     linkedToContent: boolean;
 
     onAuthor: () => void;
-    onPreview: () => void;
     onRender: () => void;
+    onRetryPreparation: () => void;
 }
 
 const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
@@ -50,15 +52,15 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
     gate,
     tokenState,
     written,
-    seen,
     authoring,
     rendering,
-    previewing,
+    preparing,
+    preparationFailed,
     submitting,
     linkedToContent,
     onAuthor,
-    onPreview,
     onRender,
+    onRetryPreparation,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -127,49 +129,51 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
                                 </Text>
                             </Pressable>
 
-                            {/* The free look leads until there has been one.
-                                Approving a film you have not seen is not
-                                approval. */}
-                            {!seen ? (
-                                <Pressable
-                                    onPress={onPreview}
-                                    disabled={submitting || previewing || !written}
-                                    style={({ pressed }) => [
-                                        styles.secondaryBtn,
-                                        (pressed || submitting || previewing || !written) && styles.dim,
-                                    ]}
-                                    accessibilityRole="button"
-                                >
-                                    <Text style={styles.secondaryLabel}>
-                                        {previewing ? "Looking…" : "Preview — free"}
-                                    </Text>
-                                </Pressable>
-                            ) : (
-                                <Pressable
-                                    onPress={onRender}
-                                    disabled={submitting || rendering || !written}
-                                    style={({ pressed }) => [
-                                        styles.secondaryBtn,
-                                        (pressed || submitting || rendering || !written) && styles.dim,
-                                    ]}
-                                    accessibilityRole="button"
-                                >
-                                    <Text style={styles.secondaryLabel}>
-                                        {rendering ? "Rendering…" : "Render"}
-                                    </Text>
-                                </Pressable>
-                            )}
+                            {/* ── Render is the only action ─────────────────
+                                There was a "Preview — free" button here, and
+                                it existed because the film's media is
+                                resolved by the worker, not by authoring — so
+                                a design opened before pressing it was missing
+                                the photograph the brief asked for. Making the
+                                user press a button to complete their own film
+                                is not a step, it is a gap.
+
+                                Preparation now runs by itself the moment
+                                authoring finishes, so the live player is the
+                                finished film and this is the only thing left
+                                to decide. */}
+                            <Pressable
+                                onPress={onRender}
+                                disabled={submitting || rendering || preparing || !written}
+                                style={({ pressed }) => [
+                                    styles.secondaryBtn,
+                                    (pressed || submitting || rendering || preparing || !written) && styles.dim,
+                                ]}
+                                accessibilityRole="button"
+                            >
+                                <Text style={styles.secondaryLabel}>
+                                    {rendering ? "Rendering…" : preparing ? "Preparing…" : "Render"}
+                                </Text>
+                            </Pressable>
                         </View>
 
-                        {seen && written && (
+                        {/* ── The one case where preparation is manual ────
+                            If finishing the film failed — a gate finding, a
+                            provider that would not answer — there has to be
+                            a way back. Without it the only recovery is
+                            Render, which charges for the same failure.
+
+                            It appears ONLY on failure. In the normal flow
+                            there is no preview action at all. */}
+                        {preparationFailed && (
                             <Pressable
-                                onPress={onPreview}
-                                disabled={submitting || previewing}
+                                onPress={onRetryPreparation}
+                                disabled={submitting || preparing}
                                 style={({ pressed }) => [pressed && styles.dim]}
                                 accessibilityRole="button"
                             >
                                 <Text style={styles.linkAction}>
-                                    {previewing ? "Taking frames…" : "Preview again — free"}
+                                    {preparing ? "Preparing…" : "Try preparing again"}
                                 </Text>
                             </Pressable>
                         )}
