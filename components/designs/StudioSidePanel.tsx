@@ -29,13 +29,14 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
-import React, { useCallback, useMemo, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import type { DesignPreviewFrame } from "./design-status";
 import { formatClock, toLayerTree, type DesignScene } from "./studio-layout";
 import { sceneHoldsSelection, selectionLabel, type Selection } from "./selection";
 import { NO_REVISIONS, revisionRows, type DesignRevision } from "./revisions";
+import { groupScript, lineBadge, worthSendingLine, type ScriptLine } from "./script-lines";
 import StudioInspector from "./StudioInspector";
 import type { ElementEdit } from "./inspector-edit";
 
@@ -51,6 +52,48 @@ export interface SceneOperation {
     durationMs?: number;
     toIndex?: number;
 }
+
+/**
+ * One line of the script.
+ *
+ * Committed on blur rather than as you type: a script is read and edited
+ * in sentences, and a revision per keystroke would spend the history on
+ * someone thinking. The draft is dropped if the line changes underneath —
+ * a rewrite arriving while they type must not be silently overwritten by
+ * a half-finished edit of the old words.
+ */
+const ScriptLineRow: React.FC<{
+    line: ScriptLine;
+    disabled: boolean;
+    onCommit: (next: string) => void;
+    colors: ReturnType<typeof Colors>;
+    styles: ReturnType<typeof useStyles>;
+}> = ({ line, disabled, onCommit, colors, styles }) => {
+    const [draft, setDraft] = useState(line.text);
+    useEffect(() => setDraft(line.text), [line.text]);
+    const badge = lineBadge(line);
+    return (
+        <View style={styles.scriptLine}>
+            {!!badge && <Text style={styles.scriptBadge}>{badge}</Text>}
+            <TextInput
+                value={draft}
+                onChangeText={setDraft}
+                onBlur={() => {
+                    if (!worthSendingLine(line, draft)) {
+                        setDraft(line.text);
+                        return;
+                    }
+                    onCommit(draft);
+                }}
+                editable={!disabled}
+                multiline
+                style={[styles.scriptField, line.kind === "voice" && styles.scriptFieldVoice]}
+                placeholderTextColor={colors.textSecondary}
+                accessibilityLabel={badge ? `${badge}: ${line.text}` : line.text}
+            />
+        </View>
+    );
+};
 
 /** One small button on a scene row. */
 const SceneOp: React.FC<{
@@ -88,6 +131,10 @@ export interface StudioSidePanelProps {
     /** Puts the film back to a revision. Absent while one is in flight. */
     onRestore?: (n: number) => void;
     restoring?: boolean;
+    /** The film as words, for the Script tab. */
+    script?: ScriptLine[];
+    /** Writes one rewritten line. */
+    onEditLine?: (line: ScriptLine, next: string) => void;
     /** Changes the film's shape: retime, move, duplicate, add, delete. */
     onScene?: (op: SceneOperation) => void;
     busyScenes?: boolean;
@@ -109,6 +156,8 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
     currentPrefix,
     onRestore,
     restoring,
+    script,
+    onEditLine,
     onScene,
     busyScenes,
     onEditElement,
@@ -138,6 +187,7 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
     // Recomputed whenever the poll brings a new document, which is also what
     // keeps "14 minutes ago" from going stale while the screen is open.
     const rows = useMemo(() => revisionRows(revisions, currentPrefix), [revisions, currentPrefix]);
+    const scriptScenes = useMemo(() => groupScript(script), [script]);
     const sceneCount = scenes?.length ?? 0;
 
     return (
@@ -197,10 +247,35 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
                 </ScrollView>
             ) : main === "script" ? (
                 <ScrollView contentContainerStyle={styles.scriptBody}>
-                    <Text style={styles.sectionLabel}>The brief</Text>
-                    <Text style={styles.script}>
-                        {brief || "Nothing written yet — describe the film on the left."}
-                    </Text>
+                    {/* ── The film as words ────────────────────────────────
+                        For the people who think in copy rather than in
+                        elements: read it top to bottom, fix the second
+                        line. Editing one goes through the same endpoint
+                        the inspector uses — one write path, not two. */}
+                    {scriptScenes.length === 0 ? (
+                        <>
+                            <Text style={styles.sectionLabel}>The brief</Text>
+                            <Text style={styles.script}>
+                                {brief || "Nothing written yet — describe the film on the left."}
+                            </Text>
+                        </>
+                    ) : (
+                        scriptScenes.map((sc, i) => (
+                            <View key={`${sc.sceneId}-${i}`} style={styles.scriptScene}>
+                                <Text style={styles.sectionLabel}>{sc.title}</Text>
+                                {sc.lines.map((l) => (
+                                    <ScriptLineRow
+                                        key={l.elementId}
+                                        line={l}
+                                        disabled={!onEditLine || !!editing}
+                                        onCommit={(next) => onEditLine?.(l, next)}
+                                        colors={colors}
+                                        styles={styles}
+                                    />
+                                ))}
+                            </View>
+                        ))
+                    )}
                 </ScrollView>
             ) : (
                 <>
@@ -526,6 +601,26 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     paddingVertical: 24,
                 },
                 soon: { flex: 1, justifyContent: "center" },
+
+                scriptScene: { gap: 6, marginBottom: 14 },
+                scriptLine: { gap: 3 },
+                scriptBadge: {
+                    fontSize: fs(9),
+                    lineHeight: lh(13),
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                    color: withAlpha(colors.text, 0.45),
+                },
+                scriptField: {
+                    fontSize: fs(12),
+                    lineHeight: lh(18),
+                    color: colors.text,
+                    backgroundColor: colors.tag,
+                    borderRadius: 8,
+                    paddingHorizontal: 8,
+                    paddingVertical: 6,
+                },
+                scriptFieldVoice: { fontStyle: "italic" },
 
                 sceneOps: { flexDirection: "row", alignItems: "center", gap: 2 },
                 sceneOp: { paddingHorizontal: 4, paddingVertical: 3, borderRadius: 5 },
