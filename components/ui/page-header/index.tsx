@@ -7,13 +7,23 @@ import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { useTheme } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useMemo } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fs } from "@/constants/Typography";
 
 export interface PageHeaderProps {
     customMainContent?: React.ReactNode;
     title: string;
+    /**
+     * Makes the title editable in place: press it, type, Enter or blur to
+     * save, Escape to abandon. Called only when the name actually changed
+     * and is not blank.
+     *
+     * Omit it and the title is plain text, which is what every other
+     * screen wants — a page title is usually a fact about where you are,
+     * not a field. A document's name is the exception.
+     */
+    onTitleChange?: (next: string) => void;
     subtitle?: string;
     /** Show back button. On mobile (!xl), defaults to true unless explicitly false. */
     showBackButton?: boolean;
@@ -47,8 +57,85 @@ export interface PageHeaderProps {
     mobileActions?: "none" | "notification-only" | "all";
 }
 
+/**
+ * A page title you can rename where it is written.
+ *
+ * ── Why in place and not a dialog ────────────────────────────────────────
+ * The name is already on screen in the size it will be read at. A modal
+ * asking for it again shows the same string in a different box and makes
+ * the user confirm a thing they can see. Pressing the words and typing is
+ * the whole interaction.
+ *
+ * Committed on blur as well as on Enter, because a person who types a name
+ * and then clicks into the thing they were naming has finished — losing it
+ * there would be the only way this could annoy anyone. Escape abandons,
+ * and so does a blank: a document with no name at all is worse than the
+ * one it had.
+ */
+const EditableTitle: React.FC<{
+    value: string;
+    onChange: (next: string) => void;
+    style: object;
+    inputStyle: object;
+}> = ({ value, onChange, style, inputStyle }) => {
+    const [editing, setEditing] = React.useState(false);
+    const [draft, setDraft] = React.useState(value);
+
+    // While not editing the field follows the document — a rename made
+    // somewhere else, or one the server corrected, must not be overwritten
+    // by a draft left in local state.
+    React.useEffect(() => {
+        if (!editing) setDraft(value);
+    }, [value, editing]);
+
+    const commit = () => {
+        setEditing(false);
+        const next = draft.trim();
+        if (!next || next === value) {
+            setDraft(value);
+            return;
+        }
+        onChange(next);
+    };
+
+    if (!editing) {
+        return (
+            <Pressable
+                onPress={() => {
+                    setDraft(value);
+                    setEditing(true);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`Rename ${value}`}
+            >
+                <Text style={style}>{value}</Text>
+            </Pressable>
+        );
+    }
+    return (
+        <TextInput
+            value={draft}
+            onChangeText={setDraft}
+            onBlur={commit}
+            onSubmitEditing={commit}
+            onKeyPress={(e) => {
+                if (e.nativeEvent.key === "Escape") {
+                    setDraft(value);
+                    setEditing(false);
+                }
+            }}
+            style={[style, inputStyle]}
+            autoFocus
+            selectTextOnFocus
+            returnKeyType="done"
+            accessibilityLabel="Design name"
+        />
+    );
+};
+
 const PageHeader: React.FC<PageHeaderProps> = ({
     title,
+    onTitleChange,
     subtitle,
     customMainContent,
     showBackButton,
@@ -115,7 +202,16 @@ const PageHeader: React.FC<PageHeaderProps> = ({
                 ) : null}
                 {customMainContent ? customMainContent :
                     <View style={styles.headerTitleBlock}>
-                        <Text style={styles.headerTitle}>{title}</Text>
+                        {onTitleChange ? (
+                            <EditableTitle
+                                value={title}
+                                onChange={onTitleChange}
+                                style={styles.headerTitle}
+                                inputStyle={styles.headerTitleInput}
+                            />
+                        ) : (
+                            <Text style={styles.headerTitle}>{title}</Text>
+                        )}
                         {subtitle && xl ? (
                             <Text style={styles.headerSubtitle}>{subtitle}</Text>
                         ) : null}
@@ -183,6 +279,18 @@ function useStyles(colors: ReturnType<typeof Colors>, topInset: number, xl: bool
                     fontSize: fs(22),
                     fontWeight: "700",
                     color: colors.text,
+                },
+                // The same words in the same place, with just enough of a
+                // field around them to say they can be typed into. No
+                // border: the background does that job everywhere else in
+                // this app.
+                headerTitleInput: {
+                    marginLeft: -8,
+                    marginVertical: -2,
+                    paddingHorizontal: 8,
+                    paddingVertical: 2,
+                    borderRadius: 8,
+                    backgroundColor: colors.tag,
                 },
                 headerSubtitle: {
                     fontSize: fs(12),

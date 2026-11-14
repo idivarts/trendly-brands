@@ -393,6 +393,30 @@ const DesignDetail = () => {
     // the user had to decide which. The endpoint stays; nothing on this
     // screen calls it, and a tool can reach for it later.
 
+    // ── Renaming ─────────────────────────────────────────────────────────
+    // Its own call rather than act(), which POSTs to a sub-path and always
+    // reloads: a rename is a PATCH on the design itself, and the name is
+    // put on screen immediately because the user just typed it. The reload
+    // that follows is what makes a refused rename visible — the old name
+    // comes back rather than the screen keeping one the server rejected.
+    const rename = useCallback(
+        async (next: string) => {
+            if (!brandId || !designId) return;
+            setDesign((d) => (d ? { ...d, name: next } : d));
+            try {
+                await HttpWrapper.fetch(`/api/design/brands/${brandId}/designs/${designId}`, {
+                    method: "PATCH",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({ name: next }),
+                });
+            } catch {
+                Toaster.error("Couldn't rename this design", "Please try again.");
+            }
+            await load();
+        },
+        [brandId, designId, load]
+    );
+
     // ── The film's shape ─────────────────────────────────────────────────
     // Retime, reorder, duplicate, add, delete. No model and no charge; the
     // backend ripples the scenes after the one that moved and recomputes
@@ -1022,6 +1046,7 @@ const DesignDetail = () => {
         <AppLayout>
             <PageHeader
                 title={design?.name || "Design"}
+                onTitleChange={rename}
                 subtitle={status.bad ? "Something went wrong" : status.detail}
                 showBackButton
                 mobileActions="all"
