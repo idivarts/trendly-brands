@@ -1,6 +1,7 @@
 import StudioBriefPanel from "@/components/designs/StudioBriefPanel";
 import StudioSidePanel from "@/components/designs/StudioSidePanel";
 import type { DesignRevision } from "@/components/designs/revisions";
+import type { ElementEdit } from "@/components/designs/inspector-edit";
 import StudioStage from "@/components/designs/StudioStage";
 import StudioTimeline from "@/components/designs/StudioTimeline";
 import {
@@ -106,6 +107,8 @@ const DesignDetail = () => {
     const [brief, setBrief] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [gate, setGate] = useState<string | null>(null);
+    // Why the last inspector edit was refused, shown beside the controls.
+    const [editError, setEditError] = useState<string | null>(null);
     const [positionMs, setPositionMs] = useState(0);
     const [playing, setPlaying] = useState(false);
     const [loop, setLoop] = useState(true);
@@ -192,9 +195,17 @@ const DesignDetail = () => {
             path: string,
             body: Record<string, unknown> | undefined,
             onOk: (data: Record<string, unknown>) => void,
-            failTitle: string
+            failTitle: string,
+            // When a caller can show the reason in context — the inspector
+            // can, beside the control that caused it — it takes the message
+            // instead of a toast the user dismisses and then has a panel
+            // showing a value that is not in the film.
+            onFail?: (message: string) => void
         ) => {
-            if (!brandId || !designId || submitting) return;
+            // Refused, not queued: the caller is told so it can keep its
+            // own state honest. The inspector needs that — a change it
+            // thinks landed and did not would never be sent again.
+            if (!brandId || !designId || submitting) return false;
             setSubmitting(true);
             try {
                 const res = await HttpWrapper.fetch(
@@ -208,6 +219,7 @@ const DesignDetail = () => {
                 onOk((await res.json()) ?? {});
                 setGate(null);
                 await load();
+                return true;
             } catch (err: unknown) {
                 // 402 is a wall, not a failure: the design is fine, the
                 // wallet is empty, and retrying unchanged would fail again.
@@ -215,9 +227,17 @@ const DesignDetail = () => {
                 // toast the user can dismiss and press again.
                 if (err instanceof HttpError && err.status === 402) {
                     setGate(err.data?.reason === "tokens_exhausted" ? "tokens_exhausted" : "plan_locked");
+                } else if (onFail) {
+                    const data = err instanceof HttpError ? err.data : undefined;
+                    onFail(
+                        (typeof data?.message === "string" && data.message) ||
+                            (typeof data?.error === "string" && data.error) ||
+                            "That change could not be applied."
+                    );
                 } else {
                     Toaster.error(failTitle, "Please try again.");
                 }
+                return false;
             } finally {
                 setSubmitting(false);
             }
@@ -241,6 +261,27 @@ const DesignDetail = () => {
                 () => Toaster.success("Put back", `This film is version ${n} again.`),
                 "Couldn't restore that version"
             ),
+        [act]
+    );
+
+    // ── An inspector edit ────────────────────────────────────────────────
+    // No model, no job, no charge: the answer carries the new player URL,
+    // and `act` reloads the document, so the film on screen becomes the
+    // edited one. A refusal is shown IN the panel rather than as a toast —
+    // "that change would break the film" is about the control the user is
+    // holding, and a toast they can dismiss would leave them with a panel
+    // showing a value that is not in the film.
+    const editElement = useCallback(
+        (edit: ElementEdit) => {
+            setEditError(null);
+            return act(
+                "element",
+                edit as unknown as Record<string, unknown>,
+                () => {},
+                "Couldn't apply that change",
+                setEditError
+            );
+        },
         [act]
     );
 
@@ -379,6 +420,9 @@ const DesignDetail = () => {
             currentPrefix={design?.projectPrefix}
             onRestore={restore}
             restoring={submitting}
+            onEditElement={editElement}
+            editing={submitting}
+            editError={editError}
             onSelectScene={onSelectScene}
             onSeek={setPositionMs}
         />
