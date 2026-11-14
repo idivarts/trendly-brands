@@ -849,6 +849,30 @@ const DesignDetail = () => {
         ];
     }, [selection, designId]);
 
+    // ── The chat can start the film, so the screen has to notice ────────
+    // The poll above only runs while isAuthoring(design), and `design` is
+    // whatever this screen last fetched. That was fine while the brief was
+    // a button HERE: submitting it set the status locally and the poll took
+    // over. The chat's start_design_authoring tool queues the job on the
+    // server and tells only the conversation, so the screen never learned
+    // it was authoring, the poll never started, and the film the chat had
+    // just promised would "appear beside you" did not — until a reload,
+    // where it turned out to have been written all along.
+    //
+    // One fetch when a turn ENDS is enough: it sees `queued`, and the poll
+    // carries it from there. On the leading edge instead of every call,
+    // because onBusyChange also fires false on mount, and the screen has
+    // just loaded.
+    const chatWasBusy = useRef(false);
+    const onChatBusyChange = useCallback(
+        (busy: boolean) => {
+            const ended = chatWasBusy.current && !busy;
+            chatWasBusy.current = busy;
+            if (ended) void load();
+        },
+        [load],
+    );
+
     // ⚠️ Not before the route has resolved. useLocalSearchParams returns {}
     // on the first render, and a thread created in that window is bound to
     // no film — designStudioBrief returns nothing for an empty designId, so
@@ -885,6 +909,7 @@ const DesignDetail = () => {
             placeholder={written ? "Ask for a change…" : "Describe the film you want…"}
             focusItems={focusItems}
             onRemoveFocusItem={() => setSelection(null)}
+            onBusyChange={onChatBusyChange}
         />
     );
 
