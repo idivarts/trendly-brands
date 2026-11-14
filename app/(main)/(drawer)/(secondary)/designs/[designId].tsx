@@ -713,7 +713,11 @@ const DesignDetail = () => {
         ];
     }, [selection, designId]);
 
-    const studioChat = (
+    // ⚠️ Not before the route has resolved. useLocalSearchParams returns {}
+    // on the first render, and a thread created in that window is bound to
+    // no film — designStudioBrief returns nothing for an empty designId, so
+    // the studio would answer about nothing in particular.
+    const studioChat = !designId ? null : (
         <AIChatPanel
             module="design"
             contextId={designId}

@@ -104,12 +104,60 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
     // about a photograph.
     React.useEffect(() => setInstruction(""), [selectionLabel]);
 
+    // Whether the thread has taken over from the brief. Read in three
+    // places — which of the two fills the panel, whether Render is the
+    // primary action, and whether the authoring button is offered at all —
+    // so it is decided once rather than re-derived and allowed to disagree.
+    const showChat = !!chat && written;
+
     const ask = () => {
         const text = instruction.trim();
         if (!text || !onAskAboutSelection) return;
         setInstruction("");
         onAskAboutSelection(text);
     };
+
+    // ── The scoped box ───────────────────────────────────────────────────
+    // Only here when something is selected, and headed with what that is,
+    // so the difference between "change this" and "rewrite everything" is
+    // never a guess.
+    //
+    // Shown in BOTH modes. The thread can change a selected element too —
+    // it carries the selection as a focus chip — but it does so by
+    // rewriting the WHOLE project through a frontier model, where this
+    // endpoint refuses any answer that is not a replacement for that one
+    // element. Cheaper and narrower is the right default for "make this
+    // bigger", so the box stays and the thread takes everything else.
+    const scopedBox =
+        !!selectionLabel && !!onAskAboutSelection ? (
+            <View style={styles.scoped}>
+                <Text style={styles.scopedHead} numberOfLines={1}>
+                    Change “{selectionLabel}”
+                </Text>
+                <TextInput
+                    value={instruction}
+                    onChangeText={setInstruction}
+                    placeholder="Make it bigger and more urgent."
+                    placeholderTextColor={colors.textSecondary}
+                    multiline
+                    style={styles.input}
+                    editable={!submitting}
+                />
+                <Pressable
+                    onPress={ask}
+                    disabled={submitting || instruction.trim() === ""}
+                    style={({ pressed }) => [
+                        styles.scopedBtn,
+                        (pressed || submitting || instruction.trim() === "") && styles.dim,
+                    ]}
+                    accessibilityRole="button"
+                >
+                    <Text style={styles.scopedLabel}>
+                        {submitting ? "Changing…" : "Change this element"}
+                    </Text>
+                </Pressable>
+            </View>
+        ) : null;
 
     return (
         <View style={styles.root}>
@@ -126,14 +174,22 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
                         {status.detail || "Ready when you are."}
                     </Text>
                 </View>
-
+                {/* Where the finished film lands. It used to sit below the
+                    brief, which is the one place it is NOT needed — by the
+                    time a film is worth exporting the brief is gone. */}
+                {linkedToContent && (
+                    <Text style={styles.note}>Linked to a post — the export lands on it.</Text>
+                )}
             </View>
 
-            {chat && written ? (
+            {showChat ? (
                 // The thread fills everything between the status line and
                 // the actions. It brings its own scrolling, composer and
                 // history, so it must not be nested in the ScrollView below.
-                <View style={styles.chat}>{chat}</View>
+                <>
+                    {!!scopedBox && <View style={styles.scopedStrip}>{scopedBox}</View>}
+                    <View style={styles.chat}>{chat}</View>
+                </>
             ) : (
             <ScrollView contentContainerStyle={styles.body}>
                 <Text style={styles.label}>What should this film be?</Text>
@@ -146,44 +202,9 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
                     style={styles.input}
                     editable={!authoring}
                 />
+                {scopedBox}
 
-                {/* ── The scoped box ───────────────────────────────────
-                    Only here when something is selected, and headed with
-                    what that is, so the difference between "change this"
-                    and "rewrite everything" is never a guess. */}
-                {!!selectionLabel && !!onAskAboutSelection && (
-                    <View style={styles.scoped}>
-                        <Text style={styles.scopedHead} numberOfLines={1}>
-                            Change “{selectionLabel}”
-                        </Text>
-                        <TextInput
-                            value={instruction}
-                            onChangeText={setInstruction}
-                            placeholder="Make it bigger and more urgent."
-                            placeholderTextColor={colors.textSecondary}
-                            multiline
-                            style={styles.input}
-                            editable={!submitting}
-                        />
-                        <Pressable
-                            onPress={ask}
-                            disabled={submitting || instruction.trim() === ""}
-                            style={({ pressed }) => [
-                                styles.scopedBtn,
-                                (pressed || submitting || instruction.trim() === "") && styles.dim,
-                            ]}
-                            accessibilityRole="button"
-                        >
-                            <Text style={styles.scopedLabel}>
-                                {submitting ? "Changing…" : "Change this element"}
-                            </Text>
-                        </Pressable>
-                    </View>
-                )}
 
-                {linkedToContent && (
-                    <Text style={styles.note}>Linked to a post — the export lands on it.</Text>
-                )}
             </ScrollView>
             )}
 
@@ -204,19 +225,31 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
                 ) : (
                     <>
                         <View style={styles.row}>
-                            <Pressable
-                                onPress={onAuthor}
-                                disabled={submitting || authoring}
-                                style={({ pressed }) => [
-                                    styles.primaryBtn,
-                                    (pressed || submitting || authoring) && styles.dim,
-                                ]}
-                                accessibilityRole="button"
-                            >
-                                <Text style={styles.primaryLabel}>
-                                    {authoring ? "Writing…" : written ? "Rewrite with AI" : "Write with AI"}
-                                </Text>
-                            </Pressable>
+                            {/* ── ⚠️ Not offered while the thread is showing ──
+                                This re-runs the authoring job from the STORED
+                                brief, and in chat mode that brief is not on
+                                screen. A button labelled "Rewrite with AI",
+                                sitting under ten minutes of conversation, is
+                                read as "apply what we just discussed" — and it
+                                would instead discard every one of those changes
+                                and re-author from a sentence the user can no
+                                longer see. The thread rewrites the film itself,
+                                and keeps the revisions. */}
+                            {!showChat && (
+                                <Pressable
+                                    onPress={onAuthor}
+                                    disabled={submitting || authoring}
+                                    style={({ pressed }) => [
+                                        styles.primaryBtn,
+                                        (pressed || submitting || authoring) && styles.dim,
+                                    ]}
+                                    accessibilityRole="button"
+                                >
+                                    <Text style={styles.primaryLabel}>
+                                        {authoring ? "Writing…" : written ? "Rewrite with AI" : "Write with AI"}
+                                    </Text>
+                                </Pressable>
+                            )}
 
                             {/* ── Render is the only action ─────────────────
                                 There was a "Preview — free" button here, and
@@ -235,12 +268,14 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
                                 onPress={onRender}
                                 disabled={submitting || rendering || preparing || !written}
                                 style={({ pressed }) => [
-                                    styles.secondaryBtn,
+                                    // The only action when the thread is
+                                    // showing, so it carries the weight.
+                                    showChat ? styles.primaryBtn : styles.secondaryBtn,
                                     (pressed || submitting || rendering || preparing || !written) && styles.dim,
                                 ]}
                                 accessibilityRole="button"
                             >
-                                <Text style={styles.secondaryLabel}>
+                                <Text style={showChat ? styles.primaryLabel : styles.secondaryLabel}>
                                     {rendering ? "Rendering…" : preparing ? "Preparing…" : "Render"}
                                 </Text>
                             </Pressable>
@@ -324,6 +359,7 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 // The thread brings its own scrolling; it takes the space and
                 // is never nested in a ScrollView, which would give it two.
                 chat: { flex: 1, minHeight: 0 },
+                scopedStrip: { paddingHorizontal: 14, paddingBottom: 10 },
                 statusRow: { flexDirection: "row", alignItems: "center", gap: 8 },
                 dot: {
                     width: 7,
