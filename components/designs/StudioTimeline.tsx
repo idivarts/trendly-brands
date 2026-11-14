@@ -5,12 +5,19 @@
  * surface this studio renders through and matching it means a user who has
  * seen one recognises the other.
  *
- * ── Read-only, and honestly so ────────────────────────────────────────────
- * Clips cannot be dragged, trimmed or reordered here. Editing a clip means
- * changing the project's HTML, which is the AI's job in v3 — a handle that
- * moved a clip and then silently did nothing would be worse than no handle.
- * What it does do is let you SEE the film's structure and seek within it,
- * which is what the stage above needs.
+ * ── What it draws, and why that changed ───────────────────────────────────
+ * Rows come from the design's CLIPS, not its scenes. The scenes were all the
+ * backend used to report, so a reel with music, a voiceover and a photograph
+ * drew one row and three invisible things — which is how a timeline comes to
+ * be described, accurately, as useless. A clip carries the row the film puts
+ * it on, so there is a row for the scenes, a row for the pictures, a row for
+ * the voice and a row for the music, each named after what is on it.
+ *
+ * ── Still read-only here ──────────────────────────────────────────────────
+ * Clicking a clip seeks to it and selects it; dragging, trimming and adding
+ * come next. A handle that moved a clip and then silently did nothing would
+ * be worse than no handle, so until the edit behind it exists there is no
+ * handle.
  */
 import { fs, lh } from "@/constants/Typography";
 import Colors from "@/shared-uis/constants/Colors";
@@ -23,36 +30,79 @@ import {
     clipGeometry,
     formatClock,
     rulerTicks,
-    toTracks,
+    timelineTracks,
+    type ClipKind,
+    type DesignClip,
     type DesignScene,
 } from "./studio-layout";
 
 export interface StudioTimelineProps {
+    /** Every timed thing in the film, each on its row. */
+    clips: DesignClip[] | undefined;
+    /** The scenes, for a film authored before clips were reported. */
     scenes: DesignScene[] | undefined;
     totalMs: number;
     positionMs: number;
     /** Scene currently selected in the layer tree, highlighted here too. */
     selectedSceneId?: string | null;
+    /** A non-scene clip picked on the timeline itself. */
+    selectedClipId?: string | null;
     onSeek: (ms: number) => void;
     onSelectScene: (sceneId: string) => void;
+    /**
+     * A clip was clicked. The screen decides what that means — a scene
+     * selects a scene, a voiceover seeks and highlights — because the
+     * timeline does not own the selection.
+     */
+    onSelectClip?: (clip: DesignClip) => void;
 }
 
 const TRACK_LABEL_WIDTH = 108;
 const TRACK_HEIGHT = 52;
 
+/**
+ * How much of the lane's own colour a kind of clip takes.
+ *
+ * Rows are told apart by colour as well as by name, because a glance at a
+ * timeline is how you find the music — reading four labels is not a glance.
+ * Alpha over the theme's own tokens rather than new colours, so this works
+ * in both themes without adding anything to the palette.
+ */
+const CLIP_TINT: Record<ClipKind, { token: ClipTintToken; alpha: number }> = {
+    scene: { token: "primary", alpha: 0.35 },
+    video: { token: "primary", alpha: 0.22 },
+    image: { token: "primary", alpha: 0.22 },
+    voice: { token: "green", alpha: 0.35 },
+    music: { token: "yellow", alpha: 0.35 },
+    sound: { token: "yellow", alpha: 0.22 },
+    captions: { token: "pink", alpha: 0.2 },
+};
+
+/**
+ * ⚠️ Only tokens that are `rgb()` strings belong here.
+ *
+ * `withAlpha` returns anything it cannot parse unchanged, and `colors.red`
+ * is the literal string "red" — so a red clip would come out fully opaque
+ * while every other row is a tint. `pink` carries the captions instead.
+ */
+type ClipTintToken = "primary" | "green" | "yellow" | "pink";
+
 const StudioTimeline: React.FC<StudioTimelineProps> = ({
+    clips,
     scenes,
     totalMs,
     positionMs,
     selectedSceneId,
+    selectedClipId,
     onSeek,
     onSelectScene,
+    onSelectClip,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useStyles(colors);
 
-    const tracks = useMemo(() => toTracks(scenes), [scenes]);
+    const tracks = useMemo(() => timelineTracks(clips, scenes), [clips, scenes]);
     const ticks = useMemo(() => rulerTicks(totalMs), [totalMs]);
 
     // Measured rather than assumed: the lane is whatever is left after the
@@ -79,7 +129,8 @@ const StudioTimeline: React.FC<StudioTimelineProps> = ({
         return (
             <View style={styles.root}>
                 <Text style={styles.empty}>
-                    No timeline yet — write the design and its scenes appear here.
+                    No timeline yet — write the design and its scenes, music and
+                    voiceovers appear here, each on its own row.
                 </Text>
             </View>
         );
@@ -118,26 +169,43 @@ const StudioTimeline: React.FC<StudioTimelineProps> = ({
                             <Text style={styles.trackLabel} numberOfLines={1}>
                                 {track.label}
                             </Text>
-                            <Text style={styles.trackCount}>{track.scenes.length}</Text>
+                            <Text style={styles.trackCount}>{track.clips.length}</Text>
                         </View>
                         <View style={styles.lane}>
-                            {track.scenes.map((scene) => {
-                                const { left, width } = clipGeometry(scene, totalMs);
-                                const selected = scene.id === selectedSceneId;
+                            {track.clips.map((clip) => {
+                                const { left, width } = clipGeometry(clip, totalMs);
+                                const selected =
+                                    clip.elementId === selectedClipId ||
+                                    (clip.kind === "scene" && clip.elementId === selectedSceneId);
+                                const label = clip.label || clip.elementId;
                                 return (
                                     <Pressable
-                                        key={scene.id}
-                                        onPress={() => onSelectScene(scene.id)}
+                                        key={clip.elementId}
+                                        onPress={() => {
+                                            if (clip.kind === "scene") onSelectScene(clip.elementId);
+                                            onSelectClip?.(clip);
+                                        }}
                                         style={[
                                             styles.clip,
                                             { left: pct(left), width: pct(width) },
+                                            { backgroundColor: tintOf(colors, clip.kind) },
+                                            // A clip of a few frames is a
+                                            // sliver with no room for a word;
+                                            // the minimum keeps it tappable.
+                                            { minWidth: MIN_CLIP_WIDTH },
                                             selected && styles.clipSelected,
                                         ]}
                                         accessibilityRole="button"
-                                        accessibilityLabel={`${scene.id}, ${(scene.durationMs / 1000).toFixed(1)} seconds`}
+                                        accessibilityLabel={`${label}, ${track.label}, ${(clip.durationMs / 1000).toFixed(1)} seconds`}
                                     >
-                                        <Text style={styles.clipLabel} numberOfLines={1}>
-                                            {scene.id}
+                                        <Text
+                                            style={[
+                                                styles.clipLabel,
+                                                !selected && styles.clipLabelUnselected,
+                                            ]}
+                                            numberOfLines={1}
+                                        >
+                                            {label}
                                         </Text>
                                     </Pressable>
                                 );
@@ -160,6 +228,15 @@ const StudioTimeline: React.FC<StudioTimelineProps> = ({
 };
 
 export default StudioTimeline;
+
+/** The clip's colour, from the theme rather than from a new palette. */
+function tintOf(colors: ReturnType<typeof Colors>, kind: string): string {
+    const tint = CLIP_TINT[kind as ClipKind] ?? CLIP_TINT.scene;
+    return withAlpha(colors[tint.token], tint.alpha);
+}
+
+/** Narrow enough to see, wide enough to hit. */
+const MIN_CLIP_WIDTH = 26;
 
 function useStyles(colors: ReturnType<typeof Colors>) {
     return useMemo(
@@ -244,6 +321,11 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     fontWeight: "700",
                     color: colors.onPrimary,
                 },
+                // A 20-35% tint of the theme's own colour is close to the
+                // card behind it, so onPrimary (white on light) disappears
+                // on an unselected clip. Only the SELECTED clip is a solid
+                // fill, so only it gets the reversed-out label.
+                clipLabelUnselected: { color: colors.text },
                 playheadLayer: {
                     position: "absolute",
                     top: 0,

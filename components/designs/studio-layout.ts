@@ -24,13 +24,161 @@ export interface DesignScene {
     trackKind?: string;
 }
 
+/**
+ * One thing on the timeline, as the backend reports it.
+ *
+ * Mirrors trendlymodels.DesignClip. A clip is a scene, a photograph, a
+ * video, a voiceover, a music track, a sound effect or a caption track —
+ * anything the film times. Text INSIDE a scene is deliberately not one: the
+ * layer tree is where structure inside a scene belongs, and a three-scene
+ * reel with thirty rows is the timeline nobody could read.
+ */
+export interface DesignClip {
+    elementId: string;
+    kind: ClipKind;
+    trackIndex: number;
+    /** True when the FILM said which row this is on, rather than it being
+     *  inferred from the kind for a film written before rows existed. */
+    authored?: boolean;
+    startMs: number;
+    durationMs: number;
+    label?: string;
+    src?: string;
+}
+
+export type ClipKind =
+    | "scene"
+    | "video"
+    | "image"
+    | "voice"
+    | "music"
+    | "sound"
+    | "captions";
+
 /** One row of the timeline, with the clips that sit on it. */
 export interface TimelineTrack {
     index: number;
     /** What the row is called down the left-hand side. */
     label: string;
     kind: string;
-    scenes: DesignScene[];
+    clips: DesignClip[];
+}
+
+/**
+ * What a row of a given kind is called.
+ *
+ * Plural, because a row holds several: "Scenes", not "Scene". Named after
+ * what is on the row rather than "Track 2", which tells a person nothing
+ * about their own film.
+ */
+const ROW_LABEL: Record<ClipKind, string> = {
+    scene: "Scenes",
+    video: "Video",
+    image: "Pictures",
+    voice: "Voice",
+    music: "Music",
+    sound: "Sound",
+    captions: "Captions",
+};
+
+/**
+ * Group the clips into the rows they are drawn on.
+ *
+ * ── Why this replaced toTracks ────────────────────────────────────────────
+ * `toTracks` grouped SCENES, which is all the backend used to report, so a
+ * reel with music, a voiceover and a photograph drew one row and three
+ * invisible things. Clips carry every timed element with the row the film
+ * puts it on, so this draws the film rather than a part of it.
+ *
+ * ── A row is named after what is on it, not its number ────────────────────
+ * The label comes from the kind that occupies most of the row, so a row the
+ * film authored at index 7 still reads as "Music". Where a row genuinely
+ * mixes kinds — a picture and a video together, which is the normal case on
+ * the media row — the commonest wins and the others are still drawn on it.
+ */
+export function clipTracks(clips: DesignClip[] | undefined): TimelineTrack[] {
+    const byIndex = new Map<number, DesignClip[]>();
+    for (const c of clips ?? []) {
+        if (!c?.elementId) continue;
+        const i = Number.isFinite(c.trackIndex) ? Math.max(0, Math.trunc(c.trackIndex)) : 0;
+        const list = byIndex.get(i);
+        if (list) list.push(c);
+        else byIndex.set(i, [c]);
+    }
+
+    return [...byIndex.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .map(([index, list]) => {
+            const kind = dominantKind(list);
+            return {
+                index,
+                kind,
+                label: ROW_LABEL[kind as ClipKind] ?? titleCase(kind),
+                clips: [...list].sort((a, b) => a.startMs - b.startMs),
+            };
+        });
+}
+
+/** The kind most of a row is, for the row's name. */
+function dominantKind(clips: DesignClip[]): string {
+    const counts = new Map<string, number>();
+    for (const c of clips) {
+        const k = c.kind || "scene";
+        counts.set(k, (counts.get(k) ?? 0) + 1);
+    }
+    let best = "scene";
+    let most = -1;
+    // Ties broken by the order the kinds are drawn in, so the same row never
+    // changes its name because two clips were reported the other way round.
+    for (const k of Object.keys(ROW_LABEL) as ClipKind[]) {
+        const n = counts.get(k) ?? 0;
+        if (n > most) {
+            most = n;
+            best = k;
+        }
+    }
+    return best;
+}
+
+/**
+ * The timeline for a design that has clips, or the best we can do without.
+ *
+ * Every design authored before the backend started reporting clips has
+ * scenes and nothing else. Falling back to the scenes gives that film its
+ * spine — one row, which is what it drew before — instead of an empty
+ * timeline that reads as a broken studio. The alternative was to re-author
+ * every old design to see its own film.
+ */
+export function timelineTracks(
+    clips: DesignClip[] | undefined,
+    scenes: DesignScene[] | undefined
+): TimelineTrack[] {
+    if (clips?.length) return clipTracks(clips);
+    return clipTracks(scenesAsClips(scenes));
+}
+
+/** Scenes as clips on row 0, for a film that predates the clip list. */
+export function scenesAsClips(scenes: DesignScene[] | undefined): DesignClip[] {
+    return (scenes ?? []).map((s) => ({
+        elementId: s.id,
+        kind: "scene" as ClipKind,
+        trackIndex: Number.isFinite(s.trackIndex) ? s.trackIndex : 0,
+        startMs: s.startMs,
+        durationMs: s.durationMs,
+        label: s.id,
+    }));
+}
+
+/** The clip under the playhead on the scene row, or null in a gap. */
+export function clipAt(clips: DesignClip[] | undefined, positionMs: number): DesignClip | null {
+    for (const c of clips ?? []) {
+        if (c.kind !== "scene") continue;
+        const start = c.startMs || 0;
+        // Half-open, for the same reason sceneAt is: at a cut the NEXT scene
+        // is the one on screen, so two clips never both claim the frame.
+        if (positionMs >= start && positionMs < start + (c.durationMs || 0)) return c;
+    }
+    return null;
 }
 
 /**
@@ -44,47 +192,21 @@ export interface TimelineTrack {
  */
 export function timelineDurationMs(
     durationMs: number | undefined,
-    scenes: DesignScene[] | undefined
+    scenes: DesignScene[] | undefined,
+    clips?: DesignClip[] | undefined
 ): number {
     if (durationMs && durationMs > 0) return durationMs;
     let end = 0;
+    // The clips as well as the scenes: a music track running two seconds
+    // past the last scene is part of the film, and a timeline cut to the
+    // scenes would draw it hanging off the end of its own row.
     for (const s of scenes ?? []) {
         end = Math.max(end, (s.startMs || 0) + (s.durationMs || 0));
     }
-    return end;
-}
-
-/**
- * Group the scenes into the rows they are drawn on.
- *
- * Hyperframes' own `data-track-index` decides the row, so the timeline shows
- * the structure the renderer will render rather than one this app invented.
- * Rows come back in index order, and a project that sets no track index puts
- * everything on row 0 — which is correct for the single-track films the AI
- * writes today.
- */
-export function toTracks(scenes: DesignScene[] | undefined): TimelineTrack[] {
-    const byIndex = new Map<number, DesignScene[]>();
-    for (const s of scenes ?? []) {
-        const i = Number.isFinite(s.trackIndex) ? s.trackIndex : 0;
-        const list = byIndex.get(i);
-        if (list) list.push(s);
-        else byIndex.set(i, [s]);
+    for (const c of clips ?? []) {
+        end = Math.max(end, (c.startMs || 0) + (c.durationMs || 0));
     }
-
-    return [...byIndex.entries()]
-        .sort((a, b) => a[0] - b[0])
-        .map(([index, list]) => {
-            const kind = list.find((s) => s.trackKind)?.trackKind ?? "scene";
-            return {
-                index,
-                kind,
-                // The kind reads better as a row label than "Track 1" does,
-                // and it is what Hyperframes itself shows.
-                label: titleCase(kind),
-                scenes: [...list].sort((a, b) => a.startMs - b.startMs),
-            };
-        });
+    return end;
 }
 
 function titleCase(s: string): string {
@@ -102,7 +224,7 @@ function titleCase(s: string): string {
  * track and push the whole row out of alignment.
  */
 export function clipGeometry(
-    scene: DesignScene,
+    scene: { startMs: number; durationMs: number },
     totalMs: number
 ): { left: number; width: number } {
     if (totalMs <= 0) return { left: 0, width: 0 };
