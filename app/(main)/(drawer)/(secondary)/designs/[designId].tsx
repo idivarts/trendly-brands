@@ -2,6 +2,7 @@ import StudioBriefPanel from "@/components/designs/StudioBriefPanel";
 import StudioSidePanel from "@/components/designs/StudioSidePanel";
 import type { DesignRevision } from "@/components/designs/revisions";
 import type { ElementEdit } from "@/components/designs/inspector-edit";
+import type { SceneOperation } from "@/components/designs/StudioSidePanel";
 import StudioStage from "@/components/designs/StudioStage";
 import StudioTimeline from "@/components/designs/StudioTimeline";
 import {
@@ -304,6 +305,22 @@ const DesignDetail = () => {
         [act, selection]
     );
 
+    // ── The film's shape ─────────────────────────────────────────────────
+    // Retime, reorder, duplicate, add, delete. No model and no charge; the
+    // backend ripples the scenes after the one that moved and recomputes
+    // the film's length, which is what a render is priced from.
+    const changeScenes = useCallback(
+        (op: SceneOperation) =>
+            act(
+                "structure",
+                op as unknown as Record<string, unknown>,
+                () => {},
+                "Couldn't change the scenes",
+                (message) => Toaster.error("Couldn't change the scenes", message)
+            ),
+        [act]
+    );
+
     const author = useCallback(() => {
         const text = brief.trim();
         if (!text) {
@@ -441,6 +458,8 @@ const DesignDetail = () => {
             currentPrefix={design?.projectPrefix}
             onRestore={restore}
             restoring={submitting}
+            onScene={changeScenes}
+            busyScenes={submitting}
             onEditElement={editElement}
             editing={submitting}
             editError={editError}

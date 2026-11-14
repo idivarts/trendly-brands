@@ -16,8 +16,12 @@ import { fs, lh } from "@/constants/Typography";
 import Colors from "@/shared-uis/constants/Colors";
 import { withAlpha } from "@/utils/color";
 import {
+    faArrowDown,
+    faArrowUp,
     faChevronDown,
     faChevronRight,
+    faClone,
+    faTrash,
     faClosedCaptioning,
     faImages,
     faLayerGroup,
@@ -39,6 +43,35 @@ type MainTab = "media" | "script" | "history";
 
 /** For a caller with no write path — the panel still shows what is selected. */
 const noEdit = () => {};
+
+/** One change to the film's shape, as the backend's /structure takes it. */
+export interface SceneOperation {
+    op: "retime" | "move" | "duplicate" | "delete" | "add";
+    sceneId?: string;
+    durationMs?: number;
+    toIndex?: number;
+}
+
+/** One small button on a scene row. */
+const SceneOp: React.FC<{
+    icon: typeof faArrowUp;
+    label: string;
+    disabled: boolean;
+    onPress: () => void;
+    colors: ReturnType<typeof Colors>;
+    styles: ReturnType<typeof useStyles>;
+}> = ({ icon, label, disabled, onPress, colors, styles }) => (
+    <Pressable
+        onPress={onPress}
+        disabled={disabled}
+        hitSlop={6}
+        style={[styles.sceneOp, disabled && styles.dimRow]}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+    >
+        <FontAwesomeIcon icon={icon} size={9} color={colors.textSecondary} />
+    </Pressable>
+);
 type MediaTab = "files" | "captions" | "inspirations" | "layers";
 
 export interface StudioSidePanelProps {
@@ -55,6 +88,9 @@ export interface StudioSidePanelProps {
     /** Puts the film back to a revision. Absent while one is in flight. */
     onRestore?: (n: number) => void;
     restoring?: boolean;
+    /** Changes the film's shape: retime, move, duplicate, add, delete. */
+    onScene?: (op: SceneOperation) => void;
+    busyScenes?: boolean;
     /** Applies a settled inspector change to the selected element. */
     onEditElement?: (edit: ElementEdit) => void;
     editing?: boolean;
@@ -73,6 +109,8 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
     currentPrefix,
     onRestore,
     restoring,
+    onScene,
+    busyScenes,
     onEditElement,
     editing,
     editError,
@@ -186,6 +224,12 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
                                 ) : (
                                     tree.map((node) => {
                                         const isScene = node.depth === 0;
+                                        // Which scene this is, counting only
+                                        // scenes — the tree also holds their
+                                        // children.
+                                        const index = isScene
+                                            ? tree.filter((n) => n.depth === 0).findIndex((n) => n.id === node.id)
+                                            : -1;
                                         const scene = isScene
                                             ? scenes?.find((s) => s.id === node.id)
                                             : undefined;
@@ -236,9 +280,72 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
                                                 <Text style={styles.rowDetail} numberOfLines={1}>
                                                     {node.detail}
                                                 </Text>
+                                                {/* ── Shape, on the row it belongs to ──────
+                                                    Up, down, duplicate and delete sit on
+                                                    the scene itself rather than in a menu
+                                                    somewhere: the thing being moved is
+                                                    the thing you are pointing at. */}
+                                                {isScene && !!onScene && (
+                                                    <View style={styles.sceneOps}>
+                                                        <SceneOp
+                                                            icon={faArrowUp}
+                                                            label={`Move ${node.label} earlier`}
+                                                            disabled={!!busyScenes || index === 0}
+                                                            onPress={() => onScene({ op: "move", sceneId: node.id, toIndex: index - 1 })}
+                                                            colors={colors}
+                                                            styles={styles}
+                                                        />
+                                                        <SceneOp
+                                                            icon={faArrowDown}
+                                                            label={`Move ${node.label} later`}
+                                                            disabled={!!busyScenes || index === sceneCount - 1}
+                                                            onPress={() => onScene({ op: "move", sceneId: node.id, toIndex: index + 1 })}
+                                                            colors={colors}
+                                                            styles={styles}
+                                                        />
+                                                        <SceneOp
+                                                            icon={faClone}
+                                                            label={`Duplicate ${node.label}`}
+                                                            disabled={!!busyScenes}
+                                                            onPress={() => onScene({ op: "duplicate", sceneId: node.id })}
+                                                            colors={colors}
+                                                            styles={styles}
+                                                        />
+                                                        <SceneOp
+                                                            icon={faTrash}
+                                                            label={`Delete ${node.label}`}
+                                                            disabled={!!busyScenes || sceneCount <= 1}
+                                                            onPress={() => onScene({ op: "delete", sceneId: node.id })}
+                                                            colors={colors}
+                                                            styles={styles}
+                                                        />
+                                                    </View>
+                                                )}
                                             </Pressable>
                                         );
                                     })
+                                )}
+
+                                {!!onScene && sceneCount > 0 && (
+                                    <Pressable
+                                        onPress={() => onScene({ op: "add" })}
+                                        disabled={!!busyScenes}
+                                        style={[styles.addScene, !!busyScenes && styles.dimRow]}
+                                        accessibilityRole="button"
+                                        accessibilityLabel="Add a scene"
+                                    >
+                                        <Text style={styles.addSceneLabel}>+ Add a scene</Text>
+                                    </Pressable>
+                                )}
+
+                                {/* The rule, where the user can see it. An
+                                    editor that reflows differently from what
+                                    you expected is an editor you stop
+                                    trusting. */}
+                                {!!onScene && sceneCount > 1 && (
+                                    <Text style={styles.sceneRule}>
+                                        Scenes play one after another — moving or retiming one moves the rest.
+                                    </Text>
                                 )}
                             </ScrollView>
 
@@ -419,6 +526,26 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     paddingVertical: 24,
                 },
                 soon: { flex: 1, justifyContent: "center" },
+
+                sceneOps: { flexDirection: "row", alignItems: "center", gap: 2 },
+                sceneOp: { paddingHorizontal: 4, paddingVertical: 3, borderRadius: 5 },
+                dimRow: { opacity: 0.35 },
+                addScene: {
+                    marginTop: 6,
+                    alignItems: "center",
+                    paddingVertical: 7,
+                    borderRadius: 8,
+                    backgroundColor: colors.tag,
+                },
+                addSceneLabel: { fontSize: fs(10), lineHeight: lh(14), color: colors.text },
+                sceneRule: {
+                    marginTop: 8,
+                    fontSize: fs(9),
+                    lineHeight: lh(13),
+                    color: withAlpha(colors.text, 0.45),
+                    textAlign: "center",
+                    paddingHorizontal: 8,
+                },
 
                 historyBody: { padding: 10, gap: 8 },
                 revision: {
