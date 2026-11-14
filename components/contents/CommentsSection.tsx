@@ -215,7 +215,6 @@ const CommentsSection: React.FC<CommentsSectionProps> = ({ contentId }) => {
                     value={draft}
                     onChangeText={setDraft}
                     multiline
-                    maxLength={1000}
                 />
                 <Pressable
                     style={({ pressed }) => [

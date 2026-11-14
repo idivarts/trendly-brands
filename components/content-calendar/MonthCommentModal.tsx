@@ -166,7 +166,6 @@ const MonthCommentModal: React.FC<MonthCommentModalProps> = ({
                             value={draft}
                             onChangeText={setDraft}
                             multiline
-                            maxLength={500}
                             textAlignVertical="top"
                         />
                         <Pressable
