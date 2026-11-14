@@ -813,6 +813,18 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                 tokens, send) on a roomy row below for easy mobile tapping. */}
             <View style={[styles.inputArea, splitMode && styles.centered]}>
                 <View style={styles.composer}>
+                    {/* ── No length cap on the composer ───────────────────
+                        There was a maxLength of 1000 here, and it did the
+                        one thing a silent cap always does: a pasted prompt
+                        longer than it arrived with the end missing, with
+                        nothing said and no way to tell from the box that
+                        anything had been dropped. The user then sends half
+                        a prompt and reads the answer to it.
+
+                        Nothing else wanted the limit. The backend puts no
+                        cap on a message, and the cost of a long one is
+                        already metered against the org's token wallet,
+                        which is the honest place for it. */}
                     <TextInput
                         style={styles.input}
                         placeholder={busy ? "Getting ready…" : placeholder}
@@ -821,7 +833,6 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                         onChangeText={setInput}
                         editable={!busy}
                         multiline
-                        maxLength={1000}
                         onKeyPress={(e: any) => {
                             // Web: Enter sends, Shift+Enter inserts a newline.
                             // Native multiline behaviour is left untouched.
