@@ -9,6 +9,8 @@ import { Audio } from "expo-av";
 import { VOICE_PENDING, lineEdit, type ScriptLine } from "@/components/designs/script-lines";
 import StudioStage from "@/components/designs/StudioStage";
 import StudioTimeline from "@/components/designs/StudioTimeline";
+import TimelineAddBar, { type TimelineAddTarget } from "@/components/designs/TimelineAddBar";
+import { dropTypeFor, type Window as ClipWindow } from "@/components/designs/timeline-drag";
 import {
     designAspect,
     designStatus,
@@ -144,6 +146,8 @@ const DesignDetail = () => {
     /** A clip picked on the timeline that is not a scene — a voiceover, a
      *  music track, a photograph. Highlighted there and nowhere else. */
     const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
+    /** Where "put something here" is pointing, or null when it is closed. */
+    const [addAt, setAddAt] = useState<TimelineAddTarget | null>(null);
     const [pane, setPane] = useState<MobilePane>("stage");
     // Watching the live composition rather than the rendered file. Web only:
     // the player is 776 KB of JavaScript and a React Native WebView has never
@@ -384,6 +388,74 @@ const DesignDetail = () => {
         [act]
     );
 
+    // ── One clip, moved or trimmed ───────────────────────────────────────
+    // A different endpoint shape from a scene op and deliberately so: a
+    // scene op relays the film around the scene that moved, and a clip op
+    // moves exactly one element. Dragging the music must not relay the
+    // scenes.
+    //
+    // The backend may MOVE the element out of the scene that held it, when
+    // the new window escapes that scene's — otherwise the clip would be
+    // clipped and silently absent from a film that still renders. Nothing
+    // to say here: `act` reloads the document either way.
+    const retimeClip = useCallback(
+        (clip: { elementId: string }, window: ClipWindow) =>
+            act(
+                "structure",
+                {
+                    op: "clip-retime",
+                    clipId: clip.elementId,
+                    startMs: window.startMs,
+                    durationMs: window.durationMs,
+                },
+                () => {},
+                "Couldn't move that",
+                (message) => Toaster.error("Couldn't move that", message)
+            ),
+        [act]
+    );
+
+    const deleteClip = useCallback(
+        (clip: { elementId: string; label?: string }) =>
+            act(
+                "structure",
+                { op: "clip-delete", clipId: clip.elementId },
+                () => {
+                    setSelectedClipId(null);
+                    Toaster.success("Removed", `${clip.label || clip.elementId} is out of the film.`);
+                },
+                "Couldn't remove that",
+                (message) => Toaster.error("Couldn't remove that", message)
+            ),
+        [act]
+    );
+
+    // ── Putting something at a moment ────────────────────────────────────
+    // The same endpoint the media panel uses, with a moment and a row
+    // instead of a scene — so the backend puts it at the film's own level
+    // rather than inside a scene that may end before it.
+    const addAtMoment = useCallback(
+        (body: Record<string, unknown>) => {
+            if (!addAt) return;
+            return act(
+                "media",
+                { ...body, startMs: addAt.atMs, trackIndex: addAt.trackIndex },
+                (data) => {
+                    setAddAt(null);
+                    if (data?.pending) {
+                        Toaster.success(
+                            "Asked for",
+                            "It will be fetched the next time this film is previewed or rendered."
+                        );
+                    }
+                },
+                "Couldn't add that",
+                (message) => Toaster.error("Couldn't add that", message)
+            );
+        },
+        [act, addAt]
+    );
+
     // ── A rewritten line ─────────────────────────────────────────────────
     // Through the same endpoint the inspector uses. A voiceover is the
     // exception that proves the rule: it writes the words to SAY rather
@@ -563,6 +635,48 @@ const DesignDetail = () => {
         setSelectedSceneId(null);
     }, []);
 
+    // ── The timeline, written once ───────────────────────────────────────
+    // Mounted in two places — under the three desktop panes, and under the
+    // stage on a phone. Two copies of eleven props is two copies that drift,
+    // and the one that drifts is the phone's, because it is the one nobody
+    // looks at while building the desktop layout.
+    const timeline = (
+        <>
+            <StudioTimeline
+                clips={clips}
+                scenes={scenes}
+                totalMs={totalMs}
+                positionMs={positionMs}
+                selectedSceneId={activeSceneId}
+                selectedClipId={selectedClipId}
+                onSeek={onSeek}
+                onSelectScene={onSelectScene}
+                onSelectClip={onSelectClip}
+                onRetimeClip={retimeClip}
+                onDeleteClip={deleteClip}
+                onAddAt={(track, atMs) =>
+                    setAddAt({
+                        trackIndex: track.index,
+                        rowLabel: track.label,
+                        rowKind: track.kind,
+                        atMs,
+                    })
+                }
+                busy={submitting}
+            />
+            {addAt && (
+                <TimelineAddBar
+                    target={addAt}
+                    assets={assets.map((a) => ({ path: a.path, name: a.name, kind: a.kind }))}
+                    busy={submitting}
+                    onClose={() => setAddAt(null)}
+                    onPlaceAsset={(assetPath, type) => addAtMoment({ type, assetPath })}
+                    onAskFor={(intent, type) => addAtMoment({ type, intent })}
+                />
+            )}
+        </>
+    );
+
     const briefPanel = (
         <StudioBriefPanel
             brief={brief}
@@ -697,17 +811,7 @@ const DesignDetail = () => {
                         </View>
                         <View style={styles.rightPane}>{sidePanel}</View>
                     </View>
-                    <StudioTimeline
-                        clips={clips}
-                        scenes={scenes}
-                        totalMs={totalMs}
-                        positionMs={positionMs}
-                        selectedSceneId={activeSceneId}
-                        selectedClipId={selectedClipId}
-                        onSeek={onSeek}
-                        onSelectScene={onSelectScene}
-                        onSelectClip={onSelectClip}
-                    />
+                    {timeline}
                 </View>
             ) : (
                 <View style={styles.mobile}>
@@ -732,19 +836,7 @@ const DesignDetail = () => {
                     <View style={styles.mobileBody}>
                         {pane === "brief" ? briefPanel : pane === "layers" ? sidePanel : stage}
                     </View>
-                    {pane === "stage" && (
-                        <StudioTimeline
-                            clips={clips}
-                            scenes={scenes}
-                            totalMs={totalMs}
-                            positionMs={positionMs}
-                            selectedSceneId={activeSceneId}
-                            selectedClipId={selectedClipId}
-                            onSeek={onSeek}
-                            onSelectScene={onSelectScene}
-                            onSelectClip={onSelectClip}
-                        />
-                    )}
+                    {pane === "stage" && timeline}
                 </View>
             )}
 
