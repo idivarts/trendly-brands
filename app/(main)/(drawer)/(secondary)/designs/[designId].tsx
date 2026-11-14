@@ -303,14 +303,14 @@ const DesignDetail = () => {
             gate={effectiveGate}
             tokenState={tokens.state}
             written={written}
-            seen={seen}
             authoring={isAuthoring(design)}
             rendering={isRendering(design)}
-            previewing={isPreviewing(design)}
+            preparing={isPreviewing(design)}
+            preparationFailed={design?.previewStatus === "failed"}
+            onRetryPreparation={preview}
             submitting={submitting}
             linkedToContent={!!design?.contentId}
             onAuthor={author}
-            onPreview={preview}
             onRender={render}
         />
     );
