@@ -37,6 +37,13 @@ import { formatClock, toLayerTree, type DesignScene } from "./studio-layout";
 import { sceneHoldsSelection, selectionLabel, type Selection } from "./selection";
 import { NO_REVISIONS, revisionRows, type DesignRevision } from "./revisions";
 import { groupScript, lineBadge, worthSendingLine, type ScriptLine } from "./script-lines";
+import {
+    CAPTIONS_SOURCE,
+    NO_CAPTIONS,
+    captionRows,
+    clock,
+    type CaptionTrack,
+} from "./caption-tracks";
 import StudioInspector from "./StudioInspector";
 import type { ElementEdit } from "./inspector-edit";
 
@@ -50,6 +57,8 @@ export interface DesignAsset {
     path: string;
     kind: "image" | "audio" | "video";
     name: string;
+    /** Where it can be opened from. Empty when the CDN is not configured. */
+    url?: string;
 }
 
 /** Media to put into the film, as the backend's /media takes it. */
@@ -151,6 +160,12 @@ export interface StudioSidePanelProps {
     assets?: DesignAsset[];
     /** Adds media to a scene, or puts a file on the selected element. */
     onAddMedia?: (place: MediaPlacement) => void;
+    /** Opens a file: a picture in the preview modal, a sound by playing it. */
+    onOpenAsset?: (asset: DesignAsset) => void;
+    /** The path of the asset currently playing, if any. */
+    playingAsset?: string | null;
+    /** The film's caption tracks, for the Captions tab. */
+    captions?: CaptionTrack[];
     /** The film as words, for the Script tab. */
     script?: ScriptLine[];
     /** Writes one rewritten line. */
@@ -178,6 +193,9 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
     restoring,
     assets,
     onAddMedia,
+    onOpenAsset,
+    playingAsset,
+    captions,
     script,
     onEditLine,
     onScene,
@@ -211,6 +229,7 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
     // keeps "14 minutes ago" from going stale while the screen is open.
     const rows = useMemo(() => revisionRows(revisions, currentPrefix), [revisions, currentPrefix]);
     const scriptScenes = useMemo(() => groupScript(script), [script]);
+    const capRows = useMemo(() => captionRows(captions), [captions]);
     const sceneCount = scenes?.length ?? 0;
 
     return (
@@ -527,10 +546,33 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
                                     <Text style={styles.sectionLabel}>In this film</Text>
                                     {assets!.map((a) => (
                                         <View key={a.path} style={styles.assetRow}>
-                                            <Text style={styles.assetName} numberOfLines={1}>
-                                                {a.name}
+                                            {/* ── Open it ──────────────────────────
+                                                A list of filenames is a list of things
+                                                you cannot check. The name is the button:
+                                                a picture opens in the asset preview
+                                                modal the rest of the app uses, and a
+                                                sound plays where it sits — a modal full
+                                                of black for a wav would be worse than
+                                                no modal at all. */}
+                                            <Pressable
+                                                onPress={() => onOpenAsset?.(a)}
+                                                disabled={!a.url || !onOpenAsset}
+                                                style={styles.assetName}
+                                                accessibilityRole="button"
+                                                accessibilityLabel={
+                                                    a.kind === "audio" ? `Play ${a.name}` : `Open ${a.name}`
+                                                }
+                                            >
+                                                <Text
+                                                    style={[styles.assetNameText, !!a.url && styles.assetOpenable]}
+                                                    numberOfLines={1}
+                                                >
+                                                    {a.name}
+                                                </Text>
+                                            </Pressable>
+                                            <Text style={styles.rowDetail}>
+                                                {playingAsset === a.path ? "playing" : a.kind}
                                             </Text>
-                                            <Text style={styles.rowDetail}>{a.kind}</Text>
                                             {!!onAddMedia && !!selection && (
                                                 <Pressable
                                                     onPress={() =>
@@ -572,12 +614,56 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
                         </ScrollView>
                     )}
 
-                    {(media === "captions" || media === "inspirations") && (
+                    {media === "captions" && (
+                        <ScrollView contentContainerStyle={styles.filesBody}>
+                            {capRows.length === 0 ? (
+                                <Text style={styles.empty}>{NO_CAPTIONS}</Text>
+                            ) : (
+                                <>
+                                    {capRows.map((row) => (
+                                        <View key={row.elementId} style={styles.askMedia}>
+                                            <View style={styles.captionHead}>
+                                                <Text style={styles.sectionLabel}>{row.title}</Text>
+                                                {!!row.span && <Text style={styles.rowDetail}>{row.span}</Text>}
+                                            </View>
+                                            {row.empty ? (
+                                                <Text style={styles.captionEmpty}>
+                                                    Written, but not transcribed yet — it fills in on the next
+                                                    preview or render.
+                                                </Text>
+                                            ) : (
+                                                <View style={styles.wordWrap}>
+                                                    {row.words.map((w, i) => (
+                                                        <Pressable
+                                                            key={`${row.elementId}-${i}`}
+                                                            onPress={() => onSeek(w.startMs)}
+                                                            style={styles.word}
+                                                            accessibilityRole="button"
+                                                            accessibilityLabel={`${w.text} at ${clock(w.startMs)}`}
+                                                        >
+                                                            <Text style={styles.wordText}>{w.text}</Text>
+                                                        </Pressable>
+                                                    ))}
+                                                </View>
+                                            )}
+                                            {/* Only when the transcriber heard something
+                                                different from the line that was written —
+                                                "three" comes back as "3". */}
+                                            {!!row.spoken && (
+                                                <Text style={styles.spokenLine}>Spoken: “{row.spoken}”</Text>
+                                            )}
+                                        </View>
+                                    ))}
+                                    <Text style={styles.sceneRule}>{CAPTIONS_SOURCE}</Text>
+                                </>
+                            )}
+                        </ScrollView>
+                    )}
+
+                    {media === "inspirations" && (
                         <View style={styles.soon}>
                             <Text style={styles.empty}>
-                                {media === "captions"
-                                    ? "Captions arrive with the media phase."
-                                    : "Reference material arrives with the media phase."}
+                                Reference material arrives with the media phase.
                             </Text>
                         </View>
                     )}
@@ -731,9 +817,37 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     borderRadius: 8,
                     backgroundColor: colors.tag,
                 },
-                assetName: { flex: 1, fontSize: fs(10), lineHeight: lh(15), color: colors.text },
+                assetName: { flex: 1 },
+                assetNameText: { fontSize: fs(10), lineHeight: lh(15), color: colors.text },
+                assetOpenable: { color: colors.primary, textDecorationLine: "underline" },
                 useBtn: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: colors.primary },
                 useLabel: { fontSize: fs(9), lineHeight: lh(13), fontWeight: "700", color: colors.white },
+
+                captionHead: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 8,
+                },
+                captionEmpty: {
+                    fontSize: fs(10),
+                    lineHeight: lh(15),
+                    color: withAlpha(colors.text, 0.5),
+                },
+                wordWrap: { flexDirection: "row", flexWrap: "wrap", gap: 4 },
+                word: {
+                    paddingHorizontal: 6,
+                    paddingVertical: 3,
+                    borderRadius: 6,
+                    backgroundColor: colors.tag,
+                },
+                wordText: { fontSize: fs(10), lineHeight: lh(14), color: colors.text },
+                spokenLine: {
+                    fontSize: fs(10),
+                    lineHeight: lh(15),
+                    fontStyle: "italic",
+                    color: withAlpha(colors.text, 0.5),
+                },
 
                 scriptScene: { gap: 6, marginBottom: 14 },
                 scriptLine: { gap: 3 },
