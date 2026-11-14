@@ -31,7 +31,7 @@ import Toaster from "@/shared-uis/components/toaster/Toaster";
 import Colors from "@/shared-uis/constants/Colors";
 import { withAlpha } from "@/utils/color";
 import { useTheme } from "@react-navigation/native";
-import type { Selection } from "@/components/designs/selection";
+import { selectionLabel, type Selection } from "@/components/designs/selection";
 import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
@@ -285,6 +285,25 @@ const DesignDetail = () => {
         [act]
     );
 
+    // ── A scoped AI edit ─────────────────────────────────────────────────
+    // The difference between an edit and a re-roll: with an element
+    // selected the instruction goes to that element alone, and the backend
+    // refuses an answer that is anything other than a replacement for it.
+    // With nothing selected there is no box, and the only AI action is the
+    // whole-film rewrite above it.
+    const askAboutSelection = useCallback(
+        (instruction: string) => {
+            if (!selection) return;
+            return act(
+                "element/ai",
+                { elementId: selection.elementId, instruction },
+                () => Toaster.success("Changed", "The film has been updated."),
+                "Couldn't make that change"
+            );
+        },
+        [act, selection]
+    );
+
     const author = useCallback(() => {
         const text = brief.trim();
         if (!text) {
@@ -370,6 +389,8 @@ const DesignDetail = () => {
             rendering={isRendering(design)}
             preparing={isPreviewing(design)}
             preparationFailed={design?.previewStatus === "failed"}
+            selectionLabel={selection ? selectionLabel(selection) : null}
+            onAskAboutSelection={askAboutSelection}
             onRetryPreparation={preview}
             submitting={submitting}
             linkedToContent={!!design?.contentId}
