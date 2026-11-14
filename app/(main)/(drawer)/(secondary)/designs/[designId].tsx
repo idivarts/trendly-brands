@@ -11,6 +11,17 @@ import { VOICE_PENDING, lineEdit, type ScriptLine } from "@/components/designs/s
 import StudioStage from "@/components/designs/StudioStage";
 import StudioTimeline from "@/components/designs/StudioTimeline";
 import TimelineAddBar, { type TimelineAddTarget } from "@/components/designs/TimelineAddBar";
+import PaneDivider from "@/components/designs/PaneDivider";
+import {
+    DEFAULT_LAYOUT,
+    LEFT_MIN,
+    RIGHT_MIN,
+    clampPaneWidth,
+    fitPanes,
+    openingPanes,
+    type StudioLayout,
+} from "@/components/designs/studio-panes";
+import { loadLayout, saveLayout } from "@/components/designs/studio-panes-store";
 import { type Window as ClipWindow } from "@/components/designs/timeline-drag";
 import {
     designAspect,
@@ -25,6 +36,7 @@ import {
 import {
     sceneAt,
     timelineDurationMs,
+    timelineTracks,
     type DesignClip,
     type DesignScene,
 } from "@/components/designs/studio-layout";
@@ -150,6 +162,23 @@ const DesignDetail = () => {
     const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
     /** Where "put something here" is pointing, or null when it is closed. */
     const [addAt, setAddAt] = useState<TimelineAddTarget | null>(null);
+
+    // ── How the studio is laid out, per viewer ───────────────────────────
+    // Panel widths and whether the timeline is showing. Remembered on this
+    // device because it is about the screen someone is sitting at rather
+    // than about the film, and read asynchronously — the studio opens on
+    // the defaults and settles into the remembered layout a frame later,
+    // which is far better than holding the whole screen on a storage read.
+    const [layout, setLayout] = useState<StudioLayout>(DEFAULT_LAYOUT);
+    useEffect(() => {
+        let alive = true;
+        void loadLayout().then((l) => {
+            if (alive) setLayout(l);
+        });
+        return () => {
+            alive = false;
+        };
+    }, []);
     const [pane, setPane] = useState<MobilePane>("stage");
     // Watching the live composition rather than the rendered file. Web only:
     // the player is 776 KB of JavaScript and a React Native WebView has never
@@ -590,13 +619,95 @@ const DesignDetail = () => {
         [act]
     );
 
+    // ⚠️ Refitted whenever the window changes, not only on a drag.
+    // Someone who sized their panels on an external monitor and unplugged
+    // it would otherwise come back to a stage of no width: the panels keep
+    // the widths they were given and nothing is left between them.
+    // Whether this design has a film in it. Read by the layout below as
+    // well as by the panel, so it is declared before both.
+    const written = !!design?.projectPrefix;
+
+    const { width: windowWidth } = useBreakpoints();
+
+    // ── An empty film opens differently ──────────────────────────────────
+    // There is nothing to look at and nothing to lay out, so the one thing
+    // a person can do — say what they want — gets about half the width and
+    // the timeline folds away, since it has no rows to draw.
+    //
+    // A PRESENTATION, not a stored preference: nothing about it is written
+    // to storage, and the moment the first scene lands the studio returns
+    // to the layout the person actually chose. `nudged` is how a person
+    // takes it back — once they move a divider or open the timeline
+    // themselves, the opening shape stops overriding them, because a panel
+    // that springs back after you drag it is broken, not opinionated.
+    const [nudged, setNudged] = useState(false);
+    const opening = !written && !nudged;
+
+    // Reset when a film arrives, so the NEXT empty design gets its own
+    // opening shape rather than inheriting a nudge from this one.
+    const wasWritten = useRef(written);
+    useEffect(() => {
+        if (written && !wasWritten.current) setNudged(false);
+        wasWritten.current = written;
+    }, [written]);
+
+    const panes = useMemo(
+        () =>
+            opening
+                ? openingPanes(windowWidth, layout.right)
+                : fitPanes(layout.left, layout.right, windowWidth),
+        [opening, layout.left, layout.right, windowWidth]
+    );
+    const timelineOpen = opening ? false : layout.timeline;
+
+    const resizePane = useCallback(
+        (side: "left" | "right", proposed: number, settle: boolean) => {
+            setNudged(true);
+            setLayout((prev) => {
+                // From what is ON SCREEN, not from the stored layout: while
+                // the opening shape is showing they differ, and starting
+                // from the stored one would make the first drag jump.
+                const base = side === "left" ? panes.left : panes.right;
+                const other = side === "left" ? panes.right : panes.left;
+                const min = side === "left" ? LEFT_MIN : RIGHT_MIN;
+                const width = clampPaneWidth(proposed, min, other, windowWidth);
+                const next =
+                    side === "left"
+                        ? { ...prev, left: width, right: panes.right }
+                        : { ...prev, right: width, left: base === panes.left ? prev.left : panes.left };
+                // Written once on release, not on every frame of a drag:
+                // a storage write per pointer move is a lot of writes for
+                // a number nobody reads until the next visit.
+                if (settle) saveLayout(next);
+                return next;
+            });
+        },
+        [windowWidth, panes]
+    );
+
+    const toggleTimeline = useCallback(() => {
+        setNudged(true);
+        setLayout((prev) => {
+            const next = { ...prev, timeline: !prev.timeline };
+            saveLayout(next);
+            return next;
+        });
+    }, []);
+
     const status = designStatus(design);
     const effectiveGate = resolveDesignGate(gate, tokens.state);
     const aspect = designAspect(design);
     const scenes = design?.scenes;
     const clips = design?.clips;
     const totalMs = timelineDurationMs(design?.durationMs, scenes, clips);
-    const written = !!design?.projectPrefix;
+
+    // What the collapsed strip reports, so hiding the timeline does not
+    // hide the fact that there is something in it.
+    const rowCount = useMemo(
+        () => timelineTracks(clips, scenes).length,
+        [clips, scenes]
+    );
+
     const seen = hasBeenSeen(design);
 
     // The scene under the playhead, unless the user picked one explicitly.
@@ -648,8 +759,31 @@ const DesignDetail = () => {
     // stage on a phone. Two copies of eleven props is two copies that drift,
     // and the one that drifts is the phone's, because it is the one nobody
     // looks at while building the desktop layout.
+    // ── The timeline, and the bar that hides it ─────────────────────────
+    // Hidden it is a strip with a label, not nothing: a timeline that
+    // vanished with no way back would be a feature someone loses by
+    // accident. The strip says how many rows are waiting, so the cost of
+    // bringing it back is visible before you do.
+    const timelineBar = (
+        <Pressable
+            onPress={toggleTimeline}
+            style={styles.timelineBar}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: timelineOpen }}
+            accessibilityLabel={timelineOpen ? "Hide the timeline" : "Show the timeline"}
+        >
+            <Text style={styles.timelineBarLabel}>
+                {timelineOpen ? "Hide timeline" : `Show timeline${rowCount ? ` · ${rowCount} rows` : ""}`}
+            </Text>
+            <Text style={styles.timelineBarChevron}>{layout.timeline ? "▾" : "▴"}</Text>
+        </Pressable>
+    );
+
     const timeline = (
         <>
+            {timelineBar}
+            {!timelineOpen ? null : (
+            <>
             <StudioTimeline
                 clips={clips}
                 scenes={scenes}
@@ -681,6 +815,8 @@ const DesignDetail = () => {
                     onPlaceAsset={(assetPath, type) => addAtMoment({ type, assetPath })}
                     onAskFor={(intent, type) => addAtMoment({ type, intent })}
                 />
+            )}
+            </>
             )}
         </>
     );
@@ -723,10 +859,59 @@ const DesignDetail = () => {
             contextId={designId}
             title="Design Studio"
             isCompact
-            placeholder="Ask for a change…"
+            // ── The opening line depends on whether there IS a film ──────
+            // "What should change?" in front of an empty canvas is a
+            // question about nothing, and "Tighten the hook" is a chip that
+            // cannot work. A film that does not exist yet is asked for;
+            // one that does is changed.
+            heroTitle={written ? "What should change?" : "What should this film be?"}
+            welcomeText={
+                written
+                    ? undefined
+                    : "Describe it — length, what it says, how it ends. I'll write it, fetch the photographs and voiceovers it needs, and it will appear beside you."
+            }
+            heroSuggestions={
+                written
+                    ? undefined
+                    : // Short enough to fit the panel at its narrowest.
+                      // A chip wider than the lane is clipped at both ends
+                      // and reads as a broken string rather than a choice.
+                      [
+                          "A 10s reel for our cold brew",
+                          "A product launch teaser",
+                          "An explainer with a voiceover",
+                      ]
+            }
+            placeholder={written ? "Ask for a change…" : "Describe the film you want…"}
             focusItems={focusItems}
             onRemoveFocusItem={() => setSelection(null)}
         />
+    );
+
+    // ── Render, in the page header ──────────────────────────────────────
+    // The one high-stakes action on this screen, so it sits where the
+    // screen's page-level actions are rather than at the foot of the
+    // conversation, under whatever the user last typed.
+    //
+    // Absent entirely until there is a film: a dimmed Render on an empty
+    // design says there is an action here and then refuses it, which reads
+    // as broken rather than as not-yet-ready.
+    const renderAction = !written ? null : (
+        <Pressable
+            key="render"
+            onPress={render}
+            disabled={submitting || isRendering(design) || isPreviewing(design)}
+            style={({ pressed }) => [
+                styles.headerRender,
+                (pressed || submitting || isRendering(design) || isPreviewing(design)) &&
+                    styles.headerRenderDim,
+            ]}
+            accessibilityRole="button"
+        >
+            <Text style={styles.headerRenderLabel}>
+                {isRendering(design) ? "Rendering…" : isPreviewing(design) ? "Preparing…" : "Render"}
+            </Text>
+        </Pressable>
     );
 
     const briefPanel = (
@@ -822,6 +1007,7 @@ const DesignDetail = () => {
                 subtitle={status.bad ? "Something went wrong" : status.detail}
                 showBackButton
                 mobileActions="all"
+                workflowActionButtons={renderAction ? [renderAction] : undefined}
             />
 
             {status.bad && (
@@ -838,7 +1024,13 @@ const DesignDetail = () => {
             {xl ? (
                 <View style={styles.desktop}>
                     <View style={styles.columns}>
-                        <View style={styles.leftPane}>{briefPanel}</View>
+                        <View style={[styles.leftPane, { width: panes.left }]}>{briefPanel}</View>
+                        <PaneDivider
+                            width={panes.left}
+                            side="left"
+                            onResize={(w) => resizePane("left", w, false)}
+                            onSettle={(w) => resizePane("left", w, true)}
+                        />
                         <View style={styles.centerPane}>
                             {canGoLive && !!design?.renderUrl && (
                                 <View style={styles.sourceTabs}>
@@ -862,7 +1054,13 @@ const DesignDetail = () => {
                             )}
                             {stage}
                         </View>
-                        <View style={styles.rightPane}>{sidePanel}</View>
+                        <PaneDivider
+                            width={panes.right}
+                            side="right"
+                            onResize={(w) => resizePane("right", w, false)}
+                            onSettle={(w) => resizePane("right", w, true)}
+                        />
+                        <View style={[styles.rightPane, { width: panes.right }]}>{sidePanel}</View>
                     </View>
                     {timeline}
                 </View>
@@ -919,7 +1117,8 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 desktop: { flex: 1 },
                 columns: { flex: 1, flexDirection: "row" },
                 leftPane: {
-                    width: 320,
+                    // The width is state — see `panes`. This is everything
+                    // else about the pane.
                     shadowColor: "#000",
                     shadowOffset: { width: 4, height: 0 },
                     shadowRadius: 12,
@@ -950,13 +1149,58 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 },
                 sourceLabelOn: { color: colors.onPrimary },
                 rightPane: {
-                    width: 290,
                     shadowColor: "#000",
                     shadowOffset: { width: -4, height: 0 },
                     shadowRadius: 12,
                     shadowOpacity: 0.06,
                     elevation: 6,
                     zIndex: 2,
+                },
+                // ── The strip that hides the timeline ────────────────
+                // Always present, even when the timeline is showing, so
+                // the control is where it was and the panel does not jump.
+                timelineBar: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    paddingVertical: 6,
+                    backgroundColor: colors.card,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: -2 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.06,
+                    elevation: 4,
+                    zIndex: 1,
+                },
+                timelineBarLabel: {
+                    fontSize: fs(10),
+                    lineHeight: lh(14),
+                    fontWeight: "600",
+                    color: colors.textSecondary,
+                },
+                timelineBarChevron: {
+                    fontSize: fs(9),
+                    lineHeight: lh(13),
+                    color: colors.textSecondary,
+                },
+                headerRender: {
+                    backgroundColor: colors.primary,
+                    borderRadius: 999,
+                    paddingHorizontal: 18,
+                    paddingVertical: 8,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 10,
+                    shadowOpacity: 0.3,
+                    elevation: 3,
+                },
+                headerRenderDim: { opacity: 0.5, shadowOpacity: 0 },
+                headerRenderLabel: {
+                    fontSize: fs(12),
+                    lineHeight: lh(16),
+                    fontWeight: "700",
+                    color: colors.onPrimary,
                 },
                 mobile: { flex: 1 },
                 mobileBody: { flex: 1 },

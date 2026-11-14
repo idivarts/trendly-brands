@@ -56,19 +56,24 @@ export interface StudioBriefPanelProps {
     onAskAboutSelection?: (instruction: string) => void;
 
     /**
-     * The conversation, once this film has one.
+     * The conversation. This panel IS the conversation when it has one.
      *
-     * ── Why the brief and the chat are not both on screen ────────────────
+     * ── Why there is no brief box beside it ──────────────────────────────
      * They are the same question asked twice. A brief box says "what should
-     * this film be" and a chat says "what would you like to change", and a
-     * panel holding both invites someone to rewrite the brief, press
-     * nothing, and wonder why the film did not change.
+     * this film be" and a thread says "what would you like"; a panel
+     * holding both invites someone to rewrite the brief, press nothing, and
+     * wonder why the film did not change.
      *
-     * So: a film with nothing in it shows the brief, because a brief is how
-     * a film STARTS and there is nothing yet to have a conversation about.
-     * Once it is written the thread takes over, and the brief lives on as
-     * that thread's first message. The status line and the actions stay in
-     * both, because they are about the film rather than about the request.
+     * An empty film is no exception, and that is the part worth stating:
+     * the first message IS the brief. The backend's start_design_authoring
+     * tool takes it and queues the same authoring job the old button did,
+     * so nothing is lost by the box going — the work still runs as a job
+     * that survives a closed tab, and the user describes their film by
+     * saying what they want rather than by filling in a field and hunting
+     * for the button under it.
+     *
+     * The brief box below is the FALLBACK, for a studio mounted without a
+     * thread at all. Without it this panel would be an empty box.
      */
     chat?: React.ReactNode;
 }
@@ -104,11 +109,14 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
     // about a photograph.
     React.useEffect(() => setInstruction(""), [selectionLabel]);
 
-    // Whether the thread has taken over from the brief. Read in three
-    // places — which of the two fills the panel, whether Render is the
-    // primary action, and whether the authoring button is offered at all —
-    // so it is decided once rather than re-derived and allowed to disagree.
-    const showChat = !!chat && written;
+    // Whether the thread is the panel. Read in three places — which of the
+    // two fills it, whether Render is the primary action, and whether the
+    // authoring button is offered at all — so it is decided once rather
+    // than re-derived and allowed to disagree.
+    //
+    // NOT gated on the film existing: an empty film is exactly where the
+    // conversation should start, because the first message is the brief.
+    const showChat = !!chat;
 
     const ask = () => {
         const text = instruction.trim();
@@ -208,7 +216,7 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
             </ScrollView>
             )}
 
-            <View style={styles.actions}>
+            <View style={[styles.actions, showChat && !written && styles.actionsEmpty]}>
                 {gate === "tokens_exhausted" ? (
                     <UpgradeInline
                         message="You're out of AI tokens this month. Add a top-up to keep making designs."
@@ -251,34 +259,16 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
                                 </Pressable>
                             )}
 
-                            {/* ── Render is the only action ─────────────────
-                                There was a "Preview — free" button here, and
-                                it existed because the film's media is
-                                resolved by the worker, not by authoring — so
-                                a design opened before pressing it was missing
-                                the photograph the brief asked for. Making the
-                                user press a button to complete their own film
-                                is not a step, it is a gap.
-
-                                Preparation now runs by itself the moment
-                                authoring finishes, so the live player is the
-                                finished film and this is the only thing left
-                                to decide. */}
-                            <Pressable
-                                onPress={onRender}
-                                disabled={submitting || rendering || preparing || !written}
-                                style={({ pressed }) => [
-                                    // The only action when the thread is
-                                    // showing, so it carries the weight.
-                                    showChat ? styles.primaryBtn : styles.secondaryBtn,
-                                    (pressed || submitting || rendering || preparing || !written) && styles.dim,
-                                ]}
-                                accessibilityRole="button"
-                            >
-                                <Text style={showChat ? styles.primaryLabel : styles.secondaryLabel}>
-                                    {rendering ? "Rendering…" : preparing ? "Preparing…" : "Render"}
-                                </Text>
-                            </Pressable>
+                            {/* ── Render lives in the page header ───────────
+                                Moved out of this panel: it is the one
+                                high-stakes action on the screen and it
+                                belongs where the screen's other
+                                page-level actions are, not at the foot of
+                                the conversation where it sat under
+                                whatever the user last typed. The header
+                                also only shows it once there is a film,
+                                so an empty design no longer offers a
+                                button that can never do anything. */}
                         </View>
 
                         {/* ── The one case where preparation is manual ────
@@ -359,6 +349,9 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 // The thread brings its own scrolling; it takes the space and
                 // is never nested in a ScrollView, which would give it two.
                 chat: { flex: 1, minHeight: 0 },
+                // Nothing in it before a film exists, so it takes no room
+                // rather than leaving a band of padding under the thread.
+                actionsEmpty: { paddingVertical: 0 },
                 scopedStrip: { paddingHorizontal: 14, paddingBottom: 10 },
                 statusRow: { flexDirection: "row", alignItems: "center", gap: 8 },
                 dot: {
