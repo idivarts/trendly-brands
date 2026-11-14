@@ -223,6 +223,19 @@ interface AIChatPanelProps {
     hideHeader?: boolean;
 
     /**
+     * A line under the header title, for a host that has a running status
+     * to show and nowhere good to put it.
+     *
+     * The Design Studio had a status strip of its own above this panel,
+     * which spent a band of the column on one sentence and pushed the
+     * conversation down. The header already names the panel; the line
+     * underneath it is where "Writing the design…" belongs.
+     */
+    subtitle?: string;
+    /** Colours the subtitle as a problem rather than progress. */
+    subtitleBad?: boolean;
+
+    /**
      * Vertical alignment of the message list. "bottom" (default) anchors to the
      * input like a side-panel chat; "top" flows messages downward like a guided
      * wizard — better for a full-page onboarding flow with few messages.
@@ -285,6 +298,8 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     onBack,
     onOnboardingComplete,
     hideHeader = false,
+    subtitle,
+    subtitleBad = false,
     messageAlign = "bottom",
     parentHandlesSafeArea = false,
     parentHandlesSafeBottom = false,
@@ -966,9 +981,26 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
                                 <FontAwesomeIcon icon={faChevronRight} size={11} color={colors.textSecondary} />
                             </Pressable>
                         )}
-                        <Text style={styles.panelHeaderLabel} numberOfLines={1}>
-                            {headerLabel}
-                        </Text>
+                        <View style={styles.panelHeaderText}>
+                            <Text style={styles.panelHeaderLabel} numberOfLines={1}>
+                                {headerLabel}
+                            </Text>
+                            {/* Only in the conversation, never over the
+                                history list: a status about the thing on
+                                screen is wrong when the screen is a list of
+                                other conversations. */}
+                            {!!subtitle && effectiveViewMode === "chat" && (
+                                <Text
+                                    style={[
+                                        styles.panelHeaderSub,
+                                        subtitleBad && styles.panelHeaderSubBad,
+                                    ]}
+                                    numberOfLines={1}
+                                >
+                                    {subtitle}
+                                </Text>
+                            )}
+                        </View>
                         {effectiveViewMode === "chat" ? (
                             <>
                                 {canExpand && (
@@ -1293,8 +1325,10 @@ function useStyles(
                     alignItems: "center",
                     gap: 8,
                     paddingHorizontal: isCompact ? 8 : 12,
-                    paddingTop: 10 + safeTop,
-                    paddingBottom: 10,
+                    // Tighter in a docked panel, where the column is narrow
+                    // and every band of padding is taken from the thread.
+                    paddingTop: (isCompact ? 7 : 10) + safeTop,
+                    paddingBottom: isCompact ? 7 : 10,
                     backgroundColor: colors.card,
                     shadowColor: "#000",
                     shadowOffset: { width: 0, height: 3 },
@@ -1311,12 +1345,26 @@ function useStyles(
                     justifyContent: "center",
                 },
                 iconBtnPressed: { backgroundColor: colors.tag },
+                // The title and its status line, as one column, so the icon
+                // buttons stay centred against both rather than against the
+                // title alone.
+                panelHeaderText: { flex: 1, minWidth: 0 },
                 panelHeaderLabel: {
-                    flex: 1,
                     fontSize: fs(13),
+                    lineHeight: lh(17),
                     fontWeight: "600",
                     color: colors.text,
                 },
+                panelHeaderSub: {
+                    fontSize: fs(10),
+                    lineHeight: lh(13),
+                    color: colors.textSecondary,
+                },
+                // Darkened rather than reddened, which is what the studio's
+                // own status line did: colors.red is the literal CSS "red",
+                // too loud for a line that often says something ordinary
+                // like "preparing failed, try again".
+                panelHeaderSubBad: { color: colors.text },
                 // ── Message list ─────────────────────────────────────────────
                 // Wizard mode (top-aligned) explicitly anchors to the top so a
                 // single message hugs the top of the panel. Default chat is
