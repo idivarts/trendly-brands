@@ -236,6 +236,18 @@ interface AIChatPanelProps {
     subtitleBad?: boolean;
 
     /**
+     * Rendered immediately ABOVE the composer, under the thread.
+     *
+     * For the host's own state — work running somewhere else, a failure
+     * and the action that clears it. It goes here because this is where
+     * the user is looking and typing: the Design Studio put its status
+     * strip at the top of the page and its retry at the very bottom of
+     * the left column, and in a screen whose whole left side is a
+     * conversation both were somewhere the user never looks.
+     */
+    composerNotice?: React.ReactNode;
+
+    /**
      * Vertical alignment of the message list. "bottom" (default) anchors to the
      * input like a side-panel chat; "top" flows messages downward like a guided
      * wizard — better for a full-page onboarding flow with few messages.
@@ -300,6 +312,7 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     hideHeader = false,
     subtitle,
     subtitleBad = false,
+    composerNotice,
     messageAlign = "bottom",
     parentHandlesSafeArea = false,
     parentHandlesSafeBottom = false,
@@ -785,6 +798,11 @@ const AIChatPanel: React.FC<AIChatPanelProps> = ({
     // the hero empty state.
     const composerStack = (
         <>
+            {/* The host's own state, directly over the box being typed in. */}
+            {!!composerNotice && (
+                <View style={splitMode ? styles.centered : undefined}>{composerNotice}</View>
+            )}
+
             {/* Low / critical token warning — non-blocking. */}
             <View style={splitMode ? styles.centered : undefined}>
                 <TokenMeterNotice tokens={tokens} />
