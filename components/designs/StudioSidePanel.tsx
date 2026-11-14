@@ -351,14 +351,35 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
                                             ? scenes?.find((s) => s.id === node.id)
                                             : undefined;
                                         const open = expanded.has(node.id);
+                                        const label = (
+                                            <>
+                                                <Text style={styles.rowLabel} numberOfLines={1}>
+                                                    {node.label}
+                                                </Text>
+                                                <Text style={styles.rowDetail} numberOfLines={1}>
+                                                    {node.detail}
+                                                </Text>
+                                            </>
+                                        );
                                         return (
-                                            <Pressable
+                                            // ── The row is not a button ──────────────
+                                            // It used to be: a Pressable wrapping the
+                                            // chevron and the four scene ops, which are
+                                            // Pressables too. On web that is a <button>
+                                            // inside a <button> — invalid HTML, a
+                                            // hydration error every render, and worse
+                                            // than cosmetic: a click on "move earlier"
+                                            // bubbled to the row and selected and seeked
+                                            // the scene as well as moving it.
+                                            //
+                                            // So the row is a plain View holding three
+                                            // siblings — fold, pick, ops — and only the
+                                            // name is the thing you click to select. A
+                                            // leaf has nothing to select, so it gets no
+                                            // button at all rather than one advertising
+                                            // a role it does not have.
+                                            <View
                                                 key={node.id}
-                                                onPress={() => {
-                                                    if (!isScene) return;
-                                                    onSelectScene(node.id);
-                                                    if (scene) onSeek(scene.startMs);
-                                                }}
                                                 style={[
                                                     styles.row,
                                                     { paddingLeft: 10 + node.depth * 18 },
@@ -367,8 +388,6 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
                                                             sceneHoldsSelection(node.id, selection ?? null)) &&
                                                         styles.rowOn,
                                                 ]}
-                                                accessibilityRole="button"
-                                                accessibilityLabel={node.label}
                                             >
                                                 {isScene && node.hasChildren ? (
                                                     <Pressable
@@ -391,12 +410,21 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
                                                 ) : (
                                                     <View style={styles.leafDot} />
                                                 )}
-                                                <Text style={styles.rowLabel} numberOfLines={1}>
-                                                    {node.label}
-                                                </Text>
-                                                <Text style={styles.rowDetail} numberOfLines={1}>
-                                                    {node.detail}
-                                                </Text>
+                                                {isScene ? (
+                                                    <Pressable
+                                                        onPress={() => {
+                                                            onSelectScene(node.id);
+                                                            if (scene) onSeek(scene.startMs);
+                                                        }}
+                                                        style={styles.rowPick}
+                                                        accessibilityRole="button"
+                                                        accessibilityLabel={node.label}
+                                                    >
+                                                        {label}
+                                                    </Pressable>
+                                                ) : (
+                                                    <View style={styles.rowPick}>{label}</View>
+                                                )}
                                                 {/* ── Shape, on the row it belongs to ──────
                                                     Up, down, duplicate and delete sit on
                                                     the scene itself rather than in a menu
@@ -438,7 +466,7 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
                                                         />
                                                     </View>
                                                 )}
-                                            </Pressable>
+                                            </View>
                                         );
                                     })
                                 )}
@@ -748,6 +776,10 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     paddingVertical: 7,
                 },
                 rowOn: { backgroundColor: withAlpha(colors.primary, 0.14) },
+                // The name and its detail, which together are what you click
+                // to select a scene. Its own row because the outer row is no
+                // longer a button — see the note on the tree.
+                rowPick: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8 },
                 // Matches the chevron's 10px glyph so a scene without one does
                 // not shift its name left of the scenes that have it.
                 chevronSpacer: { width: 10 },
