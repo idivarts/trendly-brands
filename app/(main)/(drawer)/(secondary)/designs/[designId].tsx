@@ -1,5 +1,6 @@
 import StudioBriefPanel from "@/components/designs/StudioBriefPanel";
 import StudioSidePanel from "@/components/designs/StudioSidePanel";
+import type { DesignRevision } from "@/components/designs/revisions";
 import StudioStage from "@/components/designs/StudioStage";
 import StudioTimeline from "@/components/designs/StudioTimeline";
 import {
@@ -81,6 +82,8 @@ interface Design extends DesignStatusFields {
     previewUrl?: string;
     brief?: string;
     scenes?: DesignScene[];
+    /** Every version this film has been — see components/designs/revisions. */
+    revisions?: DesignRevision[];
 }
 
 const POLL_MS = 5000;
@@ -222,6 +225,25 @@ const DesignDetail = () => {
         [brandId, designId, submitting, load]
     );
 
+    // ── Going back ───────────────────────────────────────────────────────
+    // The player and the stage both read what the document says, and `act`
+    // reloads it, so putting the pointer back is the whole of this: the
+    // next poll brings the restored film, its scenes and its player URL.
+    //
+    // No confirmation step. A restore is itself recorded as a revision, so
+    // the thing it would be protecting against — losing the version you are
+    // on — cannot happen; the version you left is the top of the list.
+    const restore = useCallback(
+        (n: number) =>
+            act(
+                `revisions/${n}/restore`,
+                undefined,
+                () => Toaster.success("Put back", `This film is version ${n} again.`),
+                "Couldn't restore that version"
+            ),
+        [act]
+    );
+
     const author = useCallback(() => {
         const text = brief.trim();
         if (!text) {
@@ -353,6 +375,10 @@ const DesignDetail = () => {
             brief={brief}
             selectedSceneId={activeSceneId}
             selection={selection}
+            revisions={design?.revisions}
+            currentPrefix={design?.projectPrefix}
+            onRestore={restore}
+            restoring={submitting}
             onSelectScene={onSelectScene}
             onSeek={setPositionMs}
         />

@@ -1,5 +1,6 @@
 /**
- * The right-hand panel: Media and Script, with the layer tree under Media.
+ * The right-hand panel: Media, Script and History, with the layer tree under
+ * Media.
  *
  * Mirrors the Hyperframes editor's own panel — the same two tabs, the same
  * sub-tabs, the same tree of clips with a count against each row.
@@ -30,8 +31,9 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 import type { DesignPreviewFrame } from "./design-status";
 import { formatClock, toLayerTree, type DesignScene } from "./studio-layout";
 import { sceneHoldsSelection, selectionLabel, type Selection } from "./selection";
+import { NO_REVISIONS, revisionRows, type DesignRevision } from "./revisions";
 
-type MainTab = "media" | "script";
+type MainTab = "media" | "script" | "history";
 type MediaTab = "files" | "captions" | "inspirations" | "layers";
 
 export interface StudioSidePanelProps {
@@ -41,6 +43,13 @@ export interface StudioSidePanelProps {
     selectedSceneId?: string | null;
     /** The element picked inside the player, shown under the scene tree. */
     selection?: Selection | null;
+    /** Every version this film has been, newest last. */
+    revisions?: DesignRevision[];
+    /** The one the design points at, so the list can say which is playing. */
+    currentPrefix?: string;
+    /** Puts the film back to a revision. Absent while one is in flight. */
+    onRestore?: (n: number) => void;
+    restoring?: boolean;
     onSelectScene: (sceneId: string) => void;
     onSeek: (ms: number) => void;
 }
@@ -51,6 +60,10 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
     brief,
     selectedSceneId,
     selection,
+    revisions,
+    currentPrefix,
+    onRestore,
+    restoring,
     onSelectScene,
     onSeek,
 }) => {
@@ -72,12 +85,15 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
     }, []);
 
     const tree = useMemo(() => toLayerTree(scenes, expanded), [scenes, expanded]);
+    // Recomputed whenever the poll brings a new document, which is also what
+    // keeps "14 minutes ago" from going stale while the screen is open.
+    const rows = useMemo(() => revisionRows(revisions, currentPrefix), [revisions, currentPrefix]);
     const sceneCount = scenes?.length ?? 0;
 
     return (
         <View style={styles.root}>
             <View style={styles.mainTabs}>
-                {(["media", "script"] as MainTab[]).map((t) => (
+                {(["media", "script", "history"] as MainTab[]).map((t) => (
                     <Pressable
                         key={t}
                         onPress={() => setMain(t)}
@@ -86,13 +102,50 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
                         accessibilityState={{ selected: main === t }}
                     >
                         <Text style={[styles.mainTabLabel, main === t && styles.mainTabLabelOn]}>
-                            {t === "media" ? "Media" : "Script"}
+                            {t === "media" ? "Media" : t === "script" ? "Script" : "History"}
                         </Text>
                     </Pressable>
                 ))}
             </View>
 
-            {main === "script" ? (
+            {main === "history" ? (
+                <ScrollView contentContainerStyle={styles.historyBody}>
+                    {rows.length === 0 ? (
+                        <Text style={styles.empty}>{NO_REVISIONS}</Text>
+                    ) : (
+                        rows.map((r) => (
+                            <View key={r.n} style={styles.revision}>
+                                <View style={styles.revisionText}>
+                                    <Text style={styles.revisionTitle}>
+                                        {r.title}
+                                        {r.current ? " · playing" : ""}
+                                    </Text>
+                                    {!!r.note && (
+                                        <Text style={styles.revisionNote} numberOfLines={2}>
+                                            {r.note}
+                                        </Text>
+                                    )}
+                                    <Text style={styles.revisionWhen}>{r.when}</Text>
+                                </View>
+                                {/* No button on the one already playing: it is
+                                    the answer to "restore this", not a thing
+                                    to ask for. */}
+                                {!r.current && !!onRestore && (
+                                    <Pressable
+                                        onPress={() => onRestore(r.n)}
+                                        disabled={restoring}
+                                        style={[styles.restore, restoring && styles.restoreOff]}
+                                        accessibilityRole="button"
+                                        accessibilityLabel={`Restore the version from ${r.when}`}
+                                    >
+                                        <Text style={styles.restoreLabel}>Restore</Text>
+                                    </Pressable>
+                                )}
+                            </View>
+                        ))
+                    )}
+                </ScrollView>
+            ) : main === "script" ? (
                 <ScrollView contentContainerStyle={styles.scriptBody}>
                     <Text style={styles.sectionLabel}>The brief</Text>
                     <Text style={styles.script}>
@@ -362,6 +415,56 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     paddingVertical: 24,
                 },
                 soon: { flex: 1, justifyContent: "center" },
+
+                historyBody: { padding: 10, gap: 8 },
+                revision: {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: 10,
+                    borderRadius: 10,
+                    backgroundColor: colors.tag,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 3,
+                    shadowOpacity: 0.04,
+                    elevation: 1,
+                },
+                revisionText: { flex: 1, gap: 2 },
+                revisionTitle: {
+                    fontSize: fs(11),
+                    lineHeight: lh(16),
+                    fontWeight: "600",
+                    color: colors.text,
+                },
+                revisionNote: {
+                    fontSize: fs(10),
+                    lineHeight: lh(15),
+                    color: colors.textSecondary,
+                },
+                revisionWhen: {
+                    fontSize: fs(10),
+                    lineHeight: lh(14),
+                    color: withAlpha(colors.text, 0.45),
+                },
+                restore: {
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
+                    borderRadius: 8,
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowRadius: 6,
+                    shadowOpacity: 0.3,
+                    elevation: 2,
+                },
+                restoreOff: { opacity: 0.5 },
+                restoreLabel: {
+                    fontSize: fs(10),
+                    lineHeight: lh(14),
+                    fontWeight: "700",
+                    color: colors.white,
+                },
                 scriptBody: { padding: 14, gap: 8 },
                 sectionLabel: {
                     fontSize: fs(10),
