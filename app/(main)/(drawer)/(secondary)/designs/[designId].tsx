@@ -3,6 +3,9 @@ import StudioSidePanel from "@/components/designs/StudioSidePanel";
 import type { DesignRevision } from "@/components/designs/revisions";
 import type { ElementEdit } from "@/components/designs/inspector-edit";
 import type { DesignAsset, MediaPlacement, SceneOperation } from "@/components/designs/StudioSidePanel";
+import type { CaptionTrack } from "@/components/designs/caption-tracks";
+import AssetPreviewModal from "@/shared-uis/components/carousel/asset-preview-modal";
+import { Audio } from "expo-av";
 import { VOICE_PENDING, lineEdit, type ScriptLine } from "@/components/designs/script-lines";
 import StudioStage from "@/components/designs/StudioStage";
 import StudioTimeline from "@/components/designs/StudioTimeline";
@@ -119,6 +122,14 @@ const DesignDetail = () => {
     // the same reason: it is a fact about the files, not about the
     // document, so the design cannot carry it.
     const [assets, setAssets] = useState<DesignAsset[]>([]);
+    const [captions, setCaptions] = useState<CaptionTrack[]>([]);
+    // What the preview modal is showing. Pictures and video go through
+    // the same modal the rest of the app uses; sound does not, because a
+    // full-screen black rectangle is not a preview of a wav.
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [previewIsVideo, setPreviewIsVideo] = useState(false);
+    const [playingAsset, setPlayingAsset] = useState<string | null>(null);
+    const sound = useRef<Audio.Sound | null>(null);
     const [positionMs, setPositionMs] = useState(0);
     const [playing, setPlaying] = useState(false);
     const [loop, setLoop] = useState(true);
@@ -201,6 +212,9 @@ const DesignDetail = () => {
                 );
                 const data = await res.json();
                 if (!cancelled && Array.isArray(data?.lines)) setScript(data.lines as ScriptLine[]);
+                if (!cancelled && Array.isArray(data?.captions)) {
+                    setCaptions(data.captions as CaptionTrack[]);
+                }
 
                 const assetRes = await HttpWrapper.fetch(
                     `/api/design/brands/${brandId}/designs/${designId}/assets`,
@@ -408,6 +422,49 @@ const DesignDetail = () => {
         [act]
     );
 
+    // ── Opening one of the film's own files ──────────────────────────────
+    // A picture or a clip goes to the shared asset preview modal. A sound
+    // plays in place: one at a time, and pressing the one that is playing
+    // stops it, because two voiceovers over each other is not a preview
+    // of either.
+    const openAsset = useCallback(async (a: DesignAsset) => {
+        if (!a.url) return;
+        if (a.kind === "audio") {
+            try {
+                if (sound.current) {
+                    await sound.current.unloadAsync();
+                    sound.current = null;
+                }
+                if (playingAsset === a.path) {
+                    setPlayingAsset(null);
+                    return;
+                }
+                const { sound: s } = await Audio.Sound.createAsync({ uri: a.url }, { shouldPlay: true });
+                sound.current = s;
+                setPlayingAsset(a.path);
+                s.setOnPlaybackStatusUpdate((st) => {
+                    if ("didJustFinish" in st && st.didJustFinish) setPlayingAsset(null);
+                });
+            } catch {
+                Toaster.error("Couldn't play that", "The file may still be uploading.");
+                setPlayingAsset(null);
+            }
+            return;
+        }
+        setPreviewIsVideo(a.kind === "video");
+        setPreviewUrl(a.url);
+    }, [playingAsset]);
+
+    // A sound left playing after the screen closes would follow the user
+    // to the next page.
+    useEffect(
+        () => () => {
+            sound.current?.unloadAsync().catch(() => {});
+            sound.current = null;
+        },
+        []
+    );
+
     const author = useCallback(() => {
         const text = brief.trim();
         if (!text) {
@@ -547,6 +604,9 @@ const DesignDetail = () => {
             restoring={submitting}
             assets={assets}
             onAddMedia={addMedia}
+            onOpenAsset={openAsset}
+            playingAsset={playingAsset}
+            captions={captions}
             script={script}
             onEditLine={editLine}
             onScene={changeScenes}
@@ -652,6 +712,20 @@ const DesignDetail = () => {
                     )}
                 </View>
             )}
+
+            {/* The asset preview the rest of the app uses, reused here so a
+                file in the media panel opens the way a file opens
+                everywhere else. */}
+            <AssetPreviewModal
+                previewImage={!!previewUrl}
+                previewImageUrl={previewIsVideo ? null : previewUrl}
+                previewVideoUrl={previewIsVideo ? previewUrl : null}
+                setPreviewImage={(open) => {
+                    const next = typeof open === "function" ? open(!!previewUrl) : open;
+                    if (!next) setPreviewUrl(null);
+                }}
+                theme={theme}
+            />
         </AppLayout>
     );
 };
