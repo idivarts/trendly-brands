@@ -5,7 +5,15 @@ import {
     type Selection,
 } from "../selection";
 
-const HIT: Selection = { elementId: "hook-title", sceneId: "hook", tag: "h1", text: "Hit the 2 PM wall?" };
+const HIT: Selection = {
+    elementId: "hook-title",
+    sceneId: "hook",
+    tag: "h1",
+    text: "Hit the 2 PM wall?",
+    style: {},
+    startMs: null,
+    durationMs: null,
+};
 
 describe("selectionFrom", () => {
     it("takes a real selection off the player's message", () => {

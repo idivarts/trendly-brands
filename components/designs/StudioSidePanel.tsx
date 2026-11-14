@@ -32,8 +32,13 @@ import type { DesignPreviewFrame } from "./design-status";
 import { formatClock, toLayerTree, type DesignScene } from "./studio-layout";
 import { sceneHoldsSelection, selectionLabel, type Selection } from "./selection";
 import { NO_REVISIONS, revisionRows, type DesignRevision } from "./revisions";
+import StudioInspector from "./StudioInspector";
+import type { ElementEdit } from "./inspector-edit";
 
 type MainTab = "media" | "script" | "history";
+
+/** For a caller with no write path — the panel still shows what is selected. */
+const noEdit = () => {};
 type MediaTab = "files" | "captions" | "inspirations" | "layers";
 
 export interface StudioSidePanelProps {
@@ -50,6 +55,10 @@ export interface StudioSidePanelProps {
     /** Puts the film back to a revision. Absent while one is in flight. */
     onRestore?: (n: number) => void;
     restoring?: boolean;
+    /** Applies a settled inspector change to the selected element. */
+    onEditElement?: (edit: ElementEdit) => void;
+    editing?: boolean;
+    editError?: string | null;
     onSelectScene: (sceneId: string) => void;
     onSeek: (ms: number) => void;
 }
@@ -64,6 +73,9 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
     currentPrefix,
     onRestore,
     restoring,
+    onEditElement,
+    editing,
+    editError,
     onSelectScene,
     onSeek,
 }) => {
@@ -231,26 +243,18 @@ const StudioSidePanel: React.FC<StudioSidePanelProps> = ({
                             </ScrollView>
 
                             {/* ── The inspector ────────────────────────────
-                                Read-only in this phase on purpose. Selection
-                                is the foundation three later phases stand on,
-                                and shipping it without a write path means it
-                                cannot damage a design while it is proved. */}
+                                Phase 11 shipped this read-only, so selection
+                                could be proved without a write path that
+                                could damage a design. Phase 13 is the write
+                                path: the edits that should never cost a
+                                model call. */}
                             <View style={styles.inspector}>
-                                <Text style={styles.inspectorHead}>
-                                    {selection ? "Selected" : "Nothing selected"}
-                                </Text>
-                                <Text style={styles.inspectorLabel} numberOfLines={2}>
-                                    {selection
-                                        ? selectionLabel(selection)
-                                        : "Click something in the player."}
-                                </Text>
-                                {selection && (
-                                    <Text style={styles.inspectorMeta} numberOfLines={1}>
-                                        {[selection.tag && `<${selection.tag}>`, selection.elementId, selection.sceneId]
-                                            .filter(Boolean)
-                                            .join(" · ")}
-                                    </Text>
-                                )}
+                                <StudioInspector
+                                    selection={selection ?? null}
+                                    onEdit={onEditElement ?? noEdit}
+                                    saving={editing}
+                                    error={editError}
+                                />
                             </View>
                         </>
                     )}

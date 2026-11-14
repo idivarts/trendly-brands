@@ -9,6 +9,7 @@
  * with it, next to the other studio logic that is tested rather than
  * trusted.
  */
+import type { SelectionStyle } from "./inspector-edit";
 
 /** One selected element, as the player's bridge reports it. */
 export interface Selection {
@@ -20,6 +21,18 @@ export interface Selection {
     tag: string;
     /** Its text, trimmed and capped by the bridge. */
     text: string;
+    /**
+     * What the element LOOKS like right now — computed, not declared.
+     *
+     * Most elements carry no inline style at all: the brand kit styles
+     * them from a class. An inspector showing "unset" for a headline that
+     * is plainly navy would be lying about the film, so the bridge sends
+     * the computed values and the panel writes its changes back inline.
+     */
+    style: SelectionStyle;
+    /** Where it sits on the timeline, in ms. Null when it says nothing. */
+    startMs: number | null;
+    durationMs: number | null;
 }
 
 /** The message shape the player posts when something is clicked. */
@@ -30,6 +43,9 @@ export interface PlayerSelectMessage {
     sceneId?: string;
     tag?: string;
     text?: string;
+    style?: SelectionStyle;
+    startMs?: number | null;
+    durationMs?: number | null;
 }
 
 /**
@@ -49,6 +65,13 @@ export function selectionFrom(msg: PlayerSelectMessage | null | undefined): Sele
         sceneId: (msg.sceneId ?? "").trim(),
         tag: (msg.tag ?? "").trim().toLowerCase(),
         text: (msg.text ?? "").trim(),
+        // An older player page — one published before this shipped, and
+        // still sitting in an earlier revision — sends none of these. The
+        // panel then shows what it can and writes only what the user
+        // actually touches.
+        style: msg.style ?? {},
+        startMs: typeof msg.startMs === "number" ? msg.startMs : null,
+        durationMs: typeof msg.durationMs === "number" ? msg.durationMs : null,
     };
 }
 
