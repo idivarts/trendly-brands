@@ -7,6 +7,13 @@
  * you say what you want, the AI writes it, you look, you render. When the
  * design chat lands this panel is where it goes, and the brief becomes its
  * first message.
+ *
+ * ── Two scopes, one panel ────────────────────────────────────────────────
+ * With nothing selected, what you say rewrites the WHOLE film. With an
+ * element selected it changes THAT element and nothing else — a second box
+ * appears, headed with what is selected, and the brief above it is left
+ * alone. The scope is never implicit: the user can always see which of the
+ * two they are about to do, because the box they are typing in says so.
  */
 import { UpgradeInline } from "@/components/billing/EntitlementGate";
 import { fs, lh } from "@/constants/Typography";
@@ -42,6 +49,11 @@ export interface StudioBriefPanelProps {
     onAuthor: () => void;
     onRender: () => void;
     onRetryPreparation: () => void;
+
+    /** What the user picked in the player, or null. */
+    selectionLabel?: string | null;
+    /** Asks the AI to change that element alone. */
+    onAskAboutSelection?: (instruction: string) => void;
 }
 
 const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
@@ -61,10 +73,25 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
     onAuthor,
     onRender,
     onRetryPreparation,
+    selectionLabel,
+    onAskAboutSelection,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useStyles(colors);
+    const [instruction, setInstruction] = React.useState("");
+
+    // The box is cleared when the selection changes, not kept: an
+    // instruction written about a headline must not be sent, a click later,
+    // about a photograph.
+    React.useEffect(() => setInstruction(""), [selectionLabel]);
+
+    const ask = () => {
+        const text = instruction.trim();
+        if (!text || !onAskAboutSelection) return;
+        setInstruction("");
+        onAskAboutSelection(text);
+    };
 
     return (
         <View style={styles.root}>
@@ -92,6 +119,40 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
                     style={styles.input}
                     editable={!authoring}
                 />
+
+                {/* ── The scoped box ───────────────────────────────────
+                    Only here when something is selected, and headed with
+                    what that is, so the difference between "change this"
+                    and "rewrite everything" is never a guess. */}
+                {!!selectionLabel && !!onAskAboutSelection && (
+                    <View style={styles.scoped}>
+                        <Text style={styles.scopedHead} numberOfLines={1}>
+                            Change “{selectionLabel}”
+                        </Text>
+                        <TextInput
+                            value={instruction}
+                            onChangeText={setInstruction}
+                            placeholder="Make it bigger and more urgent."
+                            placeholderTextColor={colors.textSecondary}
+                            multiline
+                            style={styles.input}
+                            editable={!submitting}
+                        />
+                        <Pressable
+                            onPress={ask}
+                            disabled={submitting || instruction.trim() === ""}
+                            style={({ pressed }) => [
+                                styles.scopedBtn,
+                                (pressed || submitting || instruction.trim() === "") && styles.dim,
+                            ]}
+                            accessibilityRole="button"
+                        >
+                            <Text style={styles.scopedLabel}>
+                                {submitting ? "Changing…" : "Change this element"}
+                            </Text>
+                        </Pressable>
+                    </View>
+                )}
 
                 {linkedToContent && (
                     <Text style={styles.note}>Linked to a post — the export lands on it.</Text>
@@ -267,6 +328,41 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     lineHeight: lh(15),
                     color: colors.textSecondary,
                     textAlign: "center",
+                },
+                scoped: {
+                    gap: 6,
+                    padding: 10,
+                    borderRadius: 10,
+                    backgroundColor: colors.tag,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowRadius: 4,
+                    shadowOpacity: 0.05,
+                    elevation: 1,
+                },
+                scopedHead: {
+                    fontSize: fs(10),
+                    lineHeight: lh(14),
+                    letterSpacing: 0.4,
+                    textTransform: "uppercase",
+                    color: withAlpha(colors.text, 0.55),
+                },
+                scopedBtn: {
+                    alignItems: "center",
+                    paddingVertical: 8,
+                    borderRadius: 8,
+                    backgroundColor: colors.primary,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 3 },
+                    shadowRadius: 8,
+                    shadowOpacity: 0.3,
+                    elevation: 3,
+                },
+                scopedLabel: {
+                    fontSize: fs(11),
+                    lineHeight: lh(16),
+                    fontWeight: "700",
+                    color: colors.white,
                 },
                 actions: {
                     padding: 14,
