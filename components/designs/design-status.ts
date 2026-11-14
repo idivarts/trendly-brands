@@ -138,7 +138,10 @@ export function designStatus(d: DesignStatusFields | null | undefined): DesignSt
     if (!d.projectPrefix) {
         return {
             text: "Empty",
-            detail: "Nothing in it yet — describe the film below.",
+            // "below" pointed at a brief box that no longer exists — the
+            // panel beside this IS the conversation now, and the first
+            // message is the brief.
+            detail: "Nothing in it yet — say what you want and it gets written.",
             busy: false,
             bad: false,
         };

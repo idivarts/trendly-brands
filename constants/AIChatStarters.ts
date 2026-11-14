@@ -32,6 +32,19 @@ export const AI_CHAT_STARTERS: Record<AIModule, AIChatStarter> = {
         ],
     },
 
+    // The Design Studio — one conversation per film, beside the film.
+    design: {
+        heading: "What should change?",
+        description:
+            "I can rewrite a line, retime a scene, swap a photograph or change the whole film. Ask, and watch it happen beside you.",
+        templates: [
+            "Tighten the hook",
+            "Make the first scene shorter",
+            "Change the music",
+            "Add a sign-off scene",
+        ],
+    },
+
     // Content strategy builder.
     strategy: {
         heading: "Your strategy, sharper",
