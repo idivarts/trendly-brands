@@ -42,14 +42,11 @@ export interface StudioBriefPanelProps {
     rendering: boolean;
     /** True while the film is being finished: media resolved, gate run. */
     preparing: boolean;
-    /** True when finishing the film failed and the user is stuck. */
-    preparationFailed: boolean;
     submitting: boolean;
     linkedToContent: boolean;
 
     onAuthor: () => void;
     onRender: () => void;
-    onRetryPreparation: () => void;
 
     /**
      * The conversation. This panel IS the conversation when it has one.
@@ -86,12 +83,10 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
     authoring,
     rendering,
     preparing,
-    preparationFailed,
     submitting,
     linkedToContent,
     onAuthor,
     onRender,
-    onRetryPreparation,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
@@ -130,7 +125,6 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
     const hasActions =
         gated ||
         !showChat ||
-        preparationFailed ||
         !!renderUrl ||
         linkedToContent ||
         tokenState === "critical" ||
@@ -235,26 +229,14 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
                             </View>
                         )}
 
-                        {/* ── The one case where preparation is manual ────
-                            If finishing the film failed — a gate finding, a
-                            provider that would not answer — there has to be
-                            a way back. Without it the only recovery is
-                            Render, which charges for the same failure.
-
-                            It appears ONLY on failure. In the normal flow
-                            there is no preview action at all. */}
-                        {preparationFailed && (
-                            <Pressable
-                                onPress={onRetryPreparation}
-                                disabled={submitting || preparing}
-                                style={({ pressed }) => [pressed && styles.dim]}
-                                accessibilityRole="button"
-                            >
-                                <Text style={styles.linkAction}>
-                                    {preparing ? "Preparing…" : "Try preparing again"}
-                                </Text>
-                            </Pressable>
-                        )}
+                        {/* ── "Try preparing again" moved ─────────────────
+                            It used to sit here, at the foot of the column
+                            under the composer, which on this screen is
+                            below the fold and past the thing the user is
+                            actually using. It is now in the notice directly
+                            above the composer, beside the sentence saying
+                            what failed — the action and the reason in one
+                            place, where they are both read. */}
 
                         {/* The export. A linked design also lands on its post
                             automatically, but the file itself is what a

@@ -56,7 +56,7 @@ import { selectionLabel, type Selection } from "@/components/designs/selection";
 import type { Focus } from "@/types/focus";
 import { useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 /**
  * Design Studio — one design, as an editor.
@@ -887,6 +887,46 @@ const DesignDetail = () => {
         [load],
     );
 
+    // ── The studio's own state, over the box they type in ───────────────
+    // This used to be two things in two wrong places: a red band across
+    // the top of the page, and "Try preparing again" at the very bottom
+    // of the left column under the composer. On a screen whose left side
+    // IS a conversation, the user is looking at the thread and typing
+    // underneath it; the top of the page is out of view and the foot of
+    // the column is below the fold.
+    //
+    // So one strip, directly above the composer, carrying whichever of
+    // the two states is true: work running somewhere else — which the
+    // page header showed and the chat did not, so a preparation looked
+    // like nothing happening — or the failure and the action that clears
+    // it.
+    const composerNotice =
+        !status.busy && !status.bad ? null : (
+            <View style={[styles.notice, status.bad && styles.noticeBad]}>
+                {status.busy ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                    <View style={styles.noticeDot} />
+                )}
+                <Text style={styles.noticeText}>{status.detail}</Text>
+                {status.bad && design?.previewStatus === "failed" && (
+                    <Pressable
+                        onPress={preview}
+                        disabled={submitting || isPreviewing(design)}
+                        style={({ pressed }) => [
+                            styles.noticeBtn,
+                            (pressed || submitting) && styles.headerRenderDim,
+                        ]}
+                        accessibilityRole="button"
+                    >
+                        <Text style={styles.noticeBtnLabel}>
+                            {isPreviewing(design) ? "Preparing…" : "Try again"}
+                        </Text>
+                    </Pressable>
+                )}
+            </View>
+        );
+
     // ⚠️ Not before the route has resolved. useLocalSearchParams returns {}
     // on the first render, and a thread created in that window is bound to
     // no film — designStudioBrief returns nothing for an empty designId, so
@@ -927,8 +967,11 @@ const DesignDetail = () => {
             // The studio's status, in the one header this column has. It
             // used to be a strip of its own above the panel, which spent a
             // band of a narrow column on one sentence.
-            subtitle={status.detail || "Ready when you are."}
+            // Short in the header, in full in the notice over the composer:
+            // a validator sentence truncated to one line says nothing.
+            subtitle={status.bad ? status.text : status.detail || "Ready when you are."}
             subtitleBad={status.bad}
+            composerNotice={composerNotice}
         />
     );
 
@@ -973,8 +1016,6 @@ const DesignDetail = () => {
             authoring={isAuthoring(design)}
             rendering={isRendering(design)}
             preparing={isPreviewing(design)}
-            preparationFailed={design?.previewStatus === "failed"}
-            onRetryPreparation={preview}
             submitting={submitting}
             linkedToContent={!!design?.contentId}
             onAuthor={author}
@@ -1047,22 +1088,11 @@ const DesignDetail = () => {
             <PageHeader
                 title={design?.name || "Design"}
                 onTitleChange={rename}
-                subtitle={status.bad ? "Something went wrong" : status.detail}
+                subtitle={status.bad ? status.text : status.detail}
                 showBackButton
                 mobileActions="all"
                 workflowActionButtons={renderAction ? [renderAction] : undefined}
             />
-
-            {status.bad && (
-                <View style={styles.errorWrap}>
-                    <View style={styles.errorAccent} />
-                    {/* The real reason goes in the body, not the header: a
-                        validator message is the one thing that tells the user
-                        what to change, and a header subtitle truncates it —
-                        and is hidden entirely on a phone. */}
-                    <Text style={styles.errorText}>{status.detail}</Text>
-                </View>
-            )}
 
             {xl ? (
                 <View style={styles.desktop}>
@@ -1269,24 +1299,49 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     color: colors.text,
                 },
                 paneTabLabelOn: { color: colors.onPrimary },
-                errorWrap: {
+                // The strip over the composer. Tinted rather than outlined,
+                // like every other surface in this app, and tight enough
+                // that a long validator sentence does not take the thread's
+                // space — it wraps, it does not scroll.
+                notice: {
                     flexDirection: "row",
-                    alignItems: "center",
-                    gap: 10,
-                    marginHorizontal: 14,
-                    marginTop: 10,
-                    borderRadius: 12,
-                    overflow: "hidden",
+                    // Top, not centre: a validator sentence runs to several
+                    // lines in a narrow pane, and a dot and a button floating
+                    // halfway down a paragraph read as unrelated to it.
+                    alignItems: "flex-start",
+                    gap: 8,
+                    marginHorizontal: 10,
+                    marginBottom: 6,
+                    paddingVertical: 8,
+                    paddingHorizontal: 10,
+                    borderRadius: 10,
                     backgroundColor: colors.tag,
                 },
-                errorAccent: { width: 4, alignSelf: "stretch", backgroundColor: colors.red },
-                errorText: {
+                noticeBad: { backgroundColor: withAlpha(colors.primary, 0.1) },
+                noticeDot: {
+                    width: 7,
+                    height: 7,
+                    marginTop: 5,
+                    borderRadius: 4,
+                    backgroundColor: colors.red,
+                },
+                noticeText: {
                     flex: 1,
-                    paddingVertical: 10,
-                    paddingRight: 12,
-                    fontSize: fs(12),
-                    lineHeight: lh(18),
+                    fontSize: fs(11),
+                    lineHeight: lh(16),
                     color: colors.text,
+                },
+                noticeBtn: {
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                    borderRadius: 8,
+                    backgroundColor: colors.primary,
+                },
+                noticeBtnLabel: {
+                    fontSize: fs(11),
+                    lineHeight: lh(15),
+                    fontWeight: "700",
+                    color: colors.white,
                 },
             }),
         [colors]
