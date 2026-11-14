@@ -1,4 +1,6 @@
 import {
+    TICK_SPACING_PX,
+    ticksForWidth,
     clipGeometry,
     formatClock,
     frameAt,
@@ -245,8 +247,11 @@ describe("formatClock", () => {
 });
 
 describe("rulerTicks", () => {
-    it("spaces a short film at one second", () => {
-        expect(rulerTicks(10000)).toEqual([0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000]);
+    it("spaces a short film at one second, and does not label the very end", () => {
+        // The last tick's label is drawn rightwards from its mark, so one
+        // at 100% prints outside the lane — off the edge of the pane on a
+        // phone. The end of the ruler is the end of the film already.
+        expect(rulerTicks(10000)).toEqual([0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000]);
     });
 
     /** A long film must not grow a tick per second. */
@@ -353,5 +358,48 @@ describe("isPlayerEcho", () => {
     it("is wider than a frame and narrower than a scene", () => {
         expect(PLAYER_ECHO_MS).toBeGreaterThan(1000 / 30);
         expect(PLAYER_ECHO_MS).toBeLessThan(1000);
+    });
+});
+
+
+describe("rulerTicks / ticksForWidth", () => {
+    /**
+     * At phone width ten labels in 375px overlapped into a grey smear, and
+     * the last one printed off the edge of the screen.
+     */
+    it("thins the ruler on a narrow lane", () => {
+        const wide = rulerTicks(9000, ticksForWidth(900));
+        const narrow = rulerTicks(9000, ticksForWidth(300));
+        expect(narrow.length).toBeLessThan(wide.length);
+        expect(narrow.length).toBeGreaterThanOrEqual(2);
+    });
+
+    /** The actual requirement: labels that do not touch each other. */
+    it("leaves room between every pair of labels, at any width", () => {
+        for (const w of [240, 300, 420, 600, 900, 1400]) {
+            for (const total of [3000, 9000, 45000, 300000]) {
+                const t = rulerTicks(total, ticksForWidth(w));
+                for (let i = 1; i < t.length; i++) {
+                    const gapPx = ((t[i] - t[i - 1]) / total) * w;
+                    expect(gapPx).toBeGreaterThanOrEqual(TICK_SPACING_PX - 1);
+                }
+            }
+        }
+    });
+
+    it("never labels the very end, whose label would print outside the lane", () => {
+        for (const w of [300, 600, 900]) {
+            for (const t of rulerTicks(9000, ticksForWidth(w))) {
+                expect(t / 9000).toBeLessThanOrEqual(0.97);
+            }
+        }
+    });
+
+    it("still gives a usable ruler when the lane has not been measured", () => {
+        expect(rulerTicks(9000, ticksForWidth(0)).length).toBeGreaterThan(2);
+    });
+
+    it("has nothing to draw for a film of no length", () => {
+        expect(rulerTicks(0, 10)).toEqual([]);
     });
 });

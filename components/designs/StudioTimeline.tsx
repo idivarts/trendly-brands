@@ -31,19 +31,14 @@ import Colors from "@/shared-uis/constants/Colors";
 import { useTheme } from "@react-navigation/native";
 import { withAlpha } from "@/utils/color";
 import React, { useCallback, useMemo, useRef } from "react";
-import {
-    LayoutChangeEvent,
-    PanResponder,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
-} from "react-native";
+import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 
 import {
     clipGeometry,
     formatClock,
     rulerTicks,
+    ticksForWidth,
     timelineTracks,
     type ClipKind,
     type DesignClip,
@@ -54,6 +49,7 @@ import {
     dragModeFor,
     dragWindow,
     momentAt,
+    pressFraction,
     type DragMode,
     type Window as ClipWindow,
 } from "./timeline-drag";
@@ -140,23 +136,50 @@ const StudioTimeline: React.FC<StudioTimelineProps> = ({
     const styles = useStyles(colors);
 
     const tracks = useMemo(() => timelineTracks(clips, scenes), [clips, scenes]);
-    const ticks = useMemo(() => rulerTicks(totalMs), [totalMs]);
-
-    // Measured rather than assumed: the lane is whatever is left after the
-    // labels, and a seek computed against a guessed width lands in the wrong
-    // place on every viewport but one.
+    // ── Measuring the lane ───────────────────────────────────────────────
+    // The lane is whatever is left after the labels, so its width is
+    // measured rather than guessed — a seek computed against a guessed
+    // width lands in the wrong place on every viewport but one.
+    //
+    // Its LEFT EDGE is measured too, in window coordinates, because a press
+    // can only be located against it: see pressFraction for the NaN that
+    // cost an afternoon.
     const [laneWidth, setLaneWidth] = React.useState(0);
-    const onLaneLayout = useCallback((e: LayoutChangeEvent) => {
-        setLaneWidth(e.nativeEvent.layout.width);
+    const laneRef = useRef<View | null>(null);
+    const laneLeft = useRef(0);
+    const measureLane = useCallback(() => {
+        laneRef.current?.measureInWindow((x, _y, w) => {
+            laneLeft.current = x;
+            if (w > 0) setLaneWidth(w);
+        });
     }, []);
-
-    const seekFromX = useCallback(
-        (x: number) => {
-            if (laneWidth <= 0 || totalMs <= 0) return;
-            const fraction = Math.min(Math.max(x / laneWidth, 0), 1);
-            onSeek(Math.round(fraction * totalMs));
+    const onLaneLayout = useCallback(
+        (e: LayoutChangeEvent) => {
+            setLaneWidth(e.nativeEvent.layout.width);
+            measureLane();
         },
-        [laneWidth, totalMs, onSeek]
+        [measureLane]
+    );
+
+    // Spaced by how much room there actually is: see ticksForWidth.
+    const ticks = useMemo(
+        () => rulerTicks(totalMs, ticksForWidth(laneWidth)),
+        [totalMs, laneWidth]
+    );
+
+    // Located against the lane's measured box, and measured again on the
+    // way in: the page can scroll between a layout and a press, and a
+    // stale left edge is a seek a few seconds out — the kind of wrong
+    // nobody reports because it looks like their own aim.
+    const seekFromPage = useCallback(
+        (pageX: number | undefined) => {
+            if (totalMs <= 0) return;
+            measureLane();
+            const f = pressFraction(pageX, laneLeft.current, laneWidth);
+            if (f === null) return;
+            onSeek(Math.round(f * totalMs));
+        },
+        [laneWidth, totalMs, onSeek, measureLane]
     );
 
     // ── The drag in flight ───────────────────────────────────────────────
@@ -169,45 +192,6 @@ const StudioTimeline: React.FC<StudioTimelineProps> = ({
         mode: DragMode;
         window: ClipWindow;
     } | null>(null);
-    // Read inside the responder callbacks, which are created once per clip
-    // and would otherwise close over the first render's values.
-    const live = useRef({ laneWidth: 0, totalMs: 0, busy: false });
-    live.current = { laneWidth, totalMs, busy: !!busy };
-
-    const responderFor = useCallback(
-        (clip: DesignClip, widthPx: number) => {
-            const from: ClipWindow = { startMs: clip.startMs, durationMs: clip.durationMs };
-            let mode: DragMode = "move";
-            return PanResponder.create({
-                // A tap must stay a tap: the responder is claimed only once
-                // the finger has actually travelled, so onPress still fires
-                // for a press that never moved.
-                onStartShouldSetPanResponder: () => false,
-                onMoveShouldSetPanResponder: (_e, g) =>
-                    !live.current.busy && Math.abs(g.dx) > 3 && Math.abs(g.dx) > Math.abs(g.dy),
-                onPanResponderGrant: (e) => {
-                    mode = dragModeFor(e.nativeEvent.locationX, widthPx);
-                    setDrag({ clipId: clip.elementId, mode, window: from });
-                },
-                onPanResponderMove: (_e, g) => {
-                    setDrag({
-                        clipId: clip.elementId,
-                        mode,
-                        window: dragWindow(from, mode, g.dx, live.current.laneWidth, live.current.totalMs),
-                    });
-                },
-                onPanResponderRelease: (_e, g) => {
-                    const to = dragWindow(from, mode, g.dx, live.current.laneWidth, live.current.totalMs);
-                    setDrag(null);
-                    // A tap registers as a drag of a pixel or two, and every
-                    // drag writes a revision into a ten-deep history.
-                    if (dragChanged(from, to)) onRetimeClip?.(clip, to);
-                },
-                onPanResponderTerminate: () => setDrag(null),
-            });
-        },
-        [onRetimeClip]
-    );
 
     const pct = (n: number): `${number}%` => `${Math.min(Math.max(n, 0), 1) * 100}%`;
     const playheadLeft = pct(totalMs > 0 ? positionMs / totalMs : 0);
@@ -228,15 +212,27 @@ const StudioTimeline: React.FC<StudioTimelineProps> = ({
             <View style={styles.rulerRow}>
                 <View style={styles.rulerSpacer} />
                 <Pressable
+                    ref={laneRef}
                     style={styles.ruler}
                     onLayout={onLaneLayout}
-                    onPress={(e) => seekFromX(e.nativeEvent.locationX)}
+                    onPress={(e) => seekFromPage(e.nativeEvent.pageX)}
                     accessibilityRole="adjustable"
                     accessibilityLabel="Seek"
                 >
                     {ticks.map((t) => (
                         <View
                             key={t}
+                            // ⚠️ Decoration, and it must not take the click.
+                            //
+                            // A tick is a child of the ruler, so a press that
+                            // lands on one reports locationX relative to a
+                            // mark ONE PIXEL wide — which is a fraction of
+                            // about zero, which is a seek to the start of the
+                            // film. Clicking "0:06" on the ruler jumped to
+                            // 0:00, and clicking anywhere between two ticks
+                            // worked, so it read as the timeline ignoring
+                            // half the clicks at random.
+                            pointerEvents="none"
                             style={[
                                 styles.tick,
                                 { left: pct(totalMs > 0 ? t / totalMs : 0) },
@@ -256,7 +252,32 @@ const StudioTimeline: React.FC<StudioTimelineProps> = ({
                             <Text style={styles.trackLabel} numberOfLines={1}>
                                 {track.label}
                             </Text>
-                            <Text style={styles.trackCount}>{track.clips.length}</Text>
+                            {/* ── Why a button and not only a tap on the lane ──
+                                A row whose clips cover it end to end — which
+                                the scene row always is — has no bare lane left
+                                to tap, so "add something here" would be
+                                unreachable on exactly the film a person starts
+                                from. This adds at the playhead, which is where
+                                they are looking. */}
+                            {onAddAt ? (
+                                <Pressable
+                                    onPress={() =>
+                                        onAddAt(
+                                            { index: track.index, label: track.label, kind: track.kind },
+                                            positionMs
+                                        )
+                                    }
+                                    disabled={busy}
+                                    style={[styles.addRow, busy && styles.addRowOff]}
+                                    accessibilityRole="button"
+                                    accessibilityLabel={`Add to ${track.label} at the playhead`}
+                                    hitSlop={6}
+                                >
+                                    <Text style={styles.addRowLabel}>+</Text>
+                                </Pressable>
+                            ) : (
+                                <Text style={styles.trackCount}>{track.clips.length}</Text>
+                            )}
                         </View>
                         <View style={styles.lane}>
                             {/* Behind the clips: a tap on bare lane is "put
@@ -266,12 +287,19 @@ const StudioTimeline: React.FC<StudioTimelineProps> = ({
                                 <Pressable
                                     style={styles.laneBase}
                                     disabled={busy}
-                                    onPress={(e) =>
+                                    onPress={(e) => {
+                                        // Located the same way as the seek,
+                                        // for the same reason.
+                                        const f = pressFraction(
+                                            e.nativeEvent.pageX,
+                                            laneLeft.current,
+                                            laneWidth
+                                        );
                                         onAddAt(
                                             { index: track.index, label: track.label, kind: track.kind },
-                                            momentAt(e.nativeEvent.locationX, laneWidth, totalMs)
-                                        )
-                                    }
+                                            f === null ? positionMs : momentAt(f * laneWidth, laneWidth, totalMs)
+                                        );
+                                    }}
                                     accessibilityRole="button"
                                     accessibilityLabel={`Add something to ${track.label}`}
                                 />
@@ -301,7 +329,15 @@ const StudioTimeline: React.FC<StudioTimelineProps> = ({
                                         selected={selected}
                                         dragging={dragging}
                                         styles={styles}
-                                        responder={draggable ? responderFor(clip, widthPx) : null}
+                                        draggable={draggable}
+                                        laneLeft={laneLeft}
+                                        laneWidth={laneWidth}
+                                        totalMs={totalMs}
+                                        busy={!!busy}
+                                        leftFraction={left}
+                                        widthPx={widthPx}
+                                        onDrag={setDrag}
+                                        onRetime={onRetimeClip}
                                         onPress={() => {
                                             if (clip.kind === "scene") onSelectScene(clip.elementId);
                                             onSelectClip?.(clip);
@@ -337,12 +373,12 @@ export default StudioTimeline;
  * One bar on a row.
  *
  * ── Why this is its own component ─────────────────────────────────────────
- * A PanResponder must be created once per clip and kept, and creating one
- * inside a `.map()` in the parent's body makes a new set of handlers on
- * every render — including every render the drag itself causes, so the
- * gesture is handed to a responder that has just been replaced and the
- * drag dies halfway. Holding it in a child, keyed by the clip's id, is
- * what makes a drag survive its own state updates.
+ * A gesture must be built once per clip and kept. Built inside a `.map()`
+ * in the parent's body it is rebuilt on every render — including every
+ * render the drag itself causes — so the gesture is handed to a detector
+ * that has just been replaced and the drag dies halfway across the lane.
+ * A child keyed by the clip's id is what makes a drag survive its own
+ * state updates.
  */
 const ClipBar: React.FC<{
     clip: DesignClip;
@@ -354,31 +390,102 @@ const ClipBar: React.FC<{
     selected: boolean;
     dragging: boolean;
     styles: ReturnType<typeof useStyles>;
-    responder: ReturnType<typeof PanResponder.create> | null;
+    /** Scenes are moved in the scene panel, so they carry no gesture. */
+    draggable: boolean;
+    /** The lane's measured box, for locating a press. */
+    laneLeft: React.MutableRefObject<number>;
+    laneWidth: number;
+    totalMs: number;
+    busy: boolean;
+    leftFraction: number;
+    widthPx: number;
+    onDrag: (d: { clipId: string; mode: DragMode; window: ClipWindow } | null) => void;
+    onRetime?: (clip: DesignClip, window: ClipWindow) => void;
     onPress: () => void;
     onDelete: (() => void) | null;
-}> = ({
-    clip,
-    label,
-    rowLabel,
-    left,
-    width,
-    tint,
-    selected,
-    dragging,
-    styles,
-    responder,
-    onPress,
-    onDelete,
-}) => {
-    // Created once and kept for this clip's lifetime, for the reason above.
-    const held = useRef(responder);
-    if (responder && !held.current) held.current = responder;
-    const handlers = held.current?.panHandlers ?? {};
+}> = (props) => {
+    const {
+        clip,
+        label,
+        rowLabel,
+        left,
+        width,
+        tint,
+        selected,
+        dragging,
+        styles,
+        draggable,
+        onPress,
+        onDelete,
+    } = props;
 
-    return (
+    // ── ⚠️ Why react-native-gesture-handler and not PanResponder ─────────
+    // PanResponder is the obvious choice and it does not work here. Three
+    // separate things, each of which failed silently:
+    //
+    //  1. nativeEvent.locationX is undefined on react-native-web, so the
+    //     trim zone could never be detected and every press became a move.
+    //  2. The label inside a clip is a Pressable, and a Pressable claims
+    //     the touch on press — so the bubbling onMoveShouldSetPanResponder
+    //     was never even asked. Capturing fixed the ask, and then
+    //  3. onPanResponderRelease never fired for a web mouse drag, so a
+    //     gesture could begin and never commit.
+    //
+    // This app already ships react-native-gesture-handler (its root view
+    // is mounted in app/_layout.tsx), which handles all three: absoluteX
+    // on every event, activeOffsetX to let a tap through to the Pressable
+    // while a drag is taken from it, and an onEnd that actually fires.
+    const live = useRef(props);
+    live.current = props;
+
+    const mode = useRef<DragMode>("move");
+    const from = useRef<ClipWindow>({ startMs: clip.startMs, durationMs: clip.durationMs });
+
+    const pan = useMemo(
+        () =>
+            Gesture.Pan()
+                // On the JS thread: these callbacks set React state and
+                // call the screen's handlers, which the UI thread cannot.
+                .runOnJS(true)
+                // A horizontal travel of 4px is a drag; anything less stays
+                // a tap and reaches the label, which selects the clip.
+                .activeOffsetX([-4, 4])
+                .failOffsetY([-12, 12])
+                .onBegin((e) => {
+                    const p = live.current;
+                    from.current = { startMs: p.clip.startMs, durationMs: p.clip.durationMs };
+                    // Where the finger LANDED, which is the only thing that
+                    // can say whether this is a trim of an edge or a move:
+                    // by the time a pan activates it has already travelled.
+                    const clipLeftPx = p.laneLeft.current + p.leftFraction * p.laneWidth;
+                    mode.current = dragModeFor(e.absoluteX - clipLeftPx, p.widthPx);
+                })
+                .onStart(() => {
+                    const p = live.current;
+                    p.onDrag({ clipId: p.clip.elementId, mode: mode.current, window: from.current });
+                })
+                .onUpdate((e) => {
+                    const p = live.current;
+                    p.onDrag({
+                        clipId: p.clip.elementId,
+                        mode: mode.current,
+                        window: dragWindow(from.current, mode.current, e.translationX, p.laneWidth, p.totalMs),
+                    });
+                })
+                .onEnd((e) => {
+                    const p = live.current;
+                    const to = dragWindow(from.current, mode.current, e.translationX, p.laneWidth, p.totalMs);
+                    p.onDrag(null);
+                    // A tap registers as a drag of a pixel or two, and every
+                    // drag writes a revision into a ten-deep history.
+                    if (dragChanged(from.current, to)) p.onRetime?.(p.clip, to);
+                })
+                .onFinalize(() => live.current.onDrag(null)),
+        []
+    );
+
+    const body = (
         <View
-            {...handlers}
             style={[
                 styles.clip,
                 { left, width, backgroundColor: tint, minWidth: MIN_CLIP_WIDTH },
@@ -403,7 +510,7 @@ const ClipBar: React.FC<{
                 zones on every clip of a six-row timeline is a timeline you
                 cannot tap, and the zones work whether or not they are
                 drawn — this is a hint, not the mechanism. */}
-            {selected && responder && (
+            {selected && draggable && (
                 <>
                     <View style={[styles.handle, styles.handleLeft]} pointerEvents="none" />
                     <View style={[styles.handle, styles.handleRight]} pointerEvents="none" />
@@ -422,6 +529,11 @@ const ClipBar: React.FC<{
             )}
         </View>
     );
+
+    // A scene carries no gesture at all rather than a detector that
+    // refuses: scenes are moved in the scene panel, where the film relays
+    // around them.
+    return draggable ? <GestureDetector gesture={pan}>{body}</GestureDetector> : body;
 };
 
 /** The clip's colour, from the theme rather than from a new palette. */
@@ -486,6 +598,21 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     color: colors.text,
                 },
                 trackCount: { fontSize: fs(10), lineHeight: lh(14), color: colors.textSecondary },
+                addRow: {
+                    width: 20,
+                    height: 20,
+                    borderRadius: 10,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: withAlpha(colors.primary, 0.12),
+                },
+                addRowOff: { opacity: 0.4 },
+                addRowLabel: {
+                    fontSize: fs(12),
+                    lineHeight: lh(14),
+                    fontWeight: "700",
+                    color: colors.primary,
+                },
                 lane: {
                     flex: 1,
                     height: TRACK_HEIGHT - 14,

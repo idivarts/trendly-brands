@@ -8,6 +8,7 @@ import {
     dragWindow,
     dropTypeFor,
     momentAt,
+    pressFraction,
 } from "../timeline-drag";
 
 describe("dragModeFor", () => {
@@ -31,6 +32,16 @@ describe("dragModeFor", () => {
 
     it("treats a clip of no width as a move rather than dividing by it", () => {
         expect(dragModeFor(0, 0)).toBe("move");
+    });
+
+    /**
+     * The web trap, locked in. nativeEvent.locationX is undefined on
+     * react-native-web, and an undefined x fell through both comparisons
+     * to "move" — so trimming was impossible and nothing said so.
+     */
+    it("is a move, deliberately, when there is no coordinate", () => {
+        expect(dragModeFor(undefined as unknown as number, 200)).toBe("move");
+        expect(dragModeFor(NaN, 200)).toBe("move");
     });
 
     it("keeps the edge zone to the documented width on a wide clip", () => {
@@ -137,5 +148,34 @@ describe("dropTypeFor / assetFitsRow", () => {
         expect(assetFitsRow("audio", "image")).toBe(false);
         expect(assetFitsRow("image", "scene")).toBe(true);
         expect(assetFitsRow("image", "voice")).toBe(false);
+    });
+});
+
+describe("pressFraction", () => {
+    /**
+     * The bug this exists for: locationX is undefined on react-native-web,
+     * and undefined/width is NaN, which reaches a style as "NaN%" and is
+     * silently dropped — so the playhead sat at 0 and the timeline looked
+     * like it was ignoring clicks.
+     */
+    it("is null rather than NaN when there is no coordinate", () => {
+        expect(pressFraction(undefined, 100, 800)).toBeNull();
+        expect(pressFraction(NaN, 100, 800)).toBeNull();
+    });
+
+    it("is null when the lane has not been measured", () => {
+        expect(pressFraction(500, 100, 0)).toBeNull();
+        expect(pressFraction(500, 100, -1)).toBeNull();
+    });
+
+    it("locates the press against the lane's own left edge", () => {
+        expect(pressFraction(100, 100, 800)).toBe(0);
+        expect(pressFraction(500, 100, 800)).toBe(0.5);
+        expect(pressFraction(900, 100, 800)).toBe(1);
+    });
+
+    it("clamps a press outside the lane to its ends", () => {
+        expect(pressFraction(0, 100, 800)).toBe(0);
+        expect(pressFraction(5000, 100, 800)).toBe(1);
     });
 });

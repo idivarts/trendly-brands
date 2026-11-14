@@ -46,6 +46,15 @@ export const EDGE_PX = 14;
  * they cannot see.
  */
 export function dragModeFor(x: number, widthPx: number): DragMode {
+    // ⚠️ A non-finite x is a MOVE, said explicitly.
+    //
+    // It used to fall through the comparisons below — undefined <= 14 is
+    // false, undefined >= width-14 is false — and arrive at "move" by
+    // accident, which is exactly what happened on web when this was fed
+    // `nativeEvent.locationX`: trimming was impossible and nothing said so.
+    // Stated here so the fallback is a decision rather than the shape of
+    // two comparisons.
+    if (!Number.isFinite(x)) return "move";
     const edge = Math.max(0, Math.min(EDGE_PX, widthPx / 3));
     if (edge <= 0) return "move";
     if (x <= edge) return "trim-start";
@@ -165,4 +174,31 @@ function clamp(n: number, lo: number, hi: number): number {
     if (!Number.isFinite(n)) return lo;
     if (hi < lo) return lo;
     return Math.min(Math.max(n, lo), hi);
+}
+
+/**
+ * Where along a lane a press landed, as a fraction of its width.
+ *
+ * ── ⚠️ Why this takes pageX and a measured box ────────────────────────────
+ * The obvious spelling is `e.nativeEvent.locationX`, and on a device it
+ * works. On react-native-web it is **undefined** — and undefined divided by
+ * a width is NaN, which clamps to NaN, which lands in a style as
+ * `left: "NaN%"`, which the browser silently drops. So the playhead sat at
+ * 0% and clicking the ruler looked like a timeline that ignored you. Every
+ * signal said the handler never ran.
+ *
+ * `pageX` is reported on both, so the press is located against the lane's
+ * own measured position instead. Returns null when there is nothing to
+ * measure against, so a caller can do nothing rather than seek to NaN.
+ */
+export function pressFraction(
+    pageX: number | undefined,
+    laneLeftPx: number,
+    laneWidthPx: number
+): number | null {
+    if (!Number.isFinite(pageX as number)) return null;
+    if (!(laneWidthPx > 0)) return null;
+    const raw = ((pageX as number) - laneLeftPx) / laneWidthPx;
+    if (!Number.isFinite(raw)) return null;
+    return Math.min(Math.max(raw, 0), 1);
 }

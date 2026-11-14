@@ -297,11 +297,40 @@ export function rulerTicks(totalMs: number, maxTicks = 10): number[] {
     if (totalMs <= 0) return [];
     const seconds = totalMs / 1000;
     const steps = [1, 2, 5, 10, 15, 30, 60, 120, 300];
-    const step = steps.find((s) => seconds / s <= maxTicks) ?? steps[steps.length - 1];
+    const limit = Math.max(2, Math.floor(maxTicks));
+    const step = steps.find((s) => seconds / s <= limit) ?? steps[steps.length - 1];
     const ticks: number[] = [];
-    for (let t = 0; t <= seconds + 1e-9; t += step) ticks.push(Math.round(t * 1000));
+    for (let t = 0; t <= seconds + 1e-9; t += step) {
+        // ── No tick at the very end ──────────────────────────────────────
+        // Its label is drawn from the mark rightwards, so a tick at 100%
+        // prints its time outside the lane and off the edge of the pane —
+        // which on a phone is how "0:09" ended up half-visible against the
+        // screen edge. The end of the film is the end of the ruler; it
+        // does not need telling.
+        if (t / seconds > 0.97) break;
+        ticks.push(Math.round(t * 1000));
+    }
     return ticks;
 }
+
+/**
+ * How many ticks a lane that wide can carry.
+ *
+ * A label is four or five characters, so below TICK_SPACING_PX apart they
+ * collide — which at phone width meant ten of them in 375px, overlapping
+ * into an unreadable grey smear. Never fewer than two: a ruler with one
+ * mark is not a ruler, and two is enough to read a scale from.
+ *
+ * An unmeasured lane gets the old default rather than one tick, so the
+ * first frame draws a sensible ruler and the measured one replaces it.
+ */
+export function ticksForWidth(laneWidthPx: number): number {
+    if (!(laneWidthPx > 0)) return 10;
+    return Math.max(2, Math.floor(laneWidthPx / TICK_SPACING_PX));
+}
+
+/** The closest two ruler labels may sit without touching. */
+export const TICK_SPACING_PX = 56;
 
 /**
  * The layer tree the right-hand panel shows.
