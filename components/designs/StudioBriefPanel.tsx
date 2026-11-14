@@ -1,19 +1,20 @@
 /**
- * The left panel: what the film should be, and the two things you can do
- * about it.
+ * The left column: the conversation about the film, and the few actions
+ * that are not part of it.
  *
- * In the Hyperframes editor this column is a chat with the agent. Here it is
- * the brief plus the actions, which is the same idea at the stage v3 is at:
- * you say what you want, the AI writes it, you look, you render. When the
- * design chat lands this panel is where it goes, and the brief becomes its
- * first message.
+ * ── It is mostly a frame now ─────────────────────────────────────────────
+ * This started as the brief plus two buttons, and every piece of it has
+ * since moved to where it belonged. Render went to the page header. The
+ * status line went into the thread's own header, as its subtitle. The
+ * scoped "change this element" box went away entirely, because the thread
+ * carries the selection as a focus chip and was asking the same question
+ * one box lower.
  *
- * ── Two scopes, one panel ────────────────────────────────────────────────
- * With nothing selected, what you say rewrites the WHOLE film. With an
- * element selected it changes THAT element and nothing else — a second box
- * appears, headed with what is selected, and the brief above it is left
- * alone. The scope is never implicit: the user can always see which of the
- * two they are about to do, because the box they are typing in says so.
+ * What is left: the thread fills the column, and beneath it an action bar
+ * that is drawn ONLY when it has something in it — a plan gate, the export
+ * links once a render exists, a note about the linked post, a low-token
+ * warning. The `brief` branch below is the no-thread fallback, which is
+ * reached before the route resolves a designId.
  */
 import { UpgradeInline } from "@/components/billing/EntitlementGate";
 import { fs, lh } from "@/constants/Typography";
@@ -49,11 +50,6 @@ export interface StudioBriefPanelProps {
     onAuthor: () => void;
     onRender: () => void;
     onRetryPreparation: () => void;
-
-    /** What the user picked in the player, or null. */
-    selectionLabel?: string | null;
-    /** Asks the AI to change that element alone. */
-    onAskAboutSelection?: (instruction: string) => void;
 
     /**
      * The conversation. This panel IS the conversation when it has one.
@@ -96,18 +92,10 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
     onAuthor,
     onRender,
     onRetryPreparation,
-    selectionLabel,
-    onAskAboutSelection,
 }) => {
     const theme = useTheme();
     const colors = Colors(theme);
     const styles = useStyles(colors);
-    const [instruction, setInstruction] = React.useState("");
-
-    // The box is cleared when the selection changes, not kept: an
-    // instruction written about a headline must not be sent, a click later,
-    // about a photograph.
-    React.useEffect(() => setInstruction(""), [selectionLabel]);
 
     // Whether the thread is the panel. Read in three places — which of the
     // two fills it, whether Render is the primary action, and whether the
@@ -118,86 +106,67 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
     // conversation should start, because the first message is the brief.
     const showChat = !!chat;
 
-    const ask = () => {
-        const text = instruction.trim();
-        if (!text || !onAskAboutSelection) return;
-        setInstruction("");
-        onAskAboutSelection(text);
-    };
-
-    // ── The scoped box ───────────────────────────────────────────────────
-    // Only here when something is selected, and headed with what that is,
-    // so the difference between "change this" and "rewrite everything" is
-    // never a guess.
+    // ── Why there is no "change this element" box here ──────────────────
+    // There used to be one, above the thread: a heading naming the
+    // selection, a text box and a Change button, posting to the narrower
+    // element/ai endpoint. It was two inputs stacked on one another asking
+    // the same question, and the lower one had already won — the thread
+    // carries the selection as a focus chip, so "make this bigger" typed
+    // there means that element and nothing else.
     //
-    // Shown in BOTH modes. The thread can change a selected element too —
-    // it carries the selection as a focus chip — but it does so by
-    // rewriting the WHOLE project through a frontier model, where this
-    // endpoint refuses any answer that is not a replacement for that one
-    // element. Cheaper and narrower is the right default for "make this
-    // bigger", so the box stays and the thread takes everything else.
-    const scopedBox =
-        !!selectionLabel && !!onAskAboutSelection ? (
-            <View style={styles.scoped}>
-                <Text style={styles.scopedHead} numberOfLines={1}>
-                    Change “{selectionLabel}”
-                </Text>
-                <TextInput
-                    value={instruction}
-                    onChangeText={setInstruction}
-                    placeholder="Make it bigger and more urgent."
-                    placeholderTextColor={colors.textSecondary}
-                    multiline
-                    style={styles.input}
-                    editable={!submitting}
-                />
-                <Pressable
-                    onPress={ask}
-                    disabled={submitting || instruction.trim() === ""}
-                    style={({ pressed }) => [
-                        styles.scopedBtn,
-                        (pressed || submitting || instruction.trim() === "") && styles.dim,
-                    ]}
-                    accessibilityRole="button"
-                >
-                    <Text style={styles.scopedLabel}>
-                        {submitting ? "Changing…" : "Change this element"}
-                    </Text>
-                </Pressable>
-            </View>
-        ) : null;
+    // The scoped endpoint is cheaper and cannot wander, which is why the
+    // box survived Phase 20. It is not worth a second composer: a person
+    // reading "Change “Morning”" above a chat that is already focused on
+    // Morning has to work out which of the two to use, and either answer
+    // is a change to the same element.
+
+    // ── Anything to put in the action bar? ──────────────────────────────
+    // Asked before drawing it, because the bar used to render regardless:
+    // in chat mode on a written film every child is conditional and all of
+    // them were false, leaving 28px of padding and an empty flex row under
+    // the composer — a band of nothing between the thread and the edge of
+    // the screen that looked like a component failing to load.
+    const gated = gate === "tokens_exhausted" || gate === "plan_locked";
+    const hasActions =
+        gated ||
+        !showChat ||
+        preparationFailed ||
+        !!renderUrl ||
+        linkedToContent ||
+        tokenState === "critical" ||
+        tokenState === "low";
 
     return (
         <View style={styles.root}>
-            <View style={styles.statusStrip}>
-                <View style={styles.statusRow}>
-                    <View
-                        style={[
-                            styles.dot,
-                            status.bad && styles.dotBad,
-                            status.busy && styles.dotBusy,
-                        ]}
-                    />
-                    <Text style={[styles.statusText, status.bad && styles.statusBad]}>
-                        {status.detail || "Ready when you are."}
-                    </Text>
+            {/* ── The status, where the thread's header shows it ──────────
+                In chat mode this is the AIChatPanel's own subtitle, under
+                "Design Studio" — see the subtitle prop passed at the mount.
+                A strip of its own above the panel spent a whole band of a
+                narrow column on one sentence and pushed the conversation
+                down. Without a thread there is no header to carry it, so
+                the strip stays for that case. */}
+            {!showChat && (
+                <View style={styles.statusStrip}>
+                    <View style={styles.statusRow}>
+                        <View
+                            style={[
+                                styles.dot,
+                                status.bad && styles.dotBad,
+                                status.busy && styles.dotBusy,
+                            ]}
+                        />
+                        <Text style={[styles.statusText, status.bad && styles.statusBad]}>
+                            {status.detail || "Ready when you are."}
+                        </Text>
+                    </View>
                 </View>
-                {/* Where the finished film lands. It used to sit below the
-                    brief, which is the one place it is NOT needed — by the
-                    time a film is worth exporting the brief is gone. */}
-                {linkedToContent && (
-                    <Text style={styles.note}>Linked to a post — the export lands on it.</Text>
-                )}
-            </View>
+            )}
 
             {showChat ? (
                 // The thread fills everything between the status line and
                 // the actions. It brings its own scrolling, composer and
                 // history, so it must not be nested in the ScrollView below.
-                <>
-                    {!!scopedBox && <View style={styles.scopedStrip}>{scopedBox}</View>}
-                    <View style={styles.chat}>{chat}</View>
-                </>
+                <View style={styles.chat}>{chat}</View>
             ) : (
             <ScrollView contentContainerStyle={styles.body}>
                 <Text style={styles.label}>What should this film be?</Text>
@@ -210,13 +179,11 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
                     style={styles.input}
                     editable={!authoring}
                 />
-                {scopedBox}
-
-
             </ScrollView>
             )}
 
-            <View style={[styles.actions, showChat && !written && styles.actionsEmpty]}>
+            {hasActions && (
+            <View style={styles.actions}>
                 {gate === "tokens_exhausted" ? (
                     <UpgradeInline
                         message="You're out of AI tokens this month. Add a top-up to keep making designs."
@@ -232,8 +199,7 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
                     />
                 ) : (
                     <>
-                        <View style={styles.row}>
-                            {/* ── ⚠️ Not offered while the thread is showing ──
+                        {/* ── ⚠️ Not offered while the thread is showing ──
                                 This re-runs the authoring job from the STORED
                                 brief, and in chat mode that brief is not on
                                 screen. A button labelled "Rewrite with AI",
@@ -243,7 +209,16 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
                                 and re-author from a sentence the user can no
                                 longer see. The thread rewrites the film itself,
                                 and keeps the revisions. */}
-                            {!showChat && (
+                        {/* ── Render lives in the page header ───────────
+                            Moved out of this panel: it is the one
+                            high-stakes action on the screen and it belongs
+                            where the screen's other page-level actions
+                            are, not at the foot of the conversation where
+                            it sat under whatever the user last typed. Its
+                            row went with it — an empty flex row is still a
+                            gap. */}
+                        {!showChat && (
+                            <View style={styles.row}>
                                 <Pressable
                                     onPress={onAuthor}
                                     disabled={submitting || authoring}
@@ -257,19 +232,8 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
                                         {authoring ? "Writing…" : written ? "Rewrite with AI" : "Write with AI"}
                                     </Text>
                                 </Pressable>
-                            )}
-
-                            {/* ── Render lives in the page header ───────────
-                                Moved out of this panel: it is the one
-                                high-stakes action on the screen and it
-                                belongs where the screen's other
-                                page-level actions are, not at the foot of
-                                the conversation where it sat under
-                                whatever the user last typed. The header
-                                also only shows it once there is a film,
-                                so an empty design no longer offers a
-                                button that can never do anything. */}
-                        </View>
+                            </View>
+                        )}
 
                         {/* ── The one case where preparation is manual ────
                             If finishing the film failed — a gate finding, a
@@ -318,8 +282,15 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
                             </View>
                         )}
 
-                        {linkedToContent && !!renderUrl && (
-                            <Text style={styles.note}>Added to the linked post.</Text>
+                        {/* Where the finished film lands. One line, not two:
+                            before it is rendered this says where it will go,
+                            after it says where it went. */}
+                        {linkedToContent && (
+                            <Text style={styles.note}>
+                                {renderUrl
+                                    ? "Added to the linked post."
+                                    : "Linked to a post — the export lands on it."}
+                            </Text>
                         )}
 
                         {(tokenState === "critical" || tokenState === "low") && (
@@ -331,6 +302,7 @@ const StudioBriefPanel: React.FC<StudioBriefPanelProps> = ({
                     </>
                 )}
             </View>
+            )}
         </View>
     );
 };
@@ -349,10 +321,6 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                 // The thread brings its own scrolling; it takes the space and
                 // is never nested in a ScrollView, which would give it two.
                 chat: { flex: 1, minHeight: 0 },
-                // Nothing in it before a film exists, so it takes no room
-                // rather than leaving a band of padding under the thread.
-                actionsEmpty: { paddingVertical: 0 },
-                scopedStrip: { paddingHorizontal: 14, paddingBottom: 10 },
                 statusRow: { flexDirection: "row", alignItems: "center", gap: 8 },
                 dot: {
                     width: 7,
@@ -391,41 +359,6 @@ function useStyles(colors: ReturnType<typeof Colors>) {
                     lineHeight: lh(15),
                     color: colors.textSecondary,
                     textAlign: "center",
-                },
-                scoped: {
-                    gap: 6,
-                    padding: 10,
-                    borderRadius: 10,
-                    backgroundColor: colors.tag,
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowRadius: 4,
-                    shadowOpacity: 0.05,
-                    elevation: 1,
-                },
-                scopedHead: {
-                    fontSize: fs(10),
-                    lineHeight: lh(14),
-                    letterSpacing: 0.4,
-                    textTransform: "uppercase",
-                    color: withAlpha(colors.text, 0.55),
-                },
-                scopedBtn: {
-                    alignItems: "center",
-                    paddingVertical: 8,
-                    borderRadius: 8,
-                    backgroundColor: colors.primary,
-                    shadowColor: colors.primary,
-                    shadowOffset: { width: 0, height: 3 },
-                    shadowRadius: 8,
-                    shadowOpacity: 0.3,
-                    elevation: 3,
-                },
-                scopedLabel: {
-                    fontSize: fs(11),
-                    lineHeight: lh(16),
-                    fontWeight: "700",
-                    color: colors.white,
                 },
                 actions: {
                     padding: 14,

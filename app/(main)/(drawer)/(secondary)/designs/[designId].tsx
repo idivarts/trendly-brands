@@ -384,24 +384,14 @@ const DesignDetail = () => {
         [act]
     );
 
-    // ── A scoped AI edit ─────────────────────────────────────────────────
-    // The difference between an edit and a re-roll: with an element
-    // selected the instruction goes to that element alone, and the backend
-    // refuses an answer that is anything other than a replacement for it.
-    // With nothing selected there is no box, and the only AI action is the
-    // whole-film rewrite above it.
-    const askAboutSelection = useCallback(
-        (instruction: string) => {
-            if (!selection) return;
-            return act(
-                "element/ai",
-                { elementId: selection.elementId, instruction },
-                () => Toaster.success("Changed", "The film has been updated."),
-                "Couldn't make that change"
-            );
-        },
-        [act, selection]
-    );
+    // ── The scoped AI edit is gone from this screen ──────────────────────
+    // It posted to element/ai, which changes ONE element and refuses any
+    // answer that is not a replacement for it — narrower and cheaper than
+    // a whole-project rewrite, which is why the box above the thread
+    // survived Phase 20. But the thread carries the selection as a focus
+    // chip, so both boxes asked the same question of the same element and
+    // the user had to decide which. The endpoint stays; nothing on this
+    // screen calls it, and a tool can reach for it later.
 
     // ── The film's shape ─────────────────────────────────────────────────
     // Retime, reorder, duplicate, add, delete. No model and no charge; the
@@ -910,6 +900,11 @@ const DesignDetail = () => {
             focusItems={focusItems}
             onRemoveFocusItem={() => setSelection(null)}
             onBusyChange={onChatBusyChange}
+            // The studio's status, in the one header this column has. It
+            // used to be a strip of its own above the panel, which spent a
+            // band of a narrow column on one sentence.
+            subtitle={status.detail || "Ready when you are."}
+            subtitleBad={status.bad}
         />
     );
 
@@ -955,8 +950,6 @@ const DesignDetail = () => {
             rendering={isRendering(design)}
             preparing={isPreviewing(design)}
             preparationFailed={design?.previewStatus === "failed"}
-            selectionLabel={selection ? selectionLabel(selection) : null}
-            onAskAboutSelection={askAboutSelection}
             onRetryPreparation={preview}
             submitting={submitting}
             linkedToContent={!!design?.contentId}
